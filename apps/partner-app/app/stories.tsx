@@ -19,6 +19,14 @@ export default function StoriesScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigationTouch = useRef<{ x: number; y: number } | null>(null);
+  const [storyViewportHeight, setStoryViewportHeight] = useState(0);
+  const [storyMeasuredHeight, setStoryMeasuredHeight] = useState(0);
+  const [artworkReduction, setArtworkReduction] = useState(0);
+  // Reduce only the artwork's reserved space when a story exceeds the available
+  // area between the fixed header and the permission-aware bottom tabs.
+  // Leave a legible illustration and allow native scrolling on very small screens.
+  const artworkHeight = Math.max(96, 300 - artworkReduction);
+  const journeyArtworkHeight = Math.max(100, 304 - artworkReduction);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -41,6 +49,19 @@ export default function StoriesScreen() {
   }, [load]);
 
   const story = data?.items[index] || null;
+
+  useEffect(() => {
+    setArtworkReduction(0);
+    setStoryMeasuredHeight(0);
+  }, [index, windowHeight, windowWidth]);
+
+  useEffect(() => {
+    if (storyViewportHeight <= 0 || storyMeasuredHeight <= storyViewportHeight + 1) return;
+    const remainingReduction = 204 - artworkReduction;
+    if (remainingReduction <= 0) return;
+    const overflow = Math.ceil(storyMeasuredHeight - storyViewportHeight);
+    setArtworkReduction(current => Math.min(204, current + Math.min(overflow, 204 - current)));
+  }, [storyViewportHeight, storyMeasuredHeight, artworkReduction]);
 
   const progress = useMemo(() => {
     if (!data?.items.length) return [];
@@ -136,7 +157,9 @@ export default function StoriesScreen() {
           <ScrollView
             key={index}
             style={styles.scroll}
-            contentContainerStyle={[styles.scrollContent, { minHeight: Math.max(360, windowHeight - insets.top - insets.bottom - 228), paddingBottom: 24 }]}
+            onLayout={(event) => setStoryViewportHeight(event.nativeEvent.layout.height)}
+            onContentSizeChange={(_width, height) => setStoryMeasuredHeight(height)}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: 12 }]}
             showsVerticalScrollIndicator={false}
             accessibilityLabel="Story content. Tap left for previous, right for next."
             accessibilityActions={[{ name: 'decrement', label: 'Previous story' }, { name: 'increment', label: 'Next story' }]}
@@ -157,15 +180,15 @@ export default function StoriesScreen() {
             </View>
             <View style={styles.storyContent}>
               {story.kind === 'today' ? (
-                <TodayRenewalStory story={story} onOpen={openStory} />
+                <TodayRenewalStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />
               ) : story.kind === 'business' ? (
-                <BusinessMonthStory story={story} onOpen={openStory} />
+                <BusinessMonthStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />
               ) : story.kind === 'journey' ? (
-                <JourneyMilestoneStory story={story} />
+                <JourneyMilestoneStory story={story} artworkHeight={journeyArtworkHeight} />
               ) : story.kind === 'impact' ? (
-                <ImpactStory story={story} onOpen={openStory} />
+                <ImpactStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />
               ) : story.kind === 'learn' ? (
-                <LearnStory story={story} onOpen={openStory} />
+                <LearnStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />
               ) : (
               <>
               <View style={styles.lessonBadge}>
@@ -263,7 +286,7 @@ function StoryPanel({ children }: { children: React.ReactNode }) {
   return <View style={styles.unifiedPanel}>{children}</View>;
 }
 
-function ImpactStory({ story, onOpen }: { story: PartnerStory; onOpen: () => void }) {
+function ImpactStory({ story, onOpen, artworkHeight }: { story: PartnerStory; onOpen: () => void; artworkHeight: number }) {
   const vehicleMatch = story.title.match(/([\d,]+)\s+(vehicles?)(.*)/i);
   const customerMatch = story.body.match(/([\d,]+)\s+customers?\s+served/i);
   const claimMatch = story.body.match(/([\d,]+)\s+claims?\s+assisted/i);
@@ -316,14 +339,14 @@ function ImpactStory({ story, onOpen }: { story: PartnerStory; onOpen: () => voi
           </View>
         ) : <Text style={styles.impactFallback}>{story.body}</Text>}
       </StoryPanel>
-      <View pointerEvents="none" style={styles.unifiedArtworkBox}>
-        <Image source={require('../assets/partner/stories/your-impact.png')} resizeMode="contain" style={styles.storyHeroArtwork} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+      <View pointerEvents="none" style={[styles.unifiedArtworkBox, { height: artworkHeight }]}>
+        <Image source={require('../assets/partner/stories/your-impact.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
       </View>
     </View>
   );
 }
 
-function LearnStory({ story, onOpen }: { story: PartnerStory; onOpen: () => void }) {
+function LearnStory({ story, onOpen, artworkHeight }: { story: PartnerStory; onOpen: () => void; artworkHeight: number }) {
   const hasRoute = Boolean(story.route);
   return (
     <View style={styles.unifiedStory}>
@@ -343,8 +366,8 @@ function LearnStory({ story, onOpen }: { story: PartnerStory; onOpen: () => void
           <Text style={styles.learnStoryQuestion}>{highlightStoryText(story.body)}</Text>
         </Pressable>
       </StoryPanel>
-      <View pointerEvents="none" style={styles.unifiedArtworkBox}>
-        <StoryIllustration kind={story.kind} body={story.body} />
+      <View pointerEvents="none" style={[styles.unifiedArtworkBox, { height: artworkHeight }]}>
+        <StoryIllustration kind={story.kind} body={story.body} artworkHeight={artworkHeight} />
       </View>
       {story.answered_today ? (
         <View style={styles.completedPill}>
@@ -362,7 +385,7 @@ function LearnStory({ story, onOpen }: { story: PartnerStory; onOpen: () => void
  * The shared curved background, story header, progress dashes and invisible
  * tap navigation remain owned by StoriesScreen.
  */
-function JourneyMilestoneStory({ story }: { story: PartnerStory }) {
+function JourneyMilestoneStory({ story, artworkHeight }: { story: PartnerStory; artworkHeight: number }) {
   const current = Number(story.progress_current);
   const target = Number(story.progress_target);
   const hasMilestone = Number.isFinite(current) && current >= 0 &&
@@ -418,11 +441,11 @@ function JourneyMilestoneStory({ story }: { story: PartnerStory }) {
           </View>
 
           </View>
-          <View style={styles.journeyScene} pointerEvents="none">
-            <View style={styles.journeySceneHalo} />
+          <View style={[styles.journeyScene, { height: artworkHeight }]} pointerEvents="none">
+            <View style={[styles.journeySceneHalo, { height: Math.min(235, artworkHeight - 20) }]} />
             <Image
               source={require('../assets/partner/stories/my-journey.png')}
-              style={styles.storyHeroArtwork}
+              style={[styles.storyHeroArtwork, { height: artworkHeight }]}
               resizeMode="contain"
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
@@ -450,7 +473,7 @@ function JourneyMilestoneStory({ story }: { story: PartnerStory }) {
  * The fourth (monthly business) story uses a focused financial snapshot instead
  * of the shared narrative slide. Metrics and policy counts stay backend-driven.
  */
-function BusinessMonthStory({ story, onOpen }: { story: PartnerStory; onOpen: () => void }) {
+function BusinessMonthStory({ story, onOpen, artworkHeight }: { story: PartnerStory; onOpen: () => void; artworkHeight: number }) {
   const policyMatch = story.title.match(/^([0-9,]+) +(polic(?:y|ies)) *(.*)$/i);
   const premium = story.metric !== undefined ? formatMetric(story) : null;
   const label = story.metric_label?.trim() || 'Gross premium';
@@ -505,8 +528,8 @@ function BusinessMonthStory({ story, onOpen }: { story: PartnerStory; onOpen: ()
         </View>
       ) : null}
       </StoryPanel>
-      <View style={styles.businessIllustrationWrap} pointerEvents="none">
-        <StoryIllustration kind="business" body={story.body} />
+      <View style={[styles.businessIllustrationWrap, { minHeight: artworkHeight }]} pointerEvents="none">
+        <StoryIllustration kind="business" body={story.body} artworkHeight={artworkHeight} />
       </View>
     </View>
   );
@@ -517,7 +540,7 @@ function BusinessMonthStory({ story, onOpen }: { story: PartnerStory; onOpen: ()
  * from partner_app_stories; a premium is highlighted only when the supplied
  * text contains an actual rupee amount.
  */
-function TodayRenewalStory({ story, onOpen }: { story: PartnerStory; onOpen: () => void }) {
+function TodayRenewalStory({ story, onOpen, artworkHeight }: { story: PartnerStory; onOpen: () => void; artworkHeight: number }) {
   const premiumMatch = story.body.match(/₹\s*[\d,]+(?:\.\d{1,2})?/);
   const premium = premiumMatch?.[0].replace(/\s+/g, '') ?? null;
   const remainingCopy = premiumMatch
@@ -575,13 +598,13 @@ function TodayRenewalStory({ story, onOpen }: { story: PartnerStory; onOpen: () 
           </View>
         ) : null}
       </View>
-      <View pointerEvents="none" style={styles.todayArtWrap}>
+      <View pointerEvents="none" style={[styles.todayArtWrap, { height: artworkHeight }]}>
         {isRenewal ? (
-          <Image source={require('../assets/partner/stories/today-renewal.png')} resizeMode="contain" style={styles.storyHeroArtwork} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+          <Image source={require('../assets/partner/stories/today-renewal.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
         ) : isClaim ? (
-          <Image source={require('../assets/partner/stories/claims.png')} resizeMode="contain" style={styles.storyHeroArtwork} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+          <Image source={require('../assets/partner/stories/claims.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
         ) : (
-          <Image source={require('../assets/partner/stories/your-impact.png')} resizeMode="contain" style={styles.storyHeroArtwork} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+          <Image source={require('../assets/partner/stories/your-impact.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
         )}
       </View>
     </View>
@@ -599,17 +622,17 @@ function highlightStoryText(copy: string) {
 
 /** Native and bundled artwork: no new dependency or hard-coded story data. */
 
-function StoryIllustration({ kind, body }: { kind: PartnerStory['kind']; body: string }) {
+function StoryIllustration({ kind, body, artworkHeight = 300 }: { kind: PartnerStory['kind']; body: string; artworkHeight?: number }) {
   // Keep the same approved 3D car-and-plate artwork on every 60 Sec Learn
   // topic. Lesson title/question stays live and never derives from the image.
   if (kind === 'learn') {
     return (
-      <View style={styles.vehicleScene}>
+      <View style={[styles.vehicleScene, { height: artworkHeight }]}>
         <View style={styles.vehicleHalo} />
         <Image
           source={require('../assets/partner/stories/learning-car.png')}
           resizeMode="contain"
-          style={styles.storyHeroArtwork}
+          style={[styles.storyHeroArtwork, { height: artworkHeight }]}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         />
@@ -618,9 +641,9 @@ function StoryIllustration({ kind, body }: { kind: PartnerStory['kind']; body: s
   }
   if (kind === 'business') {
     return (
-      <View style={styles.businessGrowthScene}>
+      <View style={[styles.businessGrowthScene, { height: artworkHeight }]}>
         <View style={styles.businessGrowthHalo} />
-        <Image source={require('../assets/partner/stories/this-month.png')} resizeMode="contain" style={styles.businessGrowth3dArtwork} />
+        <Image source={require('../assets/partner/stories/this-month.png')} resizeMode="contain" style={[styles.businessGrowth3dArtwork, { height: artworkHeight }]} />
       </View>
     );
   }
