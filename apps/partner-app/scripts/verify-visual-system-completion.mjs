@@ -438,8 +438,8 @@ for (const required of [
 // Today story uses a dedicated responsive renewal summary; other slides remain shared.
 for (const expected of [
   "story.kind === 'today' ? (",
-  "<TodayRenewalStory story={story} onOpen={openStory} />",
-  "function TodayRenewalStory({ story, onOpen }",
+  "<TodayRenewalStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />",
+  "function TodayRenewalStory({ story, onOpen, artworkHeight }",
   "story.body.match(/₹",
   "story.title.match(/",
   "styles.todayCard",
@@ -453,7 +453,7 @@ if (stories.includes('₹939') || stories.includes('1 renewal is due in 7 days')
 // Monthly (Business) Story alone uses the new premium and policies snapshot.
 for (const [needle, rationale] of [
   ["story.kind === 'business' ? (", 'Only Business Story receives the specialized layout'],
-  ['<BusinessMonthStory story={story} onOpen={openStory} />', 'Live business story data powers its own full-screen snapshot'],
+  ['<BusinessMonthStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />', 'Live business story data powers its own full-screen snapshot'],
   ["const policyMatch = story.title.match(/^([0-9,]+) +(polic(?:y|ies)) *(.*)$/i)", 'Policy count and title stay data-driven'],
   ["const premium = story.metric !== undefined ? formatMetric(story) : null", 'Gross premium is formatted from live data'],
   ['<StoryHeading icon="stats-chart-outline" title={story.eyebrow} />', 'This Month uses the unified rounded heading'],
@@ -463,7 +463,7 @@ for (const [needle, rationale] of [
   ['style={styles.businessIllustrationWrap}', 'Monthly growth artwork sits directly below figures'],
   ["if (kind === 'business')", 'Dedicated native business artwork is used'],
   ["require('../assets/partner/stories/this-month.png')", 'New 3D financial artwork replaces flat bars and coin mockups'],
-  ['style={styles.businessGrowth3dArtwork}', '3D business artwork scales responsively'],
+  ['style={[styles.businessGrowth3dArtwork, { height: artworkHeight }]}', '3D business artwork scales responsively'],
   ['onTouchStart={(event) => event.stopPropagation()}', 'Business story summary link preserves route navigation without changing slides'],
   ['onTouchEnd={(event) => event.stopPropagation()}', 'Business story link tap does not advance the slide'],
 ]) requireText(stories, needle, 'Business Stories snapshot regression: ' + rationale);
@@ -480,8 +480,8 @@ for (const marker of [
   '<StoryHeading icon="people" title={story.eyebrow} tone="violet" />',
   '<StoryHeading icon="stats-chart-outline" title={story.eyebrow} />',
   '<StoryHeading icon="time-outline" title={story.eyebrow} tone="green" />',
-  'function ImpactStory({ story, onOpen }',
-  'function LearnStory({ story, onOpen }',
+  'function ImpactStory({ story, onOpen, artworkHeight }',
+  'function LearnStory({ story, onOpen, artworkHeight }',
   'function StoryPanel({ children }',
   'style={styles.unifiedPanel}',
   'style={styles.impactSmallGrid}',
@@ -489,7 +489,7 @@ for (const marker of [
   "story.body.match(/([\\d,]+)\\s+customers?",
   "story.body.match(/([\\d,]+)\\s+claims?",
   "require('../assets/partner/stories/your-impact.png')",
-  'style={styles.storyHeroArtwork}',
+  'style={[styles.storyHeroArtwork, { height: artworkHeight }]}',
   'style={styles.journeyProgressTrack}',
   'style={styles.businessPremiumAmount}',
   "style={styles.learnStoryQuestion}",
@@ -505,7 +505,7 @@ for (const [needle, purpose] of [
   ["style={styles.journeyMetricPanel}", 'Journey stats are outside a large white card'],
   ["require('../assets/partner/stories/my-journey.png')", 'Journey uses the new 3D road, trophy and flag artwork'],
   ["require('../assets/partner/stories/this-month.png')", 'Monthly premium uses the new blue-gold 3D growth chart'],
-  ["style={styles.businessGrowth3dArtwork}", '3D chart is sized for the illustration scene'],
+  ["style={[styles.businessGrowth3dArtwork, { height: artworkHeight }]}", '3D chart is sized for the illustration scene'],
   ["require('../assets/partner/stories/learning-car.png')", 'Learn has a dedicated car and vehicle-plate artwork'],
   ["accessibilityActions={[{ name: 'decrement', label: 'Previous story' }, { name: 'increment', label: 'Next story' }]}", 'Existing tap/accessibility navigation is unchanged'],
 ]) requireText(stories, needle, 'Five Story visual parity contract: ' + purpose);
@@ -541,8 +541,8 @@ if (claimsArtwork.byteLength < 20000 || !claimsArtwork.subarray(0,8).equals(Buff
 // Story 3 (My Journey) keeps its own milestone-focused composition and real scoped data.
 for (const [needle, rationale] of [
   ["story.kind === 'journey' ? (", 'Only the customer journey story uses its own layout'],
-  ['<JourneyMilestoneStory story={story} />', 'My Journey renders the dedicated milestone composition'],
-  ['function JourneyMilestoneStory({ story }', 'My Journey milestone renderer exists'],
+  ['<JourneyMilestoneStory story={story} artworkHeight={journeyArtworkHeight} />', 'My Journey renders the dedicated milestone composition'],
+  ['function JourneyMilestoneStory({ story, artworkHeight }', 'My Journey milestone renderer exists'],
   ['Number(story.progress_current)', 'Achieved count comes from live story progress'],
   ['Number(story.progress_target)', 'Target comes from live story progress'],
   ['Math.max(0, target - current)', 'Remaining count derives from target minus actual progress'],
