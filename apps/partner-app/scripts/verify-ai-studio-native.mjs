@@ -19,4 +19,19 @@ assert(sql.includes("security definer") && sql.includes("partner_app_effective_p
 assert(sql.includes("'it_super_user','super_admin'"));
 assert(sql.includes("grant execute on function public.partner_app_ai_studio_detail_v1(uuid) to authenticated,service_role"));
 assert(!sql.includes('insert into public.policy_intake_requests') && !sql.includes('update public.policy_intake_requests'));
+// Only display client-side actions behind the release flag and preserve
+// independent server-side permission and verification checks.
+const actionFile=file('../lib/ai-studio-actions.ts');
+assert(screen.includes("Reparse PDF") && screen.includes("Verify & Convert"));
+assert(screen.includes("setPendingAction('reparse')") && screen.includes("setPendingAction('convert')"));
+assert(screen.includes("performAiStudioAction(selected.id,pendingAction)"));
+assert(screen.includes('resultUncertain') && screen.includes('Refresh intake status'));
+assert(screen.includes("aiStudioActionsEnabled&&!detail.final_policy_id"));
+assert(screen.includes("!aiStudioActionsEnabled&&!detail.final_policy_id"));
+assert(screen.includes('fieldExpanded?detail.fields:detail.fields.slice(0,8)'));
+assert(screen.indexOf("setPendingAction('convert')") < screen.indexOf('Extracted policy details'));
+assert(actionFile.includes("EXPO_PUBLIC_AI_STUDIO_ACTIONS_ENABLED === 'true'"));
+assert(actionFile.includes("url.hostname==='studio.nishant.uk'"));
+assert(actionFile.includes("'authorization':'Bearer '+auth.session.access_token"));
+assert(actionFile.includes("body:JSON.stringify({intake_id:intakeId,action,confirm:true})"));
 console.log('Partner native AI Studio read-only, auth and Vercel-independence contracts passed');
