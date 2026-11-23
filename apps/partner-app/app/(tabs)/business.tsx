@@ -734,7 +734,7 @@ function TrendChart({ data, emptyMessage, compact = false }: { data: TrendPoint[
                 <View style={styles.barTrack}>
                   <View style={[styles.bar, { height }]} />
                 </View>
-                <Text numberOfLines={2} style={[styles.barValue, Platform.OS === 'ios' && styles.barValueIos, { bottom: height + 5 }]}>
+                <Text numberOfLines={2} style={[styles.barValue, Platform.OS === 'ios' && styles.barValueIos, { bottom: height + 3, height: visiblePremiumLabel.includes('\n') ? 26 : 14 }]}>
                   {visiblePremiumLabel}
                 </Text>
               </View>
@@ -931,7 +931,7 @@ const styles = StyleSheet.create({
   axisText: { color: '#8795A9', ...partnerTheme.typography.meta, fontSize: 9, fontWeight: Platform.OS === 'ios' ? '400' : partnerTheme.typography.meta.fontWeight },
   chart: { flex: 1, height: 91, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 3 },
   barColumn: { flex: 1, maxWidth: 54, height: '100%', alignItems: 'center', justifyContent: 'flex-end' },
-  barValue: { position: 'absolute', left: 0, right: 0, height: 27, color: '#14367B', textAlign: 'center', fontSize: 11, lineHeight: 13, fontWeight: '700', includeFontPadding: false },
+  barValue: { position: 'absolute', left: 0, right: 0, color: '#14367B', textAlign: 'center', fontSize: 11, lineHeight: 13, fontWeight: '700', includeFontPadding: false },
   barValueIos: { color: '#000000', fontSize: 9, lineHeight: 12, fontWeight: '400' },
   barPlotSlot: { height: 72, width: '100%', alignItems: 'center', justifyContent: 'flex-end', position: 'relative' },
   barTrack: { height: '100%', width: '92%', justifyContent: 'flex-end', borderTopLeftRadius: 7, borderTopRightRadius: 7 },
