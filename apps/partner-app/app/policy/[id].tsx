@@ -147,8 +147,9 @@ export default function PolicyDetailScreen() {
             </Card>
           </View>
 
-          <Card>
-            <CardHeader iconKind="policy-overview" title="Policy Overview" tinted actionLabel="View All" onAction={() => setShowOverviewDetails((value) => !value)} />
+          <View style={styles.externalSection}>
+            <CardHeader iconKind="policy-overview" title="Policy Overview" actionLabel="View All" onAction={() => setShowOverviewDetails((value) => !value)} />
+            <Card>
             <View style={styles.overviewGrid}>
               <OverviewItem iconKind="category" label="Category" value={category} />
               <OverviewItem iconKind="product" label="Product" value={data.policy.policy_product || data.policy.policy_type || data.policy.business_line || 'Not recorded'} />
@@ -166,38 +167,43 @@ export default function PolicyDetailScreen() {
                 <MiniInfo label="End date" value={formatDate(data.policy.end_date)} threeColumn />
               </View>
             ) : null}
-          </Card>
-          <Card>
+            </Card>
+          </View>
+          <View style={styles.externalSection}>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }} onPress={() => setShowPremiumDetails((value) => !value)} style={({ pressed }) => [styles.premiumDisclosure, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="premium-breakup" size={22} showBadge={false} />
               <View style={styles.disclosureText}><Text style={styles.cardTitle}>Premium breakup</Text><Text style={styles.disclosureSummary}>{formatIndianCurrency(data.premium.gross_premium)}</Text></View>
 
             </Pressable>
             {showPremiumDetails ? (
-              <View style={styles.premiumDetailGrid}>
+              <Card>
+                <View style={styles.premiumDetailGrid}>
                 <MiniInfo compact label="Net premium" value={nullableMoney(data.premium.net_premium)} />
                 <MiniInfo compact label="OD premium" value={nullableMoney(data.premium.od_premium)} />
                 <MiniInfo compact label="TP premium" value={nullableMoney(data.premium.tp_premium)} />
                 <MiniInfo compact label="GST" value={nullableMoney(data.premium.gst_amount)} />
                 <MiniInfo compact label="CPA" value={data.premium.cpa_opted ? nullableMoney(data.premium.cpa_amount) : 'Not opted / not recorded'} />
-              </View>
+                </View>
+              </Card>
             ) : null}
-          </Card>
-          <Card>
+          </View>
+          <View style={styles.externalSection}>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="sales-ownership" size={22} showBadge={false} />
               <View style={styles.disclosureText}><Text style={styles.cardTitle}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
 
             </Pressable>
             {showCommercialDetails ? (
-              <View style={styles.detailGrid}>
+              <Card>
+                <View style={styles.detailGrid}>
                 <MiniInfo label="Intermediary" value={intermediaryName || "Not recorded"} />
                 <MiniInfo label="RM" value={data.commercial.rm_name || 'Not recorded'} />
                 <MiniInfo label="Group" value={[data.commercial.group_name, data.commercial.group_code].filter(Boolean).join(' · ') || 'No policy snapshot'} />
                 <MiniInfo label="Policy lifecycle" value={humanize(data.policy.lifecycle_status)} />
-              </View>
+                </View>
+              </Card>
             ) : null}
-          </Card>
+          </View>
 
         </View>
       )}
@@ -210,9 +216,9 @@ function Card({ children, onPress, accessibilityLabel, highlighted = false }: { 
   return <View style={[styles.card, highlighted && styles.customerVehicleBorder]}>{children}</View>;
 }
 
-function CardHeader({ iconKind, title, actionLabel, onAction, tinted = false }: { iconKind?: PartnerPolicyDetailIconKind; title: string; actionLabel?: string; onAction?: () => void; tinted?: boolean }) {
+function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind?: PartnerPolicyDetailIconKind; title: string; actionLabel?: string; onAction?: () => void }) {
   return (
-    <View style={[styles.cardHeader, !iconKind && !actionLabel ? styles.cardHeaderCompact : null, tinted && styles.policySectionHeaderTint]}>
+    <View style={[styles.cardHeader, !iconKind && !actionLabel ? styles.cardHeaderCompact : null]}>
       <View style={styles.cardHeaderLeft}>{iconKind ? <PartnerPolicyDetailIcon kind={iconKind} size={22} showBadge={false} /> : null}<Text style={styles.cardTitle}>{title}</Text></View>
       {actionLabel ? (
         <Pressable accessibilityRole="button" disabled={!onAction} onPress={onAction} hitSlop={8} style={({ pressed }) => [styles.cardHeaderAction, pressed && onAction ? styles.pressed : null]}>
@@ -240,7 +246,7 @@ function QuickAction({ iconKind, label, onPress }: {
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => [styles.quickAction, iconKind === 'policy-document' ? styles.quickDocument : iconKind === 'renew-policy' ? styles.quickRenewal : iconKind === 'raise-claim' ? styles.quickClaim : styles.quickCustomer, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}
     >
       <View style={styles.quickActionIcon}>
         <Image source={illustration} style={iconKind === 'renew-policy' || iconKind === 'raise-claim' ? styles.quickActionArtworkCompact : styles.quickActionArtwork} resizeMode="contain" accessibilityIgnoresInvertColors />
@@ -381,7 +387,6 @@ const styles = StyleSheet.create({
   customerVehicleBorder: { borderColor: '#3993F5', borderWidth: 1, backgroundColor: '#F3F8FF' },
   cardHeader: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   cardHeaderCompact: { minHeight: 30 },
-  policySectionHeaderTint: { backgroundColor: '#EDE4FF' },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 12.5, lineHeight: 16, fontWeight: '800' },
   cardHeaderAction: { flexDirection: 'row', alignItems: 'center', gap: 1, minHeight: 32, paddingLeft: 8 }, cardHeaderActionText: { color: '#0969CF', fontSize: 9, lineHeight: 12, fontWeight: '700' },
   quickSection: { marginHorizontal: 0, paddingVertical: 8 },
@@ -390,12 +395,8 @@ const styles = StyleSheet.create({
   quickAction: {
     flex: 1, minWidth: 0, minHeight: 94, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 3, paddingVertical: 9, gap: 5, borderRadius: 13,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: '#E0E9F6',
+    backgroundColor: 'transparent',
   },
-  quickDocument: { backgroundColor: '#E5F0FF', borderColor: '#C9DFFA' },
-  quickRenewal: { backgroundColor: '#F0E6FF', borderColor: '#E0CFFF' },
-  quickClaim: { backgroundColor: '#E0F8F0', borderColor: '#BEE9DB' },
-  quickCustomer: { backgroundColor: '#FFF0DF', borderColor: '#F9DFC0' },
   quickActionIcon: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
   quickActionArtwork: { width: 54, height: 54 },
   quickActionArtworkCompact: { width: 43, height: 43 },
@@ -412,8 +413,8 @@ const styles = StyleSheet.create({
   toneRose: { backgroundColor: '#FCEAF4', borderColor: '#F6D6E9' },
   overviewLogoWrap: { width: 23, height: 23, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 20, height: 20 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#59677D', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' },
   unifiedSectionDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E3E9F1', marginHorizontal: 10, marginVertical: 2 },
-  premiumDisclosure: { minHeight: 50, marginHorizontal: 0, marginBottom: 8, paddingHorizontal: 11, borderRadius: 0, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#DCF6F0' },
-  commercialRow: { minHeight: 50, marginHorizontal: 0, marginBottom: 8, paddingHorizontal: 11, borderRadius: 0, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#FFF0DC' },
+  premiumDisclosure: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  commercialRow: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 7 },
   disclosureText: { flex: 1, minWidth: 0 }, disclosureTitle: { color: '#152945', fontSize: 10.5, lineHeight: 13, fontWeight: '700' }, disclosureSummary: { marginTop: 2, color: '#6F7F94', fontSize: 8.5, lineHeight: 11 },
   premiumDetailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 10, paddingBottom: 10 },
   detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 10, paddingBottom: 10 }, miniInfo: { width: '47%', minHeight: 44, padding: 8, borderRadius: 10, backgroundColor: '#F7F9FC' }, miniLabel: { color: '#64738A', fontSize: 8, lineHeight: 10, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
