@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-stories-compact-font-cards-pr-5147
+release=partner-stories-viewport-aware-compact-cards
 source=verified-merged-main
-source_pr=5147
-source_merge=f983f5e7f6fa8f1ab1431038c525c6bb129700a2
-reason=user-approved-merge-and-publish-compact-story-typography-and-cards
+source_pr=5152
+source_merge=b2b794734f9f4047b375d30ea51bb3427b9ab050
+reason=user-approved-merge-and-publish-story-viewport-and-compact-cards
 channel=production
 runtime=0.2.0
 requested=2026-11-23
