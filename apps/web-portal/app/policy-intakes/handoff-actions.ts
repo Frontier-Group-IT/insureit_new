@@ -346,7 +346,18 @@ async function preparePolicyIntakeHandoffInternal(
       warnings:verified.warnings,fields:verified.fields,
       commercialPremium:verified.commercialPremium,
     });
-    const eligibleForVerifiedConversion=autoEligibleGoDigit||iffcoReview.eligible
+    // A fresh, fully verified Tata AIG TP parse remains a verified intake
+    // after rebuilding its derived draft. Rebuilding cannot itself book it;
+    // canonical identity, policy, vehicle, duplicate and date preflights remain.
+    const verifiedTataTp = (
+      verified.parserId==="tata_aig_private_car_liability_only_n8n_native_pdf"
+      ||verified.parserId==="tata_aig_private_car_three_year_tp_n8n_native_pdf"
+    ) && verified.checksPassed===16
+      && verified.fields.some(f=>f.key==="insured_name"&&f.value.trim().length>=2)
+      && verified.fields.some(f=>f.key==="policy_number"&&f.value.trim())
+      && verified.fields.some(f=>f.key==="policy_start_date"&&f.value.trim())
+      && verified.fields.some(f=>f.key==="policy_end_date"&&f.value.trim());
+    const eligibleForVerifiedConversion=verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible
       ||standardReview.eligible||niaReview.eligible;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
     const{error}=await admin.from("policy_intake_ai_processing_queue").update({
