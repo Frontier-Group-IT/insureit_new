@@ -161,6 +161,10 @@ export default function StoriesScreen() {
                 <BusinessMonthStory story={story} onOpen={openStory} />
               ) : story.kind === 'journey' ? (
                 <JourneyMilestoneStory story={story} />
+              ) : story.kind === 'impact' ? (
+                <ImpactStory story={story} onOpen={openStory} />
+              ) : story.kind === 'learn' ? (
+                <LearnStory story={story} onOpen={openStory} />
               ) : (
               <>
               <View style={styles.lessonBadge}>
@@ -227,6 +231,130 @@ function formatMetric(story: PartnerStory) {
   return String(story.metric);
 }
 
+
+const storyColors = {
+  navy: '#092B5B',
+  blue: '#086FE8',
+  pale: '#EDF6FF',
+  green: '#119C69',
+  violet: '#7448D8',
+  gold: '#F4AF18',
+} as const;
+
+/** Shared design system for all five illustrated stories. */
+function StoryHeading({ icon, title, tone = 'blue' }: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  tone?: 'blue' | 'gold' | 'violet' | 'green';
+}) {
+  return (
+    <View style={[styles.unifiedHeading, tone === 'gold' && styles.unifiedHeadingGold, tone === 'violet' && styles.unifiedHeadingViolet, tone === 'green' && styles.unifiedHeadingGreen]}>
+      <Ionicons name={icon} size={19} color={tone === 'gold' ? '#B06900' : tone === 'violet' ? '#7544CD' : tone === 'green' ? '#087A57' : storyColors.blue} />
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.unifiedHeadingText}>{title}</Text>
+    </View>
+  );
+}
+
+function StoryPanel({ children }: { children: React.ReactNode }) {
+  return <View style={styles.unifiedPanel}>{children}</View>;
+}
+
+function ImpactStory({ story, onOpen }: { story: PartnerStory; onOpen: () => void }) {
+  const vehicleMatch = story.title.match(/([\d,]+)\s+(vehicles?)(.*)/i);
+  const customerMatch = story.body.match(/([\d,]+)\s+customers?\s+served/i);
+  const claimMatch = story.body.match(/([\d,]+)\s+claims?\s+assisted/i);
+  const hasRoute = Boolean(story.route);
+  return (
+    <View style={styles.unifiedStory}>
+      <StoryHeading icon="shield-checkmark-outline" title={story.eyebrow} />
+      <StoryPanel>
+        <Pressable
+          onPress={onOpen}
+          disabled={!hasRoute}
+          onTouchStart={(event) => { event.stopPropagation(); }}
+          onTouchEnd={(event) => event.stopPropagation()}
+          accessibilityRole={hasRoute ? 'link' : undefined}
+          accessibilityLabel={hasRoute ? 'Open ' + story.title : undefined}
+          style={styles.impactLink}
+        >
+          {story.metric !== undefined ? (
+            <>
+              <Text style={styles.impactPremium} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.43}>{formatMetric(story)}</Text>
+              <Text style={styles.impactCaption}>{story.metric_label?.trim() || 'Coverage value'}</Text>
+            </>
+          ) : null}
+          {vehicleMatch ? (
+            <View style={styles.impactVehicleRow}>
+              <Ionicons name="car-sport-outline" size={27} color={storyColors.blue} />
+              <View style={styles.impactVehicleCopy}>
+                <Text style={styles.impactVehicleNumber}>{vehicleMatch[1]}</Text>
+                <Text style={styles.impactVehicleLabel}>{vehicleMatch[2] + vehicleMatch[3]}</Text>
+              </View>
+            </View>
+          ) : <Text style={styles.impactFallback}>{story.title}</Text>}
+        </Pressable>
+        {customerMatch || claimMatch ? (
+          <View style={styles.impactSmallGrid}>
+            {customerMatch ? (
+              <View style={styles.impactSmallTile}>
+                <Ionicons name="people" size={24} color={storyColors.blue} />
+                <Text style={styles.impactSmallValue}>{customerMatch[1]}</Text>
+                <Text style={styles.impactSmallLabel}>Customers served</Text>
+              </View>
+            ) : null}
+            {claimMatch ? (
+              <View style={styles.impactSmallTile}>
+                <Ionicons name="checkbox-outline" size={24} color={storyColors.blue} />
+                <Text style={styles.impactSmallValue}>{claimMatch[1]}</Text>
+                <Text style={styles.impactSmallLabel}>Claims assisted</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : <Text style={styles.impactFallback}>{story.body}</Text>}
+      </StoryPanel>
+      <View pointerEvents="none" style={styles.unifiedArtworkBox}>
+        <View style={styles.unifiedArtHalo} />
+        <Image source={require('../assets/partner/status/policy-active.png')} resizeMode="contain" style={styles.impactProtectionArtwork} />
+        <Image source={require('../assets/partner/actions/impact-blue-3d-car.png')} resizeMode="contain" style={styles.impactVehicleArtwork} />
+        <Image source={require('../assets/partner/actions/policy-checklist.png')} resizeMode="contain" style={styles.impactDocumentArtwork} />
+      </View>
+    </View>
+  );
+}
+
+function LearnStory({ story, onOpen }: { story: PartnerStory; onOpen: () => void }) {
+  const hasRoute = Boolean(story.route);
+  return (
+    <View style={styles.unifiedStory}>
+      <StoryHeading icon="time-outline" title={story.eyebrow} tone="green" />
+      <StoryPanel>
+        <Pressable
+          onPress={onOpen}
+          disabled={!hasRoute}
+          onTouchStart={(event) => event.stopPropagation()}
+          onTouchEnd={(event) => event.stopPropagation()}
+          accessibilityRole={hasRoute ? 'link' : undefined}
+          accessibilityLabel={hasRoute ? 'Open ' + story.title : undefined}
+          style={styles.learnStoryLink}
+        >
+          <Text style={styles.learnStoryTitle}>{story.title}</Text>
+          <View style={styles.titleRule}><View style={styles.titleRuleActive} /></View>
+          <Text style={styles.learnStoryQuestion}>{highlightStoryText(story.body)}</Text>
+        </Pressable>
+      </StoryPanel>
+      <View pointerEvents="none" style={styles.unifiedArtworkBox}>
+        <StoryIllustration kind={story.kind} body={story.body} />
+      </View>
+      {story.answered_today ? (
+        <View style={styles.completedPill}>
+          <Ionicons name="checkmark-circle" size={23} color="#079064" />
+          <Text style={styles.completedText}>Completed today</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 /**
  * Story 3/5: customer journey milestone. Use only verified, scoped story
  * progress fields so counts, target and completion stay live and consistent.
@@ -246,14 +374,12 @@ function JourneyMilestoneStory({ story }: { story: PartnerStory }) {
   return (
     <View style={styles.journeyStory}>
       <View pointerEvents="none" style={styles.journeyBlueArc} />
-      <View style={styles.journeyHeadingBadge}>
-        <Ionicons name="people" size={23} color="#0760C8" />
-        <Text style={styles.journeyHeadingText}>MY JOURNEY</Text>
-      </View>
+      <StoryHeading icon="people" title={story.eyebrow} tone="violet" />
       <Text style={styles.journeySubtitle}>Your milestone progress at a glance.</Text>
 
       {hasMilestone ? (
         <>
+          <StoryPanel>
           <View style={styles.journeyStats}>
             <View style={styles.journeyStat}>
               <View style={[styles.journeyStatIcon, styles.journeyStatIconBlue]}>
@@ -290,6 +416,7 @@ function JourneyMilestoneStory({ story }: { story: PartnerStory }) {
             </View>
           </View>
 
+          </StoryPanel>
           <View style={styles.journeyScene} pointerEvents="none">
             <View style={styles.journeySceneHalo} />
             <Image
@@ -335,10 +462,8 @@ function BusinessMonthStory({ story, onOpen }: { story: PartnerStory; onOpen: ()
 
   return (
     <View style={styles.businessSnapshot}>
-      <View style={styles.businessMonthBadge}>
-        <Ionicons name="stats-chart-outline" size={23} color="#075ECB" />
-        <Text style={styles.businessMonthBadgeText}>{story.eyebrow}</Text>
-      </View>
+      <StoryHeading icon="stats-chart-outline" title={story.eyebrow} />
+      <StoryPanel>
       <Pressable
         onPress={onOpen}
         onTouchStart={(event) => event.stopPropagation()}
@@ -382,6 +507,7 @@ function BusinessMonthStory({ story, onOpen }: { story: PartnerStory; onOpen: ()
           </View>
         </View>
       ) : null}
+      </StoryPanel>
       <View style={styles.businessIllustrationWrap} pointerEvents="none">
         <StoryIllustration kind="business" body={story.body} />
       </View>
@@ -405,6 +531,7 @@ function TodayRenewalStory({ story, onOpen }: { story: PartnerStory; onOpen: () 
 
   return (
     <View style={styles.todaySnapshot}>
+      <StoryHeading icon="sunny" title={story.eyebrow} tone="gold" />
       <View style={styles.todayCard}>
         <View pointerEvents="none" style={styles.todayCornerAccent} />
         <View style={styles.todayHeadlineRow}>
@@ -412,7 +539,7 @@ function TodayRenewalStory({ story, onOpen }: { story: PartnerStory; onOpen: () 
             <Ionicons name="sunny-outline" size={34} color="#FFFFFF" />
           </View>
           <View style={styles.todayHeadlineText}>
-            <Text style={styles.todayEyebrow}>{story.eyebrow}</Text>
+            <Text style={styles.todayEyebrow}>RENEWAL REMINDER</Text>
             <Pressable
               onPress={onOpen}
               disabled={!hasRoute}
@@ -550,7 +677,7 @@ function StoryIllustration({ kind, body }: { kind: PartnerStory['kind']; body: s
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, overflow: 'hidden', backgroundColor: '#EAF2FF' },
+  screen: { flex: 1, overflow: 'hidden', backgroundColor: '#EAF3FF' },
   top: { zIndex: 5, backgroundColor: '#0A3478', paddingHorizontal: 18, paddingTop: 11, paddingBottom: 28 },
   progress: { flexDirection: 'row', gap: 6 },
   progressTrack: { flex: 1, height: 4, overflow: 'hidden', borderRadius: 999, backgroundColor: '#7D9BC7' },
@@ -565,18 +692,46 @@ const styles = StyleSheet.create({
   brandMeta: { marginTop: 3, color: '#DBE8FF', fontSize: 11 },
   close: { width: 42, height: 42, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2D5998' },
   scroll: { flex: 1 },
-  scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 14, justifyContent: 'flex-start' },
+  scrollContent: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 18, paddingBottom: 20, justifyContent: 'flex-start' },
   storyBackdrop: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
   waveUpper: { position: 'absolute', top: -205, left: -110, width: '150%', height: 255, borderBottomLeftRadius: 250, borderBottomRightRadius: 145, backgroundColor: '#0A3478', transform: [{ rotate: '-9deg' }] },
   waveMiddle: { position: 'absolute', top: -45, left: -100, width: '160%', height: 200, borderTopLeftRadius: 245, borderTopRightRadius: 180, backgroundColor: '#CFE2FF', opacity: 0.9, transform: [{ rotate: '-10deg' }] },
   waveLower: { position: 'absolute', bottom: -110, right: -130, width: '155%', height: 230, borderTopLeftRadius: 240, borderTopRightRadius: 280, backgroundColor: '#D6E6FF', opacity: 0.88, transform: [{ rotate: '-11deg' }] },
-  storyContent: { alignItems: 'center', width: '100%', paddingTop: 8 },
-  journeyStory: { width: '100%', alignItems: 'center', paddingTop: 4, paddingBottom: 8 },
-  journeyBlueArc: { position: 'absolute', top: -55, width: '145%', height: 205, borderBottomLeftRadius: 210, borderBottomRightRadius: 195, backgroundColor: '#238BF1', opacity: 0.92 },
+  storyContent: { alignItems: 'center', width: '100%', paddingTop: 3 },
+
+  unifiedStory: { width: '100%', alignItems: 'center', paddingTop: 4, gap: 12 },
+  unifiedHeading: { minHeight: 40, maxWidth: '96%', borderRadius: 25, paddingHorizontal: 17, paddingVertical: 8, gap: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F9FF', borderWidth: 1, borderColor: '#DCEAFF', shadowColor: '#185AAB', shadowOpacity: 0.12, shadowRadius: 7, elevation: 2 },
+  unifiedHeadingGold: { backgroundColor: '#FFF8E9', borderColor: '#FFE4A8' },
+  unifiedHeadingViolet: { backgroundColor: '#F6EEFF', borderColor: '#DCD0FF' },
+  unifiedHeadingGreen: { backgroundColor: '#EBFFF7', borderColor: '#C7F0DD' },
+  unifiedHeadingText: { color: '#12386E', fontSize: 14, fontWeight: '900', letterSpacing: 0.45, textTransform: 'uppercase', flexShrink: 1 },
+  unifiedPanel: { width: '100%', padding: 15, borderRadius: 23, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1EAF7', shadowColor: '#0E579C', shadowOpacity: 0.09, shadowRadius: 12, elevation: 2 },
+  unifiedArtworkBox: { width: '100%', height: 265, alignItems: 'center', justifyContent: 'center', overflow: 'visible' },
+  unifiedArtHalo: { position: 'absolute', width: 275, height: 240, borderRadius: 150, backgroundColor: '#DCEBFF' },
+  impactLink: { alignSelf: 'stretch', alignItems: 'center' },
+  impactPremium: { color: '#092B5B', fontSize: 33, lineHeight: 43, fontWeight: '900', textAlign: 'center', width: '100%' },
+  impactCaption: { marginTop: 1, color: '#486389', fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  impactVehicleRow: { width: '100%', marginTop: 12, minHeight: 68, padding: 10, borderRadius: 16, backgroundColor: '#E9F4FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
+  impactVehicleCopy: { flexShrink: 1, alignItems: 'flex-start' },
+  impactVehicleNumber: { color: '#092B5B', fontSize: 25, lineHeight: 29, fontWeight: '900' },
+  impactVehicleLabel: { color: '#345577', fontSize: 12, lineHeight: 16, fontWeight: '700' },
+  impactSmallGrid: { marginTop: 10, flexDirection: 'row', gap: 10 },
+  impactSmallTile: { flex: 1, minWidth: 0, paddingVertical: 10, paddingHorizontal: 6, borderRadius: 15, backgroundColor: '#E9F4FF', alignItems: 'center', justifyContent: 'center', gap: 3 },
+  impactSmallValue: { color: '#092B5B', fontSize: 19, lineHeight: 24, fontWeight: '900' },
+  impactSmallLabel: { color: '#385A83', fontSize: 11, lineHeight: 14, textAlign: 'center', fontWeight: '700' },
+  impactFallback: { color: '#385A83', fontSize: 14, lineHeight: 19, textAlign: 'center', marginTop: 9 },
+  impactProtectionArtwork: { width: 164, height: 178, position: 'absolute', top: 21, left: '30%' },
+  impactVehicleArtwork: { width: 166, height: 137, position: 'absolute', bottom: 0, left: '2%' },
+  impactDocumentArtwork: { width: 117, height: 127, position: 'absolute', bottom: 2, right: '2%' },
+  learnStoryLink: { alignItems: 'center', alignSelf: 'stretch' },
+  learnStoryTitle: { color: '#092B5B', fontSize: 23, lineHeight: 29, fontWeight: '900', textAlign: 'center' },
+  learnStoryQuestion: { color: '#31537E', fontSize: 17, lineHeight: 25, textAlign: 'center', fontWeight: '600', marginTop: 12 },
+  journeyStory: { width: '100%', alignItems: 'center', paddingTop: 4, paddingBottom: 8, gap: 10 },
+  journeyBlueArc: { position: 'absolute', top: -30, width: '125%', height: 120, borderBottomLeftRadius: 210, borderBottomRightRadius: 195, backgroundColor: '#278CF3', opacity: 0.85 },
   journeyHeadingBadge: { minHeight: 45, maxWidth: '100%', paddingHorizontal: 22, borderRadius: 35, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 10, backgroundColor: '#E5F2FF', shadowColor: '#064E9F', shadowOpacity: 0.12, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8, elevation: 3 },
   journeyHeadingText: { color: '#08449B', fontSize: 20, fontWeight: '900', letterSpacing: 0.3 },
-  journeySubtitle: { marginTop: 15, color: '#FFFFFF', fontSize: 15, lineHeight: 21, fontWeight: '700', textAlign: 'center' },
-  journeyStats: { marginTop: 55, width: '100%', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'space-between' },
+  journeySubtitle: { marginTop: 6, marginBottom: 9, color: '#FFFFFF', fontSize: 13, lineHeight: 19, fontWeight: '700', textAlign: 'center' },
+  journeyStats: { marginTop: 0, width: '100%', flexDirection: 'row', alignItems: 'stretch', justifyContent: 'space-between' },
   journeyStat: { flex: 1, minWidth: 0, alignItems: 'center', gap: 5, paddingHorizontal: 3 },
   journeyStatDivider: { width: StyleSheet.hairlineWidth, alignSelf: 'stretch', backgroundColor: '#A7C5E9', marginVertical: 9 },
   journeyStatIcon: { width: 42, height: 42, borderRadius: 16, alignItems: 'center', justifyContent: 'center', shadowColor: '#116AB9', shadowOpacity: 0.09, shadowRadius: 5, elevation: 2 },
@@ -585,7 +740,7 @@ const styles = StyleSheet.create({
   journeyStatIconGold: { backgroundColor: '#FFF4DE' },
   journeyStatValue: { color: '#092E67', fontSize: 22, lineHeight: 26, fontWeight: '900' },
   journeyStatLabel: { color: '#4C6387', fontSize: 10.5, lineHeight: 14, fontWeight: '700', textAlign: 'center' },
-  journeyProgressBlock: { width: '100%', marginTop: 25, paddingHorizontal: 4 },
+  journeyProgressBlock: { width: '100%', marginTop: 14, paddingHorizontal: 4 },
   journeyProgressTop: { minHeight: 31, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 },
   journeyProgressLabel: { color: '#285A8C', fontSize: 12, fontWeight: '700' },
   journeyProgressPercent: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 12, backgroundColor: '#09975B' },
@@ -609,16 +764,16 @@ const styles = StyleSheet.create({
   todayHeadlineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 13 },
   todaySunIcon: { width: 61, height: 61, borderRadius: 19, backgroundColor: '#FFA51E', alignItems: 'center', justifyContent: 'center', shadowColor: '#DC941F', shadowOpacity: 0.18, shadowRadius: 7, elevation: 3 },
   todayHeadlineText: { flex: 1, minWidth: 0 },
-  todayEyebrow: { color: '#697996', fontSize: 13, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
+  todayEyebrow: { color: '#7B8AA3', fontSize: 10, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 7 },
   todayTitleLink: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  todayHeadline: { color: '#092E68', fontSize: 25, lineHeight: 31, fontWeight: '900', flex: 1, flexShrink: 1 },
+  todayHeadline: { color: '#092E68', fontSize: 23, lineHeight: 29, fontWeight: '900', flex: 1, flexShrink: 1 },
   todayDivider: { marginTop: 18, marginBottom: 13, height: 1, backgroundColor: '#DAE7F8' },
   todayPremiumPanel: { flexDirection: 'row', gap: 12, alignItems: 'center', padding: 12, borderRadius: 17, backgroundColor: '#EDF5FF' },
   todayPremiumIcon: { width: 47, height: 47, backgroundColor: '#D7E9FF', borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   todayPremiumBody: { flex: 1, minWidth: 0 },
   todayPremiumValue: { fontSize: 26, lineHeight: 32, fontWeight: '900', color: '#0B326E' },
   todayPremiumDescription: { color: '#506889', fontSize: 13, lineHeight: 19, fontWeight: '600' },
-  todayArtWrap: { width: '100%', height: 285, maxWidth: 355, alignItems: 'center', justifyContent: 'center', marginTop: 5 },
+  todayArtWrap: { width: '100%', height: 265, maxWidth: 355, alignItems: 'center', justifyContent: 'center', marginTop: 5 },
   todayArtHalo: { position: 'absolute', width: 280, height: 258, borderRadius: 150, backgroundColor: '#DCEBFF', opacity: 0.85 },
   todayBackDocument: { position: 'absolute', left: '14%', top: 40, width: 185, height: 216, borderRadius: 22, backgroundColor: '#E5F3FF', borderWidth: 6, borderColor: '#87BDFA', transform: [{ rotate: '-12deg' }] },
   todayFrontDocument: { position: 'absolute', left: '22%', top: 20, width: 205, height: 232, borderRadius: 23, backgroundColor: '#FFFFFF', borderWidth: 6, borderColor: '#2686F3', paddingHorizontal: 19, paddingTop: 23, shadowColor: '#246EC1', shadowOpacity: 0.2, shadowRadius: 12, elevation: 5 },
@@ -633,18 +788,18 @@ const styles = StyleSheet.create({
   todayCalendarNumber: { marginTop: 14, color: '#0C326C', fontSize: 45, lineHeight: 53, fontWeight: '900' },
   todayCalendarDays: { color: '#0C326C', fontSize: 17, lineHeight: 21, fontWeight: '900' },
   // Story 4/5: the reference's large financial headline, policy summary and 3D-style growth artwork.
-  businessSnapshot: { width: '100%', alignItems: 'center', paddingTop: 4 },
+  businessSnapshot: { width: '100%', alignItems: 'center', paddingTop: 4, gap: 12 },
   businessMonthBadge: { minHeight: 40, maxWidth: '95%', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 30, backgroundColor: '#CFE2FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   businessMonthBadgeText: { color: '#0758C3', fontSize: 14, fontWeight: '900', letterSpacing: 0.5, textTransform: 'uppercase' },
-  businessSummaryLink: { width: '100%', alignItems: 'center', marginTop: 18 },
-  businessPremiumAmount: { alignSelf: 'stretch', textAlign: 'center', color: '#092D68', fontSize: 41, lineHeight: 52, fontWeight: '900', letterSpacing: -1.1 },
+  businessSummaryLink: { width: '100%', alignItems: 'center', marginTop: 3 },
+  businessPremiumAmount: { alignSelf: 'stretch', textAlign: 'center', color: '#092D68', fontSize: 32, lineHeight: 41, fontWeight: '900', letterSpacing: -0.8 },
   businessPoliciesCard: { marginTop: 18, width: '100%', minHeight: 78, paddingVertical: 11, paddingHorizontal: 22, borderRadius: 28, backgroundColor: '#DCEBFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 15 },
   businessPolicyText: { flexShrink: 1, alignItems: 'flex-start' },
   businessPolicyCount: { fontSize: 29, lineHeight: 33, fontWeight: '900', color: '#082D67' },
   businessPolicyLabel: { fontSize: 17, lineHeight: 22, fontWeight: '700', color: '#0B2E64', textAlign: 'left' },
-  businessPremiumCaption: { marginTop: 13, textAlign: 'center', fontSize: 14, lineHeight: 20, fontWeight: '700', color: '#476384' },
-  businessIllustrationWrap: { width: '100%', minHeight: 250, marginTop: 14, alignItems: 'center', justifyContent: 'center' },
-  businessGrowthScene: { width: '100%', height: 270, maxWidth: 360, alignItems: 'center', justifyContent: 'center' },
+  businessPremiumCaption: { marginTop: 8, textAlign: 'center', fontSize: 12, lineHeight: 18, fontWeight: '700', color: '#476384' },
+  businessIllustrationWrap: { width: '100%', minHeight: 235, marginTop: 3, alignItems: 'center', justifyContent: 'center' },
+  businessGrowthScene: { width: '100%', height: 245, maxWidth: 360, alignItems: 'center', justifyContent: 'center' },
   businessGrowthHalo: { position: 'absolute', top: 17, width: 275, height: 224, borderRadius: 155, backgroundColor: '#D6E7FF' },
   businessGrowthPlatform: { position: 'absolute', bottom: 6, width: 275, height: 24, borderRadius: 40, backgroundColor: '#C1DEFD', borderWidth: 2, borderColor: '#E7F4FF' },
   businessGrowthBars: { position: 'absolute', bottom: 25, flexDirection: 'row', alignItems: 'flex-end', gap: 8, left: '19%' },
@@ -670,7 +825,7 @@ const styles = StyleSheet.create({
   storyProgressFill: { height: '100%', backgroundColor: '#1979EF', borderRadius: 999 },
   storyProgressMeta: { marginTop: 7, flexDirection: 'row', justifyContent: 'space-between' },
   storyProgressText: { color: '#153D74', fontSize: 12, fontWeight: '800' },
-  illustrationWrap: { width: '100%', alignItems: 'center', justifyContent: 'center', minHeight: 230, marginTop: 6 },
+  illustrationWrap: { width: '100%', alignItems: 'center', justifyContent: 'center', minHeight: 220, marginTop: 6 },
   illustrationScene: { width: '100%', height: 245, alignItems: 'center', justifyContent: 'center' },
   vehicleScene: { width: '100%', height: 250, alignItems: 'center', justifyContent: 'center' },
   vehicleHalo: { position: 'absolute', width: 290, height: 205, borderRadius: 165, backgroundColor: '#D4E7FF', top: 19, opacity: 0.8 },
