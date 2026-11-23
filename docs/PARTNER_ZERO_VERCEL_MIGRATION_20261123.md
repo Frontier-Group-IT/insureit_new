@@ -46,6 +46,11 @@ The list above was checked against the Partner app's `lib/` files and screen-lev
 - `apps/partner-app/scripts/verify-supabase-edge-migration.mjs` is invoked by Phase 6 CI. It asserts user JWT verification, role checks, assigned reviewer filters, preserved duplicate protection, scoped source directory, no client Vercel dependency for the two completed services and explicit fail-closed unsupported actions.
 - Live Supabase function presence and `verify_jwt=true` confirmed, but a test authenticated user session is still necessary for full e2e behavioral equivalence. No production customer or policy write test has been performed.
 
+## Onboarding document read cutover
+- New Supabase JWT-protected `partner-onboarding-documents` Edge Function v1 (read-only list). It requires active verified employee identity and live review/finalization grants; intake must be in review and assigned to caller, and saved draft businessLine must match Life / Health / Non Motor. Life Operations downline remains fail-closed with 501 until equivalent scope is migrated.
+- Only document metadata `{type,fileName}` is returned; no storage paths, signed URLs, or modification operations. Mobile remains unchanged. Upload, signed URLs, deletes and replacement updates are separate outstanding transactions.
+- CI checks the document scope guards and verifies no upload/delete methods are present.
+
 ## Latest draft-save verification
 - Applied migration `20261123090812_partner_intake_draft_save_atomic.sql` (function `partner_app_save_intake_draft_atomic`) to live Supabase. `anon`/`authenticated` EXECUTE revoked; `service_role` only; `SECURITY INVOKER`.
 - Harmless service-role invalid-input SQL call returned `{ok:false,status:400}`; no intake or policy writes were executed.
