@@ -15,6 +15,16 @@ export function canPartnerAccess(
   return Boolean(context?.permissions && rank[context.permissions[capability] ?? 'none'] >= rank[minimum]);
 }
 
+/** Internal Studio is not a Partner/POSP/MISP feature. Match Operations
+ * developer policy operator; the Supabase RPC repeats these checks server-side. */
+export function canPartnerUseAiStudio(context: PartnerSessionContext | null | undefined) {
+  return context?.identity.actor_kind === 'employee'
+    && ['it_super_user', 'super_admin'].includes(context.identity.role)
+    && canPartnerAccess(context, 'manage_system', 'approve')
+    && canPartnerAccess(context, 'view_policy_intakes')
+    && canPartnerAccess(context, 'review_policy_intakes', 'edit');
+}
+
 /** Match the Operations Life/Health Case Register page guard, not general policy visibility. */
 export function canPartnerAccessCaseRegister(context: PartnerSessionContext | null | undefined) {
   if (context?.identity.actor_kind !== 'employee' || !canPartnerAccess(context, 'view_policies')) return false;
@@ -48,6 +58,7 @@ export function requiredPartnerRoutePermission(pathname: string): {
   if (/^\/customer-new(?:\/|$)/.test(pathnameNormalized)) return { capability: 'create_customers', minimum: 'edit' };
   if (/^\/claim\/(?:new|select-vehicle)(?:\/|$)/.test(pathnameNormalized)) return { capability: 'manage_claims', minimum: 'edit' };
   if (/^\/life-health-cases(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_policies', minimum: 'view' };
+  if (/^\/ai-policy-studio(?:\/|$)/.test(pathnameNormalized)) return { capability: 'manage_system', minimum: 'approve' };
   if (/^\/policy-intakes(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_policy_intakes', minimum: 'view' };
   if (/^\/customers?(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_customers', minimum: 'view' };
   if (/^\/policies(?:\/|$)|^\/policy(?:\/|$)|^\/renewals(?:\/|$)/.test(pathnameNormalized)) return { capability: 'view_policies', minimum: 'view' };
