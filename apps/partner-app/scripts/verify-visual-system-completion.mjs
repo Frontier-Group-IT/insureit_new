@@ -399,9 +399,8 @@ for (const [needle, rationale] of [
   ['style={styles.businessPremiumCaption}', 'Business metric label is available beneath the summary'],
   ['style={styles.businessIllustrationWrap}', 'Monthly growth artwork sits directly below figures'],
   ["if (kind === 'business')", 'Dedicated native business artwork is used'],
-  ['style={styles.businessGrowthBars}', 'Native growth bars remain responsive'],
-  ['style={styles.businessRupeeCoin}', 'Rupee illustration is present'],
-  ['style={styles.businessCashCoin}', 'Premium illustration is present'],
+  ["require('../assets/partner/status/business-growth.png')", 'Bundled 3D growth artwork replaces flat bars and coin mockups'],
+  ['style={styles.businessGrowth3dArtwork}', '3D business artwork scales responsively'],
   ['onTouchStart={(event) => event.stopPropagation()}', 'Business story summary link preserves route navigation without changing slides'],
   ['onTouchEnd={(event) => event.stopPropagation()}', 'Business story link tap does not advance the slide'],
 ]) requireText(stories, needle, 'Business Stories snapshot regression: ' + rationale);
@@ -426,11 +425,33 @@ for (const marker of [
   "story.metric !== undefined",
   "story.body.match(/([\\d,]+)\\s+customers?",
   "story.body.match(/([\\d,]+)\\s+claims?",
-  'style={styles.impactProtectionArtwork}',
+  'style={styles.impactGoldenShield}',
+  'style={styles.impactApprovedMedal}',
   'style={styles.journeyProgressTrack}',
   'style={styles.businessPremiumAmount}',
   "style={styles.learnStoryQuestion}",
 ]) requireText(stories, marker, 'Five Stories unified mockup parity: ' + marker);
+// Five-screen illustrated reference: reuse optimized bundled 3D art and
+// keep all user metrics sourced from the scoped story RPC, never example values.
+for (const [needle, purpose] of [
+  ["/renew|expir|premium due/i.test(story.title + ' ' + story.body)", 'Today distinguishes renewal from other types'],
+  ["'CLAIMS UPDATE'", 'Claims are never mislabeled as renewals'],
+  ["isRenewal ? 'RENEWAL REMINDER'", 'Renewal heading remains accurate'],
+  ["style={styles.todayDaysBadge}", 'Renewal days are highlighted'],
+  ["style={styles.impactGoldenShield}", 'Impact scene includes gold-edged insurance protection'],
+  ["style={styles.impactApprovedMedal}", 'Impact scene contains approval medal'],
+  ["style={styles.journeyMetricPanel}", 'Journey stats are outside a large white card'],
+  ["require('../assets/partner/status/journey-trophy-reference.png')", 'Journey uses 3D trophy badge'],
+  ["require('../assets/partner/status/business-growth.png')", 'Monthly premium uses bundled 3D blue chart'],
+  ["style={styles.businessGrowth3dArtwork}", '3D chart is sized for the illustration scene'],
+  ["style={styles.vehiclePlate}", 'Educational vehicle number plate remains prominent'],
+  ["style={styles.learningCar}", 'Educational car illustration remains on Learn'],
+  ["accessibilityActions={[{ name: 'decrement', label: 'Previous story' }, { name: 'increment', label: 'Next story' }]}", 'Existing tap/accessibility navigation is unchanged'],
+]) requireText(stories, needle, 'Five Story visual parity contract: ' + purpose);
+for (const forbidden of ['style={styles.businessGrowthBars}', 'style={styles.businessRupeeCoin}', 'style={styles.businessCashCoin}']) {
+  if (stories.includes(forbidden)) throw new Error('Legacy flat business chart still renders: ' + forbidden);
+}
+
 // Story 3 (My Journey) keeps its own milestone-focused composition and real scoped data.
 for (const [needle, rationale] of [
   ["story.kind === 'journey' ? (", 'Only the customer journey story uses its own layout'],
