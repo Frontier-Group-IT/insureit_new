@@ -18,9 +18,9 @@ assert.match(provider, /getPartnerProfilePhotoUrl\(nextContext\.identity\.auth_u
 assert.match(provider, /setAvatarUri\(null\)/, 'Clear avatar on logout');
 assert.match(profile, /refreshAvatar\(\)/, 'Partner upload must refresh shared avatar state');
 assert.match(profile, /<PartnerCasePageHeader title="Profile & registration"/, 'Keep the existing navy page header');
-assert.match(profile, /hero: \{[\s\S]*?marginHorizontal: 0,\s*marginTop: 12,\s*borderRadius: 24,/, 'Approved Profile banner should be inset and rounded');
-assert.match(profile, /profile-id-check-3d\.png/, 'Approved profile hero illustration must be retained');
-assert.match(profile, /<View style=\{styles\.heroTopRow\}>/, 'Photo and sign-out must stay in the upper row');
+assert.match(profile, /hero: \{[\s\S]*?backgroundColor: 'transparent'/, 'Profile identity must be unboxed on a transparent background');
+assert.match(profile, /profile-team-3d\.png/, 'Approved 3D team illustration must appear in the profile identity area');
+assert.match(profile, /<View style=\{styles\.heroTopRow\}>/, 'Photo, identity and accessible sign-out must remain in the hero');
 assert.match(profile, /<View style=\{styles\.heroBody\}>[\s\S]*?<Text style=\{styles\.name\}>/, 'Name must occupy a separate full-width block');
 assert.doesNotMatch(profile, /numberOfLines=\{1\} style=\{styles\.name\}/, 'Long names must wrap');
 assert.doesNotMatch(profile, /numberOfLines=\{1\} style=\{styles\.detailValue\}/, 'Full registration details must not truncate');
