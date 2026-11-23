@@ -347,7 +347,7 @@ for (const [fragment, reason] of [
   ['style={styles.illustrationWrap}', 'Large illustration sits underneath question'],
   ['style={styles.completedPill}', 'Completed learning status sits below illustration'],
   ['<StoryIllustration kind={story.kind} body={story.body} />', 'Artwork adapts to the current story type'],
-  ["if (kind === 'learn' && /vehicle number/i.test(body))", 'Vehicle-servicing story uses car and number plate'],
+  ["if (kind === 'learn') {", 'Every learning question keeps the approved 3D car and number-plate art'],
   ["require('../assets/partner/stories/learning-car.png')", 'Learning illustration uses the bundled 3D car-and-plate scene'],
   ["require('../assets/partner/stories/learning-car.png')", 'Learning story has its own 3D vehicle and example plate illustration'],
   ["onPress={openStory}", 'Story title retains navigation'],
