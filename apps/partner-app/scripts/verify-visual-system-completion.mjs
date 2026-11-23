@@ -460,7 +460,7 @@ for (const [needle, rationale] of [
   ['style={styles.businessPremiumAmount}', 'Premium is the main headline'],
   ['style={styles.businessPoliciesCard}', 'Policies are summarized separately'],
   ['style={styles.businessPremiumCaption}', 'Business metric label is available beneath the summary'],
-  ['style={styles.businessIllustrationWrap}', 'Monthly growth artwork sits directly below figures'],
+  ['style={[styles.businessIllustrationWrap, { minHeight: artworkHeight }]}', 'Monthly growth artwork sits directly below figures'],
   ["if (kind === 'business')", 'Dedicated native business artwork is used'],
   ["require('../assets/partner/stories/this-month.png')", 'New 3D financial artwork replaces flat bars and coin mockups'],
   ['style={[styles.businessGrowth3dArtwork, { height: artworkHeight }]}', '3D business artwork scales responsively'],
