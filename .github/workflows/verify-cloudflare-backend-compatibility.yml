@@ -42,7 +42,7 @@ jobs:
         run: |
           # Add to this runner's workspace manifest so the OpenNext config
           # resolves the adapter. No source or lockfile changes are committed.
-          npm pkg set --workspace @insureit/web-portal 'devDependencies.@opennextjs/cloudflare=1.20.18' 'devDependencies.wrangler=4.166.0'
+          npm pkg set --workspace @insureit/web-portal 'dependencies.next=15.5.29' 'devDependencies.eslint-config-next=15.5.29' 'devDependencies.@opennextjs/cloudflare=1.20.18' 'devDependencies.wrangler=4.166.0'
           npm install --no-audit --no-fund
       - name: Verify OpenNext Worker build without deploying
         run: npx --no-install opennextjs-cloudflare build
