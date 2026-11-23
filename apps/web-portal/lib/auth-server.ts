@@ -1,10 +1,16 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { accessTokenCookie, customerAccessTokenCookie } from "./auth-config";
+import { getVerifiedPartnerApiToken } from "./partner-ai-studio-api-context";
 import { createSupabaseWithAccessToken, getAuthenticatedProfile as getAuthenticatedProfileUncached, isAuthorizedProfile } from "./auth";
 import { getAuthenticatedProfileViaUser } from "./auth-cloudflare";
 
 export const getServerAccessToken = cache(async () => {
+  // The narrow native Partner route has already verified its bearer token.
+  // Prefer that request-scoped identity even if a browser cookie is present.
+  // Every other route retains its existing cookie-only session behavior.
+  const mobileToken=getVerifiedPartnerApiToken();
+  if(mobileToken)return mobileToken;
   const cookieStore = await cookies();
   return cookieStore.get(accessTokenCookie)?.value;
 });
