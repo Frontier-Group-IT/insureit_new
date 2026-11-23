@@ -101,3 +101,10 @@ The list above was checked against the Partner app's `lib/` files and screen-lev
 - This version **does not support** the complete Operations employee RM hierarchy and Life Operations Head downline. A legitimate user outside the supported paths may therefore receive 404. It must not replace the existing Partner App document call yet.
 - The new service is **committed only**, not deployed or connected to the mobile UI; no PDF records or production data were modified.
 - Added static security-contract assertions to `verify-supabase-edge-migration.mjs`; production release and OTA remain blocked until complete read-scope parity and authenticated role-specific tests.
+
+
+## Staged active reporting-chain PDF reads
+- The Policy Intake PDF Edge service now resolves active employee descendants and active profile IDs for `sales_manager`, `asm`, `zonal_head`, `sales_head`, `manager` and `director` via a bounded, fail-closed hierarchy traversal. This implements only the verified submitter portion of `reportingChainScope`, not the full RM/Partner scope.
+- The `relationship_manager` role is intentionally excluded from this new path because the canonical Operations `getEmployeeAccessScope` supports capability-specific scope overrides. Partner/Branch family attribution and Life Operations Head downline remain unmet.
+- Pure resolver unit tests cover active descendants, isolation from unrelated staff, stale employee edges, reporting cycles and malformed IDs. CI invokes the tests with Node type stripping.
+- No user data, booking, production database, Edge deployment, OTA, or mobile call path was changed. This PR must remain draft pending full permission parity and user-account UAT.
