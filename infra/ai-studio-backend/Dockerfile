@@ -9,7 +9,7 @@ ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 RUN test -n "$NEXT_PUBLIC_SUPABASE_URL" && test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" \
-    && npm ci --no-audit --no-fund \
+    && npm ci --include=dev --no-audit --no-fund \
     && npm run build --workspace apps/web-portal
 EXPOSE 3001
 CMD ["node","node_modules/next/dist/bin/next","start","apps/web-portal","-p","3001","-H","0.0.0.0"]
