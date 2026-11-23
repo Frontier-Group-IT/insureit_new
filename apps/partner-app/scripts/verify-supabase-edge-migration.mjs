@@ -63,13 +63,22 @@ assert.match(sources,/Life Operations source scope has not been migrated/, 'Life
 assert.match(sources,/eq\("account_status","active"\)/, 'Source listings only include active intermediaries');
 assert.match(sources,/Source directory temporarily unavailable/, 'Source outage must not be treated as denial');
 
-assert.match(onboardingDocs,/body.action!=="list"/,'Document service must reject all mutation actions');
+assert.match(onboardingDocs,/prepare_upload/,'Document service supports scoped one-time signed upload');
+assert.match(onboardingDocs,/finalize_upload/,'Document service confirms stored upload before registration');
+assert.match(onboardingDocs,/action==="delete"/,'Document service supports scoped deletion');
 assert.match(onboardingDocs,/grants.finalize_policy_intakes!=="approve"/,'Document service requires finalizer permission');
 assert.match(onboardingDocs,/assigned_to_profile_id!==userInfo.user.id/,'Document list must check assigned reviewer');
 assert.match(onboardingDocs,/draft.data.draft_payload\?\.businessLine!==line/,'Document list must enforce saved business line');
 assert.match(onboardingDocs,/Life Operations document scope is not migrated/,'Life Head downline must fail closed');
 assert.match(onboardingDocs,/\.select\("document_type,file_name"\)/,'Only document metadata can be returned');
-assert.doesNotMatch(onboardingDocs,/\.upload\(|\.remove\(|createSignedUrl/,'Document listing must never mutate or issue links');
+assert.match(onboardingDocs,/createSignedUploadUrl\(path,\{upsert:false\}\)/,'Document upload must use one-time non-overwriting token');
+assert.match(onboardingDocs,/stored.size!==size\|\|stored.contentType!==mime/,'Finalize must verify uploaded content');
+assert.match(onboardingDocs,/MAX_BYTES=4\*1024\*1024/,'Document file-size limit is enforced');
+assert.match(onboardingDocs,/eq\("assigned_to_profile_id",userInfo.user.id\)/,'Document mutations must require original reviewer');
+assert.match(mobileOnboarding,/action:'prepare_upload'/,'Mobile must prepare signed document uploads');
+assert.match(mobileOnboarding,/action:'finalize_upload'/,'Mobile must finalize checked Storage uploads');
+assert.match(mobileOnboarding,/action:'delete'/,'Mobile document removal must use Supabase Edge');
+
 assert.match(policyCopy,/partner_app_effective_permissions/,'Policy copy requires current grants');
 assert.match(policyCopy,/policy.created_by!==userInfo.user.id/,'Only original booking employee can attach the copy');
 assert.match(policyCopy,/policy.business_line!=="Motor"/,'Only standalone Motor policy copy is eligible');
