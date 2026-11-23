@@ -1115,33 +1115,39 @@ for (const item of ['Profile & registration', 'Support', 'Biometric re-entry', '
 for (const detail of ['INSUREIT Partner', 'Version', 'Runtime', 'Automatic on launch']) requireText(settings, detail, 'Compact app information must retain ' + detail);
 
 
+// Approved Profile & registration design: no blue hero card and exactly one 3D icon per detail row.
 for (const fragment of [
   'marginHorizontal: 0,',
-  'marginTop: 12,',
-  'borderRadius: 24,',
-  'minHeight: 124,',
+  'marginTop: 14,',
+  'minHeight: 212,',
+  'profile-team-3d.png',
   'sectionTitleRule: { flex: 1, height: 2',
   'details: { gap: 11, paddingBottom: 18 }',
-  'minHeight: 98,',
+  'minHeight: 88,',
   'detailVerticalRule:',
   'detailArtworkLeft:',
-  'detailArtworkRight:',
   'registrationIcons: Record<string, ImageSourcePropType>',
-  'registrationSideIcons: Record<string, ImageSourcePropType>',
-  "profile-id-check-3d.png",
   "registration-3d.png",
   "employee-id-3d.png",
   "designation-bag-3d.png",
   "role-team-3d.png",
-  "employee-id-detail-3d.png",
-  "designation-briefcase-detail-3d.png",
-  "role-shield-detail-3d.png",
   'onPress={() => void changeProfilePhoto()}',
   'value={identity.employee_code}',
   'value={identity.designation',
   'value={humanize(identity.role)}',
   '<PartnerCaseBottomNavigation activeTab="More" />',
-]) requireText(profile, fragment, 'Refreshed Profile layout must retain registration details and key actions: ' + fragment);
+]) requireText(profile, fragment, 'Profile 3D redesign must retain: ' + fragment);
+for (const forbidden of [
+  'registrationSideIcons', 'detailArtworkRight', 'detailGlow:',
+  "profile-id-check-3d.png", "backgroundColor: '#1047B9'",
+]) {
+  if (profile.includes(forbidden)) throw new Error('Profile must not restore duplicate icons or the old blue card: ' + forbidden);
+}
+requireText(profile, 'style={styles.heroArtwork}', '3D team hero artwork must remain visible.');
+const profileTeamImage = fs.readFileSync(path.join(root, 'assets/partner/profile/profile-team-3d.png'));
+if (profileTeamImage.byteLength < 10000 || !profileTeamImage.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) {
+  throw new Error('Transparent 3D team asset missing or invalid PNG');
+}
 requireText(profile, 'name="log-out-outline"', 'Profile hero must expose the logout icon.');
 requireText(profile, 'onPress={() => setLogoutOpen(true)}', 'Profile hero logout icon must open confirmation instead of signing out immediately.');
 requireText(profile, '<PartnerConfirmDialog', 'Profile logout must use the shared confirmation dialog.');
