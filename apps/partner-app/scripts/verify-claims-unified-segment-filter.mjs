@@ -14,4 +14,14 @@ const phrases=[
   ["<HighlightedAddClaimButton onPress={() => router.push('/claim/select-vehicle' as never)} active={isFocused} />", 'existing Add Claim action'],
 ];
 for(const [fragment,label] of phrases) assert.ok(source.includes(fragment),label);
-console.log('Claims unified segmented filters, navy-outline selection, counts and Add Claim action verified');
+const emptyStateChecks = [
+  ["const illustrationScale = Math.min(0.88, Math.max(0.68, (width - 48) / 340));", 'compact responsive empty illustration'],
+  ["emptyWrapFull: { flexGrow: 1, justifyContent: 'flex-start', paddingTop: 24, paddingBottom: 10 }", 'empty state sits closer to filters'],
+  ["claimsEmptyTitle: { marginTop: 2, color: '#092653'", 'strong navy empty title'],
+  ["claimsEmptyMessage: { marginTop: 7, maxWidth: 290, color: '#425673'", 'high-contrast empty description'],
+  ["claimsEmptyHalo: { position: 'absolute', top: 15, width: 210, height: 174, borderRadius: 100, backgroundColor: '#DCEAFF' }", 'clear but isolated empty artwork'],
+  ["summaryAddClaimMotion:", 'Add Claim button remains present'],
+];
+for (const [fragment, label] of emptyStateChecks) assert.ok(source.includes(fragment), label);
+assert.ok(source.includes("source={PartnerAssets.actions.impactBlue3dCar}"), 'Keep original 3D car artwork');
+console.log('Claims filters, actions, and compact higher-contrast empty presentation verified');
