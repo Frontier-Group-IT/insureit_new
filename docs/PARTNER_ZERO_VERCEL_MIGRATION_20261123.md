@@ -94,7 +94,8 @@ The list above was checked against the Partner app's `lib/` files and screen-lev
 
 
 ## Policy Intake PDF service — staged read-only slice (2026-11-23)
-- Added `supabase/functions/partner-intake-document/index.ts`: verified JWT, canonical identity/scope, employee effective-permission and active-profile checks; exact submitter ownership; five-minute private Storage signed URL.
-- This version **does not support** the broader Operations employee RM hierarchy, organization-wide reviewer visibility, Operations Head downline, or intermediary lead-source read visibility. A legitimate non-submitter may therefore receive 404. It must not replace the existing Partner App document call yet.
+- Added `supabase/functions/partner-intake-document/index.ts`: verified JWT, canonical identity/scope, employee effective-permission and active-profile checks; exact submitter ownership and explicit assigned in-review employee reviewer access; five-minute private Storage signed URL.
+- The assigned-reviewer path requires current `review_policy_intakes` edit/approve or `finalize_policy_intakes` approve permission, exact reviewer profile ID, and `status=in_review`. Other employees and intermediary users remain submitter-scoped.
+- This version **does not support** the broader Operations employee RM hierarchy, organization-wide reviewer visibility, Operations Head downline, or intermediary lead-source read visibility. A legitimate non-submitter outside the assigned-reviewer path may therefore receive 404. It must not replace the existing Partner App document call yet.
 - The new service is **committed only**, not deployed or connected to the mobile UI; no PDF records or production data were modified.
 - Added static security-contract assertions to `verify-supabase-edge-migration.mjs`; production release and OTA remain blocked until complete read-scope parity and authenticated role-specific tests.
