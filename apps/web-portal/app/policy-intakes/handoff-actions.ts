@@ -12,6 +12,7 @@ import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
 import { mapVerifiedN8nMotorPremium, mapVerifiedIffcoCommercialPremium, mapVerifiedNiaCommercialPremium } from "@/lib/policy-n8n-onboarding-premium";
+import { assessProductVariantDirectConversion, mapVerifiedProductVariantPremium, PRODUCT_VARIANT_PARSERS } from "@/lib/policy-product-variant-direct-eligibility";
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
 import { assessNiaNamedAuthorityUnregisteredConversion, assessStandardCommercialDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
 import { policyDateDecision } from "@/lib/policy-date-rule";
@@ -151,8 +152,14 @@ export async function prepareVerifiedN8nIntakeHandoff(
       warnings:parsed.preview.warnings,fields:parsed.preview.fields,
       commercialPremium:commercial,
     }).eligible);
+  const productVariantVerifiedFill=Boolean(commercial)&&fillEmptyFields
+    &&assessProductVariantDirectConversion({
+      parserId:parsed.preview.parserId,checksPassed:parsed.preview.checksPassed,
+      warnings:parsed.preview.warnings,fields:parsed.preview.fields,
+      commercialPremium:commercial,
+    }).eligible;
   if (commercial && !replaceExistingDraft && !goDigitVerifiedFill
-      && !iffcoVerifiedFill && !standardCommercialVerifiedFill) {
+      && !iffcoVerifiedFill && !standardCommercialVerifiedFill && !productVariantVerifiedFill) {
     return {ok:false,error:"This commercial PDF is not eligible for direct verified handoff; check its insurer-specific evidence before booking."};
   }
   if (!commercial && !parsed.preview.premium) {
@@ -175,12 +182,12 @@ export async function prepareVerifiedN8nIntakeHandoff(
   // set and its printed OD + TP = net, net + GST = gross contract.
   // Never attempt to pass its commercial totals through ICICI/Tata rules.
   const commercialChecksOk=Boolean(commercial)
-    && ["go_digit_cv_native_pdf","iffco_tokio_cv_native_pdf","new_india_cv_native_pdf",
+    && (["go_digit_cv_native_pdf","iffco_tokio_cv_native_pdf","new_india_cv_native_pdf",
         "united_india_gcv_native_pdf","oriental_gccv_native_pdf"].includes(parsed.preview.parserId)
-    && parsed.preview.checksPassed >= (parsed.preview.parserId==="new_india_cv_native_pdf" ? 16
-      : parsed.preview.parserId==="oriental_gccv_native_pdf" ? 17 : 18)
+       || PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId))
+    && parsed.preview.checksPassed === (trainedN8nParserProfile(parsed.preview.parserId)?.checks ?? 0)
     && Math.abs((commercial!.od+commercial!.tp)-commercial!.net)<0.07
-    && Math.abs((commercial!.net+commercial!.gst)-commercial!.gross)<0.07;
+    && Math.abs((commercial!.net+commercial!.gst)-commercial!.gross)<(PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId)?0.51:0.07);
   const acceptableCommercialWarning=(value:string)=>
     parsed.preview.parserId==="new_india_cv_native_pdf"
     && value.startsWith("Policy prints only an RTO prefix.");
@@ -448,6 +455,8 @@ async function preparePolicyIntakeHandoffInternal(
       ?mapVerifiedIffcoCommercialPremium(verified.commercialPremium!,iffcoCpa)
       :niaCertified
       ?mapVerifiedNiaCommercialPremium(verified!.commercialPremium!,niaCpa)
+      :verified?.commercialPremium&&PRODUCT_VARIANT_PARSERS.has(verified.parserId)
+      ?mapVerifiedProductVariantPremium(verified.commercialPremium,verified.parserId)
       :verified?.commercialPremium
       ? {od:String(verified.commercialPremium.od),tp:String(verified.commercialPremium.tp),
          addOnPremium:"0",cpa:"0",cpaOpted:"No"}
