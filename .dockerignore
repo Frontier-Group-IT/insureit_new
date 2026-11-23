@@ -1,0 +1,14 @@
+# Prevent local credentials, build products and source control from entering
+# the Windows-hosted AI Studio backend build context.
+.git
+**/node_modules
+**/.next
+**/.expo
+**/.vercel
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/*.p12
+**/*.key
+**/.DS_Store
