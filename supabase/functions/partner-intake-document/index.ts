@@ -4,6 +4,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.0";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// Synced to web's hierarchyIntakeRoles: these roles never gain organization-wide
+// Intake PDF visibility merely from having a review capability.
+const hierarchyIntakeRoles = new Set(["relationship_manager","sales_manager","asm","zonal_head","sales_head","manager","director"]);
 const json = (body: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(body), { status,
     headers: { "Content-Type": "application/json", "Cache-Control": "private, no-store" } });
@@ -44,15 +47,16 @@ Deno.serve(async (request: Request) => {
   const admin = createClient(url, secret, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  // This staged endpoint supports submitters, authorized intermediary
-  // lead-source scope, and active assigned in-review employee reviewers.
-  // Wider employee organization, RM hierarchy and Operations Head visibility
-  // remain intentionally unsupported until canonical read-scope parity is proven
+  // This staged endpoint supports verified organization viewers as well as
+  // submitter, intermediary source and assigned in-review reviewer paths.
+  // RM hierarchy and Operations Head downline remain intentionally unsupported
+  // until canonical read-scope parity is proven
   // BEFORE this replaces the mobile API.
   // Never infer global read access from a capability or client-provided ID.
   let ownerField: "submitted_by_profile_id" | "submitted_by_portal_account_id";
   let ownerId: string | null = null;
   let canReadAssignedReview = false;
+  let canReadOrganization = false;
   let sourceIds: string[] = [];
   if (identity.actor_kind === "employee") {
     const { data: grants, error: grantsError } = await scoped.rpc("partner_app_effective_permissions");
@@ -65,7 +69,7 @@ Deno.serve(async (request: Request) => {
     if (identity.profile_id !== user.user.id)
       return json({ ok: false, error: "Account identity unavailable." }, 403);
     const { data: profile, error: profileError } = await admin.from("profiles")
-      .select("id,is_active").eq("id", identity.profile_id).maybeSingle();
+      .select("id,role,is_active").eq("id", identity.profile_id).maybeSingle();
     if (profileError) return json({ ok: false, error: "Employee profile temporarily unavailable." }, 503);
     if (!profile || profile.is_active !== true)
       return json({ ok: false, error: "Employee account unavailable." }, 403);
@@ -73,6 +77,15 @@ Deno.serve(async (request: Request) => {
     ownerId = identity.profile_id;
     canReadAssignedReview = ["edit", "approve"].includes(capabilities.review_policy_intakes) ||
       capabilities.finalize_policy_intakes === "approve";
+    // Canonical website policy: an active super_admin is organization-scoped
+    // after effective view authorization. Other non-hierarchy reviewers need
+    // explicit edit permission; approve-only does not imply organization read.
+    // Life Operations Heads and RM hierarchy roles keep their narrower scope.
+    const constrainedRole = profile.role === "operations_head_life" ||
+      hierarchyIntakeRoles.has(profile.role ?? "");
+    canReadOrganization = !constrainedRole &&
+      (profile.role === "super_admin" ||
+       ["edit", "approve"].includes(capabilities.review_policy_intakes));
   } else {
     // Match the canonical website document route: ordinary intermediary
     // accounts see their own lead source, while branch/group accounts use
@@ -109,10 +122,12 @@ Deno.serve(async (request: Request) => {
   if (identity.actor_kind === "intermediary" && sourceIds.length) {
     predicates.push(`lead_source_id.in.(${sourceIds.join(",")})`);
   }
-  if (!predicates.length) return json({ ok: false, error: "Partner access unavailable." }, 403);
+  if (!canReadOrganization && !predicates.length)
+    return json({ ok: false, error: "Partner access unavailable." }, 403);
   let intakeQuery = admin.from("policy_intake_requests")
-    .select("storage_bucket,storage_path").eq("id", input.id)
-    .or(predicates.join(","));
+    .select("storage_bucket,storage_path").eq("id", input.id);
+  // Organization access is explicit, never produced by a client-provided filter.
+  if (!canReadOrganization) intakeQuery = intakeQuery.or(predicates.join(","));
   const { data: intake, error: intakeError } = await intakeQuery.maybeSingle();
   if (intakeError) return json({ ok: false, error: "Policy document lookup unavailable." }, 503);
   if (!intake) return json({ ok: false, error: "Policy Intake not available to this account." }, 404);
