@@ -14,7 +14,7 @@ function verifiedBackendOrigin():string {
   let url:URL;
   try{url=new URL(configuredBase);}catch{throw new Error('Invalid secure Studio service address.');}
   if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash||url.pathname!=='/'
-    ||!(url.hostname.endsWith('.workers.dev')||url.hostname==='api.insureit.in')){
+    ||!(url.hostname==='studio.nishant.uk'||url.hostname==='api.insureit.in'||url.hostname.endsWith('.workers.dev'))){
     throw new Error('The Studio service has not been configured with a trusted HTTPS origin.');
   }
   return url.origin;
