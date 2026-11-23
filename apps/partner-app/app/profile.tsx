@@ -133,18 +133,6 @@ export default function ProfileScreen() {
             style={styles.heroArtwork}
             accessible={false}
           />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Sign out"
-            disabled={signingOut}
-            onPress={() => setLogoutOpen(true)}
-            style={({ pressed }) => [
-              styles.heroProfileIcon,
-              (pressed || signingOut) && styles.heroProfileIconPressed,
-            ]}
-          >
-            <Ionicons name="log-out-outline" size={21} color="#174A96" />
-          </Pressable>
         </View>
       </View>
 
@@ -223,6 +211,20 @@ export default function ProfileScreen() {
           <PartnerBanner tone="danger" message={logoutError} />
         </View>
       ) : null}
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Sign out"
+        disabled={signingOut}
+        onPress={() => setLogoutOpen(true)}
+        style={({ pressed }) => [
+          styles.logoutButton,
+          (pressed || signingOut) && styles.logoutButtonPressed,
+        ]}
+      >
+        <Ionicons name="log-out-outline" size={20} color="#C43D4B" />
+        <Text style={styles.logoutButtonText}>Logout</Text>
+      </Pressable>
 
       <PartnerConfirmDialog
         visible={logoutOpen}
@@ -348,34 +350,34 @@ const styles = StyleSheet.create({
   },
   // No colored hero card: profile is part of the page canvas.
   hero: {
-    marginTop: 10,
+    marginTop: 3,
     marginHorizontal: 0,
     paddingHorizontal: 4,
-    paddingVertical: 8,
+    paddingVertical: 3,
   },
   heroTopRow: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    minHeight: 104,
+    gap: 8,
+    minHeight: 82,
   },
   heroArtwork: {
     flexShrink: 0,
-    width: 76,
-    height: 90,
+    width: 65,
+    height: 75,
   },
   avatarStage: {
-    width: 58,
-    height: 58,
+    width: 76,
+    height: 76,
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarShell: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -394,8 +396,8 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: '#153E83',
-    fontSize: 18,
-    lineHeight: 22,
+    fontSize: 21,
+    lineHeight: 26,
     fontWeight: '800',
   },
   avatarCamera: {
@@ -448,25 +450,12 @@ const styles = StyleSheet.create({
     lineHeight: 12,
     fontWeight: '600',
   },
-  heroProfileIcon: {
-    flexShrink: 0,
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#E7EFFC',
-  },
-  heroProfileIconPressed: {
-    opacity: 0.68,
-  },
-
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, marginBottom: 14, paddingLeft: 3 },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8, marginBottom: 12, paddingLeft: 3 },
   sectionTitleIcon: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   registrationTitleArtwork: { width: 34, height: 34 },
   sectionTitle: { color: '#111A35', fontSize: 17, lineHeight: 23, fontWeight: '800' },
   sectionTitleRule: { flex: 1, height: 2, backgroundColor: '#8D50D9', marginLeft: 5 },
-  details: { gap: 11, paddingBottom: 18 },
+  details: { gap: 11, paddingBottom: 5 },
   detailRow: {
     minHeight: 88,
     flexDirection: 'row',
@@ -490,8 +479,27 @@ const styles = StyleSheet.create({
   detailLabel: { color: '#5A6683', fontSize: 11.5, lineHeight: 15, fontWeight: '600' },
   detailValue: { color: '#101833', fontSize: 13.5, lineHeight: 17, fontWeight: '800' },
   logoutFeedback: {
-    marginTop: 12,
+    marginTop: 10,
   },
-
-
+  logoutButton: {
+    minHeight: 48,
+    marginTop: 10,
+    marginBottom: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F0CFD4',
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  logoutButtonPressed: {
+    opacity: 0.7,
+  },
+  logoutButtonText: {
+    color: '#B83B49',
+    fontSize: 15,
+    fontWeight: '700',
+  },
 });
