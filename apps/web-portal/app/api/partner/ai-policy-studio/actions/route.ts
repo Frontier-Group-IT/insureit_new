@@ -18,14 +18,22 @@ function respond(data:Record<string,unknown>,status=200){
 }
 
 /**
- * This handler is meant to serve from the separately verified Cloudflare
- * OpenNext deployment, NOT from a device or a paused Vercel host.
+ * This handler is served by the dedicated, path-restricted Windows backend
+ * published through the Cloudflare Tunnel, NOT the paused Vercel frontend.
  * It reuses the exact existing canonical website actions and booking engine.
  *
  * No caller may supply editable OCR fields, draft JSON, storage paths,
  * arbitrary n8n URLs, customer decisions or a policy payload.
  */
 export async function POST(request:NextRequest){
+  // Keep this route inert on Vercel and every other web runtime by default.
+  // The separately hosted Studio backend must opt in explicitly.
+  if(process.env.INSUREIT_AI_STUDIO_BACKEND_ENABLED!=="true")
+    return respond({ok:false,error:"service_not_enabled"},503);
+  // The reverse proxy forwards the dedicated hostname; disallow arbitrary Host
+  // headers so internal web routes are not accidentally used as a public API.
+  if(request.headers.get("host")!=="studio.nishant.uk")
+    return respond({ok:false,error:"invalid_service_host"},403);
   const bearer=request.headers.get("authorization")??"";
   const jwt=/^Bearer ([A-Za-z0-9._-]{100,8192})$/.exec(bearer)?.[1];
   if(!jwt)return respond({ok:false,error:"not_authenticated"},401);
