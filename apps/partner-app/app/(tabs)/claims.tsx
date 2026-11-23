@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -332,9 +333,9 @@ export default function ClaimsScreen() {
           </View>
         )}
         ListHeaderComponent={header}
-        ListEmptyComponent={<View style={styles.emptyWrap}>{empty}</View>}
+        ListEmptyComponent={<View style={[styles.emptyWrap, !collection.loading && !collection.error && styles.emptyWrapFull]}>{empty}</View>}
         ListFooterComponent={footer}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, !rows.length && !collection.loading && !collection.error && styles.emptyContent]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         refreshing={collection.refreshing || summary.refreshing}
@@ -355,6 +356,8 @@ export default function ClaimsScreen() {
 
 /** Claims-only empty presentation: preserves the shared loading/error states and claim filters. */
 function ClaimsEmptyState({ filtered, settled }: { filtered: boolean; settled: boolean }) {
+  const { width } = useWindowDimensions();
+  const illustrationScale = Math.min(1.24, Math.max(0.82, (width - 48) / 270));
   const title = filtered
     ? 'A little quieter here'
     : settled
@@ -366,7 +369,8 @@ function ClaimsEmptyState({ filtered, settled }: { filtered: boolean; settled: b
 
   return (
     <View style={styles.claimsEmptyCard} accessibilityLiveRegion="polite">
-      <View style={styles.claimsEmptyIllustration} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none">
+      <View style={{ width: 270 * illustrationScale, height: 205 * illustrationScale, alignItems: 'center', justifyContent: 'center' }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none">
+      <View style={[styles.claimsEmptyIllustration, { transform: [{ scale: illustrationScale }] }]}>
         <View style={styles.claimsEmptyHalo} />
         <View style={styles.claimsEmptyLeafLeft} />
         <View style={styles.claimsEmptyLeafRight} />
@@ -397,6 +401,7 @@ function ClaimsEmptyState({ filtered, settled }: { filtered: boolean; settled: b
         <View style={styles.claimsEmptySparkOne} />
         <View style={styles.claimsEmptySparkTwo} />
         <View style={styles.claimsEmptySparkThree} />
+      </View>
       </View>
       <Text style={styles.claimsEmptyTitle}>{title}</Text>
       <Text style={styles.claimsEmptyMessage}>{message}</Text>
@@ -738,17 +743,12 @@ const styles = StyleSheet.create({
   loadingMoreText: { color: '#66789B', fontSize: 7.5, lineHeight: 10 },
   endText: { minHeight: 26, paddingTop: 6, color: '#7D8BA1', textAlign: 'center', fontSize: 7, lineHeight: 9 },
   claimsEmptyCard: {
-    minHeight: 340,
     width: '100%',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#D8E2F0',
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 14,
-    paddingTop: 24,
-    paddingBottom: 28,
+    paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
   },
   claimsEmptyIllustration: { width: 270, maxWidth: '100%', height: 205, position: 'relative', alignItems: 'center', justifyContent: 'center' },
   claimsEmptyHalo: { position: 'absolute', top: 15, width: 210, height: 174, borderRadius: 100, backgroundColor: '#E8F2FF' },
@@ -774,5 +774,7 @@ const styles = StyleSheet.create({
   claimsEmptySparkThree: { position: 'absolute', right: 8, top: 47, width: 4, height: 14, borderRadius: 3, backgroundColor: '#1764CE', transform: [{ rotate: '79deg' }] },
   claimsEmptyTitle: { marginTop: 4, color: '#0A2D63', fontSize: 20, lineHeight: 27, fontWeight: '800', textAlign: 'center' },
   claimsEmptyMessage: { marginTop: 9, maxWidth: 290, color: '#65748C', fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  emptyContent: { flexGrow: 1 },
   emptyWrap: { flex: 1, paddingHorizontal: 10, paddingTop: 14, backgroundColor: '#FFFFFF' },
+  emptyWrapFull: { flexGrow: 1, justifyContent: 'center', paddingTop: 0, paddingBottom: 10 },
 });
