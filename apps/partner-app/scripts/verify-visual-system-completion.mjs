@@ -1355,7 +1355,7 @@ for(const phrase of ["filterButton: {","minWidth: 68","borderLeftWidth: StyleShe
 requireText(policies,'accessibilityLabel="Filter policies"','Inline Filter must have a useful accessible action label.');
 requireText(policies,'accessibilityHint="Opens the same filters as Sort by"','Inline Filter must describe its shared filter sheet.');
 requireText(policies,'style={({ pressed }) => [styles.filterButton, pressed && styles.summaryChipPressed]}','Inline Filter must be tappable with press feedback.');
-if ((policies.match(/onPress=\\{openSortSheet\\}/g) || []).length !== 2) {
+if ((policies.split('onPress={openSortSheet}').length - 1) !== 2) {
   throw new Error('Both search-row Filter and floating Sort must open the same filter popup.');
 }
 requireText(policies,'accessibilityLabel="Sort and filter policies"','Bottom-center Sort must be accessible.');
