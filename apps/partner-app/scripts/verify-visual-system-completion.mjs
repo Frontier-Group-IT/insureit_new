@@ -464,9 +464,8 @@ for (const [needle, purpose] of [
   ["require('../assets/partner/stories/claims.png')", 'Today claims use a new glossy blue 3D illustration'],
   ["isClaim ? 'shield-checkmark' : 'sunny-outline'", 'Claims use a relevant header icon'],
   ["isClaim ? 'medkit-outline' : 'calendar-outline'", 'Claims summary icon is no longer an unrelated calendar'],
-  ["/motor|vehicle|third.party|accident|liability|driver|road|insurance cover|own.damage/i.test(body)", 'Motor learning subjects select relevant 3D artwork'],
-  ["motorLesson", 'Motor learning selection does not fall back to the flat document scene'],
-  ["kind === 'learn' && /vehicle number/i.test(body)", 'Vehicle-number lessons retain their specific number-plate art'],
+  ["if (kind === 'learn') {", 'Every lesson, including Motor Basics, uses the 3D artwork'],
+  ["require('../assets/partner/stories/learning-car.png')", 'Learn topics consistently show the approved glossy 3D car and sample number-plate scene'],
 ]) requireText(stories, needle, 'Contextual Stories artwork contract: ' + purpose);
 for (const oldFallback of ["require('../assets/partner/status/claim-attention.png')", "if (kind === 'learn') {\\n    return (\\n      <View style={styles.illustrationScene}>"]) {
   if (stories.includes(oldFallback)) throw new Error('Old contextual Story fallback must remain removed: ' + oldFallback);
