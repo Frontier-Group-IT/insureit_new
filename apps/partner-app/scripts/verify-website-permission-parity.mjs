@@ -49,6 +49,9 @@ assert.match(sessionProvider, /permissions: \{\}/, 'Failed refresh must not keep
 assert.match(sessionProvider, /clearPartnerQueryCache\(activeScopeKey\.current\)/, 'Revoked access must clear stale local data cache');
 assert.match(guard, /rank\[context\.permissions\[capability\] \?\? 'none'\]/, 'Unknown permission must deny');
 assert.match(guard, /requirePartnerWritePermission/, 'Mobile writes recheck live grants');
+assert.match(guard, /supabase\.rpc\('partner_app_effective_permissions'\)/,'Mobile writes resolve live permissions directly through Supabase');
+assert.doesNotMatch(guard, /portal\.insureit\.in|EXPO_PUBLIC_PORTAL_URL|\/api\/partner\/effective-permissions/,'Write permission check must not depend on suspended Vercel');
+assert.match(guard, /!Object\.values\(capabilities\)\.every/,'Malformed permission maps must fail closed');
 assert.match(layout, /requiredPartnerRoutePermission\(pathname\)/, 'Deep links must check permission');
 assert.match(layout, /<Redirect href="\/access-denied"\s*\/>/, 'Direct route must deny');
 assert.match(tabs, /href: canPartnerAccess\(context, "view_policies"\) \? undefined : null/, 'Hide policies tab without view');
