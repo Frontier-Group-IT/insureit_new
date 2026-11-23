@@ -9,6 +9,14 @@ const organizationWideRoles: AppRole[] = [
 ];
 const hierarchyRoles: AppRole[] = ["sales_head", "zonal_head", "asm", "sales_manager"];
 
+// Explicit company-direct business exception for Operations Head - Life only.
+// Keep this separate from dynamic RM downline ownership and other roles.
+const LIFE_HEAD_DIRECT_PARTNER = {
+  id: "d183747f-eeab-483b-adc6-b5c1b5868ccc",
+  applicationId: "e5988aee-0bf7-4528-ad20-79e61359d8ee",
+  code: "PT00071",
+} as const;
+
 type EmployeeLink = { id: string; reporting_manager_id: string | null };
 type ProfileLink = { id: string; employee_id: string | null };
 type ApplicationLink = { id?: string; application_id: string };
@@ -225,6 +233,14 @@ export async function getAccessibleIntermediaryApplicationIds(profileId: string,
     if (linkedError) return [];
     for (const intermediary of linked ?? []) if (intermediary.application_id) applicationIds.add(intermediary.application_id);
   }
+  if (role === "operations_head_life" && capability === "view_intermediaries") {
+    const { data: directPartner, error: directError } = await admin.from("intermediaries")
+      .select("id").eq("id", LIFE_HEAD_DIRECT_PARTNER.id)
+      .eq("application_id", LIFE_HEAD_DIRECT_PARTNER.applicationId)
+      .eq("intermediary_code", LIFE_HEAD_DIRECT_PARTNER.code)
+      .maybeSingle<{ id: string }>();
+    if (!directError && directPartner) applicationIds.add(LIFE_HEAD_DIRECT_PARTNER.applicationId);
+  }
   return Array.from(applicationIds);
 }
 
@@ -284,6 +300,15 @@ export async function getAccessibleIntermediaryIds(profileId: string, role: stri
     for (const row of applicationIntermediaries ?? []) if (row.id) intermediaryIds.add(row.id);
   }
 
+  if (role === "operations_head_life" && capability === "view_intermediaries") {
+    // No general partner-name matching: authorize only the confirmed master ID/code.
+    const { data: directPartner, error: directError } = await admin.from("intermediaries")
+      .select("id").eq("id", LIFE_HEAD_DIRECT_PARTNER.id)
+      .eq("intermediary_code", LIFE_HEAD_DIRECT_PARTNER.code)
+      .eq("application_id", LIFE_HEAD_DIRECT_PARTNER.applicationId)
+      .maybeSingle<{ id: string }>();
+    if (!directError && directPartner) intermediaryIds.add(directPartner.id);
+  }
   return Array.from(intermediaryIds);
 }
 
