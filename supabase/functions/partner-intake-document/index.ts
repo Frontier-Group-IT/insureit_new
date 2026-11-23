@@ -3,6 +3,7 @@
 // and authenticated role-based UAT are complete. No unsigned/public Storage URLs.
 import { createClient } from "npm:@supabase/supabase-js@2.57.0";
 import { resolveActiveReportingProfiles } from "./intake-reporting-chain.ts";
+import { partnerFamilyPredicates } from "./intake-partner-family.ts";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 // Synced to web's hierarchyIntakeRoles: these roles never gain organization-wide
@@ -23,6 +24,20 @@ async function activePages(admin: any, table: "employees" | "profiles", columns:
     if (data.length < pageSize) return rows;
   }
   throw new Error("Reporting-chain exceeds verified page limit");
+}
+
+// Complete bounded table reads. No partial result is ever treated as an
+// authoritative Partner family scope. Query builders are server-generated.
+async function verifiedRows(makeQuery: (from: number, to: number) => any) {
+  const rows: Record<string, any>[] = [];
+  const size = 500;
+  for (let from = 0; from <= 10000; from += size) {
+    const { data, error } = await makeQuery(from, from + size - 1);
+    if (error || !Array.isArray(data)) throw new Error("Partner family lookup unavailable");
+    rows.push(...data);
+    if (data.length < size) return rows;
+  }
+  throw new Error("Partner family lookup exceeds safe page limit");
 }
 
 const json = (body: Record<string, unknown>, status = 200) =>
@@ -76,6 +91,7 @@ Deno.serve(async (request: Request) => {
   let canReadAssignedReview = false;
   let canReadOrganization = false;
   let hierarchySubmitterIds: string[] = [];
+  let hierarchyFamilyPredicates: string[] = [];
   let sourceIds: string[] = [];
   if (identity.actor_kind === "employee") {
     const { data: grants, error: grantsError } = await scoped.rpc("partner_app_effective_permissions");
@@ -124,6 +140,52 @@ Deno.serve(async (request: Request) => {
             profiles as Array<{ id: string; employee_id: string | null }>,
           );
           hierarchySubmitterIds = resolved.profileIds;
+          // Canonical rm-policy-intake-scope: descendants' onboarding
+          // applications -> parent Partners -> branches -> verified linked
+          // login profiles/intermediaries/portal accounts. Never infer this
+          // access from a name, customer record, or client-supplied code.
+          if (resolved.employeeIds.length) {
+            const onboarding = await verifiedRows((from,to) =>
+              admin.from("posp_misp_onboarding_profiles")
+                .select("application_id")
+                .in("associate_employee_id", resolved.employeeIds)
+                .order("application_id", { ascending: true }).range(from,to));
+            const applications = [...new Set(onboarding.map(x=>x.application_id).filter(Boolean))];
+            if (applications.length) {
+              const parents = await verifiedRows((from,to) =>
+                admin.from("partners").select("id,partner_code")
+                  .in("source_application_id", applications)
+                  .is("parent_partner_id", null)
+                  .order("id", { ascending: true }).range(from,to));
+              if (parents.length) {
+                const branches = await verifiedRows((from,to) =>
+                  admin.from("partners").select("id,partner_code")
+                    .in("parent_partner_id", parents.map(x=>x.id))
+                    .order("id", { ascending: true }).range(from,to));
+                const family = [...parents,...branches];
+                const familyCodes = [...new Set(family.map(x=>x.partner_code?.trim()).filter(Boolean))];
+                const identities = await verifiedRows((from,to) =>
+                  admin.from("portal_access_identities").select("profile_id")
+                    .in("entity_id", family.map(x=>x.id))
+                    .in("entity_type", ["partner","branch"])
+                    .order("profile_id", { ascending: true }).range(from,to));
+                const intermediaries = familyCodes.length
+                  ? await verifiedRows((from,to) =>
+                    admin.from("intermediaries").select("id")
+                      .in("intermediary_code",familyCodes)
+                      .order("id", { ascending: true }).range(from,to))
+                  : [];
+                const accounts = intermediaries.length
+                  ? await verifiedRows((from,to) =>
+                    admin.from("intermediary_portal_accounts").select("id")
+                      .in("intermediary_id", intermediaries.map(x=>x.id))
+                      .order("id", { ascending: true }).range(from,to))
+                  : [];
+                hierarchyFamilyPredicates = partnerFamilyPredicates(
+                  parents,branches,identities,intermediaries,accounts);
+              }
+            }
+          }
         } catch {
           return json({ ok: false, error: "Reporting-chain scope unavailable." }, 503);
         }
@@ -164,6 +226,9 @@ Deno.serve(async (request: Request) => {
   }
   if (identity.actor_kind === "employee" && hierarchySubmitterIds.length) {
     predicates.push(`submitted_by_profile_id.in.(${hierarchySubmitterIds.join(",")})`);
+  }
+  if (identity.actor_kind === "employee" && hierarchyFamilyPredicates.length) {
+    predicates.push(...hierarchyFamilyPredicates);
   }
   if (identity.actor_kind === "intermediary" && sourceIds.length) {
     predicates.push(`lead_source_id.in.(${sourceIds.join(",")})`);
