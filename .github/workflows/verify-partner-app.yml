@@ -201,6 +201,9 @@ jobs:
       - name: Verify Phase 6 native foundation
         run: npm --workspace apps/partner-app run verify:phase6
 
+      - name: Verify Partner Intake reporting-chain security
+        run: node --experimental-strip-types apps/partner-app/scripts/verify-intake-reporting-chain.mjs
+
       - name: Verify pre-APK UAT and security contracts
         run: npm --workspace apps/partner-app run verify:uat
 
