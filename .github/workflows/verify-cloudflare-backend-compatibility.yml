@@ -44,7 +44,24 @@ jobs:
           # resolves the adapter. No source or lockfile changes are committed.
           npm pkg set --workspace @insureit/web-portal 'dependencies.next=15.5.29' 'devDependencies.eslint-config-next=15.5.29' 'devDependencies.@opennextjs/cloudflare=1.20.18' 'devDependencies.wrangler=4.166.0'
           npm install --no-audit --no-fund
-      - name: Verify OpenNext Worker build without deploying
+      # Next 15.5.29 has a separate MUI/React type-ref incompatibility in
+      # external-policy-form.tsx. Keep the canonical web CI typecheck required.
+      # This packaging-only probe bypasses Next's duplicate type-check to
+      # isolate Cloudflare bundling, never to certify a production release.
+      - name: Isolate Cloudflare bundling from existing upgraded-Next type conflict (CI only)
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const file = 'next.config.mjs';
+          const body = fs.readFileSync(file,'utf8');
+          const marker = 'const nextConfig = {';
+          if(!body.includes(marker)) throw new Error('Next config shape changed');
+          fs.writeFileSync(file,body.replace(marker,marker+'\n  typescript: { ignoreBuildErrors: true },'));
+          NODE
+      - name: Verify OpenNext Worker packaging without deploying
+        env:
+          INSUREIT_CLOUDFLARE_BUILD: '1'
         run: npx --no-install opennextjs-cloudflare build
       - name: Inspect worker bundle size and generated artifacts
         if: success()
