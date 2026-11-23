@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { canPartnerUseAiStudio } from '@/lib/partner-permissions';
+import { aiStudioActionsEnabled, performAiStudioAction, type StudioAction } from '@/lib/ai-studio-actions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 import { loadAiStudioDetail, loadAiStudioPage, type AiStudioBucket, type AiStudioDetail, type AiStudioPage, type AiStudioRow } from '@/lib/ai-studio';
 
@@ -36,6 +37,10 @@ export default function AiPolicyStudioScreen() {
   const [detail,setDetail]=useState<AiStudioDetail|null>(null);
   const [detailLoading,setDetailLoading]=useState(false);
   const [detailError,setDetailError]=useState('');
+  const [pendingAction,setPendingAction]=useState<StudioAction|null>(null);
+  const [actionBusy,setActionBusy]=useState(false);
+  const [actionError,setActionError]=useState('');
+  const [resultUncertain,setResultUncertain]=useState(false);
   const sequence=useRef(0);
   const detailSequence=useRef(0);
 
@@ -70,6 +75,26 @@ export default function AiPolicyStudioScreen() {
   },[selected,allowed]);
   const count=(key:AiStudioBucket)=>page.counts[key]||0;
   const refresh=()=>{setRefreshing(true);void reload();};
+  const closeDetail=()=>{if(actionBusy)return;setSelected(null);setPendingAction(null);setActionError('');setResultUncertain(false);};
+  async function commitAction(){
+    if(!selected||!pendingAction||actionBusy||resultUncertain)return;
+    setActionBusy(true);setActionError('');
+    try {
+      const result=await performAiStudioAction(selected.id,pendingAction);
+      if(!result.ok){
+        setActionError(result.issues?.[0]?.message||result.error);
+        setPendingAction(null);
+        return;
+      }
+      setPendingAction(null);setSelected(null);
+      if(result.policy_booked)setFilter('done');else void reload();
+    }catch(e){
+      const message=e instanceof Error?e.message:'The operation could not be confirmed.';
+      setActionError(message);
+      if(message.includes('unknown')||message.includes('confirm'))setResultUncertain(true);
+      setPendingAction(null);
+    }finally{setActionBusy(false);}
+  }
 
   if(!allowed)return(
     <SafeAreaView style={s.root}>
@@ -152,12 +177,12 @@ export default function AiPolicyStudioScreen() {
         <Text style={s.footer}>SECURED BY INSUREIT · SUPABASE</Text>
       </ScrollView>
 
-      <Modal visible={Boolean(selected)} presentationStyle="pageSheet" animationType="slide" onRequestClose={()=>setSelected(null)}>
+      <Modal visible={Boolean(selected)} presentationStyle="pageSheet" animationType="slide" onRequestClose={closeDetail}>
         <SafeAreaView style={s.sheet}>
           <View style={s.sheetTop}>
             <View><Text style={s.eyebrow}>VERIFIED INTAKE</Text>
               <Text style={s.sheetTitle}>{selected?.intake_number.replace('PIR-','')}</Text></View>
-            <Pressable style={s.circle} onPress={()=>setSelected(null)} accessibilityRole="button" accessibilityLabel="Close details">
+            <Pressable style={s.circle} onPress={closeDetail} disabled={actionBusy} accessibilityRole="button" accessibilityLabel="Close details">
               <Ionicons name="close" color={C.ink} size={21}/>
             </Pressable>
           </View>
@@ -181,7 +206,37 @@ export default function AiPolicyStudioScreen() {
                 <Text selectable style={s.fieldValue}>{f.value}</Text>
               </View>)}
             </View>
-            <Text style={s.note}>Extraction is not booking approval. Final registration requires the protected onboarding service.</Text>
+
+            {aiStudioActionsEnabled&&!detail.final_policy_id?<View style={s.actionsWrap}>
+              {actionError?<Text style={s.actionError}>{actionError}</Text>:null}
+              {resultUncertain?<Text style={s.note}>Refresh the record and confirm its booking status before any retry.</Text>:null}
+              {!pendingAction&&!resultUncertain?<View style={s.actionsRow}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Reparse current PDF and replace draft"
+                  style={s.reparseButton} onPress={()=>setPendingAction('reparse')} disabled={actionBusy}>
+                  <Ionicons name="refresh-outline" color={C.ink} size={18}/><Text style={s.reparseLabel}>Reparse</Text>
+                </Pressable>
+                <Pressable accessibilityRole="button" accessibilityLabel="Verify PDF and convert to policy"
+                  style={s.convertButton} onPress={()=>setPendingAction('convert')} disabled={actionBusy}>
+                  <Text style={s.convertLabel}>Verify & Convert</Text>
+                  <Ionicons name="arrow-forward" color="#FFFFFF" size={17}/>
+                </Pressable>
+              </View>:null}
+              {pendingAction?<View style={s.confirmPanel}>
+                <Text style={s.confirmTitle}>{pendingAction==='reparse'?'Replace saved draft?':'Register this policy?'}</Text>
+                <Text style={s.confirmDescription}>{pendingAction==='reparse'
+                  ?'The current PDF will replace all OCR-generated draft details. No policy is booked.'
+                  :'The server will independently verify the current PDF and all policy, customer, vehicle and duplicate checks before booking.'}</Text>
+                <View style={s.confirmActions}>
+                  <Pressable disabled={actionBusy} accessibilityRole="button" style={s.cancel}
+                    onPress={()=>setPendingAction(null)}><Text style={s.cancelText}>Cancel</Text></Pressable>
+                  <Pressable disabled={actionBusy} accessibilityRole="button" style={s.confirm}
+                    onPress={()=>void commitAction()}>
+                    {actionBusy?<ActivityIndicator color="#FFFFFF" size="small"/>:<Text style={s.confirmText}>Confirm</Text>}
+                  </Pressable>
+                </View>
+              </View>:null}
+            </View>:null}
+                        <Text style={s.note}>Extraction is not booking approval. Final registration requires the protected onboarding service.</Text>
           </ScrollView>:null}
         </SafeAreaView>
       </Modal>
@@ -249,4 +304,19 @@ const s=StyleSheet.create({
   fieldLabel:{flex:.38,fontSize:11,color:C.faint},
   fieldValue:{flex:.62,fontSize:11.5,color:C.ink,fontWeight:'700',textAlign:'right'},
   note:{fontSize:10.5,lineHeight:17,color:C.faint,marginTop:19,textAlign:'center'},
+  actionsWrap:{marginTop:18},
+  actionsRow:{flexDirection:'row',gap:10},
+  reparseButton:{height:48,borderRadius:15,borderWidth:1,borderColor:C.line,backgroundColor:'#FFFFFF',paddingHorizontal:15,flexDirection:'row',alignItems:'center',gap:7},
+  reparseLabel:{fontSize:11,fontWeight:'800',color:C.ink},
+  convertButton:{flex:1,height:48,borderRadius:15,backgroundColor:C.blue,flexDirection:'row',justifyContent:'center',alignItems:'center',gap:10},
+  convertLabel:{fontSize:12,fontWeight:'800',color:'#FFFFFF'},
+  actionError:{color:'#B04A3B',fontSize:11,lineHeight:16,marginBottom:10},
+  confirmPanel:{borderRadius:17,borderColor:C.line,borderWidth:1,padding:16,backgroundColor:'#FFFFFF'},
+  confirmTitle:{fontSize:14,fontWeight:'800',color:C.ink},
+  confirmDescription:{fontSize:11,color:C.faint,lineHeight:16,marginTop:7},
+  confirmActions:{flexDirection:'row',gap:10,marginTop:16},
+  cancel:{flex:1,height:43,borderRadius:12,justifyContent:'center',alignItems:'center',backgroundColor:'#EDF1F0'},
+  cancelText:{fontSize:12,fontWeight:'800',color:C.ink},
+  confirm:{flex:1,height:43,borderRadius:12,justifyContent:'center',alignItems:'center',backgroundColor:C.blue},
+  confirmText:{fontSize:12,fontWeight:'800',color:'#FFFFFF'},
 });
