@@ -27,4 +27,8 @@ assert.ok(proxy.includes('proxy_set_header Cookie "";'),"Ignore browser cookies"
 assert.ok(proxy.includes('proxy_set_header Authorization $http_authorization;'),"Preserve verified bearer");
 assert.ok(docker.includes('node_modules/next/dist/bin/next'),"Use actual Next runtime executable");
 assert.ok(ignore.includes("**/.env"),"Keep credentials out of image context");
+assert.ok(route.includes("action_outcome_unknown_refresh_before_retry"),"Ambiguous server errors must block retry");
+assert.ok(mobile.includes("Every transport/JSON/timeout failure"),"Ambiguous mobile transport must block retry");
+const screen=read("../partner-app/app/ai-policy-studio.tsx");
+assert.ok(screen.includes("setResultUncertain(true)"),"UI must disable repeat action after unknown outcome");
 console.log("AI Studio dedicated Windows backend isolation regression passed");
