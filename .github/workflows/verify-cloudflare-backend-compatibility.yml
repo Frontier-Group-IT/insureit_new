@@ -40,7 +40,7 @@ jobs:
       - name: Install PINNED OpenNext build tools (test-only)
         run: npm install --no-save --package-lock=false --no-audit --no-fund @opennextjs/cloudflare@1.20.18 wrangler@4.166.0
       - name: Verify OpenNext Worker build without deploying
-        run: npx --no-install opennextjs-cloudflare build
+        run: npx --yes --package=@opennextjs/cloudflare@1.20.18 opennextjs-cloudflare build
       - name: Inspect worker bundle size and generated artifacts
         if: success()
         shell: bash
