@@ -445,16 +445,15 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     catch{return fail("Premium","The independently verified premium, OD/NCB, or Tata liability allocation cannot be reconciled with canonical onboarding. Review the policy manually.");}
   }
 
-  // Explicitly confirmed IT/Admin auto-conversion uses the existing atomic
-  // reviewer takeover; manual handoffs keep their separate confirmation.
-  // Fill blank fields from CURRENT verified PDF only, never overwrite edits.
-  // The fifth argument is fillEmptyFields, NOT replaceExistingDraft.
-  // All certified commercial paths must apply verified missing-field updates;
-  // New India specifically needs this to reconcile the old generated TP/CPA
-  // split under draft revision CAS. The separate replaceExistingDraft
-  // argument stays false, preserving reviewer edits and original draft.
+  // An automatic onboarding draft is derived data, NOT a competing
+  // authority. Every explicit Verify & Convert re-reads the current PDF and
+  // replaces the old parser-generated draft under revision CAS, even when
+  // a stale draft contains nonempty OCR values. Never use fill-empty-only
+  // reconciliation as an identity or premium source of truth.
+  // The existing current-document, duplicate, vehicle, customer, signature
+  // and booking preflight checks still run after rebuilding this draft.
   const forwarded=await prepareVerifiedN8nIntakeHandoff(id,queued.document_id,
-    extracted.preview.fingerprint,true,true);
+    extracted.preview.fingerprint,true,false,undefined,undefined,true);
   if(!forwarded.ok)return fail("Canonical Intake handoff",forwarded.error);
   if(forwarded.draft.issuanceDate!==issuanceDate)
     return fail("Saved issuance date","The saved draft's issue date differs from the verified current PDF. Review it before booking; no existing manual value was overwritten.");
@@ -486,7 +485,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   const normalizedIdentity=(value:string)=>value.normalize("NFKC").trim().replace(/\s+/g," ").toUpperCase();
   if(!pdfField("insured_name")||
      normalizedIdentity(pdfField("insured_name"))!==normalizedIdentity(forwarded.draft.insuredName)){
-    return fail("Insured name","The saved insured name differs from the current verified PDF. Review the canonical draft rather than registering the wrong identity.");
+    return fail("Insured name","The current verified PDF did not produce a matching insured name in the freshly regenerated draft. Review the insurer-specific name mapping; no booking occurred.");
   }
   // The booking payload uses cpaOpted to determine whether CPA is charged.
   // An older saved draft can say "No" even when the verified PDF charges CPA:

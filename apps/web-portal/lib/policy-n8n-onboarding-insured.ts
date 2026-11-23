@@ -42,10 +42,17 @@ export function selectVerifiedN8nInsuredDraftIdentity(
     "go_digit_cv_native_pdf", "iffco_tokio_cv_native_pdf", "new_india_cv_native_pdf",
     "united_india_gcv_native_pdf", "oriental_gccv_native_pdf",
   ]).has(parserId ?? "");
+  // Strictly validated Tata AIG third-party parsers emit a dedicated
+  // insurer evidence label, not the legacy ICICI "Name of Insured" label.
+  // Only these exact parser IDs and labels may supply an automatic draft name.
+  const tataTp = parserId === "tata_aig_private_car_liability_only_n8n_native_pdf"
+    || parserId === "tata_aig_private_car_three_year_tp_n8n_native_pdf";
   const candidates = fields.filter(field => field.key === "insured_name"
     && (commercial
       ? field.page === null && field.evidence === "Native PDF policy schedule"
-      : field.page === 1 && /^Name of (?:the )?Insured$/i.test(field.evidence?.trim() ?? "")));
+      : tataTp
+        ? field.page === 1 && field.evidence === "Tata AIG Liability Only Policy Schedule"
+        : field.page === 1 && /^Name of (?:the )?Insured$/i.test(field.evidence?.trim() ?? "")));
   const source = candidates.length === 1 ? candidates[0] : undefined;
   const candidate = source ? normalizedName(source.value) : "";
   // Fail closed for an empty, placeholder or malformed PDF identity.

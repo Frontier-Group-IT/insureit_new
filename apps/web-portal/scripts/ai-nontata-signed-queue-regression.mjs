@@ -373,7 +373,7 @@ const semiN8n=file("../lib/policy-intake-semi-auto-n8n.ts");
 assert.ok(semiN8n.includes("legacyIffcoNewFingerprint")
   &&semiN8n.includes('field.key!=="vehicle_registration_number"')
   &&actions.includes("sameReviewedFingerprint")
-  &&actions.includes("extracted.preview.fingerprint,true,true")
+  &&actions.includes("extracted.preview.fingerprint,true,false,undefined,undefined,true")
   &&actions.includes("const nia=extracted.preview.parserId"),
   "An old queue MP/NEW hash can retry once with the newly verified full current-PDF evidence");
 // Family-level enrichment: N9293311's original PDF prints "VMT 117 LC
@@ -467,7 +467,7 @@ assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.map
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.map(f=>f.key==="vehicle_fuel_type"?{...f,evidence:"Native PDF policy schedule"}:f)}).eligible,false);
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:[...iffcoAuto.fields,iffcoAuto.fields[0]]}).eligible,false);
 assert.ok(handoff.includes("const iffcoReview=assessIffcoAutoOnboarding(")
-  && handoff.includes("eligibleForVerifiedConversion=autoEligibleGoDigit||iffcoReview.eligible"),
+  && handoff.includes("eligibleForVerifiedConversion=verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible"),
   "IFFCO source and financial validated readiness must be used for the queue");
 assert.ok(actions.includes('queued.exception_codes[0]==="registration_pending_review"')
   &&actions.includes('queued.parser_id==="iffco_tokio_cv_native_pdf"'),
