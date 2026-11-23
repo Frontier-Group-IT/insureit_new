@@ -354,14 +354,14 @@ if (stories.indexOf('<PartnerCaseBottomNavigation activeTab="Home" />') < storie
 }
 // Compact Stories update is typography/card sizing only; keep artwork sizes and navigation unchanged.
 for (const marker of [
-  "unifiedPanel: { width: '100%', padding: 11,",
-  "impactPremium: { color: '#092B5B', fontSize: 28, lineHeight: 36, fontWeight: '800'",
-  "impactVehicleRow: { width: '100%', marginTop: 12, minHeight: 54, padding: 7,",
-  "journeyStatValue: { color: '#092E67', fontSize: 20, lineHeight: 24, fontWeight: '800'",
-  "todayCard: { width: '100%', borderRadius: 24, padding: 12,",
-  "businessPremiumAmount: { alignSelf: 'stretch', textAlign: 'center', color: '#092D68', fontSize: 27, lineHeight: 35, fontWeight: '800'",
-  "businessPoliciesCard: { marginTop: 18, width: '100%', minHeight: 62, paddingVertical: 8,",
-  "learnStoryQuestion: { color: '#31537E', fontSize: 15, lineHeight: 22",
+  "unifiedPanel: { width: '100%', padding: 8,",
+  "impactPremium: { color: '#092B5B', fontSize: 25, lineHeight: 32, fontWeight: '800'",
+  "impactVehicleRow: { width: '100%', marginTop: 7, minHeight: 48, padding: 5,",
+  "journeyStatValue: { color: '#092E67', fontSize: 18, lineHeight: 22, fontWeight: '800'",
+  "todayCard: { width: '100%', borderRadius: 24, padding: 8,",
+  "businessPremiumAmount: { alignSelf: 'stretch', textAlign: 'center', color: '#092D68', fontSize: 24, lineHeight: 31, fontWeight: '800'",
+  "businessPoliciesCard: { marginTop: 8, width: '100%', minHeight: 52, paddingVertical: 5,",
+  "learnStoryQuestion: { color: '#31537E', fontSize: 14, lineHeight: 20",
   "unifiedArtworkBox: { width: '100%', height: 300,",
   "storyHeroArtwork: { width: '100%', height: 300,",
   "journeyScene: { width: '100%', height: 304,",
@@ -369,6 +369,20 @@ for (const marker of [
   "<PartnerCaseBottomNavigation activeTab=\"Home\" />",
   "onTouchEnd={handleStoryTouchEnd}",
 ]) requireText(stories, marker, 'Story compact text/card-only scope regression: ' + marker);
+// Fixed-height 300 px art was the underlying clipping cause; keep image assets and story navigation.
+for (const required of [
+  'onLayout={(event) => setStoryViewportHeight(event.nativeEvent.layout.height)}',
+  'onContentSizeChange={(_width, height) => setStoryMeasuredHeight(height)}',
+  'const artworkHeight = Math.max(96, 300 - artworkReduction);',
+  'const journeyArtworkHeight = Math.max(100, 304 - artworkReduction);',
+  'Math.ceil(storyMeasuredHeight - storyViewportHeight)',
+  'Math.min(204, current + Math.min(overflow, 204 - current))',
+  '<ImpactStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />',
+  '<JourneyMilestoneStory story={story} artworkHeight={journeyArtworkHeight} />',
+  'style={[styles.todayArtWrap, { height: artworkHeight }]}',
+  'style={[styles.businessGrowth3dArtwork, { height: artworkHeight }]}',
+  '<PartnerCaseBottomNavigation activeTab="Home" />',
+]) requireText(stories, required, 'Viewport-aware story artwork / nav contract: ' + required);
 // Second-pass tightening only touches typography and summary-card spacing, not the artwork or navigation.
 for (const snippet of [
   "unifiedPanel: { width: '100%', padding: 8,",
