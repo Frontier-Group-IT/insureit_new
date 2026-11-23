@@ -67,14 +67,15 @@ for (const [style, weight] of [
   ['policyNo', '700'],
   ['policyInsurer', '500'],
 ]) {
-  const styleDefinition = file.split(new RegExp('\\\\b' + style + ':\\\\s*\\\\{'))[1]?.split('},')[0] ?? '';
+  const styleDefinition = file.split('  ' + style + ': {')[1]?.split('},')[0] ?? '';
   assert.ok(
     styleDefinition.includes("fontWeight: Platform.OS === 'android' ? '" + weight + "' : '400'"),
     style + ' must use Android weight ' + weight + ' with unchanged regular iOS fallback',
   );
 }
 for (const style of ['subtitle', 'helper', 'selectMeta', 'policyDates']) {
-  assert.match(file, new RegExp('\\\\b' + style + ':\\\\s*\\\\{[^}]*fontWeight: \\'400\\''), style + ' supporting copy must remain regular');
+  const definition = file.split('  ' + style + ': {')[1]?.split('},')[0] ?? '';
+  assert.ok(definition.includes("fontWeight: '400'"), style + ' supporting copy must remain regular');
 }
 
 assert.match(file, /policyCardCompact:\s*\{\s*minHeight:\s*82\s*\}/, 'Compact policy card must not retain the old 106pt minimum height');
