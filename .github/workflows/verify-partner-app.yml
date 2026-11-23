@@ -204,6 +204,9 @@ jobs:
       - name: Verify Partner Intake reporting-chain security
         run: node --experimental-strip-types apps/partner-app/scripts/verify-intake-reporting-chain.mjs
 
+      - name: Verify Partner Intake Partner-family scope security
+        run: node --experimental-strip-types apps/partner-app/scripts/verify-intake-partner-family.mjs
+
       - name: Verify pre-APK UAT and security contracts
         run: npm --workspace apps/partner-app run verify:uat
 
