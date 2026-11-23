@@ -1,0 +1,34 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import assert from 'node:assert/strict';
+const here=path.dirname(fileURLToPath(import.meta.url));
+const app=path.resolve(here,'..');
+const repo=path.resolve(app,'../..');
+const read=(p)=>fs.readFileSync(path.join(repo,p),'utf8');
+const onboarding=read('supabase/functions/partner-policy-onboarding/index.ts');
+const deletion=read('supabase/functions/partner-account-deletion/index.ts');
+const push=read('supabase/functions/partner-push-devices/index.ts');
+const mobileDeletion=read('apps/partner-app/lib/account-deletion.ts');
+const mobilePush=read('apps/partner-app/lib/partner-notifications.ts');
+for(const [name,code] of [['onboarding',onboarding],['deletion',deletion],['push',push]]){
+  assert.match(code,/auth\.getUser\(/,`${name} must check the caller's JWT`);
+  assert.match(code,/partner_app_current_identity/,`${name} must verify canonical identity`);
+  assert.match(code,/SUPABASE_SERVICE_ROLE_KEY/,`${name} uses server-only credentials`);
+  assert.doesNotMatch(code,/portal\.insureit\.in|EXPO_PUBLIC_PORTAL_URL/,`${name} cannot depend on Vercel`);
+}
+assert.match(onboarding,/partner_app_effective_permissions/, 'Onboarding uses live effective permissions');
+assert.match(onboarding,/body\.action !== "new_prepare" && body\.action !== "customer_search"/, 'Only tested read-only actions are implemented');
+assert.match(onboarding,/status","in_review"/, 'Customer search must require in-review intake');
+assert.match(onboarding,/assigned_to_profile_id",uid/, 'Customer search must require assigned reviewer');
+assert.match(onboarding,/Duplicate intakes cannot be onboarded/, 'Customer search must block duplicates');
+assert.match(onboarding,/Life Operations customer scope is not migrated/, 'Life Operations must fail closed until downline access is migrated');
+assert.match(onboarding,/status.?501/, 'Unmigrated actions must return 501');
+assert.doesNotMatch(onboarding,/\.from\("policies"\)\.insert\(/, 'Preparation may not book policies');
+assert.match(mobileDeletion,/functions\.invoke\('partner-account-deletion'/, 'Account deletion must call Supabase Edge');
+assert.match(mobilePush,/functions\.invoke\('partner-push-devices'/, 'Push must call Supabase Edge');
+assert.doesNotMatch(mobileDeletion,/portal\.insureit\.in|EXPO_PUBLIC_PORTAL_URL/, 'Account deletion cannot call Vercel');
+assert.doesNotMatch(mobilePush,/portal\.insureit\.in|EXPO_PUBLIC_PORTAL_URL/, 'Push cannot call Vercel');
+assert.match(push,/\.eq\("actor_id", actor\.actor_id\)/, 'Push unregistration must be scoped to actor');
+assert.match(deletion,/confirmation !== "DELETE MY ACCOUNT"/, 'Deletion must require explicit user confirmation');
+console.log('Supabase Edge migration read-only and auth contracts verified');
