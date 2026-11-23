@@ -65,8 +65,8 @@ export function assessProductVariantDirectConversion(input:Input):{eligible:bool
      ||field("idv")==="0"
      ||printed.od<=0||printed.tp!==0
      ||Number(field("cpa_premium"))!==0
-     ||field("third_party_end_date")!=="2030-11-17"
-     ||!day(field("third_party_end_date")))
+     ||!day(field("third_party_end_date"))
+     ||field("third_party_end_date")<field("policy_end_date"))
      return no("digit_two_wheeler_od_variant_unverified");
    // Prior TP is a reference, not a newly issued TP premium.
    return {eligible:true,reason:""};
@@ -102,8 +102,6 @@ export function assessProductVariantDirectConversion(input:Input):{eligible:bool
 export function mapVerifiedProductVariantPremium(
  p:Printed,parserId:string,
 ):{od:string;tp:string;addOnPremium:string;cpa:string;cpaOpted:"Yes"|"No"}{
- const fields:Field[]=[
- {key:"policy_number",value:"x"},{key:"insurer_name",value:"x"},{key:"insured_name",value:"x"}];
  // This routine ONLY translates already certified totals; the independent
  // assessor must pass before it is invoked. Never reassign TP to OD.
  if(!PRODUCT_VARIANT_PARSERS.has(parserId)||
@@ -115,6 +113,5 @@ export function mapVerifiedProductVariantPremium(
    ||parserId!=="go_digit_two_wheeler_od_native_pdf"&&!(p.od===0&&p.tp>0))
    throw new Error("product_variant_premium_components_invalid");
  const cash=(v:number)=>String(Math.round(v*100)/100);
- void fields;
  return {od:cash(p.od),tp:cash(p.tp),addOnPremium:"0",cpa:"0",cpaOpted:"No"};
 }
