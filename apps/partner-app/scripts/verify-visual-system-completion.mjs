@@ -165,11 +165,11 @@ for (const [source, fragment, label] of [
   requireText(source, fragment, `${label} status card must match the Claim Tracker navy #07347E.`);
 }
 
-// Policy Overview, Premium and Commercial remain a single white card.
+// The redesigned Policy Overview, Premium and Sales cards are independently styled; the white policy hero remains unchanged.
 // Customer and vehicle identity now share one compact row and separate heading.
 requireText(policyDetail, '<CardHeader title="Customer & Vehicle Details" />', 'Combined customer and vehicle heading is present');
 requireText(policyDetail, '<CardHeader title="Customer & Vehicle Details" /></View>\\n            <Card highlighted>'.replace('\\n','\n'), 'Only the Customer & Vehicle section requests the blue border');
-requireText(policyDetail, "customerVehicleBorder: { borderColor: '#3993F5', borderWidth: 1 }", 'Customer & Vehicle card has a visible 1px blue border');
+requireText(policyDetail, "customerVehicleBorder: { borderColor: '#3993F5', borderWidth: 1, backgroundColor: '#F3F8FF' }", 'Customer & Vehicle card has a visible 1px blue border');
 requireText(policyDetail, 'highlighted && styles.customerVehicleBorder', 'Blue border is applied only when highlighted is set');
 if ((policyDetail.match(/<Card highlighted>/g) || []).length !== 1) throw new Error('Only Customer & Vehicle Details may have a highlighted card border');
 
@@ -189,25 +189,27 @@ const overviewStart = policyDetail.indexOf('<CardHeader iconKind="policy-overvie
 if (!(quickActionsStart >= 0 && customerStart > quickActionsStart && overviewStart > customerStart)) {
   throw new Error('Expected Quick Actions → Customer & Vehicle Details → Policy Overview');
 }
-const unified = policyDetail.slice(overviewStart, policyDetail.indexOf('</Card>', overviewStart) + '</Card>'.length);
-requireText(unified, 'styles.overviewGrid', 'Existing overview fields remain visible');
-requireText(unified, 'styles.premiumDisclosure', 'Premium remains inside the combined overview');
-requireText(unified, 'styles.commercialRow', 'Commercial remains inside the combined overview');
-if(unified.split('styles.unifiedSectionDivider').length !== 3)throw new Error('Expected two internal separators');
-if(unified.split('</Card>').length !== 2)throw new Error('Overview, Premium and Commercial must share one card');
+const overviewCard = policyDetail.slice(overviewStart, policyDetail.indexOf('</Card>', overviewStart) + '</Card>'.length);
+const premiumStart = policyDetail.indexOf('styles.premiumDisclosure', overviewStart);
+const commercialStart = policyDetail.indexOf('styles.commercialRow', premiumStart);
+requireText(overviewCard, 'styles.overviewGrid', 'Existing overview fields remain visible');
+if (!(premiumStart > overviewStart && commercialStart > premiumStart)) throw new Error('Premium and Sales must follow Policy Overview');
+if (overviewCard.includes('styles.premiumDisclosure') || overviewCard.includes('styles.commercialRow')) throw new Error('Premium and Sales require independent colorful cards');
+requireText(policyDetail, "premiumDisclosure: { minHeight: 50", 'Premium mint card retains its pressable disclosure');
+requireText(policyDetail, "commercialRow: { minHeight: 50", 'Sales amber card retains its pressable disclosure');
 requireText(policyDetail, 'accessibilityState={{ expanded: showPremiumDetails }}', 'Premium expansion remains');
 requireText(policyDetail, 'accessibilityState={{ expanded: showCommercialDetails }}', 'Commercial expansion remains');
 requireText(policyDetail, 'const [showPremiumDetails, setShowPremiumDetails] = useState(true);', 'Premium breakup opens expanded by default');
 requireText(policyDetail, 'const [showCommercialDetails, setShowCommercialDetails] = useState(true);', 'Sales ownership opens expanded by default');
 requireText(policyDetail, 'onPress={() => setShowPremiumDetails((value) => !value)}', 'Premium breakup is still collapsible');
 requireText(policyDetail, 'onPress={() => setShowCommercialDetails((value) => !value)}', 'Sales ownership is still collapsible');
-requireText(policyDetail, 'quickSectionHeading: { marginLeft: -6, marginRight: 3, marginBottom: 5', 'Quick Actions heading moves slightly left without moving action icons');
+requireText(policyDetail, 'quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 9', 'Quick Actions heading remains aligned with new color tiles');
 requireText(policyDetail, 'externalSectionHeading: { marginLeft: -6, paddingLeft: 0, paddingRight: 2 }', 'Customer & Vehicle heading moves slightly left without moving its card');
-requireText(policyDetail, 'contentWrap: { marginTop: 0, gap: 6, paddingBottom: 15 }', 'Inter-section vertical gap is compact');
+requireText(policyDetail, 'contentWrap: { marginTop: 0, gap: 12, paddingBottom: 15 }', 'Colored section cards use 12px breathing room');
 requireText(policyDetail, 'paddingHorizontal: 14, paddingTop: 10, paddingBottom: 9', 'Policy summary vertical padding is compact');
-requireText(policyDetail, 'quickSection: { marginHorizontal: 12, paddingVertical: 4 }', 'Quick Actions section vertical padding is compact');
-requireText(policyDetail, 'quickSectionHeading: { marginLeft: -6, marginRight: 3, marginBottom: 5', 'Quick Actions heading keeps the left alignment and reduces the gap below');
-requireText(policyDetail, "minHeight: 68, alignItems: 'center', justifyContent: 'center'", 'Quick Action rows use compact 68px minimum with intact tap surface');
+requireText(policyDetail, 'quickSection: { marginHorizontal: 0, paddingVertical: 8 }', 'Quick Actions tiles align with full-width content');
+requireText(policyDetail, 'quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 9', 'Quick Actions heading keeps its clear spacing');
+requireText(policyDetail, "minHeight: 94, alignItems: 'center', justifyContent: 'center'", 'Quick Action rows use full colored tap targets');
 requireText(policyDetail, 'cardHeaderCompact: { minHeight: 30 }', 'Customer & Vehicle heading becomes 30px tall');
 requireText(policyDetail, '!iconKind && !actionLabel ? styles.cardHeaderCompact : null', 'Only plain section headings compact; Policy Overview header retains its original layout');
 
