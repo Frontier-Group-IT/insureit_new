@@ -510,6 +510,11 @@ jobs:
       - name: Production build
         run: npm run build
 
+      - name: Anonymous Cloudflare Partner API route presence (informational)
+        if: always()
+        continue-on-error: true
+        run: node ../../scripts/check-cloudflare-partner-api-readiness.mjs
+
       - name: Verification summary
         if: always()
         shell: bash
