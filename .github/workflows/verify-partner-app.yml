@@ -195,6 +195,9 @@ jobs:
       - name: Verify Partner App website permissions and deep-link parity
         run: node apps/partner-app/scripts/verify-website-permission-parity.mjs
 
+      - name: Verify native AI Studio access and Supabase-only data contract
+        run: node apps/partner-app/scripts/verify-ai-studio-native.mjs
+
       - name: Verify pre-APK native transition guard
         run: npm --workspace apps/partner-app run verify:pre-apk
 
