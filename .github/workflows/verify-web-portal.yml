@@ -170,6 +170,8 @@ jobs:
         run: node scripts/partner-reports-rm-calendar-regression.mjs
       - name: RM Performance inline Custom calendar regression
         run: node scripts/rm-performance-inline-custom-calendar-regression.mjs
+      - name: RM Performance verified sales reporting hierarchy regression
+        run: node scripts/rm-performance-sales-hierarchy-regression.mjs
       - name: Partner hierarchy Reports security regression
         run: npm run partner-reports:security-regression
       - name: Operations Branch-parent policy register regression
