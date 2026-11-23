@@ -63,6 +63,37 @@ export function classifyPartnerSessionFailure(error: unknown): PartnerSessionFai
   return error instanceof PartnerSessionResolutionError ? error.kind : 'retryable';
 }
 
+/** Safe, actionable sign-in feedback. Never surface raw RPC data or session credentials. */
+export function partnerLoginErrorMessage(error: unknown, phase: 'credentials' | 'account'): string {
+  if (phase === 'credentials') {
+    const authCode = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
+    if (authCode === 'invalid_credentials' || authCode === 'email_not_confirmed') {
+      return authCode === 'email_not_confirmed'
+        ? 'Please verify your email address before signing in.'
+        : 'The email or password is incorrect. Please try again.';
+    }
+    return 'Sign-in service is unavailable right now. Check your connection and try again.';
+  }
+  if (error instanceof PartnerSessionResolutionError) {
+    switch (error.reason) {
+      case 'partner_identity_not_enabled':
+      case 'commercial_scope_missing':
+      case 'permission_api_forbidden':
+      case 'permission_identity_mismatch':
+        return 'Your sign-in succeeded, but Partner access is not enabled for this account. Contact INSUREIT support.';
+      case 'session_expired':
+      case 'permission_api_unauthorized':
+        return 'Your sign-in session could not be verified. Please try signing in again.';
+      case 'permission_api_not_deployed':
+        return 'Sign-in succeeded, but the Partner permissions service is not available on the website. Please contact INSUREIT support.';
+      case 'permission_api_unavailable':
+      case 'permission_api_invalid_response':
+        return 'Sign-in succeeded, but the Partner permissions service is temporarily unavailable. Please retry shortly.';
+    }
+  }
+  return 'Sign-in succeeded, but your Partner account could not be loaded. Please check your connection and retry.';
+}
+
 /** Identify authenticated Branch accounts by server-provided identity/scope—not name or intermediary role alone. */
 export function isPartnerBranchSession(context: PartnerSessionContext | null | undefined): boolean {
   if (context?.identity.actor_kind !== 'intermediary') return false;
@@ -112,18 +143,35 @@ export async function resolvePartnerSession(): Promise<PartnerSessionContext> {
   if (!scope) throw new PartnerSessionResolutionError('denied', 'commercial_scope_missing');
   const session = await getCurrentSession();
   if (!session?.access_token) throw new PartnerSessionResolutionError('retryable', 'session_expired');
-  const response = await fetch(
-    `${(process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '')}/api/partner/effective-permissions`,
-    { headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store' },
-  );
+  let response: Response;
+  try {
+    response = await fetch(
+      `${(process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '')}/api/partner/effective-permissions`,
+      { headers: { Authorization: `Bearer ${session.access_token}` }, cache: 'no-store' },
+    );
+  } catch {
+    throw new PartnerSessionResolutionError('retryable', 'permission_api_unavailable');
+  }
+  if (response.status === 401) throw new PartnerSessionResolutionError('retryable', 'permission_api_unauthorized');
   if (response.status === 403) throw new PartnerSessionResolutionError('denied', 'permission_api_forbidden');
+  if (response.status === 404 || response.status === 405) {
+    throw new PartnerSessionResolutionError('retryable', 'permission_api_not_deployed');
+  }
   if (!response.ok) throw new PartnerSessionResolutionError('retryable', 'permission_api_unavailable');
-  const access = await response.json() as {
+  let access: {
     actor_kind?: string;
     capabilities?: PartnerPermissionMap;
     can_view_insurer_commercials?: boolean;
   };
-  if (access.actor_kind !== identity.actor_kind || !access.capabilities) {
+  try {
+    access = await response.json();
+  } catch {
+    throw new PartnerSessionResolutionError('retryable', 'permission_api_invalid_response');
+  }
+  if (!access || typeof access !== 'object' || !access.capabilities || typeof access.capabilities !== 'object') {
+    throw new PartnerSessionResolutionError('retryable', 'permission_api_invalid_response');
+  }
+  if (access.actor_kind !== identity.actor_kind) {
     throw new PartnerSessionResolutionError('denied', 'permission_identity_mismatch');
   }
 
