@@ -12,4 +12,4 @@ RUN test -n "$NEXT_PUBLIC_SUPABASE_URL" && test -n "$NEXT_PUBLIC_SUPABASE_ANON_K
     && npm ci --no-audit --no-fund \
     && npm run build --workspace apps/web-portal
 EXPOSE 3001
-CMD ["npm","run","start","--workspace","apps/web-portal","--","-p","3001","-H","0.0.0.0"]
+CMD ["node","node_modules/next/dist/bin/next","start","apps/web-portal","-p","3001","-H","0.0.0.0"]
