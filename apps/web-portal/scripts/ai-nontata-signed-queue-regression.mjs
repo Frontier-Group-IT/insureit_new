@@ -482,7 +482,7 @@ assert.ok(actions.includes('const heldReview=queued?.state==="exception"')
   &&actions.includes("!(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold)")
   &&actions.includes("extracted.preview.documentId!==queued.document_id")
   &&actions.includes('queued.last_error_code==="missing_verified_vehicle_registration_number"')
-  &&actions.includes("assessNiaNamedAuthorityUnregisteredConversion({"),
+  &&actions.includes("assessNiaNamedAuthorityUnregisteredConversion({")
   &&actions.includes('queued.last_error_code==="rto_authority_not_verified"')
   &&actions.includes('rtoOld?.evidence==="Native PDF policy schedule"')
   &&actions.includes('JSON.stringify(oldValues)===JSON.stringify(freshValues)')
