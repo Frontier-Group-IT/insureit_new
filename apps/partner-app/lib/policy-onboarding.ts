@@ -150,7 +150,7 @@ async function documentRequest<T>(intakeId:string,line:NativeProductType,method:
     body=JSON.stringify({intake_id:intakeId,business_line:line,document_type:type});
   }
   let response:Response;
-  try{response=await fetch(endpoint+(method==='GET'?query:''),{method,headers,body,cache:'no-store'});}
+  try{response=await fetch(endpoint,{method,headers,body,cache:'no-store'});}
   catch{throw new Error('Document service is unavailable. Check your connection.');}
   const value=await response.json().catch(()=>null) as ({ok?:boolean;error?:string}&Partial<T>)|null;
   if(!response.ok||!value?.ok)throw new Error(value?.error||'Document could not be saved.');
