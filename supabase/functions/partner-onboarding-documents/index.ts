@@ -1,5 +1,6 @@
-// Read-only, scoped document listing for Partner Policy Onboarding.
-// Upload, replacement, delete and storage URL issuance are NOT implemented.
+// Authenticated Partner Policy Onboarding document service, independent of Vercel.
+// Signed Storage uploads, verified finalize, replacement and delete are supported.
+// Never return Storage paths or signed download URLs through the list action.
 import { createClient } from "npm:@supabase/supabase-js@2.57.0";
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const lines=new Set(["Life","Health","Non Motor"]);
