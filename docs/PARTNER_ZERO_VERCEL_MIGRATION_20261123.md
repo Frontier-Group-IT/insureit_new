@@ -39,12 +39,18 @@ The list above was checked against the Partner app's `lib/` files and screen-lev
 - Added `supabase/functions/partner-push-devices/index.ts`; deployed with JWT verification and checked Expo project/version requirements.
 - Mobile calls for these two services were updated in the feature branch, **not OTA published**.
 - Deployed `partner-policy-onboarding` Edge Function with authenticated read-only `new_prepare` and reviewer-assigned `customer_search`; current Life Head downline search explicitly rejects 501. Booking/approval/RC operations reject with 501; **mobile is not switched to it** until booking/document operations have parity.
-- Implemented `save` for assigned intake reviewers only: exact shared draft field allowlist, optional fields, restricted financial fields, product-specific commercial validation, duplicate protection, revision CAS and fail-closed Life Operations downline scope. **Not yet connected to the mobile UI**. No policy booking is possible through this Edge Function.\n- Deployed `partner-policy-sources` Edge Function with authenticated source search, active POSP/MISP/Partner filter, paginated results, verified assigned-intake binding and active sales RM metadata. Life Head downline search remains disabled until equivalent scope is implemented; **mobile is not switched**.
+- Implemented `save` for assigned intake reviewers only: exact shared draft field allowlist, optional fields, restricted financial fields, product-specific commercial validation, duplicate protection, revision CAS and fail-closed Life Operations downline scope. The final save uses `partner_app_save_intake_draft_atomic` (service-role-only, reviewer/status row locked in Postgres). **Deployed to Supabase Edge v4; not connected to the mobile UI**. No policy booking is possible through this Edge Function.\n- Deployed `partner-policy-sources` Edge Function with authenticated source search, active POSP/MISP/Partner filter, paginated results, verified assigned-intake binding and active sales RM metadata. Life Head downline search remains disabled until equivalent scope is implemented; **mobile is not switched**.
 - Added `node apps/partner-app/scripts/audit-vercel-dependencies.mjs` for the remaining call inventory; `--enforce` is the mandatory final release gate, not currently green.
 
 ## Verification added
 - `apps/partner-app/scripts/verify-supabase-edge-migration.mjs` is invoked by Phase 6 CI. It asserts user JWT verification, role checks, assigned reviewer filters, preserved duplicate protection, scoped source directory, no client Vercel dependency for the two completed services and explicit fail-closed unsupported actions.
 - Live Supabase function presence and `verify_jwt=true` confirmed, but a test authenticated user session is still necessary for full e2e behavioral equivalence. No production customer or policy write test has been performed.
+
+## Latest draft-save verification
+- Applied migration `20261123090812_partner_intake_draft_save_atomic.sql` (function `partner_app_save_intake_draft_atomic`) to live Supabase. `anon`/`authenticated` EXECUTE revoked; `service_role` only; `SECURITY INVOKER`.
+- Harmless service-role invalid-input SQL call returned `{ok:false,status:400}`; no intake or policy writes were executed.
+- Repaired commercial numeric regex matching to accept decimal digits rather than escaped backslash characters.
+- Deployed Supabase `partner-policy-onboarding` Edge Function v4 with this atomic save implementation. Partner CI passed for the implementation commit; physical-device and authorized-user draft save UAT remain outstanding.
 
 ## Release blockers / exact next engineering work
 - Move the main 44k+ character native-onboarding route and its shared engines into an equivalent testable service, without bypassing existing booking checks.
