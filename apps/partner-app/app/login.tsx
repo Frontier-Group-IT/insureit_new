@@ -19,7 +19,7 @@ import {
 import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerField } from '@/components/ui/partner-field';
 import { partnerTheme } from '@/lib/theme';
-import { signIn } from '@/lib/partner-session';
+import { partnerLoginErrorMessage, signIn } from '@/lib/partner-session';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 export default function LoginScreen() {
@@ -36,7 +36,7 @@ export default function LoginScreen() {
     motion.start();
     return () => motion.stop();
   }, [entrance, floating]);
-  const { refresh } = usePartnerSession();
+  const { refreshForLogin } = usePartnerSession();
   const scrollRef = useRef<ScrollView>(null);
   const passwordRef = useRef<TextInput>(null);
   const [email, setEmail] = useState('');
@@ -60,12 +60,19 @@ export default function LoginScreen() {
     setBusy(true);
     setMessage('');
     try {
-      await signIn(email, password);
-      const context = await refresh();
-      if (!context) throw new Error('Partner access unavailable.');
-      router.replace('/(tabs)');
-    } catch {
-      setMessage('We could not open your Partner account. Check your credentials or contact INSUREIT support.');
+      try {
+        await signIn(email, password);
+      } catch (cause) {
+        setMessage(partnerLoginErrorMessage(cause, 'credentials'));
+        return;
+      }
+
+      try {
+        await refreshForLogin();
+        router.replace('/(tabs)');
+      } catch (cause) {
+        setMessage(partnerLoginErrorMessage(cause, 'account'));
+      }
     } finally {
       setBusy(false);
     }

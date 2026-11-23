@@ -21,6 +21,7 @@ const searchScreen = app('app/search.tsx');
 const businessScreen = app('app/(tabs)/business.tsx');
 const endpoint = web('app/api/partner/effective-permissions/route.ts');
 const intakeRoute = web('app/api/partner/policy-intakes/route.ts');
+const permissionRpc = readFileSync(new URL('../../../supabase/migrations/20261123075048_partner_app_effective_permissions_supabase.sql', import.meta.url), 'utf8');
 const migration = readFileSync(new URL('../../../supabase/migrations/20261107180000_partner_app_website_write_permission_guards.sql', import.meta.url), 'utf8');
 const rollback = readFileSync(new URL('../../../supabase/rollbacks/20261107180000_partner_app_website_write_permission_guards_rollback.sql', import.meta.url), 'utf8');
 
@@ -31,7 +32,19 @@ assert.match(endpoint, /profile\?\.is_active/, 'Inactive profiles cannot receive
 assert.match(endpoint, /employee\?\.employment_status !== "active"/, 'Inactive employees cannot receive permissions');
 assert.match(endpoint, /"Cache-Control": "private, no-store"/, 'Never cache permissions across accounts');
 assert.doesNotMatch(endpoint, /role:\s*request\./, 'Never trust a client-supplied role');
-assert.match(session, /permissions: access\.capabilities/, 'Mobile session uses server grants');
+assert.match(session, /supabase\.rpc\('partner_app_effective_permissions'\)/, 'Mobile must resolve permissions directly from Supabase');
+assert.doesNotMatch(session, /fetch\([\s\S]*?effective-permissions/, 'Login cannot depend on Vercel permissions API');
+assert.match(session, /permissions: capabilities as PartnerPermissionMap/, 'Session must use verified RPC grants');
+assert.match(permissionRpc, /security definer/i, 'Server grants must be evaluated on Supabase with a protected function');
+assert.match(permissionRpc, /auth\.uid\(\)/, 'Permission RPC must bind scope to signed-in user');
+assert.match(permissionRpc, /partner_app_current_identity\(\)/, 'RPC must verify canonical Partner identity');
+assert.match(permissionRpc, /partner_app_commercial_scope\(\)/, 'RPC must verify canonical scope');
+assert.match(permissionRpc, /v_profile\.is_active/, 'Inactive profiles must not receive permissions');
+assert.match(permissionRpc, /v_employee_state is distinct from 'active'/, 'Inactive employees must not receive permissions');
+assert.match(permissionRpc, /employee_permission_overrides/, 'Employee overrides remain effective');
+assert.match(permissionRpc, /role_permission_overrides/, 'Role overrides remain effective');
+assert.match(permissionRpc, /revoke all on function public\.partner_app_effective_permissions\(\) from public, anon/, 'Anonymous RPC execution must be revoked');
+assert.match(permissionRpc, /grant execute on function public\.partner_app_effective_permissions\(\) to authenticated/, 'Authenticated users may request server-verified grants');
 assert.match(sessionProvider, /permissions: \{\}/, 'Failed refresh must not keep stale permission grants');
 assert.match(sessionProvider, /clearPartnerQueryCache\(activeScopeKey\.current\)/, 'Revoked access must clear stale local data cache');
 assert.match(guard, /rank\[context\.permissions\[capability\] \?\? 'none'\]/, 'Unknown permission must deny');
@@ -68,8 +81,9 @@ assert.match(businessScreen, /canPartnerAccess\(context, 'view_reports'\)/, 'Rep
 // Transient identity/permission API errors must not masquerade as revoked access.
 assert.match(session, /class PartnerSessionResolutionError extends Error/, 'Session failures must carry a known access category.');
 assert.match(session, /'denied' \| 'retryable'/, 'Session failures distinguish verified denial from temporary faults.');
-assert.match(session, /if \(response\.status === 403\).*?'denied'/, 'Explicit server 403 remains a real denial.');
-assert.match(session, /if \(!response\.ok\).*?'retryable'/, 'Temporary permission API outages must be retryable.');
+assert.match(session, /if \(!access\).*?'denied'/, 'Explicit RPC authorization denial must fail closed.');
+assert.match(session, /if \(permissionsError\)/, 'RPC errors must be classified without granting access.');
+assert.match(session, /'retryable',[\s\S]*?permission_rpc_unavailable/, 'Temporary permission RPC outage must remain retryable.');
 assert.match(session, /identityError\) throw identityError/, 'An RPC failure is not automatically an account denial.');
 assert.match(session, /permission_identity_mismatch/, 'Actual authorization mismatches still deny access.');
 assert.match(sessionProvider, /setStatus\(kind === 'denied' \? 'denied' : 'unavailable'\)/, 'Only explicit denial produces denied state.');
