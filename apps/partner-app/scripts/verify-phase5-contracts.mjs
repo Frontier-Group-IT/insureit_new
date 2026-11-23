@@ -312,9 +312,9 @@ expectAll('app/customer-new.tsx', [
 expectAll('lib/customers.ts', [
   [/gst_number: string/, 'customer creation form includes GSTIN'],
   [/type: 'pan_copy' \| 'aadhaar_front' \| 'aadhaar_back' \| 'gst_copy'/, 'document type supports GST Copy'],
-  [/partnerCustomerRequest\('POST', JSON\.stringify\(\{ \.\.\.input, requestId \}\)\)/, 'customer creation carries a stable retry identifier to authorized portal endpoint'],
-  [/partnerCustomerRequest\('PUT',payload\)/, 'KYC documents use authenticated upload endpoint'],
-  [/payload\.append\('customerId', customerId\)/, 'document upload binds the created customer id'],
+  [/partnerCustomerRequest\(\{ \.\.\.input, requestId, action:'create' \}\)/, 'customer creation carries a stable retry identifier to authenticated Supabase Edge'],
+  [/partnerCustomerRequest\(\{action:'finalize_document',\.\.\.details,path:prepared\.path\}\)/, 'KYC documents use authenticated Supabase Edge finalize'],
+  [/const details=\{customerId,type:document\.type/, 'document upload binds the created customer id'],
 ]);
 
 expectAll('app/customer-new.tsx', [
