@@ -374,8 +374,8 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
       &&JSON.stringify(oldValues)===JSON.stringify(freshValues)
       &&rtoOld?.evidence==="Native PDF policy schedule"
       &&typeof rtoFresh?.evidence==="string"
-      &&/\\bRegistration Authority\\b/i.test(rtoFresh.evidence)
-      &&/\\bRTO\\b/i.test(rtoFresh.evidence);
+      &&/\bRegistration Authority\b/i.test(rtoFresh.evidence)
+      &&/\bRTO\b/i.test(rtoFresh.evidence);
   }
   if(extracted.preview.documentId!==queued.document_id||
      !(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold)||
