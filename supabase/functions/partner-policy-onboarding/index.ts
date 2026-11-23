@@ -15,13 +15,8 @@ const approvers = [
   { key: "varun", name: "Varun Sabharwal" },
   { key: "gagan", name: "Gagan Singh" },
 ];
-function indiaDate() {
-  const date = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit"
-  }).formatToParts(new Date());
-  const part = (type: string) => date.find(x => x.type === type)?.value ?? "";
-  return `${part("year")}-${part("month")}-${part("day")}`;
-}
+// Preserve the existing native-onboarding API's default date exactly.
+function initialIssuanceDate() { return new Date().toISOString().slice(0,10); }
 const json = (body: Record<string,unknown>, status=200) =>
   new Response(JSON.stringify(body), {status,headers:{"Content-Type":"application/json","Cache-Control":"no-store"}});
 Deno.serve(async (request: Request) => {
@@ -67,14 +62,14 @@ Deno.serve(async (request: Request) => {
   const active=new Set((makes.data??[]).map(x=>x.id));
   const draft=Object.fromEntries(allowedFields.map(field=>[field,""]));
   Object.assign(draft,{
-    registrationMode:"registered",issuanceDate:indiaDate(),businessLine:"Motor",
+    registrationMode:"registered",issuanceDate:initialIssuanceDate(),businessLine:"Motor",
     cpaOpted:"No",payoutBasis:"NET",payinStatus:"Unbilled",payoutStatus:"Pending",
   });
   return json({
     ok:true,draft,revision:0,intake_number:"",
     insurers:(insurers.data??[]).map(x=>({value:x.id,label:x.name})),
     manufacturers:Array.from(new Set((brands.data??[]).filter(x=>active.has(x.manufacturer_id)).map(x=>x.brand_name))).sort(),
-    sourceMeta:null,commercialAccess:access.can_view_insurer_commercials===true,
+    sourceMeta:null,commercialAccess:identity.role==='operations_head_life' || access.can_view_insurer_commercials===true,
     approvers,
   });
 });
