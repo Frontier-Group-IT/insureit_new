@@ -38,9 +38,14 @@ jobs:
       - name: Install Portal dependencies
         run: npm install --no-audit --no-fund
       - name: Install PINNED OpenNext build tools (test-only)
-        run: npm install --no-save --package-lock=false --no-audit --no-fund @opennextjs/cloudflare@1.20.18 wrangler@4.166.0
+        shell: bash
+        run: |
+          # Add to this runner's workspace manifest so the OpenNext config
+          # resolves the adapter. No source or lockfile changes are committed.
+          npm pkg set --workspace @insureit/web-portal 'devDependencies.@opennextjs/cloudflare=1.20.18' 'devDependencies.wrangler=4.166.0'
+          npm install --no-audit --no-fund
       - name: Verify OpenNext Worker build without deploying
-        run: npx --yes --package=@opennextjs/cloudflare@1.20.18 opennextjs-cloudflare build
+        run: npx --no-install opennextjs-cloudflare build
       - name: Inspect worker bundle size and generated artifacts
         if: success()
         shell: bash
