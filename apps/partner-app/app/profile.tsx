@@ -11,7 +11,6 @@ import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PARTNER_PROFILE_PHOTO_BUCKET, partnerProfilePhotoPath } from '@/lib/partner-profile-photo';
 import { supabase } from '@/lib/supabase';
-import { partnerTheme } from '@/lib/theme';
 import { signedInOrganizationName, signedInPersonName, signedInPersonRole } from '@/lib/signed-in-person';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
