@@ -21,8 +21,8 @@ begin
   if v_access->>'actor_kind' is distinct from 'employee'
     or v_role not in ('it_super_user','super_admin')
     or v_access->'capabilities'->>'manage_system' is distinct from 'approve'
-    or v_access->'capabilities'->>'view_policy_intakes' not in ('view','edit','approve')
-    or v_access->'capabilities'->>'review_policy_intakes' not in ('edit','approve')
+    or coalesce(v_access->'capabilities'->>'view_policy_intakes','none') not in ('view','edit','approve')
+    or coalesce(v_access->'capabilities'->>'review_policy_intakes','none') not in ('edit','approve')
   then raise exception 'ai_studio_access_denied' using errcode='42501'; end if;
   if p_filter not in ('review','processing','done') or p_filter is null
     or p_offset not between 0 and 2000 or p_limit not between 1 and 40
@@ -73,8 +73,8 @@ begin
   if v_access->>'actor_kind' is distinct from 'employee'
     or v_role not in ('it_super_user','super_admin')
     or v_access->'capabilities'->>'manage_system' is distinct from 'approve'
-    or v_access->'capabilities'->>'view_policy_intakes' not in ('view','edit','approve')
-    or v_access->'capabilities'->>'review_policy_intakes' not in ('edit','approve')
+    or coalesce(v_access->'capabilities'->>'view_policy_intakes','none') not in ('view','edit','approve')
+    or coalesce(v_access->'capabilities'->>'review_policy_intakes','none') not in ('edit','approve')
   then raise exception 'ai_studio_access_denied' using errcode='42501'; end if;
   select jsonb_build_object(
     'id',i.id, 'intake_number',i.intake_number,
