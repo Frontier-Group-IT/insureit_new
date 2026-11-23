@@ -14,6 +14,7 @@ assert.equal(read('supabase/functions/partner-policy-onboarding/policy-registrat
 const atomicSave=read('supabase/migrations/20261123090812_partner_intake_draft_save_atomic.sql');
 const deletion=read('supabase/functions/partner-account-deletion/index.ts');
 const sources=read('supabase/functions/partner-policy-sources/index.ts');
+const intakeSources=read('supabase/functions/partner-intake-sources/index.ts');
 const onboardingDocs=read('supabase/functions/partner-onboarding-documents/index.ts');
 const policyCopy=read('supabase/functions/partner-policy-copy/index.ts');
 const customerService=read('supabase/functions/partner-customer-create/index.ts');
@@ -21,8 +22,9 @@ const push=read('supabase/functions/partner-push-devices/index.ts');
 const mobileDeletion=read('apps/partner-app/lib/account-deletion.ts');
 const mobileOnboarding=read('apps/partner-app/lib/policy-onboarding.ts');
 const mobileCustomers=read('apps/partner-app/lib/customers.ts');
+const mobileIntakes=read('apps/partner-app/lib/policy-intakes.ts');
 const mobilePush=read('apps/partner-app/lib/partner-notifications.ts');
-for(const [name,code] of [['onboarding',onboarding],['deletion',deletion],['push',push],['sources',sources],['onboarding-documents',onboardingDocs],['policy-copy',policyCopy],['customer-create',customerService]]){
+for(const [name,code] of [['onboarding',onboarding],['deletion',deletion],['push',push],['sources',sources],['onboarding-documents',onboardingDocs],['policy-copy',policyCopy],['customer-create',customerService],['intake-sources',intakeSources]]){
   assert.match(code,/auth\.getUser\(/,`${name} must check the caller's JWT`);
   assert.match(code,/partner_app_current_identity/,`${name} must verify canonical identity`);
   assert.match(code,/SUPABASE_SERVICE_ROLE_KEY/,`${name} uses server-only credentials`);
@@ -105,4 +107,10 @@ assert.match(customerService,/aadhaar_last_four:/,'Aadhaar only stores last four
 assert.match(mobileCustomers,/functions.invoke\('partner-customer-create'/,'Native customer creation uses Supabase');
 assert.match(mobileCustomers,/uploadToSignedUrl\(prepared.path,prepared.token,bytes/,'Native customer KYC upload uses Supabase Storage');
 assert.doesNotMatch(mobileCustomers,/portal.insureit.in|EXPO_PUBLIC_PORTAL_URL|\/api\/partner\/customers\/create/,'Native customer workflow must have no Vercel dependency');
-console.log('Supabase Edge migration auth, documents and customer contracts verified');
+assert.match(intakeSources,/scope.intermediary_ids/, 'Intake source service derives IDs from verified scope');
+assert.match(intakeSources,/identity.portal_access_type==="branch"/, 'Branch portal parent rule is retained');
+assert.match(intakeSources,/scope.partner_ids.includes\(identity.portal_access_entity_id\)/, 'Branch parent exception must match scoped branch');
+assert.match(intakeSources,/parent.partner_status==="active_partner"/, 'Parent source requires active Partner');
+assert.match(intakeSources,/eq\("account_status","active"\)/, 'Directory must filter active intermediaries');
+assert.match(mobileIntakes,/functions.invoke\('partner-intake-sources'/, 'Mobile intake sources must use Supabase Edge');
+console.log('Supabase Edge migration auth, documents, customers and intake-source contracts verified');
