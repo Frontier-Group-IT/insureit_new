@@ -294,12 +294,7 @@ export default function ClaimsScreen() {
       onAction={() => void refreshAll()}
     />
   ) : (
-    <PartnerStateView
-      state="empty"
-      asset={PartnerAssets.navigation.claims}
-      title="No claims found"
-      message="There are no claims matching this authorized scope and filter."
-    />
+    <ClaimsEmptyState filtered={Boolean(debouncedSearch)} settled={state === 'completed'} />
   );
 
   const footer = rows.length && rows.length < collection.total ? (
@@ -354,6 +349,57 @@ export default function ClaimsScreen() {
           <View style={styles.stickySearchBody}>{searchControls}</View>
         </View>
       ) : null}
+    </View>
+  );
+}
+
+/** Claims-only empty presentation: preserves the shared loading/error states and claim filters. */
+function ClaimsEmptyState({ filtered, settled }: { filtered: boolean; settled: boolean }) {
+  const title = filtered
+    ? 'A little quieter here'
+    : settled
+      ? 'Everything looks settled here'
+      : 'Nothing to review here yet';
+  const message = filtered
+    ? 'Try a different search or clear the filter to explore claim activity.'
+    : 'Try another tab or adjust your filters to explore claim activity.';
+
+  return (
+    <View style={styles.claimsEmptyCard} accessibilityLiveRegion="polite">
+      <View style={styles.claimsEmptyIllustration} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none">
+        <View style={styles.claimsEmptyHalo} />
+        <View style={styles.claimsEmptyLeafLeft} />
+        <View style={styles.claimsEmptyLeafRight} />
+        <View style={styles.claimsEmptyDocument}>
+          <View style={styles.claimsEmptyDocumentClip} />
+          <Text style={styles.claimsEmptyDocumentHeading}>CLAIM</Text>
+          <View style={styles.claimsEmptyDocumentLine}>
+            <Ionicons name="checkmark-circle" size={15} color="#70A8ED" />
+            <View style={[styles.claimsEmptyLine, styles.claimsEmptyLineLong]} />
+          </View>
+          <View style={styles.claimsEmptyDocumentLine}>
+            <Ionicons name="checkmark-circle" size={15} color="#70A8ED" />
+            <View style={[styles.claimsEmptyLine, styles.claimsEmptyLineMedium]} />
+          </View>
+          <View style={styles.claimsEmptyDocumentLine}>
+            <Ionicons name="checkmark-circle" size={15} color="#70A8ED" />
+            <View style={[styles.claimsEmptyLine, styles.claimsEmptyLineShort]} />
+          </View>
+        </View>
+        <Image
+          source={PartnerAssets.actions.impactBlue3dCar}
+          style={styles.claimsEmptyCar}
+          resizeMode="contain"
+        />
+        <View style={styles.claimsEmptyShield}>
+          <Ionicons name="shield-checkmark" size={52} color="#1764CE" />
+        </View>
+        <View style={styles.claimsEmptySparkOne} />
+        <View style={styles.claimsEmptySparkTwo} />
+        <View style={styles.claimsEmptySparkThree} />
+      </View>
+      <Text style={styles.claimsEmptyTitle}>{title}</Text>
+      <Text style={styles.claimsEmptyMessage}>{message}</Text>
     </View>
   );
 }
@@ -691,5 +737,42 @@ const styles = StyleSheet.create({
   loadingMore: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 5 },
   loadingMoreText: { color: '#66789B', fontSize: 7.5, lineHeight: 10 },
   endText: { minHeight: 26, paddingTop: 6, color: '#7D8BA1', textAlign: 'center', fontSize: 7, lineHeight: 9 },
+  claimsEmptyCard: {
+    minHeight: 340,
+    width: '100%',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#D8E2F0',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingTop: 24,
+    paddingBottom: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  claimsEmptyIllustration: { width: 270, maxWidth: '100%', height: 205, position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  claimsEmptyHalo: { position: 'absolute', top: 15, width: 210, height: 174, borderRadius: 100, backgroundColor: '#E8F2FF' },
+  claimsEmptyLeafLeft: { position: 'absolute', left: 24, bottom: 31, width: 26, height: 91, borderRadius: 27, backgroundColor: '#A5CAFA', transform: [{ rotate: '-32deg' }] },
+  claimsEmptyLeafRight: { position: 'absolute', right: 21, bottom: 31, width: 26, height: 91, borderRadius: 27, backgroundColor: '#A5CAFA', transform: [{ rotate: '32deg' }] },
+  claimsEmptyDocument: {
+    position: 'absolute', top: 25, left: 83, width: 121, height: 151,
+    borderRadius: 13, borderWidth: 6, borderColor: '#2774D6', backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12, paddingTop: 31,
+    shadowColor: '#164B95', shadowOpacity: 0.09, shadowRadius: 6, elevation: 2,
+  },
+  claimsEmptyDocumentClip: { position: 'absolute', top: -13, left: 32, width: 45, height: 23, borderRadius: 8, backgroundColor: '#3E90ED' },
+  claimsEmptyDocumentHeading: { color: '#123F83', fontSize: 14, lineHeight: 18, fontWeight: '900', marginBottom: 8, textAlign: 'center' },
+  claimsEmptyDocumentLine: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5 },
+  claimsEmptyLine: { height: 5, borderRadius: 5, backgroundColor: '#BBD7FA' },
+  claimsEmptyLineLong: { width: 49 },
+  claimsEmptyLineMedium: { width: 40 },
+  claimsEmptyLineShort: { width: 30 },
+  claimsEmptyCar: { position: 'absolute', left: 0, bottom: 0, width: 135, height: 96 },
+  claimsEmptyShield: { position: 'absolute', right: 14, bottom: 9, width: 64, height: 67, borderRadius: 23, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  claimsEmptySparkOne: { position: 'absolute', right: 34, top: 9, width: 4, height: 18, borderRadius: 3, backgroundColor: '#1764CE', transform: [{ rotate: '20deg' }] },
+  claimsEmptySparkTwo: { position: 'absolute', right: 15, top: 25, width: 4, height: 17, borderRadius: 3, backgroundColor: '#1764CE', transform: [{ rotate: '52deg' }] },
+  claimsEmptySparkThree: { position: 'absolute', right: 8, top: 47, width: 4, height: 14, borderRadius: 3, backgroundColor: '#1764CE', transform: [{ rotate: '79deg' }] },
+  claimsEmptyTitle: { marginTop: 4, color: '#0A2D63', fontSize: 20, lineHeight: 27, fontWeight: '800', textAlign: 'center' },
+  claimsEmptyMessage: { marginTop: 9, maxWidth: 290, color: '#65748C', fontSize: 13, lineHeight: 19, textAlign: 'center' },
   emptyWrap: { flex: 1, paddingHorizontal: 10, paddingTop: 14, backgroundColor: '#FFFFFF' },
 });
