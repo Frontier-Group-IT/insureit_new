@@ -573,6 +573,14 @@ for (const removed of ['styles.headerGlow', 'styles.headerCurve', 'headerGlow: {
   if (learn.includes(removed)) throw new Error('Compact Learn header must not include decorative blue curves: ' + removed);
 }
 
+// Progress counters connect directly to the navy header with no floating card treatment.
+requireText(learn, "statsCard: { marginTop: 0, marginHorizontal: -partnerTheme.spacing.lg", "Learn progress must touch the header and extend edge to edge.");
+requireText(learn, "borderBottomWidth: 1, borderBottomColor: '#DDE9FB'", "Learn progress must end with a straight full-width divider.");
+const statsStyle = learn.slice(learn.indexOf('statsCard: {'), learn.indexOf('stat: {', learn.indexOf('statsCard: {')));
+for (const obsolete of ['borderRadius:', 'shadowColor:', 'shadowOpacity:', 'elevation:', 'borderWidth: 1,']) {
+  if (statsStyle.includes(obsolete)) throw new Error('Learn progress must be a flat strip, not a floating card: ' + obsolete);
+}
+
 // Learn matches the approved reference: independent white options, single-choice radio
 // selection and explicit submission. Preserve learning progress while feedback expires after one second.
 const learnSectionStart = learn.indexOf('<View style={styles.questionSection}>');
