@@ -27,6 +27,13 @@ export default function StoriesScreen() {
   // Leave a legible illustration and allow native scrolling on very small screens.
   const artworkHeight = Math.max(96, 300 - artworkReduction);
   const journeyArtworkHeight = Math.max(100, 304 - artworkReduction);
+  // A Story should behave as a fixed-screen slide, not a continuously
+  // scrollable page. Only allow scrolling if the original artwork has already
+  // been reduced to its safe minimum and the content still cannot fit (e.g.
+  // a small device or enlarged accessibility text).
+  const storyScrollEnabled = storyViewportHeight > 0
+    && storyMeasuredHeight > storyViewportHeight + 2
+    && artworkReduction >= 204;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -157,6 +164,9 @@ export default function StoriesScreen() {
           <ScrollView
             key={index}
             style={styles.scroll}
+            scrollEnabled={storyScrollEnabled}
+            bounces={storyScrollEnabled}
+            alwaysBounceVertical={false}
             onLayout={(event) => setStoryViewportHeight(event.nativeEvent.layout.height)}
             onContentSizeChange={(_width, height) => setStoryMeasuredHeight(height)}
             contentContainerStyle={[styles.scrollContent, { paddingBottom: 12 }]}
