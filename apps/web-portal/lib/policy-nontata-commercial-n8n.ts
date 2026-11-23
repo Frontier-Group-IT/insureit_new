@@ -230,7 +230,7 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
       || payload.validation_passed !== payload.ok)
     throw new Error("n8n_nontata_validation_shape_invalid");
 
-  const expected = [...REQUIRED_BASE, ...REQUIRED_EXTRA[insurer]];
+  const expected = [...REQUIRED_BASE, ...REQUIRED_EXTRA[insurer as ExistingInsurer]];
   const checks = payload.checks;
   if (Object.keys(checks).length !== expected.length
       || expected.some((name) => typeof checks[name] !== "boolean"))
