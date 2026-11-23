@@ -388,7 +388,7 @@ for (const [needle, rationale] of [
   ['<BusinessMonthStory story={story} onOpen={openStory} />', 'Live business story data powers its own full-screen snapshot'],
   ["const policyMatch = story.title.match(/^([0-9,]+) +(polic(?:y|ies)) *(.*)$/i)", 'Policy count and title stay data-driven'],
   ["const premium = story.metric !== undefined ? formatMetric(story) : null", 'Gross premium is formatted from live data'],
-  ['style={styles.businessMonthBadge}', 'This Month uses centered rounded badge'],
+  ['<StoryHeading icon="stats-chart-outline" title={story.eyebrow} />', 'This Month uses the unified rounded heading'],
   ['style={styles.businessPremiumAmount}', 'Premium is the main headline'],
   ['style={styles.businessPoliciesCard}', 'Policies are summarized separately'],
   ['style={styles.businessPremiumCaption}', 'Business metric label is available beneath the summary'],
@@ -406,6 +406,26 @@ for (const unexpected of [
 ]) {
   if (stories.includes(unexpected)) throw new Error('Business Story figures must come from the actual story result, not a mockup: ' + unexpected);
 }
+// Unified five-screen Story design contract: dynamic metrics, shared styling and routed links.
+for (const marker of [
+  '<StoryHeading icon="sunny" title={story.eyebrow} tone="gold" />',
+  '<StoryHeading icon="shield-checkmark-outline" title={story.eyebrow} />',
+  '<StoryHeading icon="people" title={story.eyebrow} tone="violet" />',
+  '<StoryHeading icon="stats-chart-outline" title={story.eyebrow} />',
+  '<StoryHeading icon="time-outline" title={story.eyebrow} tone="green" />',
+  'function ImpactStory({ story, onOpen }',
+  'function LearnStory({ story, onOpen }',
+  'function StoryPanel({ children }',
+  'style={styles.unifiedPanel}',
+  'style={styles.impactSmallGrid}',
+  "story.metric !== undefined",
+  "story.body.match(/([\\d,]+)\\s+customers?",
+  "story.body.match(/([\\d,]+)\\s+claims?",
+  'style={styles.impactProtectionArtwork}',
+  'style={styles.journeyProgressTrack}',
+  'style={styles.businessPremiumAmount}',
+  "style={styles.learnStoryQuestion}",
+]) requireText(stories, marker, 'Five Stories unified mockup parity: ' + marker);
 // Story 3 (My Journey) keeps its own milestone-focused composition and real scoped data.
 for (const [needle, rationale] of [
   ["story.kind === 'journey' ? (", 'Only the customer journey story uses its own layout'],
@@ -415,7 +435,7 @@ for (const [needle, rationale] of [
   ['Number(story.progress_target)', 'Target comes from live story progress'],
   ['Math.max(0, target - current)', 'Remaining count derives from target minus actual progress'],
   ['Math.round(completion)', 'Percentage is calculated from live progress'],
-  ['style={styles.journeyHeadingBadge}', 'Journey heading is a centered badge'],
+  ['<StoryHeading icon="people" title={story.eyebrow} tone="violet" />', 'Journey uses the unified violet heading'],
   ['style={styles.journeyBlueArc}', 'Journey uses the uninterrupted curved background'],
   ['style={styles.journeyProgressTrack}', 'Milestone progress has a dedicated track'],
   ["require('../assets/partner/status/journey.png')", 'Journey road uses the bundled 3D path illustration'],
