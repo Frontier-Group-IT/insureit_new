@@ -453,8 +453,8 @@ for (const marker of [
   '<StoryHeading icon="time-outline" title={story.eyebrow} tone="green" />',
   'function ImpactStory({ story, onOpen }',
   'function LearnStory({ story, onOpen }',
-  'function StoryPanel({ children }',
-  'style={styles.unifiedPanel}',
+  'function StoryPanel({ children, impact = false }',
+  'style={[styles.unifiedPanel, impact && styles.impactPanel]}',
   'style={styles.impactSmallGrid}',
   "story.metric !== undefined",
   "story.body.match(/([\\d,]+)\\s+customers?",
@@ -465,6 +465,11 @@ for (const marker of [
   'style={styles.businessPremiumAmount}',
   "style={styles.learnStoryQuestion}",
 ]) requireText(stories, marker, 'Five Stories unified mockup parity: ' + marker);
+for (const marker of [
+  '<StoryPanel impact>',
+  "impactPanel: { borderWidth: 2, borderColor: '#3687E8' }",
+  '<StoryPanel>',
+]) requireText(stories, marker, 'Your Impact alone must use the blue border; shared Story panels must remain unchanged: ' + marker);
 // Five-screen illustrated reference: reuse optimized bundled 3D art and
 // keep all user metrics sourced from the scoped story RPC, never example values.
 for (const [needle, purpose] of [
