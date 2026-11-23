@@ -12,6 +12,14 @@ const management = read("lib/permission-management.ts");
 assert.ok(management.includes('view_intermediaries:"view"'));
 assert.ok(!management.includes('const lifeHeadPermissionCeiling:Partial<Record<Capability,PermissionAccess>>={view_policies:"view",view_intermediaries:"view",create_intermediary_application'));
 const scope=read("lib/employee-access-scope.ts");
+// The only non-downline intermediary exception is the confirmed company-direct account.
+for (const expected of ["d183747f-eeab-483b-adc6-b5c1b5868ccc", "e5988aee-0bf7-4528-ad20-79e61359d8ee", "PT00071"]) {
+  assert.ok(scope.includes(expected), "Missing exact Sankalp Direct identity: " + expected);
+}
+assert.ok(scope.includes('role === "operations_head_life" && capability === "view_intermediaries"'), "Direct partner exception must be role and capability scoped");
+assert.ok(scope.includes("intermediaryIds.add(directPartner.id)"), "Partner register must include direct account");
+assert.ok(scope.includes("applicationIds.add(LIFE_HEAD_DIRECT_PARTNER.applicationId)"), "Partner application must be scoped");
+
 assert.ok(scope.includes('["view_policies","view_intermediaries"].includes(capability)'));
 assert.ok(scope.includes('const root = "ac167429-0ce0-4ffe-90ea-4040cb4fea95"'));
 assert.ok(scope.includes('if (role === "operations_head_life") {') && scope.includes('linkedError) return []'));
