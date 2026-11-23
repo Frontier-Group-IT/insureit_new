@@ -357,7 +357,7 @@ export default function ClaimsScreen() {
 /** Claims-only empty presentation: preserves the shared loading/error states and claim filters. */
 function ClaimsEmptyState({ filtered, settled }: { filtered: boolean; settled: boolean }) {
   const { width } = useWindowDimensions();
-  const illustrationScale = Math.min(1.24, Math.max(0.82, (width - 48) / 270));
+  const illustrationScale = Math.min(0.88, Math.max(0.68, (width - 48) / 340));
   const title = filtered
     ? 'A little quieter here'
     : settled
@@ -745,15 +745,16 @@ const styles = StyleSheet.create({
   claimsEmptyCard: {
     width: '100%',
     paddingHorizontal: 14,
-    paddingVertical: 18,
+    paddingTop: 12,
+    paddingBottom: 18,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     backgroundColor: '#FFFFFF',
   },
   claimsEmptyIllustration: { width: 270, maxWidth: '100%', height: 205, position: 'relative', alignItems: 'center', justifyContent: 'center' },
-  claimsEmptyHalo: { position: 'absolute', top: 15, width: 210, height: 174, borderRadius: 100, backgroundColor: '#E8F2FF' },
-  claimsEmptyLeafLeft: { position: 'absolute', left: 24, bottom: 31, width: 26, height: 91, borderRadius: 27, backgroundColor: '#A5CAFA', transform: [{ rotate: '-32deg' }] },
-  claimsEmptyLeafRight: { position: 'absolute', right: 21, bottom: 31, width: 26, height: 91, borderRadius: 27, backgroundColor: '#A5CAFA', transform: [{ rotate: '32deg' }] },
+  claimsEmptyHalo: { position: 'absolute', top: 15, width: 210, height: 174, borderRadius: 100, backgroundColor: '#DCEAFF' },
+  claimsEmptyLeafLeft: { position: 'absolute', left: 24, bottom: 31, width: 26, height: 91, borderRadius: 27, backgroundColor: '#76B0F5', transform: [{ rotate: '-32deg' }] },
+  claimsEmptyLeafRight: { position: 'absolute', right: 21, bottom: 31, width: 26, height: 91, borderRadius: 27, backgroundColor: '#76B0F5', transform: [{ rotate: '32deg' }] },
   claimsEmptyDocument: {
     position: 'absolute', top: 25, left: 83, width: 121, height: 151,
     borderRadius: 13, borderWidth: 6, borderColor: '#2774D6', backgroundColor: '#FFFFFF',
@@ -763,7 +764,7 @@ const styles = StyleSheet.create({
   claimsEmptyDocumentClip: { position: 'absolute', top: -13, left: 32, width: 45, height: 23, borderRadius: 8, backgroundColor: '#3E90ED' },
   claimsEmptyDocumentHeading: { color: '#123F83', fontSize: 14, lineHeight: 18, fontWeight: '900', marginBottom: 8, textAlign: 'center' },
   claimsEmptyDocumentLine: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5 },
-  claimsEmptyLine: { height: 5, borderRadius: 5, backgroundColor: '#BBD7FA' },
+  claimsEmptyLine: { height: 5, borderRadius: 5, backgroundColor: '#8BBDF7' },
   claimsEmptyLineLong: { width: 49 },
   claimsEmptyLineMedium: { width: 40 },
   claimsEmptyLineShort: { width: 30 },
@@ -772,9 +773,9 @@ const styles = StyleSheet.create({
   claimsEmptySparkOne: { position: 'absolute', right: 34, top: 9, width: 4, height: 18, borderRadius: 3, backgroundColor: '#1764CE', transform: [{ rotate: '20deg' }] },
   claimsEmptySparkTwo: { position: 'absolute', right: 15, top: 25, width: 4, height: 17, borderRadius: 3, backgroundColor: '#1764CE', transform: [{ rotate: '52deg' }] },
   claimsEmptySparkThree: { position: 'absolute', right: 8, top: 47, width: 4, height: 14, borderRadius: 3, backgroundColor: '#1764CE', transform: [{ rotate: '79deg' }] },
-  claimsEmptyTitle: { marginTop: 4, color: '#0A2D63', fontSize: 20, lineHeight: 27, fontWeight: '800', textAlign: 'center' },
-  claimsEmptyMessage: { marginTop: 9, maxWidth: 290, color: '#65748C', fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  claimsEmptyTitle: { marginTop: 2, color: '#092653', fontSize: 20, lineHeight: 27, fontWeight: '800', textAlign: 'center' },
+  claimsEmptyMessage: { marginTop: 7, maxWidth: 290, color: '#425673', fontSize: 13, lineHeight: 19, textAlign: 'center' },
   emptyContent: { flexGrow: 1 },
   emptyWrap: { flex: 1, paddingHorizontal: 10, paddingTop: 14, backgroundColor: '#FFFFFF' },
-  emptyWrapFull: { flexGrow: 1, justifyContent: 'center', paddingTop: 0, paddingBottom: 10 },
+  emptyWrapFull: { flexGrow: 1, justifyContent: 'flex-start', paddingTop: 24, paddingBottom: 10 },
 });
