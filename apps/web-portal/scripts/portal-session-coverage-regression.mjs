@@ -56,6 +56,7 @@ const intentionallyPublicPageRoots = new Set([
   "access-denied",
   "account-deletion",
   "auth",
+  "download", // Public, device-aware Partner App store link; never exposes portal data.
   "forgot-password",
   "firebase-otp-test",
   "invite",
