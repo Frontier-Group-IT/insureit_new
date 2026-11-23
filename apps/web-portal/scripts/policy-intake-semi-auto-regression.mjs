@@ -116,6 +116,13 @@ assert(client.includes("No policy will be booked."), "Takeover must clearly dist
 
 // n8n is integrated into the existing workbench, never an alternate booking path.
 const n8nServer = text("lib/policy-intake-semi-auto-n8n.ts");
+assert(n8nServer.includes('"n8n_tp_required_field_missing"')
+  && n8nServer.includes('"n8n_tp_receipt_date_invalid"')
+  && n8nServer.includes('"n8n_tp_coverage_invalid"')
+  && n8nServer.includes('tataTpContractCodes.has(code)')
+  && n8nServer.includes('diagnosticCode:code'),
+  "Tata AIG TP strict contract failures must retain their exact safe code, not become n8n_unavailable");
+
 assert(server.includes("previewSemiAutoN8nIntake"), "Development action must expose an authorized n8n preview");
 assert(server.includes("await requireDevelopmentPolicyOperator(id)"), "Every n8n action must retain Development operator authorization");
 assert(server.includes("applySemiAutoN8nIntake"), "Save must be a distinct explicit action");
