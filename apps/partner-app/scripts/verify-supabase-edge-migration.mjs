@@ -122,7 +122,8 @@ assert.match(intakeDocument,/canReadAssignedReview = \["edit", "approve"\]\.incl
 assert.match(intakeDocument,/capabilities\.finalize_policy_intakes === "approve"/,'Assigned finalizer permission remains explicit');
 assert.match(intakeDocument,/identity\.actor_kind === "employee" && canReadAssignedReview && ownerId/,'Reviewer expansion only for verified employees');
 assert.match(intakeDocument,/assigned_to_profile_id\.eq\.\$\{ownerId\},status\.eq\.in_review/,'Reviewer can read only assigned in-review intakes');
-assert.match(intakeDocument,/identity\.portal_access_type\s*\? scope\.intermediary_ids\s*:\s*\[identity\.intermediary_id\]/,'Branch\/group sources use verified scope; ordinary intermediary uses own ID');
+assert.match(intakeDocument,/identity\.portal_access_type\s*\? \(scope\.intermediary_ids \?\? \[\]\)/,'Branch\/group source IDs must come from canonical commercial scope');
+assert.match(intakeDocument,/\[identity\.intermediary_id\]\.filter/,'Standalone intermediary source must come from verified identity');
 assert.match(intakeDocument,/scopedIds\.some\(\(id: unknown\) =>/,'Reject malformed intermediary scope values');
 assert.match(intakeDocument,/identity\.actor_kind === "intermediary" && sourceIds\.length/,'Source predicates are intermediary-only');
 assert.match(intakeDocument,/lead_source_id\.in\.\(\$\{sourceIds\.join\(","\)\}\)/,'Scoped lead-source OR condition matches website route');
