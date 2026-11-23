@@ -19,12 +19,19 @@ for(const [name,code] of [['onboarding',onboarding],['deletion',deletion],['push
   assert.doesNotMatch(code,/portal\.insureit\.in|EXPO_PUBLIC_PORTAL_URL/,`${name} cannot depend on Vercel`);
 }
 assert.match(onboarding,/partner_app_effective_permissions/, 'Onboarding uses live effective permissions');
-assert.match(onboarding,/body\.action !== "new_prepare" && body\.action !== "customer_search"/, 'Only tested read-only actions are implemented');
+assert.match(onboarding,/body\.action !== "new_prepare" && body\.action !== "customer_search"/, 'Only implemented preparation, search and revision-guarded draft-save actions are allowed');
 assert.match(onboarding,/status","in_review"/, 'Customer search must require in-review intake');
 assert.match(onboarding,/assigned_to_profile_id",uid/, 'Customer search must require assigned reviewer');
 assert.match(onboarding,/Duplicate intakes cannot be onboarded/, 'Customer search must block duplicates');
 assert.match(onboarding,/Life Operations customer scope is not migrated/, 'Life Operations must fail closed until downline access is migrated');
-assert.match(onboarding,/not yet been migrated.[^\n]*501\)/, 'Unmigrated actions must return 501');
+assert.match(onboarding,/not yet been migrated.[^\\n]*501\\)/, 'Unmigrated actions must return 501');
+assert.match(onboarding,/body.action === "save"/, 'Revision-guarded draft save is implemented');
+assert.match(onboarding,/Number.isSafeInteger\\(revision\\)/, 'Save rejects nonintegral revisions');
+assert.match(onboarding,/eq\\("assigned_to_profile_id",uid\\)/, 'Save requires current reviewer assignment');
+assert.match(onboarding,/eq\\("revision",revision\\)/, 'Concurrent saves must use revision compare-and-set');
+assert.match(onboarding,/!commercialAccess&&commercialFields.includes\\(key\\)/, 'Save must not write restricted commercial fields');
+assert.match(onboarding,/commercialProductFields.has\\(key\\)/, 'Restricted product commercial keys are protected');
+assert.match(onboarding,/Duplicate intakes cannot be onboarded/, 'Duplicate protection remains enforced');
 assert.doesNotMatch(onboarding,/\.from\("policies"\)\.insert\(/, 'Preparation may not book policies');
 assert.match(mobileDeletion,/functions\.invoke\('partner-account-deletion'/, 'Account deletion must call Supabase Edge');
 assert.match(mobilePush,/functions\.invoke\('partner-push-devices'/, 'Push must call Supabase Edge');
