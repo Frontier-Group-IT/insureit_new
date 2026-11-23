@@ -1,3 +1,8 @@
+## Supabase document upload/replace/delete migration
+- New `partner-policy-copy` Edge Function v1 deployed with JWT verification; employee creator-only standalone Motor policy copy (15 MB), private Storage one-time signed uploads, file-size/MIME check before metadata linking, and retry-safe finalization. Expo client uses `supabase.functions.invoke` and `uploadToSignedUrl`.
+- Upgraded `partner-onboarding-documents` Edge Function to v2 with JWT verification for Life, Health and Non Motor; supports assigned-reviewer `list`, `prepare_upload`, `finalize_upload`, and `delete`. Restricts filenames and MIME, preserves existing 4 MB cap and saved business line, verifies stored file properties, replaces metadata before deleting old Storage object, and keeps private bucket paths out of list responses. Expo client uses Edge and signed Storage, not Vercel.
+- Both mobile client changes are **in draft PR only**. They are not in the installed production app, and no real user file upload or booking UAT has been performed. Document services do not independently make the app Vercel-free; all other endpoints listed in this audit remain release blockers.
+
 # INSUREIT Partner App — Zero-Vercel migration
 
 **Status: IN PROGRESS — do not publish the mixed migration branch as a production Expo OTA.**
