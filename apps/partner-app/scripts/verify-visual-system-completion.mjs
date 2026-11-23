@@ -347,7 +347,7 @@ for (const [fragment, reason] of [
   ['style={styles.illustrationWrap}', 'Large illustration sits underneath question'],
   ['style={styles.completedPill}', 'Completed learning status sits below illustration'],
   ['<StoryIllustration kind={story.kind} body={story.body} />', 'Artwork adapts to the current story type'],
-  ["if (kind === 'learn' && /vehicle number/i.test(body))", 'Vehicle-servicing story uses car and number plate'],
+  ["if (kind === 'learn') {", 'Every learning question keeps the approved 3D car and number-plate art'],
   ["require('../assets/partner/stories/learning-car.png')", 'Learning illustration uses the bundled 3D car-and-plate scene'],
   ["require('../assets/partner/stories/learning-car.png')", 'Learning story has its own 3D vehicle and example plate illustration'],
   ["onPress={openStory}", 'Story title retains navigation'],
@@ -383,7 +383,8 @@ for (const expected of [
   "styles.todayCard",
   "styles.todayPremiumPanel",
   "styles.todayArtWrap",
-  "styles.todayCalendar",
+  "require('../assets/partner/stories/today-renewal.png')",
+  "require('../assets/partner/stories/claims.png')",
   "onTouchStart={(event) => event.stopPropagation()}",
 ]) requireText(stories, expected, 'Today renewal design regression: ' + expected);
 if (stories.includes('₹939') || stories.includes('1 renewal is due in 7 days')) throw new Error('Today story renewal values must not be hardcoded');
@@ -459,6 +460,22 @@ for(const asset of [
     throw new Error('Original PNG story artwork missing or invalid: ' + asset);
   }
 }
+// Both screenshots that exposed the fallbacks must now use themed 3D art.
+for (const [needle, purpose] of [
+  ["require('../assets/partner/stories/claims.png')", 'Today claims use a new glossy blue 3D illustration'],
+  ["isClaim ? 'shield-checkmark' : 'sunny-outline'", 'Claims use a relevant header icon'],
+  ["isClaim ? 'medkit-outline' : 'calendar-outline'", 'Claims summary icon is no longer an unrelated calendar'],
+  ["if (kind === 'learn') {", 'Every lesson, including Motor Basics, uses the 3D artwork'],
+  ["require('../assets/partner/stories/learning-car.png')", 'Learn topics consistently show the approved glossy 3D car and sample number-plate scene'],
+]) requireText(stories, needle, 'Contextual Stories artwork contract: ' + purpose);
+for (const oldFallback of ["require('../assets/partner/status/claim-attention.png')", "if (kind === 'learn') {\\n    return (\\n      <View style={styles.illustrationScene}>"]) {
+  if (stories.includes(oldFallback)) throw new Error('Old contextual Story fallback must remain removed: ' + oldFallback);
+}
+const claimsArtwork = fs.readFileSync(path.join(root,'assets/partner/stories/claims.png'));
+if (claimsArtwork.byteLength < 20000 || !claimsArtwork.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) {
+  throw new Error('Claims story 3D asset is missing or invalid PNG');
+}
+
 // Story 3 (My Journey) keeps its own milestone-focused composition and real scoped data.
 for (const [needle, rationale] of [
   ["story.kind === 'journey' ? (", 'Only the customer journey story uses its own layout'],
