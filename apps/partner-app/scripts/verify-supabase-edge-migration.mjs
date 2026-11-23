@@ -123,7 +123,7 @@ assert.match(intakeDocument,/canReadOrganization = !constrainedRole/,'Organizati
 assert.match(intakeDocument,/if \(!canReadOrganization\) intakeQuery = intakeQuery\.or\(predicates\.join\(","\)\)/,'Unprivileged PDF lookups remain scoped');
 
 assert.match(intakeDocument,/if \(ownerId && !uuid\.test\(ownerId\)\)/,'Invalid identity values may not enter OR predicates');
-assert.match(intakeDocument,/if \(!predicates\.length\) return json\(/,'Empty scope must deny before reading');
+assert.match(intakeDocument,/if \(!canReadOrganization && !predicates\.length\)/,'Empty scope must deny unless live organization access is verified');
 assert.match(intakeDocument,/predicates\.push\(\x60\$\{ownerField\}\.eq\.\$\{ownerId\}\x60\)/,'Exact submitter ownership remains in authorized OR scope');
 assert.match(intakeDocument,/canReadAssignedReview = \["edit", "approve"\]\.includes\(capabilities\.review_policy_intakes\)/,'Assigned reviewer read requires live review edit rights');
 assert.match(intakeDocument,/capabilities\.finalize_policy_intakes === "approve"/,'Assigned finalizer permission remains explicit');
