@@ -97,9 +97,7 @@ export default function ProfileScreen() {
       ) : null}
 
       <View style={styles.hero}>
-        <View pointerEvents="none" style={styles.heroGlowLarge} />
-        <View pointerEvents="none" style={styles.heroGlowSmall} />
-        <Image source={require('../assets/partner/profile/profile-id-check-3d.png')} style={styles.heroArtwork} resizeMode="contain" accessible={false} />
+        <Image source={require('../assets/partner/profile/profile-team-3d.png')} style={styles.heroArtwork} resizeMode="contain" accessible={false} />
 
         <View style={styles.heroTopRow}>
           <View style={styles.avatarStage}>
@@ -142,7 +140,7 @@ export default function ProfileScreen() {
               (pressed || signingOut) && styles.heroProfileIconPressed,
             ]}
           >
-            <Ionicons name="log-out-outline" size={25} color="#FFFFFF" />
+            <Ionicons name="log-out-outline" size={24} color="#0C306B" />
           </Pressable>
         </View>
       </View>
@@ -247,16 +245,6 @@ const registrationIcons: Record<string, ImageSourcePropType> = {
   'Portal status': require('../assets/partner/profile/role-team-3d.png'),
 };
 
-const registrationSideIcons: Record<string, ImageSourcePropType> = {
-  'Employee code': require('../assets/partner/profile/employee-id-detail-3d.png'),
-  'Intermediary code': require('../assets/partner/profile/employee-id-detail-3d.png'),
-  'Partner code': require('../assets/partner/profile/employee-id-detail-3d.png'),
-  Designation: require('../assets/partner/profile/designation-briefcase-detail-3d.png'),
-  Organization: require('../assets/partner/profile/designation-briefcase-detail-3d.png'),
-  Role: require('../assets/partner/profile/role-shield-detail-3d.png'),
-  'Portal status': require('../assets/partner/profile/role-shield-detail-3d.png'),
-};
-
 function SectionTitle({ icon, title }: { icon: React.ComponentProps<typeof Ionicons>['name']; title: string }) {
   return (
     <View style={styles.sectionTitleRow}>
@@ -285,8 +273,6 @@ function Detail({
   const artwork = registrationIcons[label];
   return (
     <View style={[styles.detailRow, isLast && styles.detailRowLast, { borderColor: iconBackground }]}>
-      <View style={[styles.detailGlow, { backgroundColor: iconBackground }]} pointerEvents="none" />
-      {registrationSideIcons[label] ? <Image source={registrationSideIcons[label]} style={styles.detailArtworkRight} resizeMode="contain" accessible={false} /> : null}
       <View style={[styles.detailIcon, { backgroundColor: iconBackground }]}>
         {artwork ? <Image source={artwork} style={styles.detailArtworkLeft} resizeMode="contain" accessible={false} /> : <Ionicons name={icon} size={24} color={iconColor} />}
       </View>
@@ -359,48 +345,21 @@ const styles = StyleSheet.create({
   },
   hero: {
     position: 'relative',
-    overflow: 'hidden',
-    width: 'auto',
-    marginHorizontal: 0,
-    marginTop: 12,
-    borderRadius: 24,
-    minHeight: 124,
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 18,
-    backgroundColor: '#1047B9',
-    shadowColor: '#153A89',
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 3,
-  },
-  heroArtwork: { position: 'absolute', width: 91, height: 83, right: 9, bottom: 1, opacity: 0.67 },
-  heroTopRow: {
     width: '100%',
+    marginTop: 13,
+    minHeight: 150,
+    paddingHorizontal: 6,
+    paddingTop: 26,
+    paddingBottom: 22,
+    backgroundColor: 'transparent',
+  },
+  heroArtwork: { position: 'absolute', width: 128, height: 128, right: -5, bottom: 0 },
+  heroTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  heroGlowLarge: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    right: -45,
-    top: -82,
-    backgroundColor: '#0A66D8',
-    opacity: 0.62,
-  },
-  heroGlowSmall: {
-    position: 'absolute',
-    width: 145,
-    height: 145,
-    borderRadius: 73,
-    right: -42,
-    top: 42,
-    backgroundColor: '#319BFF',
-    opacity: 0.28,
+    gap: 10,
+    paddingRight: 113,
+    minHeight: 95,
   },
   avatarStage: {
     width: 74,
@@ -416,7 +375,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    backgroundColor: '#8EA6ED',
+    backgroundColor: '#E7F0FF',
     borderWidth: 3,
     borderColor: '#FFFFFF',
     shadowColor: '#000000',
@@ -430,7 +389,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   avatarText: {
-    color: partnerTheme.colors.white,
+    color: '#103A83',
     fontSize: 22,
     lineHeight: 27,
     fontWeight: '800',
@@ -464,7 +423,7 @@ const styles = StyleSheet.create({
   },
   name: {
     flexShrink: 1,
-    color: partnerTheme.colors.white,
+    color: '#0D2D67',
     fontSize: 18,
     lineHeight: 23,
     fontWeight: '800',
@@ -476,23 +435,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.17)',
+    backgroundColor: '#DCEBFF',
   },
-  heroDesignation: { marginTop: 7, maxWidth: '100%', color: '#DFECFF', fontSize: 9.5, lineHeight: 13, fontWeight: '600' },
+  heroDesignation: { marginTop: 7, maxWidth: '100%', color: '#4B5D7A', fontSize: 9.5, lineHeight: 14, fontWeight: '700' },
   roleText: {
-    color: '#DCE7FF',
+    color: '#194B95',
     fontSize: 10.5,
     lineHeight: 13,
     fontWeight: '500',
   },
   heroProfileIcon: {
-    flexShrink: 0,
-    width: 40,
-    height: 40,
+    position: 'absolute',
+    right: -1,
+    top: -16,
+    width: 38,
+    height: 38,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(227,239,255,0.85)',
+    zIndex: 3,
   },
   heroProfileIconPressed: {
     opacity: 0.68,
@@ -505,18 +467,16 @@ const styles = StyleSheet.create({
   sectionTitleRule: { flex: 1, height: 2, backgroundColor: '#8D50D9', marginLeft: 5 },
   details: { gap: 11, paddingBottom: 18 },
   detailRow: {
-    position: 'relative', overflow: 'hidden', minHeight: 98, flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 14, borderRadius: 20, backgroundColor: '#FFFFFF',
+    minHeight: 94, flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 13, paddingVertical: 15, borderRadius: 20, backgroundColor: '#FFFFFF',
     borderWidth: 1, shadowColor: '#5433B6', shadowOpacity: 0.07, shadowRadius: 9,
     shadowOffset: { width: 0, height: 4 }, elevation: 2,
   },
   detailRowLast: {},
-  detailGlow: { position: 'absolute', right: -32, top: -26, width: 143, height: 143, borderRadius: 72, opacity: 0.8 },
-  detailArtworkRight: { position: 'absolute', right: -2, bottom: 1, width: 86, height: 91, opacity: 0.83 },
   detailIcon: { width: 56, height: 61, borderRadius: 16, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   detailArtworkLeft: { width: 54, height: 59 },
   detailVerticalRule: { width: 1, height: 56, marginHorizontal: 12, opacity: 0.5 },
-  detailCopy: { flex: 1, minWidth: 0, paddingRight: 69, gap: 5 },
+  detailCopy: { flex: 1, minWidth: 0, gap: 5 },
   detailLabel: { color: '#5A6683', fontSize: 11.5, lineHeight: 15, fontWeight: '600' },
   detailValue: { color: '#101833', fontSize: 13.5, lineHeight: 17, fontWeight: '800' },
   logoutFeedback: {
