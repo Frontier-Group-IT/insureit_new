@@ -166,7 +166,8 @@ export default function PolicyDetailScreen() {
                 <MiniInfo label="End date" value={formatDate(data.policy.end_date)} threeColumn />
               </View>
             ) : null}
-            <View style={styles.unifiedSectionDivider} />
+          </Card>
+          <Card>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }} onPress={() => setShowPremiumDetails((value) => !value)} style={({ pressed }) => [styles.premiumDisclosure, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="premium-breakup" size={22} showBadge={false} />
               <View style={styles.disclosureText}><Text style={styles.cardTitle}>Premium breakup</Text><Text style={styles.disclosureSummary}>{formatIndianCurrency(data.premium.gross_premium)}</Text></View>
@@ -181,7 +182,8 @@ export default function PolicyDetailScreen() {
                 <MiniInfo compact label="CPA" value={data.premium.cpa_opted ? nullableMoney(data.premium.cpa_amount) : 'Not opted / not recorded'} />
               </View>
             ) : null}
-            <View style={styles.unifiedSectionDivider} />
+          </Card>
+          <Card>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="sales-ownership" size={22} showBadge={false} />
               <View style={styles.disclosureText}><Text style={styles.cardTitle}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
@@ -345,7 +347,7 @@ const styles = StyleSheet.create({
   headerBackButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: '#FFFFFF', fontSize: 16, lineHeight: 22, fontWeight: '700', letterSpacing: -0.12 },
   stateWrap: { marginTop: 14 },
-  contentWrap: { marginTop: 0, gap: 6, paddingBottom: 15 },
+  contentWrap: { marginTop: 0, gap: 12, paddingBottom: 15 },
   summaryCard: {
     paddingHorizontal: 14, paddingTop: 10, paddingBottom: 9,
     marginHorizontal: -partnerTheme.spacing.lg,
