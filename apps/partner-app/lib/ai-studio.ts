@@ -111,3 +111,25 @@ export async function loadAiStudioDetail(id: string): Promise<AiStudioDetail> {
         evidence: typeof field.evidence === 'string' ? field.evidence : null })),
   };
 }
+
+/** Fresh n8n verification runs in a protected Supabase Edge Function, never on-device.
+ * This is read-only; the response cannot be used by a client to book a policy. */
+export async function verifyAiStudioPdf(intakeId: string): Promise<{
+  ok: true; parser_id: string; checks_passed: number; fields: AiStudioField[];
+}> {
+  const { data, error } = await supabase.functions.invoke('partner-ai-studio-verify', {
+    body: { intake_id: intakeId },
+  });
+  if (error || !object(data) || data.ok !== true || !Array.isArray(data.fields)) {
+    throw new Error('Secure PDF verification is unavailable. No saved data was changed.');
+  }
+  return {
+    ok: true,
+    parser_id: typeof data.parser_id === 'string' ? data.parser_id : '',
+    checks_passed: Number(data.checks_passed) || 0,
+    fields: data.fields.filter(object).filter(row =>
+      typeof row.key === 'string' && typeof row.value === 'string')
+      .map(row => ({ key: String(row.key), value: String(row.value),
+        evidence: typeof row.evidence === 'string' ? row.evidence : null })),
+  };
+}
