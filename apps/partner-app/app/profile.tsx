@@ -11,7 +11,6 @@ import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PARTNER_PROFILE_PHOTO_BUCKET, partnerProfilePhotoPath } from '@/lib/partner-profile-photo';
 import { supabase } from '@/lib/supabase';
-import { partnerTheme } from '@/lib/theme';
 import { signedInOrganizationName, signedInPersonName, signedInPersonRole } from '@/lib/signed-in-person';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -277,7 +276,7 @@ function Detail({
   const artwork = registrationIcons[label];
   return (
     <View style={[styles.detailRow, isLast && styles.detailRowLast, { borderColor: iconBackground }]}>
-       <View style={[styles.detailIcon, { backgroundColor: iconBackground }]}>
+      <View style={[styles.detailIcon, { backgroundColor: iconBackground }]}>
         {artwork ? <Image source={artwork} style={styles.detailArtworkLeft} resizeMode="contain" accessible={false} /> : <Ionicons name={icon} size={24} color={iconColor} />}
       </View>
       <View style={[styles.detailVerticalRule, { backgroundColor: iconColor }]} />
