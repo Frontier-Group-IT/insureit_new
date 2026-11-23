@@ -89,5 +89,6 @@ assert.match(policyCopy,/after.data\)return reply\(\{ok:true,document_id:after.d
 assert.doesNotMatch(policyCopy,/portal.insureit.in|EXPO_PUBLIC_PORTAL_URL/,'Policy-copy service must be independent of Vercel');
 assert.match(mobileOnboarding,/functions\.invoke\('partner-policy-copy'/,'Native Motor policy copy must use Supabase Edge');
 assert.match(mobileOnboarding,/functions\.invoke\('partner-onboarding-documents'/,'Native document listing must use Supabase Edge');
-assert.match(mobileOnboarding,/action:'list',intake_id:intakeId,business_line:line/,'Document list request is scope-bound');
+assert.match(mobileOnboarding,/const scope=\{intake_id:intakeId,business_line:line\}/,'Document actions must be scoped to intake and business line');
+assert.match(mobileOnboarding,/invoke\(\{\.\.\.scope,action:'list'\}\)/,'Document listing uses scoped payload');
 console.log('Supabase Edge migration auth and policy-copy upload contracts verified');
