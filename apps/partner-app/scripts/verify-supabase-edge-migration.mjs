@@ -115,6 +115,13 @@ assert.match(intakeDocument,/partner_app_commercial_scope/,'Intake PDF read must
 assert.match(intakeDocument,/identity\.auth_user_id !== user\.user\.id/,'Intake PDF must bind identity to authenticated user');
 assert.match(intakeDocument,/partner_app_effective_permissions/,'Employee PDF access requires current permissions');
 assert.match(intakeDocument,/profile\.is_active !== true/,'Inactive employee PDF access must be denied');
+assert.match(intakeDocument,/\.select\("id,role,is_active"\)/,'Organization scope requires a live server-read employee role');
+assert.match(intakeDocument,/hierarchyIntakeRoles\.has\(profile\.role \?\? ""\)/,'Hierarchy roles cannot automatically gain organization-wide PDF access');
+assert.match(intakeDocument,/profile\.role === "operations_head_life"/,'Life Head must retain scoped read');
+assert.match(intakeDocument,/profile\.role === "super_admin"/,'Super Admin organization scope is explicit');
+assert.match(intakeDocument,/canReadOrganization = !constrainedRole/,'Organization scope requires non-hierarchy role');
+assert.match(intakeDocument,/if \(!canReadOrganization\) intakeQuery = intakeQuery\.or\(predicates\.join\(","\)\)/,'Unprivileged PDF lookups remain scoped');
+
 assert.match(intakeDocument,/if \(ownerId && !uuid\.test\(ownerId\)\)/,'Invalid identity values may not enter OR predicates');
 assert.match(intakeDocument,/if \(!predicates\.length\) return json\(/,'Empty scope must deny before reading');
 assert.match(intakeDocument,/predicates\.push\(\x60\$\{ownerField\}\.eq\.\$\{ownerId\}\x60\)/,'Exact submitter ownership remains in authorized OR scope');
@@ -127,7 +134,7 @@ assert.match(intakeDocument,/\[identity\.intermediary_id\]\.filter/,'Standalone 
 assert.match(intakeDocument,/scopedIds\.some\(\(id: unknown\) =>/,'Reject malformed intermediary scope values');
 assert.match(intakeDocument,/identity\.actor_kind === "intermediary" && sourceIds\.length/,'Source predicates are intermediary-only');
 assert.match(intakeDocument,/lead_source_id\.in\.\(\$\{sourceIds\.join\(","\)\}\)/,'Scoped lead-source OR condition matches website route');
-assert.match(intakeDocument,/\.or\(predicates\.join\(","\)\)/,'Signed PDF lookup must use server-verified OR scope');
+assert.match(intakeDocument,/if \(!canReadOrganization\) intakeQuery = intakeQuery\.or\(predicates\.join\(","\)\)/,'Non-organization PDF lookup must use server-verified OR scope');
 assert.match(intakeDocument,/intakeQuery\.maybeSingle\(\)/,'Signed URL uses one permission-scoped intake result');
 assert.match(intakeDocument,/createSignedUrl\(intake\.storage_path, 300\)/,'Intake PDF URL must expire after five minutes');
 assert.doesNotMatch(intakeDocument,/\.from\("policy_intake_requests"\)\.update\(|\.from\("policy_intake_requests"\)\.insert\(/,'PDF endpoint is read only');
