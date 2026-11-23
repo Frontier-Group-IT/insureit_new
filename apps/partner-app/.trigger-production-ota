@@ -1,12 +1,13 @@
 Partner production OTA trigger
-release=partner-login-supabase-independent
+release=partner-native-ai-studio-read-only
 source=verified-merged-main
-source_pr=5131
-source_merge=72ad3c9d0ec2d96b7c620bae6e3666eebe794f41
-reason=user-approved-finish-login-fix-without-vercel
+source_pr=5136
+source_merge=07bc1fcd331402dda864a510153a2917c5132197
+reason=user-approved-publish-before-edge-backend-extension
 channel=production
 runtime=0.2.0
 requested=2026-11-23
+precondition=secure-rpcs-installed-and-verified
 no_native_build=true
 no_apk=true
 no_aab=true
