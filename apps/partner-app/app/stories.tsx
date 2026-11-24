@@ -59,6 +59,8 @@ export default function StoriesScreen() {
   const story = data?.items[index] || null;
   const [impactPaused, setImpactPaused] = useState(false);
   const impactClock = useImpactTimeline(!loading && !error && story?.kind === 'impact', impactPaused);
+  const monthClock = useImpactTimeline(!loading && !error && story?.kind === 'business', impactPaused);
+  const backdropClock = story?.kind === 'business' ? monthClock : impactClock;
   useEffect(() => { setImpactPaused(false); }, [index]);
 
   useEffect(() => {
@@ -101,7 +103,7 @@ export default function StoriesScreen() {
       return;
     }
     navigationTouch.current = { x: event.nativeEvent.pageX, y: event.nativeEvent.pageY, started: Date.now() };
-    if (story?.kind === 'impact') setImpactPaused(true);
+    if (story?.kind === 'impact' || story?.kind === 'business') setImpactPaused(true);
   }
 
   function handleStoryTouchMove(event: { nativeEvent: { pageX: number; pageY: number } }) {
@@ -116,7 +118,7 @@ export default function StoriesScreen() {
     setImpactPaused(false);
     navigationTouch.current = null;
     if (!start) return;
-    if (story?.kind === 'impact' && Date.now() - start.started > 250) return;
+    if ((story?.kind === 'impact' || story?.kind === 'business') && Date.now() - start.started > 250) return;
     if (Math.abs(start.x - event.nativeEvent.pageX) > 12 || Math.abs(start.y - event.nativeEvent.pageY) > 12) return;
     if (event.nativeEvent.pageX < windowWidth / 2) previous();
     else next();
@@ -198,15 +200,15 @@ export default function StoriesScreen() {
             onScrollBeginDrag={() => { navigationTouch.current = null; setImpactPaused(false); }}
           >
             <View pointerEvents="none" style={styles.storyBackdrop}>
-              <Animated.View style={[styles.waveUpper, impactClock.enabled && { transform: [{ rotate: '-9deg' }, { translateX: impactClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,5]}) }] }]} />
-              <Animated.View style={[styles.waveMiddle, impactClock.enabled && { transform: [{ rotate: '-10deg' }, { translateX: impactClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,-8]}) }] }]} />
-              <Animated.View style={[styles.waveLower, impactClock.enabled && { transform: [{ rotate: '-11deg' }, { translateY: impactClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,6]}) }] }]} />
+              <Animated.View style={[styles.waveUpper, backdropClock.enabled && { transform: [{ rotate: '-9deg' }, { translateX: backdropClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,5]}) }] }]} />
+              <Animated.View style={[styles.waveMiddle, backdropClock.enabled && { transform: [{ rotate: '-10deg' }, { translateX: backdropClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,-8]}) }] }]} />
+              <Animated.View style={[styles.waveLower, backdropClock.enabled && { transform: [{ rotate: '-11deg' }, { translateY: backdropClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,6]}) }] }]} />
             </View>
             <View style={styles.storyContent}>
               {story.kind === 'today' ? (
                 <TodayRenewalStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />
               ) : story.kind === 'business' ? (
-                <BusinessMonthStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />
+                <BusinessMonthStory story={story} onOpen={openStory} artworkHeight={artworkHeight} clock={monthClock} onPause={setImpactPaused} />
               ) : story.kind === 'journey' ? (
                 <JourneyMilestoneStory story={story} artworkHeight={journeyArtworkHeight} />
               ) : story.kind === 'impact' ? (
@@ -513,48 +515,54 @@ function JourneyMilestoneStory({ story, artworkHeight }: { story: PartnerStory; 
  * The fourth (monthly business) story uses a focused financial snapshot instead
  * of the shared narrative slide. Metrics and policy counts stay backend-driven.
  */
-function BusinessMonthStory({ story, onOpen, artworkHeight }: { story: PartnerStory; onOpen: () => void; artworkHeight: number }) {
+function BusinessMonthStory({ story, onOpen, artworkHeight, clock, onPause }: { story: PartnerStory; onOpen: () => void; artworkHeight: number; clock: ImpactTimeline; onPause: (paused: boolean) => void }) {
   const policyMatch = story.title.match(/^([0-9,]+) +(polic(?:y|ies)) *(.*)$/i);
-  const premium = story.metric !== undefined ? formatMetric(story) : null;
+  const premium = story.metric !== undefined ? Number(story.metric) : null;
+  const policyCount = policyMatch ? Number(policyMatch[1].replace(/,/g, '')) : null;
+  const glow = clock.ambient.interpolate({ inputRange: [0, 1], outputRange: [0, 0.18] });
+  const sweep = clock.time.interpolate({ inputRange: [0, 350, 1250, 1800], outputRange: [-160, -160, 160, 160], extrapolate: 'clamp' });
+  const shineOpacity = clock.time.interpolate({ inputRange: [0, 350, 700, 1250, 1800], outputRange: [0, 0, 0.12, 0.08, 0], extrapolate: 'clamp' });
   const label = story.metric_label?.trim() || 'Gross premium';
   const hasRoute = Boolean(story.route);
   const hasTarget = story.progress_current !== undefined && Boolean(story.progress_target);
 
   return (
     <View style={styles.businessSnapshot}>
-      <StoryHeading icon="stats-chart-outline" title={story.eyebrow} />
-      <StoryPanel>
+      <Animated.View style={[{ alignItems: 'center', maxWidth: '100%' }, reveal(clock, 0, 320, 5, 0.95)]}>
+        {clock.enabled ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 25, backgroundColor: '#9ACBFF', opacity: glow, transform: [{ scale: 1.035 }] }]} /> : null}
+        <StoryHeading icon="stats-chart-outline" title={story.eyebrow} />
+      </Animated.View>
+      <Animated.View style={[{ width: '100%' }, reveal(clock, 0, 200, 5, 0.985)]}><StoryPanel>
       <Pressable
         onPress={onOpen}
-        onTouchStart={(event) => event.stopPropagation()}
-        onTouchEnd={(event) => event.stopPropagation()}
+        onTouchStart={(event) => { onPause(true); event.stopPropagation(); }}
+        onTouchEnd={(event) => { onPause(false); event.stopPropagation(); }}
+        onTouchCancel={() => onPause(false)}
         disabled={!hasRoute}
         accessibilityRole={hasRoute ? 'link' : undefined}
         accessibilityLabel={hasRoute ? 'Open ' + story.title : undefined}
         style={({ pressed }) => [styles.businessSummaryLink, pressed && hasRoute && styles.storyTextPressed]}
       >
-        {premium ? (
+        {premium !== null && Number.isFinite(premium) ? (
           <>
-            <Text style={styles.businessPremiumAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.42}>
-              {premium}
-            </Text>
+            <ImpactCounter clock={clock} value={premium} start={200} duration={1600} format={formatMonthPremium} style={[styles.businessPremiumAmount, { fontVariant: ['tabular-nums'] }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.42} />
             <Text style={styles.businessPremiumCaption}>{label}</Text>
           </>
         ) : <Text style={styles.businessPremiumCaption}>{story.body}</Text>}
-        <View style={styles.titleRule}><View style={styles.titleRuleActive} /></View>
-        <View style={styles.businessPoliciesCard}>
-          <Ionicons name="document-text-outline" size={31} color="#0E6ADD" />
+        <View style={styles.titleRule}><View style={styles.titleRuleActive} />{clock.enabled ? <View pointerEvents="none" style={styles.monthRuleClip}><Animated.View style={[styles.monthRuleLight, { opacity: shineOpacity, transform: [{ translateX: sweep }] }]} /></View> : null}</View>
+        <Animated.View style={[styles.businessPoliciesCard, reveal(clock, 400, 720, 3, 0.97)]}>
+          <Animated.View style={reveal(clock, 400, 800, 3, 0.88)}><Ionicons name="document-text-outline" size={31} color="#0E6ADD" /></Animated.View>
           <View style={styles.businessPolicyText}>
-            {policyMatch ? (
+            {policyMatch && policyCount !== null && Number.isFinite(policyCount) ? (
               <>
-                <Text style={styles.businessPolicyCount}>{policyMatch[1]}</Text>
+                <ImpactCounter clock={clock} value={policyCount} start={400} duration={1400} format={formatMonthCount} style={[styles.businessPolicyCount, { fontVariant: ['tabular-nums'] }]} />
                 <Text style={styles.businessPolicyLabel}>{policyMatch[2] + (policyMatch[3] ? ' ' + policyMatch[3].trim() : '')}</Text>
               </>
             ) : (
               <Text style={styles.businessPolicyLabel}>{story.title}</Text>
             )}
           </View>
-        </View>
+        </Animated.View>
       </Pressable>
       {hasTarget ? (
         <View style={styles.storyProgressWrap}>
@@ -567,9 +575,14 @@ function BusinessMonthStory({ story, onOpen, artworkHeight }: { story: PartnerSt
           </View>
         </View>
       ) : null}
-      </StoryPanel>
+      {clock.enabled ? <View pointerEvents="none" style={styles.monthCardClip}><Animated.View style={[styles.monthCardShine, { opacity: shineOpacity, transform: [{ translateX: sweep }, { rotate: '24deg' }] }]} /></View> : null}
+      </StoryPanel></Animated.View>
       <View style={[styles.businessIllustrationWrap, { minHeight: artworkHeight }]} pointerEvents="none">
-        <StoryIllustration kind="business" body={story.body} artworkHeight={artworkHeight} />
+        <Animated.View style={[{ width: '100%', alignItems: 'center' }, reveal(clock, 700, 1800, 8, 0.97)]}>
+          <Animated.View style={[{ width: '100%', alignItems: 'center' }, clock.enabled && { transform: [{ translateY: clock.ambient.interpolate({ inputRange: [0, 1], outputRange: [0, -7] }) }, { scale: clock.ambient.interpolate({ inputRange: [0, 1], outputRange: [1, 1.02] }) }] }]}>
+            <StoryIllustration kind="business" body={story.body} artworkHeight={artworkHeight} />
+          </Animated.View>
+        </Animated.View>
       </View>
     </View>
   );
@@ -700,7 +713,18 @@ function StoryIllustration({ kind, body, artworkHeight = 300 }: { kind: PartnerS
   );
 }
 
+function formatMonthPremium(value: number) {
+  return '₹' + new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+}
+function formatMonthCount(value: number) {
+  return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.round(value));
+}
+
 const styles = StyleSheet.create({
+  monthRuleClip: { ...StyleSheet.absoluteFillObject, overflow: 'hidden', borderRadius: 5 },
+  monthRuleLight: { width: 28, height: 3, backgroundColor: '#DCEEFF' },
+  monthCardClip: { ...StyleSheet.absoluteFillObject, overflow: 'hidden', borderRadius: 23 },
+  monthCardShine: { position: 'absolute', width: 65, height: '160%', top: '-30%', left: '50%', backgroundColor: '#A8D5FF' },
   screen: { flex: 1, overflow: 'hidden', backgroundColor: '#EAF3FF' },
   top: { zIndex: 5, backgroundColor: '#0A3478', paddingHorizontal: 18, paddingTop: 11, paddingBottom: 16 },
   bottomNavigationShell: { backgroundColor: '#071E49' },
