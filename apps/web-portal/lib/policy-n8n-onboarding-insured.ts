@@ -49,6 +49,8 @@ export function selectVerifiedN8nInsuredDraftIdentity(
     united_india_tractor_tp_native_pdf: "Native PDF: Name of the Insured",
     go_digit_two_wheeler_od_native_pdf: "Native PDF: Name",
     zurich_kotak_private_car_tp_native_pdf: "Native PDF: INSURED DETAILS Name",
+    hdfc_ergo_two_wheeler_tp_native_pdf: "Native PDF: Policy Schedule Insured Name",
+    sbi_general_private_car_package_native_pdf: "Native PDF: Premium Receipt Policy Holder Name",
   };
   const variantEvidence = variantNameEvidence[parserId ?? ""];
   // Strictly validated Tata AIG third-party parsers emit a dedicated
