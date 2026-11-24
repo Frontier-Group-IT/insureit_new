@@ -42,9 +42,6 @@ export function assessIffcoAutoOnboarding(input:Input):{eligible:boolean;reason:
     return fail("iffco_vehicle_evidence_incomplete");
   const registration=get("vehicle_registration_number").toUpperCase().replace(/[ -]/g,"");
   const isPending=get("vehicle_registration_status")==="registration_pending";
-  const rtoCity=get("vehicle_rto_name");
-  const rtoStateEvidence=fields.get("vehicle_rto_state")?.evidence??"";
-  const rtoCityEvidence=fields.get("vehicle_rto_name")?.evidence??"";
   // Both location fields are optional. Never substitute insured-address city
   // for the registration authority; keep its provenance when available.
   if(isPending){
