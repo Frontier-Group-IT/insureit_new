@@ -13,7 +13,7 @@ import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-valida
 import { mapVerifiedN8nMotorPremium, mapVerifiedIffcoCommercialPremium, mapVerifiedNiaCommercialPremium, mapVerifiedUiicGcvCommercialPremium } from "@/lib/policy-n8n-onboarding-premium";
 import { assessProductVariantDirectConversion, mapVerifiedProductVariantPremium, PRODUCT_VARIANT_PARSERS } from "@/lib/policy-product-variant-direct-eligibility";
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
-import { assessNiaNamedAuthorityUnregisteredConversion, assessStandardCommercialDirectConversion, assessUiicGcvDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
+import { assessNiaNamedAuthorityUnregisteredConversion, assessStandardCommercialDirectConversion, assessUiicGcvDirectConversion, assessUiicPrivateCarDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { trainedN8nParserProfile } from "@/lib/ai-policy-onboarding-eligibility";
 import { enrichVerifiedN8nOnboardingFields, resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
@@ -150,6 +150,10 @@ export async function prepareVerifiedN8nIntakeHandoff(
       parserId:parsed.preview.parserId,checksPassed:parsed.preview.checksPassed,
       warnings:parsed.preview.warnings,fields:parsed.preview.fields,
       commercialPremium:commercial,
+    }).eligible||assessUiicPrivateCarDirectConversion({
+      parserId:parsed.preview.parserId,checksPassed:parsed.preview.checksPassed,
+      warnings:parsed.preview.warnings,fields:parsed.preview.fields,
+      commercialPremium:commercial,
     }).eligible||assessStandardCommercialDirectConversion({
       parserId:parsed.preview.parserId,checksPassed:parsed.preview.checksPassed,
       warnings:parsed.preview.warnings,fields:parsed.preview.fields,
@@ -186,7 +190,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
   // Never attempt to pass its commercial totals through ICICI/Tata rules.
   const commercialChecksOk=Boolean(commercial)
     && (["go_digit_cv_native_pdf","iffco_tokio_cv_native_pdf","new_india_cv_native_pdf",
-        "united_india_gcv_native_pdf","oriental_gccv_native_pdf"].includes(parsed.preview.parserId)
+        "united_india_gcv_native_pdf","united_india_private_car_package_native_pdf","oriental_gccv_native_pdf"].includes(parsed.preview.parserId)
        || PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId))
     && parsed.preview.checksPassed === (trainedN8nParserProfile(parsed.preview.parserId)?.checks ?? 0)
     // SBI Package prints owner-driver CPA separately from TP. Reuse its
@@ -352,6 +356,11 @@ async function preparePolicyIntakeHandoffInternal(
       warnings:verified.warnings,fields:verified.fields,
       commercialPremium:verified.commercialPremium,
     });
+    const uiicPrivateCarReview=assessUiicPrivateCarDirectConversion({
+      parserId:verified.parserId,checksPassed:verified.checksPassed,
+      warnings:verified.warnings,fields:verified.fields,
+      commercialPremium:verified.commercialPremium,
+    });
     const uiicReview=assessUiicGcvDirectConversion({
       parserId:verified.parserId,checksPassed:verified.checksPassed,
       warnings:verified.warnings,fields:verified.fields,
@@ -385,7 +394,7 @@ async function preparePolicyIntakeHandoffInternal(
       commercialPremium:verified.commercialPremium,
     });
     const eligibleForVerifiedConversion=verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible
-      ||standardReview.eligible||niaReview.eligible||uiicReview.eligible||productVariantReview.eligible;
+      ||standardReview.eligible||niaReview.eligible||uiicReview.eligible||uiicPrivateCarReview.eligible||productVariantReview.eligible;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
     const{error}=await admin.from("policy_intake_ai_processing_queue").update({
       // Only previously certified Go Digit and new narrowly evidenced IFFCO
@@ -402,6 +411,7 @@ async function preparePolicyIntakeHandoffInternal(
           :verified.parserId==="iffco_tokio_cv_native_pdf"?iffcoReview.reason
           :verified.parserId==="new_india_cv_native_pdf"?niaReview.reason
           :verified.parserId==="united_india_gcv_native_pdf"?uiicReview.reason
+          :verified.parserId==="united_india_private_car_package_native_pdf"?uiicPrivateCarReview.reason
           :PRODUCT_VARIANT_PARSERS.has(verified.parserId)?productVariantReview.reason
            :["united_india_gcv_native_pdf","oriental_gccv_native_pdf"].includes(verified.parserId)?standardReview.reason
           :"bulk_conversion_review_required"),
