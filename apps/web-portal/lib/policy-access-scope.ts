@@ -138,6 +138,29 @@ export async function getSalesExecutivePolicyIds(profileId: string) {
   return Array.from(new Set((data ?? []).map((row) => row.final_policy_id).filter((id): id is string => Boolean(id))));
 }
 
+
+/** Explicit approved shared read portfolio. Do not use this for writes or commercial grants. */
+export function usesLifeTeamPortfolio(profileId: string, role: string | null | undefined) {
+  return (profileId === "7bda6ffc-340e-48aa-bd3d-4f1f62cf85d9" && role === "sales_head")
+    || (profileId === "50fc9055-5509-44aa-8357-d60db9ce916c" && role === "operations_head_life");
+}
+
+export async function getLifeTeamPortfolioReadFilter(profileId: string, role: string | null | undefined) {
+  if (!usesLifeTeamPortfolio(profileId, role)) return null;
+  const scope = await getEmployeeAccessScope(profileId, role, "view_policies");
+  const deny = "id.eq.00000000-0000-0000-0000-000000000000";
+  if (scope.mode !== "hierarchy" || !scope.employeeIds.includes("ac167429-0ce0-4ffe-90ea-4040cb4fea95")) return deny;
+  const admin = createSupabaseAdminClient();
+  // Resolve the independent direct source by its stable employee code, not display name.
+  const { data: direct, error } = await admin.from("employees").select("id")
+    .eq("employee_code", "SIBL/0027").maybeSingle<{ id: string }>();
+  if (error || !direct?.id) throw new Error("Direct business identity could not be verified.");
+  const employeeIds = scope.employeeIds.filter(id => id !== direct.id);
+  const filters = employeeIds.length ? [`rm_employee_id.in.(${employeeIds.join(",")})`] : [];
+  filters.push(`and(business_line.in.(Life,Health),rm_employee_id.eq.${direct.id})`);
+  return filters.join(",");
+}
+
 export async function canAccessPolicy(
   profileId: string,
   role: string | null | undefined,
@@ -145,6 +168,13 @@ export async function canAccessPolicy(
   capability: Capability = "view_policies",
   write = false,
 ) {
+  if (!write && capability === "view_policies" && usesLifeTeamPortfolio(profileId, role)) {
+    const filter = await getLifeTeamPortfolioReadFilter(profileId, role);
+    if (!filter) return false;
+    const { data, error } = await createSupabaseAdminClient().from("policies")
+      .select("id").eq("id", policyId).or(filter).maybeSingle<{ id: string }>();
+    return !error && Boolean(data?.id);
+  }
   const anjanaScope = await getAnjanaParsottamPolicyScope(profileId, role);
   if (anjanaScope && !write) {
     const filters = operationsHeadPolicyFilter(anjanaScope);
