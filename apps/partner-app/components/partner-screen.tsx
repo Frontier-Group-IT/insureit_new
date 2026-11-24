@@ -57,7 +57,7 @@ export function PartnerScreen({
   bottomNavigationNavy = false,
   topBarIcon,
   stickyStartY = 100,
-  stickyFirstChild = false,
+  fixedHeader,
 }: PropsWithChildren<{
   title: string;
   eyebrow?: string;
@@ -90,8 +90,8 @@ export function PartnerScreen({
   /** Optional plain icon in place of header artwork, with no icon tile background. */
   topBarIcon?: ComponentProps<typeof Ionicons>['name'];
   stickyStartY?: number;
-  /** Opt-in native sticky header for screens whose first child is their header. */
-  stickyFirstChild?: boolean;
+  /** Optional screen-specific header outside the scroll view, beneath the top safe area. */
+  fixedHeader?: ReactNode;
   heroSearch?: {
     value: string;
     onChangeText: (value: string) => void;
@@ -227,6 +227,7 @@ export function PartnerScreen({
     {isFocused ? <StatusBar style={statusBarColor || navyStatusBar || (showFixedHeader && stickyHeaderNavy) ? 'light' : 'dark'} backgroundColor={statusBarColor ?? (navyStatusBar ? '#071E49' : undefined)} /> : null}
     <View style={[styles.safeArea, navyStatusBar && styles.navyStatusArea, statusBarColor ? { backgroundColor: statusBarColor } : null]}>
       <SafeAreaView style={[styles.safeArea, navyStatusBar && styles.navyStatusArea, statusBarColor ? { backgroundColor: statusBarColor } : null]} edges={['top']}>
+      {fixedHeader ?? null}
       <Animated.ScrollView
         style={navyStatusBar || statusBarColor ? styles.contentCanvas : undefined}
         ref={scrollRef}
@@ -250,7 +251,7 @@ export function PartnerScreen({
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustsScrollIndicatorInsets={false}
-        stickyHeaderIndices={stickyFirstChild ? [isOffline ? 1 : 0] : undefined}
+        stickyHeaderIndices={undefined}
         contentContainerStyle={[styles.content, fullWidth && styles.fullWidthContent]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps={scrollProps?.keyboardShouldPersistTaps ?? 'handled'}
