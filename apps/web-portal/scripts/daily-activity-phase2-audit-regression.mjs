@@ -26,7 +26,7 @@ assert.match(helper, /record_id: entry.recordId/);
 assert.doesNotMatch(helper, /new_data:|old_data:|reason:|remarks:|ocr_fields:/, "Audit must not include sensitive payloads");
 assert.match(helper, /catch \{[\s\S]*?Audit service unavailable/, "Logging failure must be isolated");
 assert.doesNotMatch(helper, /throw new Error|throw error/, "Audit helper must never interrupt business writes");
-assert.match(intake, /if\(intake.status!=="in_review"\) await recordDailyWorkflowActivity/, "Review logged only on actual transition");
+assert.match(intake, /Manual Intake review is retired\. Use AI Policy Studio\./, "Legacy manual claim is rejected before any review transition or audit");
 assert.match(intake, /if\(error\|\|!saved\)return\{ok:false as const,error:"Could not update this intake."\};[\s\S]*?recordDailyWorkflowActivity/, "Review status logged only on successful update");
 assert.match(intake, /if\(updateError\|\|!savedResponse\)return\{ok:false,error:"Could not attach the replacement document."\};[\s\S]*?recordDailyWorkflowActivity/, "Response upload logged after success");
 assert.match(edit, /if \(caseError \|\| !savedCase\) return[\s\S]*?recordDailyWorkflowActivity/, "Case edited after saved confirmation");
