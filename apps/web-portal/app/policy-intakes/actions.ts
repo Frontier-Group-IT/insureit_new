@@ -174,7 +174,7 @@ export async function claimPolicyIntakeForReview(id:string){
   return {ok:false as const,error:"Manual Intake review is retired. Use AI Policy Studio."};
 }
 export async function updatePolicyIntakeStatus(id:string,status:"needs_attention"|"rejected",reason:string){const profile=await requirePolicyIntakeReviewer(id),clean=reason.trim();if(!clean)return{ok:false as const,error:"Add a short reason."};const admin=createSupabaseAdminClient();
-  let manualStatus=admin.from("policy_intake_requests").update({status,attention_reason:clean,assigned_to_profile_id:profile.id}).eq("id",id).in("status",["processing","ready_for_review","in_review","needs_attention"]);
+  const manualStatus=admin.from("policy_intake_requests").update({status,attention_reason:clean,assigned_to_profile_id:profile.id}).eq("id",id).in("status",["processing","ready_for_review","in_review","needs_attention"]);
   const{data:saved,error}=await manualStatus.select("id").maybeSingle<{id:string}>();if(error||!saved)return{ok:false as const,error:"Could not update this intake."};
   await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"policy_intake_requests",recordId:id,action:status==="rejected"?"policy_intake_rejected":"policy_intake_attention_requested"});
   revalidatePath(`/policy-intakes/${id}`);revalidatePath("/policy-intakes");return{ok:true as const};}
