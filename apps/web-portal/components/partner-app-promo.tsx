@@ -94,18 +94,23 @@ export function CompactPartnerAppPromo() {
           <span className="block truncate text-[10px] font-bold">Get the Partner App</span>
         </span>
       </a>
-      <div className={`${compactStyles.stores} shrink-0 flex-col gap-0.5`}>
-        <a href={STORE_PLAY} target="_blank" rel="noopener noreferrer" className="flex h-[17px] items-center gap-1 rounded bg-black px-1.5 text-[8px] font-semibold focus-visible:outline focus-visible:outline-white" aria-label="Download from Google Play"><svg aria-hidden="true" viewBox="0 0 48 48" className="h-3.5 w-3.5 shrink-0"><path fill="#00D7FE" d="M5 3v42l22-21z"/><path fill="#00F076" d="M5 3q2-2 5 0l25 14-8 7z"/><path fill="#FFCE00" d="M35 17l10 6q2 1 0 3l-10 6-8-8z"/><path fill="#F33C51" d="M5 45q2 2 5 0l25-13-8-8z"/></svg>Google Play</a>
-        <a href={STORE_APPLE} target="_blank" rel="noopener noreferrer" className="flex h-[17px] items-center gap-1 rounded bg-black px-1.5 text-[8px] font-semibold focus-visible:outline focus-visible:outline-white" aria-label="Download from Apple App Store"><svg aria-hidden="true" viewBox="0 0 48 48" className="h-3.5 w-3.5 shrink-0"><g fill="none" stroke="white" strokeWidth="5.5" strokeLinecap="round"><path d="M11 29h26M12 40l3-5M18 29 29 10M19 10l2.5 4.5M28 26l8 14"/></g></svg>App Store</a>
+      <div className={`${compactStyles.stores} min-w-0 grid-cols-2 gap-1`}>
+        <a href={STORE_PLAY} target="_blank" rel="noopener noreferrer" className="flex h-7 min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded bg-black px-1.5 text-[9px] font-semibold focus-visible:outline focus-visible:outline-white" aria-label="Download from Google Play"><svg aria-hidden="true" viewBox="0 0 48 48" className="h-3.5 w-3.5 shrink-0"><path fill="#00D7FE" d="M5 3v42l22-21z"/><path fill="#00F076" d="M5 3q2-2 5 0l25 14-8 7z"/><path fill="#FFCE00" d="M35 17l10 6q2 1 0 3l-10 6-8-8z"/><path fill="#F33C51" d="M5 45q2 2 5 0l25-13-8-8z"/></svg>Google Play</a>
+        <a href={STORE_APPLE} target="_blank" rel="noopener noreferrer" className="flex h-7 min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded bg-black px-1.5 text-[9px] font-semibold focus-visible:outline focus-visible:outline-white" aria-label="Download from Apple App Store"><svg aria-hidden="true" viewBox="0 0 48 48" className="h-3.5 w-3.5 shrink-0"><g fill="none" stroke="white" strokeWidth="5.5" strokeLinecap="round"><path d="M11 29h26M12 40l3-5M18 29 29 10M19 10l2.5 4.5M28 26l8 14"/></g></svg>App Store</a>
       </div>
-      <a href="/download/partner" aria-label="Scan or open INSUREIT Partner App download" className="flex shrink-0 items-center gap-1.5 rounded focus-visible:outline focus-visible:outline-white">
-        <span className={`${compactStyles.scan} text-[8px] font-semibold`}>Scan to<br />download</span>
-        <svg role="img" aria-label="Partner App download QR code" viewBox="-2 -2 41 41" className={`${compactStyles.qr} h-10 w-10 rounded-sm bg-white`} shapeRendering="crispEdges">
-          <rect x="-2" y="-2" width="41" height="41" fill="#FFFFFF" />
-          <path d={qrPath} fill="#071D49" />
-        </svg>
-        <QrCode aria-hidden className={`${compactStyles.shortcut} h-4 w-4`} />
-      </a>
     </aside>
+  );
+}
+
+/** Separate dashboard QR; same permanent first-party download URL and matrix. */
+export function CompactPartnerAppQr() {
+  return (
+    <a href="/download/partner" aria-label="Scan or open INSUREIT Partner App download" className="flex h-11 shrink-0 items-center gap-1.5 rounded-md px-1 text-[#174B83] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174B83]">
+      <span className="hidden whitespace-nowrap text-[8px] font-semibold leading-tight 2xl:block">Scan to<br />download</span>
+      <svg role="img" aria-label="Partner App download QR code" viewBox="-2 -2 41 41" className="h-11 w-11 rounded-sm border border-[#CFD9E7] bg-white" shapeRendering="crispEdges">
+        <rect x="-2" y="-2" width="41" height="41" fill="#FFFFFF" />
+        <path d={qrPath} fill="#071D49" />
+      </svg>
+    </a>
   );
 }
