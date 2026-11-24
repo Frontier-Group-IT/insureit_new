@@ -40,21 +40,34 @@ for(const fixture of fixtures) {
   const v={parserId:preview.parser_id,checksPassed:18,warnings:preview.warnings,
     fields:preview.fields,issuanceEvidence:evidence(receipt)};
   assert.equal(acceptedTataAigIssuanceDate(v),receipt,fixture.name);
-  assert.equal(acceptedTataAigIssuanceDate({...v,issuanceEvidence:{...v.issuanceEvidence,verification:"signature_metadata_receipt_match"}}),null,
-    "An unverified /M and ByteRange cannot become an accepted issuance date");
+  assert.equal(preview.fields.find(f=>f.key==="policy_issuance_date")?.evidence,
+    "Tata AIG printed Receipt Date (approved issuance rule)");
   assert.deepEqual(codes(eligible(preview,true)),["preflight_pending"],
-    "Matching signing/receipt date must clear issuance exception without bypassing canonical preflight");
-  assert.equal(acceptedTataAigIssuanceDate({...v,issuanceEvidence:evidence("2026-10-20",receipt)}),null);
-  assert.equal(acceptedTataAigIssuanceDate({...v,issuanceEvidence:undefined}),null);
+    "Approved printed date clears issuance exception but not canonical preflight");
+  // The printed issuance mapping does NOT depend on signature metadata.
+  for(const signature of [undefined,
+    {...v.issuanceEvidence,verification:"signature_metadata_receipt_match"},
+    evidence("2026-10-20",receipt),
+    {...v.issuanceEvidence,documentSha256:"bad"}]){
+    assert.equal(acceptedTataAigIssuanceDate({...v,issuanceEvidence:signature}),receipt);
+  }
+  const withoutPrinted={...v,fields:v.fields.filter(f=>f.key!=="policy_issuance_date")};
+  assert.equal(acceptedTataAigIssuanceDate({...withoutPrinted,issuanceEvidence:undefined}),null,
+    "No printed policy or receipt date may be invented");
+  assert.equal(acceptedTataAigIssuanceDate({...withoutPrinted,
+    issuanceEvidence:{...v.issuanceEvidence,verification:"signature_metadata_receipt_match"}}),null,
+    "Unsigned /M metadata alone remains disallowed");
+  assert.equal(acceptedTataAigIssuanceDate({...withoutPrinted,
+    issuanceEvidence:evidence("2026-10-20",receipt)}),null,
+    "Signature fallback without printed issue still needs matching document-bound evidence");
   const futureDate=new Date(Date.now()+3*86_400_000).toISOString().slice(0,10);
-  assert.equal(acceptedTataAigIssuanceDate({...v,issuanceEvidence:evidence(futureDate)}),null,
-    "Never infer future issuance, even if it falls later in the current month");
+  const futureFields=v.fields.map(f=>f.key==="policy_issuance_date"?{...f,value:futureDate}:f);
+  assert.equal(acceptedTataAigIssuanceDate({...v,fields:futureFields}),null,
+    "Future printed issuance remains invalid");
   assert.equal(acceptedTataAigIssuanceDate({...v,checksPassed:17}),null);
   assert.equal(acceptedTataAigIssuanceDate({...v,warnings:[...v.warnings,"untrusted_new_warning"]}),null);
   assert.equal(acceptedTataAigIssuanceDate({...v,parserId:"icici_3005_n8n_native_pdf"}),null);
   assert.equal(acceptedTataAigIssuanceDate({...v,parserId:"unknown_parser"}),null);
-  assert.equal(acceptedTataAigIssuanceDate({...v,issuanceEvidence:{...v.issuanceEvidence,documentSha256:"bad"}}),null);
-  assert.equal(acceptedTataAigIssuanceDate({...v,issuanceEvidence:{...v.issuanceEvidence,proposedDate:"2026-02-30",receiptDate:"2026-02-30"}}),null);
   assert(codes(eligible(preview,false)).includes("issuance_date_unverified"));
   assert(hasVerifiedN8nParserEvidence(v.parserId,18,v.warnings));
 }
