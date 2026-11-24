@@ -3,13 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { aiQueueEnabled, processAiQueueBatch } from "@/lib/ai-policy-onboarding-queue-server";
-import { extractPolicyIntakeDocument, type PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
-import { extractPolicyIntakeWithN8nFallback, extractPolicyIntakeWithN8nOnly, requiresN8nForIntake } from "@/lib/policy-intake-n8n-router";
-import { isN8nPolicyReadEnabled } from "@/lib/policy-ocr-routing-mode";
+import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { canAccessIntermediary } from "@/lib/employee-access-scope";
 import { canAccessPolicy, getOperationsHeadDownlinePolicyScope } from "@/lib/policy-access-scope";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
-import { selectPolicyIntakeCustomerMatch, type PolicyIntakeCustomerIdentityCandidate } from "@/lib/policy-intake-customer-match";
 import { requirePolicyIntakeCreator, requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer, requirePolicyIntakeViewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { recordDailyWorkflowActivity } from "@/lib/daily-workflow-audit";
@@ -22,17 +19,6 @@ function isPolicyType(value:string):value is PolicyIntakePolicyType{return POLIC
 function isProposalType(value:string|null|undefined){return value==="life"||value==="health";}
 function cleanMobile(value:string){return value.replace(/\D/g,"").slice(-10);}
 function safeName(value:string){return value.trim().replace(/[^A-Za-z0-9._-]+/g,"-").replace(/-+/g,"-").replace(/^[-.]+|[-.]+$/g,"")||"policy-copy";}
-async function resolveMatchedCustomerIdByIdentity(admin:ReturnType<typeof createSupabaseAdminClient>,phone:string,insuredName:string){
-  const cleanPhone=cleanMobile(phone);
-  if(cleanPhone.length!==10||!insuredName.trim())return null;
-  const{data,error}=await admin.from("customers")
-    .select("id,contact_name,company_name")
-    .eq("phone",cleanPhone)
-    .limit(20)
-    .returns<PolicyIntakeCustomerIdentityCandidate[]>();
-  if(error)return null;
-  return selectPolicyIntakeCustomerMatch(data??[],insuredName);
-}
 function intakeNumber(){return `PIR-${new Date().toISOString().slice(2,10).replace(/-/g,"")}-${crypto.randomUUID().slice(0,6).toUpperCase()}`;}
 type UploadMeta={name:string;type:string;size:number};
 type PreparedUpload={ok:true;id:string;number:string;storagePath:string;signedUrl:string}|{ok:false;error:string};
@@ -154,22 +140,6 @@ export async function completePolicyIntakeUpload(input:{id:string;number:string;
   }
   return{ok:true,id:input.id,number:input.number,status};
 }
-
-async function processStoredOcr(id:string){const admin=createSupabaseAdminClient();const{data:intake}=await admin.from("policy_intake_requests").select("id,status,policy_type,storage_bucket,storage_path,file_name,mime_type,customer_mobile").eq("id",id).maybeSingle<{id:string;status:string;policy_type:string|null;storage_bucket:string;storage_path:string;file_name:string;mime_type:string|null;customer_mobile:string}>();if(!intake)return;if(isProposalType(intake.policy_type)){await admin.from("policy_intake_requests").update({status:"ready_for_review",ocr_status:"completed",ocr_fields:[],ocr_warnings:[],ocr_parser_id:null,ocr_parser_version:null}).eq("id",id).neq("status","completed");return;}if(intake.status!=="processing")return;await admin.from("policy_intake_requests").update({ocr_status:"processing"}).eq("id",id).eq("storage_path",intake.storage_path);// In opt-in required mode n8n downloads directly from private Storage;
- // do not download the PDF through the web server or invoke Google OCR.
- const ocr = intake.policy_type === "motor" && (requiresN8nForIntake(id) || isN8nPolicyReadEnabled())
-   ? await extractPolicyIntakeWithN8nOnly(id, intake.storage_path, isN8nPolicyReadEnabled())
-   : await (async () => {
-       const { data: blob, error } = await admin.storage.from(intake.storage_bucket).download(intake.storage_path);
-       if (error || !blob) return { ok: false as const, error: "The stored policy copy could not be read automatically." };
-       const file = new File([await blob.arrayBuffer()], intake.file_name, {
-         type: intake.mime_type || blob.type || "application/pdf",
-       });
-       const ocrForm = new FormData();
-       ocrForm.set("policy_document", file);
-       return extractPolicyIntakeWithN8nFallback(id, intake.storage_path, file, () => extractPolicyIntakeDocument(ocrForm));
-     })();if(!ocr.ok){await markOcrFailure(id,intake.storage_path,ocr.error);return;}const insuredName=ocr.fields.find(field=>field.key==="insured_name")?.value??"";const matchedCustomerId=await resolveMatchedCustomerIdByIdentity(admin,intake.customer_mobile,insuredName);await admin.from("policy_intake_requests").update({status:"ready_for_review",ocr_status:"completed",ocr_fields:ocr.fields,ocr_parser_id:ocr.parserId,ocr_parser_version:ocr.parserVersion,ocr_warnings:ocr.warnings,attention_reason:null,matched_customer_id:matchedCustomerId}).eq("id",id).eq("storage_path",intake.storage_path).eq("status","processing");}
-async function markOcrFailure(id:string,storagePath:string,message:string){const admin=createSupabaseAdminClient();await admin.from("policy_intake_requests").update({ocr_status:"failed",ocr_warnings:[message]}).eq("id",id).eq("storage_path",storagePath).eq("status","processing");}
 
 export async function preparePolicyIntakeResponseUpload(id:string,file:UploadMeta):Promise<PreparedUpload>{const profile=await requirePolicyIntakeCreator(),admin=createSupabaseAdminClient();const{data}=await admin.from("policy_intake_requests").select("id,intake_number,status,policy_type,submitted_by_profile_id").eq("id",id).maybeSingle<{id:string;intake_number:string;status:string;policy_type:string|null;submitted_by_profile_id:string}>();if(!data||data.submitted_by_profile_id!==profile.id)return{ok:false,error:"You do not have access to respond to this intake."};const metaError=validateMeta(file,isProposalType(data.policy_type));if(metaError)return{ok:false,error:metaError};if(data.status!=="needs_attention")return{ok:false,error:"Operations has not requested a replacement document for this intake."};const storagePath=`intakes/${id}/responses/${crypto.randomUUID()}-${safeName(file.name)}`,{data:signed,error}=await admin.storage.from(BUCKET).createSignedUploadUrl(storagePath,{upsert:false});if(error||!signed?.signedUrl)return{ok:false,error:"Could not prepare the replacement upload. Please try again."};return{ok:true,id,number:data.intake_number,storagePath,signedUrl:signed.signedUrl};}
 
