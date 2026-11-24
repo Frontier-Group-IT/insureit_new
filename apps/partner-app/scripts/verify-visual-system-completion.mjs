@@ -752,6 +752,8 @@ for (const marker of [
   'setFreshResult({ key: selectedOptionKey, correct: result.is_correct, cardId: data.card.id });',
   'function QuizOption(',
   'function ConfettiBurst(',
+  'celebrate={Boolean(freshResult?.correct && freshResult?.cardId === data.card?.id && showAnswerFeedback)}',
+  '{celebrate && correct ? <ConfettiBurst animate={animate} /> : null}',
   'function AnimatedSubmitButton(',
   'function LearnSkeleton(',
   'function StopwatchArtwork(',
