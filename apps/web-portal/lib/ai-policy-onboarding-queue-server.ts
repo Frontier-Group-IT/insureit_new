@@ -282,19 +282,31 @@ async function processClaim(item: Claimed, parserRevision: string) {
   // extraction is NOT permission to book or to bypass the canonical preflight.
   const tataTpOnly = extraction.preview.parserId === "tata_aig_private_car_liability_only_n8n_native_pdf"
     || extraction.preview.parserId === "tata_aig_private_car_three_year_tp_n8n_native_pdf";
-  if((ICICI_N8N_IDS.has(extraction.preview.parserId) || tataTpOnly)
+  // The existing 18-check Tata packages were only assessed in the queue;
+  // their verified OCR was never persisted, leaving rows "Processing" despite
+  // n8n success. Store the PDF-evidenced fields with a dedicated lease-bound
+  // RPC, but do not approve an unverified issuance date or book the policy.
+  const tata18 = [
+    "tata_aig_private_car_saod_n8n_native_pdf",
+    "tata_aig_private_car_package_n8n_native_pdf",
+    "tata_aig_private_car_bundled_n8n_native_pdf",
+    "tata_aig_two_wheeler_bundled_n8n_native_pdf",
+  ].includes(extraction.preview.parserId);
+  if((ICICI_N8N_IDS.has(extraction.preview.parserId) || tataTpOnly || tata18)
     && hasVerifiedN8nParserEvidence(extraction.preview.parserId,
       extraction.preview.checksPassed,extraction.preview.warnings)
     && intake.status==="processing"
     && ["pending","processing","failed"].includes(intake.ocr_status)
     && (intake.ocr_fields??[]).length===0
     && !draft) {
-    // v1 hardcoded the Bundled parser and compared a base revision against
-    // the claimed suffixed revision. v2 binds BOTH the actual parser identity
-    // and the exact queue lease/revision, and refuses to rewrite a draft.
-    const synced=await admin.rpc(tataTpOnly
+    // Each verified parser family uses a lease/document/revision-bound
+    // service-only RPC. An existing manual draft or policy never gets replaced.
+    const syncName=tataTpOnly
       ? "sync_verified_ai_intake_tata_tp_ocr_v1"
-      : "sync_verified_ai_intake_ocr_v2",{
+      : tata18
+        ? "sync_verified_ai_intake_tata_18_ocr_v1"
+        : "sync_verified_ai_intake_ocr_v2";
+    const synced=await admin.rpc(syncName,{
       p_intake_id:intake.id,p_document_id:item.document_id,p_lease_id:item.lease_id,
       p_parser_revision:parserRevision,
       p_parser_id:extraction.preview.parserId,
