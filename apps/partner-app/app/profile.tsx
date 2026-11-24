@@ -193,7 +193,7 @@ export default function ProfileScreen() {
                 (pressed || avatarUploading) && styles.avatarCameraDisabled,
               ]}
             >
-              {avatarUploading ? <ActivityIndicator size="small" color="#FFFFFF" animating={visible && enabled} /> : <Animated.View style={{ transform: [{ scale: photoSuccess ? success : 1 }] }}><Ionicons name={photoSuccess ? 'checkmark' : 'camera'} size={15} color="#FFFFFF" /></Animated.View>}
+              {avatarUploading ? (enabled ? <ActivityIndicator size="small" color="#FFFFFF" animating={visible} /> : <Ionicons name="cloud-upload-outline" size={15} color="#FFFFFF" />) : <Animated.View style={{ transform: [{ scale: photoSuccess ? success : 1 }] }}><Ionicons name={photoSuccess ? 'checkmark' : 'camera'} size={15} color="#FFFFFF" /></Animated.View>}
               <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 13, backgroundColor: '#B5D9FF', opacity: cameraPress.value.interpolate({ inputRange: [0, 1], outputRange: [0, 0.22] }) }]} />
             </Pressable></Animated.View>
           </Animated.View>
@@ -274,7 +274,7 @@ export default function ProfileScreen() {
               value={organizationName || 'Not recorded'}
             />
             <Detail
-              motion={enabled} delay={330}
+              motion={enabled} delay={660}
               icon="pricetag-outline"
               iconBackground="#F4EEFF"
               iconColor="#7C46E8"
@@ -282,7 +282,7 @@ export default function ProfileScreen() {
               value={identity.partner_code}
             />
             <Detail
-              motion={enabled} delay={440}
+              motion={enabled} delay={770}
               icon="checkmark-circle-outline"
               iconBackground="#EAF9F0"
               iconColor="#11A86B"
