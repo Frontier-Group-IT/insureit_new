@@ -72,7 +72,7 @@ function canRetryOcr(row: PolicyIntakeWorkspaceRow) {
   return Number.isFinite(created) && Date.now() - created >= STALE_OCR_MS;
 }
 function statusLabel(row: PolicyIntakeWorkspaceRow) {
-  if (row.status === "processing" && row.ocr_status === "failed") return "Manual review required";
+  if (row.status === "processing" && row.ocr_status === "failed") return "AI extraction needs attention";
   return ({
     processing: "Fetching details",
     ready_for_review: "Ready for review",
@@ -92,14 +92,14 @@ function statusTone(row: PolicyIntakeWorkspaceRow): "navy" | "green" | "amber" |
   return "slate";
 }
 function detailLabel(row: PolicyIntakeWorkspaceRow) {
-  if (isProposal(row)) return "Stored";
+  
   if (row.ocr_status === "completed") return "Fetched";
-  if (row.ocr_status === "failed") return "Manual review";
+  if (row.ocr_status === "failed") return "Action required";
   if (row.ocr_status === "processing") return "Fetching";
   return "Queued";
 }
 function detailTone(row: PolicyIntakeWorkspaceRow): "navy" | "green" | "amber" | "red" | "blue" | "slate" {
-  if (isProposal(row) || row.ocr_status === "completed") return "green";
+  if (row.ocr_status === "completed") return "green";
   if (row.ocr_status === "failed") return "amber";
   if (row.ocr_status === "processing") return "blue";
   return "slate";
@@ -190,7 +190,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
     const sourceKey = `${row.lead_source_type}:${row.lead_source_name}`;
     const created = view === "completed" && row.status === "completed" && row.finalized_at
       ? completionDateValue(row.finalized_at) : dateValue(row.created_at);
-    const detailStatus = isProposal(row) ? "stored" : row.ocr_status;
+    const detailStatus = row.ocr_status;
     return (!query.trim() || haystack.includes(query.trim().toLowerCase())) && (source === "all" || sourceKey === source) && (ocr === "all" || detailStatus === ocr) && (!fromDate || created >= fromDate) && (!toDate || created <= toDate);
   }), [rows, query, source, ocr, fromDate, toDate, view]);
 
@@ -252,7 +252,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
           <RegisterSelect value={source} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source"><option value="all">All Lead Source</option>{sources.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</RegisterSelect>
         </div>
         <div className="w-[155px] min-w-[155px] shrink-0 [&>label]:block [&>label]:w-full [&_select]:w-full xl:[&_select]:!h-9 xl:[&_select]:!min-w-0 xl:[&_select]:!pl-8 xl:[&_select]:!pr-6 xl:[&_select]:!text-[10px]">
-          <RegisterSelect value={ocr} onChange={(value) => { setOcr(value); setPage(1); }} label="Detail status"><option value="all">All Detail Status</option><option value="stored">Stored / no OCR</option><option value="queued">Queued</option><option value="pending">Queued</option><option value="processing">Fetching</option><option value="completed">Fetched</option><option value="failed">Manual review</option></RegisterSelect>
+          <RegisterSelect value={ocr} onChange={(value) => { setOcr(value); setPage(1); }} label="Detail status"><option value="all">All Detail Status</option><option value="queued">Queued</option><option value="pending">Queued</option><option value="processing">Fetching</option><option value="completed">Fetched</option><option value="failed">Manual review</option></RegisterSelect>
         </div>
         <div className="w-[155px] min-w-[155px] shrink-0 [&_summary]:!min-w-0 [&_summary]:!w-full"><PolicyIntakeDateRangeFilter fromDate={fromDate} toDate={toDate} onFromDateChange={(value) => { setFromDate(value); setPage(1); }} onToDateChange={(value) => { setToDate(value); setPage(1); }} onClear={() => { setFromDate(""); setToDate(""); setPage(1); }} /></div>
         <div className="flex min-w-[110px] flex-1 items-center gap-2"><div className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain pb-1" role="region" aria-label="Policy intake status filters" tabIndex={0}><div className="min-w-max shrink-0 [&>div]:!w-max [&>div]:!min-w-max [&>div]:!flex-nowrap [&>div]:!overflow-visible [&>div>button]:!min-w-max [&>div>button]:!shrink-0 [&>div>button]:!whitespace-nowrap"><RegisterViewTabs value={view === "mine" ? "" : view} onChange={changeView} options={reviewer ? [{ value: "open", label: "All Open", count: stats.open },{ value: "action", label: "Action Required", count: stats.action },{ value: "in_review", label: "In Review", count: stats.inReview },{ value: "processing", label: "Processing", count: stats.processing },{ value: "completed", label: "Completed", count: stats.completed },{ value: "duplicate", label: "Duplicate", count: stats.duplicate },{ value: "rejected", label: "Rejected", count: stats.rejected },{ value: "all", label: "All Records", count: stats.all }] : [{ value: "open", label: "All Open", count: stats.open },{ value: "all", label: "All Records", count: stats.all },{ value: "processing", label: "Processing", count: stats.processing },{ value: "in_review", label: "In Review", count: stats.inReview },{ value: "completed", label: "Completed", count: stats.completed },{ value: "duplicate", label: "Duplicate", count: stats.duplicate },{ value: "rejected", label: "Rejected", count: stats.rejected }]} /></div></div>{reviewer ? <button type="button" onClick={() => changeView("mine")} aria-pressed={view === "mine"} className={`inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-lg border px-3 text-[10px] font-bold transition ${view === "mine" ? "border-[#17365D] bg-[#17365D] text-white shadow-sm" : "border-[#C9D5E3] bg-white text-[#526178] hover:border-[#9FB4CD] hover:bg-[#F8FAFC]"}`} title="Show only policy intakes currently assigned to you">My Active Work <span className="ml-1.5 opacity-80">{stats.myActiveWork}</span></button> : null}</div>
