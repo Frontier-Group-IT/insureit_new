@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getPartnerStories, type PartnerStory, type PartnerStoriesData } from '@/lib/stories';
 import { formatIndianCurrency } from '@/lib/format';
+import { ImpactCounter, reveal, useImpactTimeline, type ImpactTimeline } from '@/components/impact-story-motion';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 
 export default function StoriesScreen() {
@@ -18,7 +19,7 @@ export default function StoriesScreen() {
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const navigationTouch = useRef<{ x: number; y: number } | null>(null);
+  const navigationTouch = useRef<{ x: number; y: number; started: number } | null>(null);
   const [storyViewportHeight, setStoryViewportHeight] = useState(0);
   const [storyMeasuredHeight, setStoryMeasuredHeight] = useState(0);
   const [artworkReduction, setArtworkReduction] = useState(0);
@@ -56,6 +57,9 @@ export default function StoriesScreen() {
   }, [load]);
 
   const story = data?.items[index] || null;
+  const [impactPaused, setImpactPaused] = useState(false);
+  const impactClock = useImpactTimeline(!loading && !error && story?.kind === 'impact', impactPaused);
+  useEffect(() => { setImpactPaused(false); }, [index]);
 
   useEffect(() => {
     setArtworkReduction(0);
@@ -96,7 +100,8 @@ export default function StoriesScreen() {
       navigationTouch.current = null;
       return;
     }
-    navigationTouch.current = { x: event.nativeEvent.pageX, y: event.nativeEvent.pageY };
+    navigationTouch.current = { x: event.nativeEvent.pageX, y: event.nativeEvent.pageY, started: Date.now() };
+    if (story?.kind === 'impact') setImpactPaused(true);
   }
 
   function handleStoryTouchMove(event: { nativeEvent: { pageX: number; pageY: number } }) {
@@ -108,8 +113,10 @@ export default function StoriesScreen() {
 
   function handleStoryTouchEnd(event: { nativeEvent: { pageX: number; pageY: number } }) {
     const start = navigationTouch.current;
+    setImpactPaused(false);
     navigationTouch.current = null;
     if (!start) return;
+    if (story?.kind === 'impact' && Date.now() - start.started > 250) return;
     if (Math.abs(start.x - event.nativeEvent.pageX) > 12 || Math.abs(start.y - event.nativeEvent.pageY) > 12) return;
     if (event.nativeEvent.pageX < windowWidth / 2) previous();
     else next();
@@ -187,13 +194,13 @@ export default function StoriesScreen() {
             onTouchStart={handleStoryTouchStart}
             onTouchMove={handleStoryTouchMove}
             onTouchEnd={handleStoryTouchEnd}
-            onTouchCancel={() => { navigationTouch.current = null; }}
-            onScrollBeginDrag={() => { navigationTouch.current = null; }}
+            onTouchCancel={() => { navigationTouch.current = null; setImpactPaused(false); }}
+            onScrollBeginDrag={() => { navigationTouch.current = null; setImpactPaused(false); }}
           >
             <View pointerEvents="none" style={styles.storyBackdrop}>
-              <View style={styles.waveUpper} />
-              <View style={styles.waveMiddle} />
-              <View style={styles.waveLower} />
+              <Animated.View style={[styles.waveUpper, impactClock.enabled && { transform: [{ rotate: '-9deg' }, { translateX: impactClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,5]}) }] }]} />
+              <Animated.View style={[styles.waveMiddle, impactClock.enabled && { transform: [{ rotate: '-10deg' }, { translateX: impactClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,-8]}) }] }]} />
+              <Animated.View style={[styles.waveLower, impactClock.enabled && { transform: [{ rotate: '-11deg' }, { translateY: impactClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,6]}) }] }]} />
             </View>
             <View style={styles.storyContent}>
               {story.kind === 'today' ? (
@@ -203,7 +210,7 @@ export default function StoriesScreen() {
               ) : story.kind === 'journey' ? (
                 <JourneyMilestoneStory story={story} artworkHeight={journeyArtworkHeight} />
               ) : story.kind === 'impact' ? (
-                <ImpactStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />
+                <ImpactStory story={story} onOpen={openStory} artworkHeight={artworkHeight} clock={impactClock} onPause={setImpactPaused} />
               ) : story.kind === 'learn' ? (
                 <LearnStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />
               ) : (
@@ -303,61 +310,77 @@ function StoryPanel({ children, impact = false }: { children: React.ReactNode; i
   return <View style={[styles.unifiedPanel, impact && styles.impactPanel]}>{children}</View>;
 }
 
-function ImpactStory({ story, onOpen, artworkHeight }: { story: PartnerStory; onOpen: () => void; artworkHeight: number }) {
+function ImpactStory({ story, onOpen, artworkHeight, clock, onPause }: { story: PartnerStory; onOpen: () => void; artworkHeight: number; clock: ImpactTimeline; onPause: (paused: boolean) => void }) {
   const vehicleMatch = story.title.match(/([\d,]+)\s+(vehicles?)(.*)/i);
   const customerMatch = story.body.match(/([\d,]+)\s+customers?\s+served/i);
   const claimMatch = story.body.match(/([\d,]+)\s+claims?\s+assisted/i);
   const hasRoute = Boolean(story.route);
+  const metric = Number(story.metric);
+  const formatMoney = (value: number) => formatIndianCurrency(Math.round(value * (Number.isInteger(metric) ? 1 : 100)) / (Number.isInteger(metric) ? 1 : 100));
+  const count = (value: number) => String(Math.round(value));
+  const accent = clock.time.interpolate({ inputRange: [0, 300, 1100, 1600], outputRange: [0, 0.45, 0.15, 0], extrapolate: 'clamp' });
+  const glow = clock.ambient.interpolate({inputRange:[0,1],outputRange:[0,0.22]});
   return (
     <View style={styles.unifiedStory}>
-      <StoryHeading icon="shield-checkmark-outline" title={story.eyebrow} />
-      <StoryPanel impact>
+      <Animated.View style={[{ alignItems: 'center', maxWidth: '100%' }, reveal(clock, 0, 300, 4, 0.96)]}>
+        {clock.enabled ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 25, backgroundColor: '#9ACBFF', opacity: glow, transform: [{scale:1.04}] }]} /> : null}
+        <StoryHeading icon="shield-checkmark-outline" title={story.eyebrow} />
+      </Animated.View>
+      <Animated.View style={[{ width: '100%' }, reveal(clock, 0, 200, 5)]}><StoryPanel impact>
+        {clock.enabled ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, {borderRadius:21,borderWidth:2,borderColor:'#81BEFF',opacity:accent}]} /> : null}
         <Pressable
           onPress={onOpen}
           disabled={!hasRoute}
-          onTouchStart={(event) => { event.stopPropagation(); }}
-          onTouchEnd={(event) => event.stopPropagation()}
+          onTouchStart={(event) => { onPause(true); event.stopPropagation(); }}
+          onTouchEnd={(event) => { onPause(false); event.stopPropagation(); }}
+          onTouchCancel={() => onPause(false)}
           accessibilityRole={hasRoute ? 'link' : undefined}
           accessibilityLabel={hasRoute ? 'Open ' + story.title : undefined}
           style={styles.impactLink}
         >
           {story.metric !== undefined ? (
             <>
-              <Text style={styles.impactPremium} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.43}>{formatMetric(story)}</Text>
+              <ImpactCounter clock={clock} value={Number.isFinite(metric) ? metric : 0} start={200} duration={1400} format={formatMoney} style={[styles.impactPremium, {fontVariant:['tabular-nums']}]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.43} />
               <Text style={styles.impactCaption}>{story.metric_label?.trim() || 'Coverage value'}</Text>
             </>
           ) : null}
           {vehicleMatch ? (
-            <View style={styles.impactVehicleRow}>
+            <Animated.View style={[styles.impactVehicleRow, reveal(clock, 500, 800)]}>
               <Ionicons name="car-sport-outline" size={27} color={storyColors.blue} />
               <View style={styles.impactVehicleCopy}>
-                <Text style={styles.impactVehicleNumber}>{vehicleMatch[1]}</Text>
+                <ImpactCounter clock={clock} value={Number(vehicleMatch[1].replace(/,/g, ''))} start={500} duration={650} format={count} style={styles.impactVehicleNumber} />
                 <Text style={styles.impactVehicleLabel}>{vehicleMatch[2] + vehicleMatch[3]}</Text>
               </View>
-            </View>
+            </Animated.View>
           ) : <Text style={styles.impactFallback}>{story.title}</Text>}
         </Pressable>
         {customerMatch || claimMatch ? (
           <View style={styles.impactSmallGrid}>
             {customerMatch ? (
-              <View style={styles.impactSmallTile}>
+              <Animated.View style={[styles.impactSmallTile, reveal(clock, 800, 1100)]}>
                 <Ionicons name="people" size={24} color={storyColors.blue} />
-                <Text style={styles.impactSmallValue}>{customerMatch[1]}</Text>
+                <ImpactCounter clock={clock} value={Number(customerMatch[1].replace(/,/g, ''))} start={800} duration={650} format={count} style={styles.impactSmallValue} />
                 <Text style={styles.impactSmallLabel}>Customers served</Text>
-              </View>
+              </Animated.View>
             ) : null}
             {claimMatch ? (
-              <View style={styles.impactSmallTile}>
+              <Animated.View style={[styles.impactSmallTile, reveal(clock, 800, 1100)]}>
                 <Ionicons name="checkbox-outline" size={24} color={storyColors.blue} />
-                <Text style={styles.impactSmallValue}>{claimMatch[1]}</Text>
+                <ImpactCounter clock={clock} value={Number(claimMatch[1].replace(/,/g, ''))} start={800} duration={650} format={count} style={styles.impactSmallValue} />
                 <Text style={styles.impactSmallLabel}>Claims assisted</Text>
-              </View>
+              </Animated.View>
             ) : null}
           </View>
         ) : <Text style={styles.impactFallback}>{story.body}</Text>}
-      </StoryPanel>
+      </StoryPanel></Animated.View>
       <View pointerEvents="none" style={[styles.unifiedArtworkBox, { height: artworkHeight }]}>
-        <Image source={require('../assets/partner/stories/your-impact.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+        <Animated.View style={[{width:'100%',height:artworkHeight,alignItems:'center',justifyContent:'center'}, reveal(clock, 1200, 1600, 8)]}>
+          {clock.enabled ? <Animated.View style={{position:'absolute',bottom:4,width:'60%',height:12,borderRadius:20,backgroundColor:'#6FA8DF',opacity:clock.ambient.interpolate({inputRange:[0,1],outputRange:[0.12,0.06]}),transform:[{scaleX:clock.ambient.interpolate({inputRange:[0,1],outputRange:[1,0.96]})}]}} /> : null}
+          <Animated.View style={[{width:'100%',height:artworkHeight,alignItems:'center'}, clock.enabled && {transform:[{translateY:clock.ambient.interpolate({inputRange:[0,1],outputRange:[0,-8]})},{scale:clock.ambient.interpolate({inputRange:[0,1],outputRange:[1,1.015]})},{rotate:clock.ambient.interpolate({inputRange:[0,1],outputRange:['0deg','0.35deg']})}]}]}>
+            <Image source={require('../assets/partner/stories/your-impact.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+            {clock.enabled ? <Animated.View pointerEvents="none" style={{position:'absolute',top:'18%',left:'46%',width:22,height:22,borderRadius:11,backgroundColor:'#FFE6A1',opacity:clock.time.interpolate({inputRange:[2000,2250,2500],outputRange:[0,0.32,0],extrapolate:'clamp'}),transform:[{translateX:clock.time.interpolate({inputRange:[2000,2500],outputRange:[-24,24],extrapolate:'clamp'})}]}} /> : null}
+          </Animated.View>
+        </Animated.View>
       </View>
     </View>
   );
