@@ -192,7 +192,7 @@ export default function JourneyScreen() {
               <View style={styles.timeline}>
                 {visible.map((item, index) => (
                   <MotionEntrance key={`${item.kind}-${item.date}-${index}`} reducedMotion={reducedMotion} delay={Math.min(index, 6) * 55} style={index > 0 ? styles.timelineDivider : undefined}>
-                    <PressScale reducedMotion={reducedMotion} style={styles.timelineRow} accessibilityLabel={item.title}>
+                    <PressScale reducedMotion={reducedMotion} style={styles.timelineRow} contentStyle={styles.timelinePressContent} accessibilityLabel={item.title}>
                       <MotionEntrance reducedMotion={reducedMotion} delay={Math.min(index, 6) * 55 + 40} icon>
                         <Image source={journeyMilestoneArtwork(item.kind, item.title)} style={styles.timelineArtwork} resizeMode="contain" accessible={false} />
                       </MotionEntrance>
@@ -278,7 +278,7 @@ function MotionEntrance({ children, style, delay = 0, icon = false, reducedMotio
   return <Animated.View style={[style, { opacity, transform: icon ? [{ scale }] : [{ translateY: displacement }] }]}>{children}</Animated.View>;
 }
 
-function PressScale({ children, style, reducedMotion, accessibilityLabel }: { children: ReactNode; style?: object; reducedMotion: boolean; accessibilityLabel: string }) {
+function PressScale({ children, style, contentStyle, reducedMotion, accessibilityLabel }: { children: ReactNode; style?: object; contentStyle?: object; reducedMotion: boolean; accessibilityLabel: string }) {
   const scale = useRef(new Animated.Value(1)).current;
   const animate = (toValue: number) => {
     if (reducedMotion) { scale.setValue(1); return; }
@@ -287,7 +287,7 @@ function PressScale({ children, style, reducedMotion, accessibilityLabel }: { ch
   useEffect(() => () => scale.stopAnimation(), [scale]);
   return (
     <Animated.View style={[style, { transform: [{ scale }] }]}>
-      <Pressable accessible accessibilityLabel={accessibilityLabel} onPressIn={() => animate(0.975)} onPressOut={() => animate(1)} style={styles.pressScaleContent}>
+      <Pressable accessible accessibilityLabel={accessibilityLabel} onPressIn={() => animate(0.975)} onPressOut={() => animate(1)} style={[styles.pressScaleContent, contentStyle]}>
         {children}
       </Pressable>
     </Animated.View>
@@ -415,6 +415,7 @@ const styles = StyleSheet.create({
   filterActiveText: { color: '#17233A' },
   timeline: { borderTopWidth: 1, borderTopColor: '#E7E9EE' },
   timelineRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9 },
+  timelinePressContent: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'flex-start' },
   timelineArtwork: { width: 30, height: 32, flexShrink: 0 },
   timelineDivider: { borderTopWidth: 1, borderTopColor: '#E7E9EE' },
   timelineBody: { flex: 1, minWidth: 0 },
