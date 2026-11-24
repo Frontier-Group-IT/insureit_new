@@ -172,7 +172,7 @@ export default function PolicyDetailScreen() {
           <View style={styles.externalSection}>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }} onPress={() => setShowPremiumDetails((value) => !value)} style={({ pressed }) => [styles.premiumDisclosure, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="premium-breakup" size={22} showBadge={false} />
-              <View style={styles.disclosureText}><Text style={[styles.cardTitle, styles.premiumHeadingTone]}>Premium breakup</Text><Text style={styles.disclosureSummary}>{formatIndianCurrency(data.premium.gross_premium)}</Text></View>
+              <View style={styles.disclosureText}><Text style={styles.cardTitle}>Premium breakup</Text><Text style={styles.disclosureSummary}>{formatIndianCurrency(data.premium.gross_premium)}</Text></View>
 
             </Pressable>
             {showPremiumDetails ? (
@@ -190,7 +190,7 @@ export default function PolicyDetailScreen() {
           <View style={styles.externalSection}>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="sales-ownership" size={22} showBadge={false} />
-              <View style={styles.disclosureText}><Text style={[styles.cardTitle, styles.salesHeadingTone]}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
+              <View style={styles.disclosureText}><Text style={styles.cardTitle}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
 
             </Pressable>
             {showCommercialDetails ? (
@@ -219,7 +219,7 @@ function Card({ children, onPress, accessibilityLabel, highlighted = false }: { 
 function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind?: PartnerPolicyDetailIconKind; title: string; actionLabel?: string; onAction?: () => void }) {
   return (
     <View style={[styles.cardHeader, !iconKind && !actionLabel ? styles.cardHeaderCompact : null]}>
-      <View style={styles.cardHeaderLeft}>{iconKind ? <PartnerPolicyDetailIcon kind={iconKind} size={22} showBadge={false} /> : null}<Text style={[styles.cardTitle, iconKind === 'policy-overview' ? styles.overviewHeadingTone : styles.customerHeadingTone]}>{title}</Text></View>
+      <View style={styles.cardHeaderLeft}>{iconKind ? <PartnerPolicyDetailIcon kind={iconKind} size={22} showBadge={false} /> : null}<Text style={styles.cardTitle}>{title}</Text></View>
       {actionLabel ? (
         <Pressable accessibilityRole="button" disabled={!onAction} onPress={onAction} hitSlop={8} style={({ pressed }) => [styles.cardHeaderAction, pressed && onAction ? styles.pressed : null]}>
           <Text style={styles.cardHeaderActionText}>{actionLabel}</Text>
@@ -355,24 +355,24 @@ const styles = StyleSheet.create({
   stateWrap: { marginTop: 14 },
   contentWrap: { marginTop: 0, gap: 12, paddingBottom: 15 },
   summaryCard: {
-    paddingHorizontal: 14, paddingTop: 5, paddingBottom: 5,
+    paddingHorizontal: 14, paddingTop: 10, paddingBottom: 9,
     marginHorizontal: -partnerTheme.spacing.lg,
     backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E9F1',
   },
   summaryTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  summaryArtworkWrap: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  summaryArtworkWrap: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
   summaryArtwork: { width: 34, height: 34 },
   summaryBody: { flex: 1, minWidth: 0 },
   summaryPolicyNo: { color: '#1B2536', fontSize: 18, lineHeight: 23, fontWeight: '800', flexShrink: 1, minWidth: 0 },
   policyNoRow: { flexDirection: 'row', alignItems: 'center', gap: 7, minWidth: 0 },
-  summaryNetPremium: { marginTop: 2, color: '#53677F', fontSize: 12, lineHeight: 17, fontWeight: '700' },
-  categoryPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFF2DE', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  summaryNetPremium: { marginTop: 4, color: '#53677F', fontSize: 12, lineHeight: 17, fontWeight: '700' },
+  categoryPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFF2DE', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 },
   categoryLabel: { color: '#895519', fontSize: 10, fontWeight: '700' },
   motorCategoryPill: { backgroundColor: '#0A234A' },
   motorCategoryLabel: { color: '#FFFFFF' },
   periodIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1375DC' },
   summaryInsurer: { color: '#75849A', fontSize: 9, lineHeight: 12, marginTop: 2 },
-  summaryBadges: { alignItems: 'flex-end', justifyContent: 'center', gap: 3, maxWidth: '45%' },
+  summaryBadges: { alignItems: 'flex-end', justifyContent: 'center', gap: 7, maxWidth: '45%' },
   summaryDivider: { height: StyleSheet.hairlineWidth, marginTop: 12, backgroundColor: '#E6EBF2' },
   premiumRow: { minHeight: 47, flexDirection: 'row', alignItems: 'center', paddingTop: 7 },
   premiumBlock: { flex: 1 }, premiumLabel: { color: '#718096', fontSize: 9, lineHeight: 11 },
@@ -388,13 +388,9 @@ const styles = StyleSheet.create({
   cardHeader: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   cardHeaderCompact: { minHeight: 30 },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 12.5, lineHeight: 16, fontWeight: '800' },
-  customerHeadingTone: { color: '#078878' },
-  overviewHeadingTone: { color: '#7946CE' },
-  premiumHeadingTone: { color: '#098956' },
-  salesHeadingTone: { color: '#B66C16' },
   cardHeaderAction: { flexDirection: 'row', alignItems: 'center', gap: 1, minHeight: 32, paddingLeft: 8 }, cardHeaderActionText: { color: '#0969CF', fontSize: 9, lineHeight: 12, fontWeight: '700' },
   quickSection: { marginHorizontal: 0, paddingVertical: 8 },
-  quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 9, color: '#0969CF', fontSize: 13, lineHeight: 18, fontWeight: '800' },
+  quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 9, color: '#17365D', fontSize: 13, lineHeight: 18, fontWeight: '800' },
   quickGrid: { flexDirection: 'row', alignItems: 'stretch', gap: 6 },
   quickAction: {
     flex: 1, minWidth: 0, minHeight: 94, alignItems: 'center', justifyContent: 'center',
