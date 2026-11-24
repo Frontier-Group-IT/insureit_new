@@ -150,9 +150,9 @@ assert.equal(selectVerifiedN8nInsuredDraftIdentity(rawName,null,"unexpected_pars
 assert.equal(selectVerifiedN8nInsuredDraftIdentity(rawName,[{id:"x",name:"UNRELATED"}][0],"go_digit_cv_native_pdf").matchedCustomerId,null);
 assert.equal(selectVerifiedN8nInsuredDraftIdentity([], {id:"x",name:"UNRELATED"},"go_digit_cv_native_pdf").name,"","Do not fallback to a master when verified commercial PDF name is missing");
 for(const [parserId,evidence,name] of [
-  ["united_india_tractor_tp_native_pdf","Native PDF: Name of the Insured","MR AASHU"],
-  ["go_digit_two_wheeler_od_native_pdf","Native PDF: Name","MAHENDRA THAPA"],
-  ["zurich_kotak_private_car_tp_native_pdf","Native PDF: INSURED DETAILS Name","SUBHASH CHANDRA BHATT"],
+  ["united_india_tractor_tp_native_pdf","Native PDF: Name of the Insured","MR SAMPLE TRACTOR OWNER"],
+  ["go_digit_two_wheeler_od_native_pdf","Native PDF: Name","SAMPLE MOTORCYCLE OWNER"],
+  ["zurich_kotak_private_car_tp_native_pdf","Native PDF: INSURED DETAILS Name","SAMPLE PRIVATE CAR OWNER"],
 ]){
   const fields=[{key:"insured_name",value:name,page:null,evidence}];
   assert.equal(selectVerifiedN8nInsuredDraftIdentity(fields,null,parserId).name,name,
