@@ -253,8 +253,6 @@ function validatePayload(payload: PolicyOnboardingPayload) {
   const fuelType = String(payload.vehicle.fuelType ?? "").trim();
   const manufacturingYear = String(payload.vehicle.manufacturingYear ?? "").trim();
   const capacity = String(payload.vehicle.capacity ?? "").trim();
-  const rtoState = String(payload.vehicle.rtoState ?? "").trim();
-  const rtoName = String(payload.vehicle.rtoName ?? "").trim();
   const cpaAmount = Number(numericPayloadValue(payload.premium.cpa, false, "0"));
   const addOnPremium = Number(normalizePolicyMoney(payload.premium.addOnPremium) ?? (String(payload.premium.addOnPremium ?? "").trim() ? "NaN" : "0"));
   if (!Number.isFinite(addOnPremium) || addOnPremium < 0 || addOnPremium > 100000000) return "Enter a valid non-negative Add-on Premium.";
@@ -269,7 +267,8 @@ function validatePayload(payload: PolicyOnboardingPayload) {
   if (!capacity) return "Enter the vehicle capacity.";
   if (!chassis) return "Enter the chassis number.";
   if (!engine) return "Enter the engine number.";
-  if (vehicleClass !== "CPM" && (!rtoState || !rtoName)) return "Enter the RTO state and RTO name/code.";
+  // RTO city/state are optional source enrichment. Missing one or both must
+  // never prevent booking; registration identity and all other guards remain.
   // CPA is optional for goods carriers. Never invent a charge, and require
   // a positive amount only when owner-driver CPA is explicitly opted in.
   if (!Number.isFinite(cpaAmount) || cpaAmount < 0
