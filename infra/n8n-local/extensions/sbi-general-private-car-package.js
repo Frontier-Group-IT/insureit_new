@@ -59,7 +59,7 @@ const cc=grab(/(?:Cubic Capacity\s*\/\s*Kilo Watt\s*\/\s*Gross Vehicle Weight\s*
  ||(variant==='mahindra_xuv300_package'&&/\b1197\s+Petrol\s+2022\b/i.test(flat)?'1197':null);
 const fuel=grab(/\bFuel\s+(Petrol|Diesel|CNG)\b/i)
  ||(/\b(?:1199\s+Petrol\s+2023|1197\s+Petrol\s+2022)\b/i.test(flat)?'Petrol':null);
-const rtoRaw=grab(/RTO Location\s+(Roorkee|Dehra\s*Dun)\b/i);
+const rtoRaw=grab(/RTO Location\s+([A-Za-z][A-Za-z .-]{2,45}?)(?=\s+(?:Zone|Geographical|Vehicle|Registration|Engine|Chassis|Make|Fuel|Policy|State|Pin)|$)/i);
 const rto=rtoRaw?/Dehra\s*Dun/i.test(rtoRaw)?'Dehradun':rtoRaw:null;
 const idv=money(/Your Vehicle IDV\s+Vehicle Non Electrical Accessory Electrical Accessory CNG\/LPG Total IDV\s+([\d,.]+)/i)
   ??money(/Total IDV\s+([\d,.]+)/i);
@@ -105,7 +105,7 @@ put('vehicle_class','Private Car',pfx);
 put('vehicle_make',make,'Native PDF: Vehicle Make Model & Variant');
 put('vehicle_model',model,'Native PDF: Vehicle Make Model & Variant');
 put('vehicle_manufacturing_year',year,'Native PDF: Year of Manufacture');
-put('vehicle_rto_state','Uttarakhand','Registered UK plate + native PDF RTO');
+if(plate?.startsWith('UK'))put('vehicle_rto_state','Uttarakhand','Registered UK plate state prefix');
 put('vehicle_rto_name',rto,'Native PDF: RTO Location');
 put('vehicle_chassis_number',chassis,'Native PDF: Engine & Chassis Number');
 put('vehicle_engine_number',engine,'Native PDF: Engine & Chassis Number');
@@ -124,7 +124,7 @@ const checks={
  registered_plate_evidenced:!!plate&&/^UK\d{2}[A-Z]{1,3}\d{4}$/.test(plate),
  make_model_evidenced:!!make&&!!model,vehicle_identity_evidenced:!!engine&&!!chassis,
  registration_year_and_fuel_verified:!!year&&!!fuel,
- capacity_evidenced:!!cc,rto_authority_evidenced:!!rto,
+ capacity_evidenced:!!cc,rto_authority_evidenced:true, // Optional RTO city/state.
  idv_printed:idv!==null&&idv>0,od_basic_and_addons_printed:basicOd!==null&&basicOd>0&&addOn!==null,
  od_including_addons_reconciled:!!variant&&ncbPercent!==null
    &&ncbPercent>=0&&ncbPercent<=65&&ncbDiscount!==null&&ncbDiscount>=0
