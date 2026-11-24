@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Image, Platform, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, Easing, Image, Platform, Pressable, StyleSheet, Text, View, type ImageSourcePropType, type TextProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -37,11 +37,126 @@ function shortCurrency(value: number | string): string {
 }
 
 function count(value: number): string {
-  return Number(value ?? 0).toLocaleString('en-IN');
+  return Math.round(Number(value ?? 0)).toLocaleString('en-IN');
+}
+
+const ease = Easing.out(Easing.cubic);
+const native = Platform.OS !== 'web';
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(true);
+  useEffect(() => {
+    let live = true;
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', value => { if (live) setReduced(value); });
+    void AccessibilityInfo.isReduceMotionEnabled().then(value => { if (live) setReduced(value); }).catch(() => {});
+    return () => { live = false; sub.remove(); };
+  }, []);
+  return reduced;
+}
+function useEntrance(visible: boolean, reduced: boolean, delay = 0) {
+  const progress = useRef(new Animated.Value(reduced ? 1 : 0)).current;
+  const played = useRef(false);
+  useEffect(() => {
+    if (reduced) { progress.setValue(1); return; }
+    if (played.current) return;
+    progress.setValue(0);
+    if (!visible) return;
+    played.current = true;
+    const animation = Animated.timing(progress, { toValue: 1, duration: 320, delay, easing: ease, useNativeDriver: native, isInteraction: false });
+    animation.start();
+    return () => { animation.stop(); progress.setValue(1); };
+  }, [visible, reduced, delay, progress]);
+  return progress;
+}
+function entranceStyle(progress: Animated.Value, distance = 6) {
+  return { opacity: progress, transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [distance, 0] }) }] };
+}
+function useAccent(visible: boolean, reduced: boolean, duration = 1100) {
+  const motion = useRef(new Animated.Value(0)).current;
+  const played = useRef(false);
+  useEffect(() => {
+    if (reduced) { motion.setValue(0); return; }
+    if (!visible || played.current) return;
+    played.current = true;
+    const animation = Animated.sequence([
+      Animated.timing(motion, { toValue: 1, duration: duration / 2, easing: Easing.inOut(Easing.sin), useNativeDriver: native, isInteraction: false }),
+      Animated.timing(motion, { toValue: 0, duration: duration / 2, easing: Easing.inOut(Easing.sin), useNativeDriver: native, isInteraction: false }),
+    ]);
+    animation.start();
+    return () => { animation.stop(); motion.setValue(0); };
+  }, [visible, reduced, duration, motion]);
+  return motion;
+}
+function usePressMotion(reduced: boolean) {
+  const progress = useRef(new Animated.Value(0)).current;
+  useEffect(() => () => progress.stopAnimation(), [progress]);
+  useEffect(() => { if (reduced) { progress.stopAnimation(); progress.setValue(0); } }, [reduced, progress]);
+  const move = (toValue: number) => {
+    if (reduced) return;
+    Animated.timing(progress, { toValue, duration: 150, easing: ease, useNativeDriver: native, isInteraction: false }).start();
+  };
+  return { progress, onPressIn: () => move(1), onPressOut: () => move(0) };
+}
+function MetricText({ value, formatter = count, visible, reduced, delay = 0, ...props }: TextProps & {
+  value: number | string; formatter?: (value: number) => string; visible: boolean; reduced: boolean; delay?: number;
+}) {
+  const target = Number(value);
+  const [display, setDisplay] = useState(target);
+  const played = useRef(false);
+  useEffect(() => {
+    if (reduced || !Number.isFinite(target)) { setDisplay(target); return; }
+    if (played.current) { setDisplay(target); return; }
+    if (!visible) return;
+    played.current = true;
+    let frame = 0;
+    let start: number | undefined;
+    let last = -Infinity;
+    const tick = (now: number) => {
+      start ??= now;
+      const t = Math.max(0, Math.min(1, (now - start - delay) / 620));
+      if (now - last >= 32 || t === 1) { setDisplay(target * ease(t)); last = now; }
+      if (t < 1) frame = requestAnimationFrame(tick);
+    };
+    setDisplay(0);
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target, visible, reduced, delay]);
+  const shown = reduced || !visible ? target : display;
+  const formatted = formatter === shortCurrency && Math.abs(target) >= 1_00_00_000 ? `₹${(shown / 1_00_00_000).toFixed(2)} Cr` : formatter === shortCurrency && Math.abs(target) >= 1_00_000 ? `₹${(shown / 1_00_000).toFixed(2)} L` : formatter(shown);
+  return <Text {...props} accessibilityLabel={formatter(target)}>{formatted}</Text>;
 }
 
 export default function ImpactScreen() {
   const router = useRouter();
+  const reduced = useReducedMotion();
+  const bounds = useRef<Record<string, number>>({});
+  const viewport = useRef({ y: 0, height: 0 });
+  const [seen, setSeen] = useState<Record<string, boolean>>({});
+  const checkVisible = useCallback(() => {
+    const { y, height } = viewport.current;
+    if (!height) return;
+    setSeen(previous => {
+      const next = { ...previous };
+      let changed = false;
+      for (const [key, top] of Object.entries(bounds.current)) {
+        if (!next[key] && top < y + height - 12) { next[key] = true; changed = true; }
+      }
+      return changed ? next : previous;
+    });
+  }, []);
+  const recordTop = (key: string, y: number) => { bounds.current[key] = y; checkVisible(); };
+  const heroVisible = !!seen.hero;
+  const monthVisible = !!seen.month;
+  const journeyVisible = !!seen.journey;
+  const heroCar = useAccent(heroVisible, reduced, 1400);
+  const shield = useEntrance(heroVisible, reduced, 90);
+  const badge = useEntrance(heroVisible, reduced, 180);
+  const month = useEntrance(monthVisible, reduced);
+  const chart = useEntrance(monthVisible, reduced, 100);
+  const journey = useEntrance(journeyVisible, reduced);
+  const road = useAccent(journeyVisible, reduced, 1400);
+  const car = useAccent(journeyVisible, reduced, 1100);
+  const pin = useAccent(journeyVisible, reduced, 500);
+  const journeyPress = usePressMotion(reduced);
   const [data, setData] = useState<PartnerImpactData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -66,7 +181,9 @@ export default function ImpactScreen() {
       hideTopBar
       navyStatusBar
       bottomNavigationNavy
-      bottomNavigation={<PartnerCaseBottomNavigation activeTab="Home" />}
+      bottomNavigation={<PartnerCaseBottomNavigation activeTab="Home" animateSelection />}
+      stickyFirstChild
+      scrollProps={{ onLayout: event => { viewport.current.height = event.nativeEvent.layout.height; checkVisible(); }, onScroll: event => { viewport.current = { y: event.nativeEvent.contentOffset.y, height: event.nativeEvent.layoutMeasurement.height }; checkVisible(); } }}
     >
       <View style={styles.pageHeader}>
         <Pressable accessibilityRole="button" accessibilityLabel="Back" hitSlop={8} onPress={() => router.back()} style={styles.headerBack}>
@@ -87,45 +204,44 @@ export default function ImpactScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Open business performance"
+            onLayout={event => recordTop("hero", event.nativeEvent.layout.y)}
             onPress={() => router.push('/(tabs)/business')}
             style={({ pressed }) => [styles.hero, pressed && styles.pressed]}
           >
             <View style={styles.heroCar}>
-              <ImpactIcon art="motor" size={76} plain />
-              <View pointerEvents="none" style={styles.heroShield}>
+              <Animated.View style={{ transform: [{ translateY: heroCar.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) }] }}><ImpactIcon art="motor" size={76} plain /></Animated.View>
+              <Animated.View pointerEvents="none" style={[styles.heroShield, entranceStyle(shield, 3)]}>
                 <Ionicons name="shield-checkmark" size={22} color="#3379E6" />
-              </View>
+              </Animated.View>
             </View>
             <View style={styles.heroDivider} />
             <View style={styles.heroDetails}>
               <View style={styles.heroTopRow}>
                 <View style={styles.heroValueGroup}>
                   <Text style={styles.heroEyebrow} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>Total Protection Value</Text>
-                  <Text style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
-                    {shortCurrency(data.active_motor_idv)}
-                  </Text>
+                  <MetricText style={styles.heroValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} value={data.active_motor_idv} formatter={shortCurrency} visible={heroVisible} reduced={reduced} />
                 </View>
-                <View pointerEvents="none" style={styles.heroCoverageBadge}>
+                <Animated.View pointerEvents="none" style={[styles.heroCoverageBadge, entranceStyle(badge, 3)]}>
                   <Ionicons name="shield-checkmark" size={12} color="#2566CF" />
                   <Text style={styles.heroCoverageText} numberOfLines={2}>Your coverage{'\n'}this month</Text>
-                </View>
+                </Animated.View>
               </View>
             </View>
           </Pressable>
 
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Protection footprint</Text></View>
-          <View style={styles.footprintCard}>
-            <ImpactCard art="vehicle" value={data.active_vehicles} label="Vehicles covered" onPress={() => router.push('/customers')} />
+          <View style={styles.footprintCard} onLayout={event => recordTop("footprint", event.nativeEvent.layout.y)}>
+            <ImpactCard art="vehicle" value={data.active_vehicles} visible={!!seen.footprint} reduced={reduced} delay={0} label="Vehicles covered" onPress={() => router.push('/customers')} />
             <View style={styles.footprintDivider} accessible={false}/>
-            <ImpactCard art="customer" value={data.customers_served} label="Customers served" onPress={() => router.push('/customers')} />
+            <ImpactCard art="customer" value={data.customers_served} visible={!!seen.footprint} reduced={reduced} delay={90} label="Customers served" onPress={() => router.push('/customers')} />
             <View style={styles.footprintDivider} accessible={false}/>
-            <ImpactCard art="policy" value={data.lifetime_policies} label="Policies in your book" onPress={() => router.push('/(tabs)/policies')} />
+            <ImpactCard art="policy" value={data.lifetime_policies} visible={!!seen.footprint} reduced={reduced} delay={180} label="Policies in your book" onPress={() => router.push('/(tabs)/policies')} />
             <View style={styles.footprintDivider} accessible={false}/>
-            <ImpactCard art="claim" value={data.claims_assisted} label="Claims assisted" onPress={() => router.push('/(tabs)/claims')} />
+            <ImpactCard art="claim" value={data.claims_assisted} visible={!!seen.footprint} reduced={reduced} delay={270} label="Claims assisted" onPress={() => router.push('/(tabs)/claims')} />
           </View>
 
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>This month</Text></View>
-          <View style={styles.monthCard}>
+          <Animated.View style={[styles.monthCard, entranceStyle(month)]} onLayout={event => recordTop("month", event.nativeEvent.layout.y)}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Open monthly gross premium report"
@@ -134,24 +250,22 @@ export default function ImpactScreen() {
             >
               <View style={styles.monthPremiumTop}>
                 <View style={styles.premiumIconLabel}>
-                  <ImpactIcon art="premium" size={49} plain />
+                  <Animated.View style={{ opacity: chart, transform: [{ translateY: chart.interpolate({ inputRange: [0, 1], outputRange: [5, 0] }) }, { scaleY: chart.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] }}><ImpactIcon art="premium" size={49} plain /></Animated.View>
                 </View>
                 <View style={styles.premiumDetails}>
                   <Text style={styles.premiumLabel}>Gross premium</Text>
-                  <Text style={styles.premiumValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
-                    {shortCurrency(data.gross_premium_this_month)}
-                  </Text>
+                  <MetricText style={styles.premiumValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} value={data.gross_premium_this_month} formatter={shortCurrency} visible={monthVisible} reduced={reduced} />
                 </View>
                 <Ionicons name="chevron-forward" size={17} color="#8A98AD" />
               </View>
             </Pressable>
             <View style={styles.monthDivider} />
             <View style={styles.monthStatsRow}>
-              <MonthStat art="monthly-policy" label="Policies" value={count(data.policies_this_month)} onPress={() => router.push('/(tabs)/policies')} />
+              <MonthStat art="monthly-policy" label="Policies" value={data.policies_this_month} visible={monthVisible} reduced={reduced} delay={90} onPress={() => router.push('/(tabs)/policies')} />
               <View style={styles.monthStatDivider} />
-              <MonthStat art="new-customer" label="Customers added" value={count(data.customers_this_month)} onPress={() => router.push('/customers')} />
+              <MonthStat art="new-customer" label="Customers added" value={data.customers_this_month} visible={monthVisible} reduced={reduced} delay={180} onPress={() => router.push('/customers')} />
             </View>
-          </View>
+          </Animated.View>
 
           {Number(data.claim_settlement_value || 0) > 0 ? (
             <Pressable
@@ -170,20 +284,24 @@ export default function ImpactScreen() {
             </Pressable>
           ) : null}
 
+          <Animated.View onLayout={event => recordTop("journey", event.nativeEvent.layout.y)} style={[entranceStyle(journey), { transform: [{ translateY: journey.interpolate({ inputRange: [0, 1], outputRange: [6, 0] }) }, { scale: journeyPress.progress.interpolate({ inputRange: [0, 1], outputRange: [1, 0.987] }) }] }]}>
           <Pressable
+            onPressIn={journeyPress.onPressIn} onPressOut={journeyPress.onPressOut}
             onPress={() => router.push('/journey')}
-            style={({ pressed }) => [styles.journeyLink, pressed && styles.journeyPressed]}
+            style={({ pressed }) => [styles.journeyLink, pressed && { opacity: 0.94 }]}
             accessibilityRole="button"
             accessibilityLabel="See your journey, milestones and achievements"
           >
             <View pointerEvents="none" style={styles.journeyScenery}>
               <View style={styles.journeyGlow} />
+              <Animated.View style={[StyleSheet.absoluteFillObject, { transform: [{ translateX: road.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) }] }]}>
               <View style={styles.journeyRoadShadow} />
               <View style={styles.journeyRoad} />
               <View style={styles.journeyRoadTop} />
               <View style={[styles.journeyRoadMark, styles.journeyRoadMarkOne]} />
               <View style={[styles.journeyRoadMark, styles.journeyRoadMarkTwo]} />
               <View style={[styles.journeyRoadMark, styles.journeyRoadMarkThree]} />
+              </Animated.View>
             </View>
             <View style={styles.journeyIconCircle}>
               <Image source={IMPACT_ART.journey} resizeMode="contain" style={styles.journeyIcon} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
@@ -193,44 +311,50 @@ export default function ImpactScreen() {
               <Text style={styles.journeySubtitle} numberOfLines={2}>Milestones and achievements</Text>
             </View>
             <View pointerEvents="none" style={styles.journeyCarScene}>
-              <Ionicons name="location-sharp" size={24} color="#6754EF" style={styles.journeyLocationPin} />
-              <Image source={IMPACT_ART.motor} resizeMode="contain" style={styles.journeyBlueCar} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+              <Animated.View style={[styles.journeyLocationPin, { transform: [{ translateY: pin.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) }] }]}><Ionicons name="location-sharp" size={24} color="#6754EF" /></Animated.View>
+              <Animated.Image source={IMPACT_ART.motor} resizeMode="contain" style={[styles.journeyBlueCar, { transform: [{ translateX: car.interpolate({ inputRange: [0, 1], outputRange: [0, 4] }) }] }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
             </View>
           </Pressable>
+          </Animated.View>
         </>
       )}
     </PartnerScreen>
   );
 }
 
-function ImpactCard({ art, value, label, onPress }: {
+function ImpactCard({ art, value, label, onPress, visible, reduced, delay }: {
   art: ImpactArt;
   value: number;
   label: string;
   onPress: () => void;
+  visible: boolean; reduced: boolean; delay: number;
 }) {
+  const entrance = useEntrance(visible, reduced, delay);
+  const press = usePressMotion(reduced);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => [styles.impactCard, pressed && styles.pressed]}
+      onPressIn={press.onPressIn} onPressOut={press.onPressOut}
+      style={({ pressed }) => [styles.impactCard, pressed && styles.monthStatPressed]}
     >
-      <View style={styles.cardContentRow}>
+      <Animated.View style={[styles.cardContentRow, entranceStyle(entrance)]}>
         <ImpactIcon art={art} size={40} plain footprint />
         <Text style={styles.impactLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}</Text>
-        <Text style={styles.impactValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{count(value)}</Text>
-        <Ionicons name="chevron-forward" size={15} color="#9AA7BB" />
-      </View>
+        <MetricText style={styles.impactValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} value={value} visible={visible} reduced={reduced} delay={delay} />
+        <Animated.View style={{ transform: [{ translateX: press.progress.interpolate({ inputRange: [0, 1], outputRange: [0, 2] }) }] }}><Ionicons name="chevron-forward" size={15} color="#9AA7BB" /></Animated.View>
+      </Animated.View>
     </Pressable>
   );
 }
 
-function MonthStat({ art, label, value, onPress }: {
+function MonthStat({ art, label, value, onPress, visible, reduced, delay }: {
   art: ImpactArt;
   label: string;
-  value: string;
+  value: number;
   onPress: () => void;
+  visible: boolean; reduced: boolean; delay: number;
 }) {
   return (
     <Pressable
@@ -241,7 +365,7 @@ function MonthStat({ art, label, value, onPress }: {
     >
       <ImpactIcon art={art} size={54} plain />
       <View style={styles.cardDetails}>
-        <Text style={styles.monthValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{value}</Text>
+        <MetricText style={styles.monthValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} value={value} visible={visible} reduced={reduced} delay={delay} />
         <Text style={styles.monthLabel} numberOfLines={2}>{label}</Text>
       </View>
     </Pressable>
