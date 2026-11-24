@@ -66,7 +66,8 @@ const privateFields=common.map(x=>({
  :x.key==="vehicle_manufacturing_year"?"2018"
  :x.key==="vehicle_capacity"?"1248"
  :x.key==="policy_product"?"Package":x.value,
- evidence:x.key==="policy_issuance_date"?"UIIC Private Car printed Date of Issue: 2026-11-19":x.evidence,
+ evidence:x.key==="policy_issuance_date"?"UIIC Private Car printed Date of Issue: 2026-11-19"
+ :x.key==="cpa_premium"?"UIIC Private Car PDF explicitly removes owner-driver CPA":x.evidence,
 }));
 const privateResult=assessUiicPrivateCarDirectConversion({
  parserId:"united_india_private_car_package_native_pdf",
