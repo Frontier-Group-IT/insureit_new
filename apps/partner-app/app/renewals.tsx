@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, ActivityIndicator, Animated, AppState, Easing, Image, Modal, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 
 import { PartnerListScreen } from '@/components/partner-list-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
@@ -39,6 +41,8 @@ let savedRenewalQuery = '';
 
 export default function RenewalsScreen() {
   const router = useRouter();
+  const motion = useRenewalMotion();
+  const [tabWidth, setTabWidth] = useState(0);
   const { width: windowWidth } = useWindowDimensions();
   const sortAnchorRef = useRef<View>(null);
   const [sortMenuPosition, setSortMenuPosition] = useState({ top: 0, left: 0 });
@@ -107,11 +111,23 @@ export default function RenewalsScreen() {
     [bucket, mode, summary.data],
   );
 
+  const indicator = useRef(new Animated.Value(mode === 'expired' ? 1 : 0)).current;
+  const arrow = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const a = Animated.timing(indicator, { toValue: mode === 'expired' ? 1 : 0, duration: motion ? 240 : 0, easing: Easing.out(Easing.cubic), useNativeDriver: true });
+    a.start(); return () => a.stop();
+  }, [mode, motion, indicator]);
+  useEffect(() => {
+    const a = Animated.timing(arrow, { toValue: sortOpen ? 1 : 0, duration: motion ? 180 : 0, useNativeDriver: true });
+    a.start(); return () => a.stop();
+  }, [sortOpen, motion, arrow]);
+
   const refreshAll = useCallback(async () => {
     await Promise.all([summary.refresh(), collection.refresh()]);
   }, [collection, summary]);
 
   const selectMode = (nextMode: PartnerRenewalMode) => {
+    if (nextMode !== mode) renewalHaptic();
     setMode(nextMode);
     setBucket(nextMode === 'expired' ? 'overdue' : 'all');
     setSortOpen(false);
@@ -135,6 +151,7 @@ export default function RenewalsScreen() {
   };
 
   const selectSort = (direction: DueDateSort) => {
+    if (direction !== sortDirection) renewalHaptic();
     setSortDirection(direction);
     setSortOpen(false);
   };
@@ -142,6 +159,7 @@ export default function RenewalsScreen() {
   const header = (
     <View>
       {summary.loading && !summary.data ? null : (
+        <RenewalEnter enabled={motion} delay={0}>
         <View style={styles.summaryPanel}>
           <Pressable
             accessibilityRole="button"
@@ -150,18 +168,18 @@ export default function RenewalsScreen() {
             style={({ pressed }) => [styles.summaryLead, pressed && styles.summaryPressed]}
           >
             <View style={styles.summaryMain}>
-              <Image source={PartnerAssets.actions.quickRenewals} style={styles.summaryArtwork} resizeMode="contain" />
+              <RenewalShine enabled={motion}><Image source={PartnerAssets.actions.quickRenewals} style={styles.summaryArtwork} resizeMode="contain" /></RenewalShine>
               <View style={styles.summaryText}>
                 <Text style={styles.summaryEyebrow}>{selectedSummary.eyebrow}</Text>
-                <Text style={styles.summaryPremium}>Net Premium - {formatWholeRupees(selectedSummary.premium)}</Text>
+                <RenewalPremium value={selectedSummary.premium} enabled={motion} />
               </View>
             </View>
-            <View style={styles.summaryCountBadge}>
+            <RenewalEnter enabled={motion} spring delay={90}><View style={styles.summaryCountBadge}>
               <Text style={styles.summaryCount} numberOfLines={1}>Policies {selectedSummary.count}</Text>
-            </View>
+            </View></RenewalEnter>
           </Pressable>
           <View style={styles.summaryDivider} />
-        </View>
+        </View></RenewalEnter>
       )}
 
       {(collection.stale || summary.stale) ? (
@@ -170,12 +188,13 @@ export default function RenewalsScreen() {
         </View>
       ) : null}
 
-      <View style={styles.modeTabs}>
-        <ModeTab label="Upcoming" count={summary.data?.due_30_count ?? null} active={mode === 'expiring'} onPress={() => selectMode('expiring')} />
-        <ModeTab label="Overdue" count={summary.data?.overdue_count ?? null} active={mode === 'expired'} danger onPress={() => selectMode('expired')} />
-      </View>
+      <RenewalEnter enabled={motion} delay={65}><View style={styles.modeTabs} onLayout={event => setTabWidth(event.nativeEvent.layout.width)}>
+        <ModeTab label="Upcoming" count={summary.data?.due_30_count ?? null} active={mode === 'expiring'} motion={motion} onPress={() => selectMode('expiring')} />
+        <ModeTab label="Overdue" count={summary.data?.overdue_count ?? null} active={mode === 'expired'} motion={motion} danger onPress={() => selectMode('expired')} />
+        <Animated.View pointerEvents="none" style={[styles.slidingUnderline, { width: tabWidth / 2, transform: [{ translateX: indicator.interpolate({ inputRange: [0, 1], outputRange: [0, tabWidth / 2] }) }] }]} />
+      </View></RenewalEnter>
 
-      <View style={styles.searchRow}>
+      <RenewalEnter enabled={motion} delay={120}><View style={styles.searchRow}>
         <View style={styles.searchGrow}>
           <PartnerSearchField
             value={query}
@@ -184,11 +203,12 @@ export default function RenewalsScreen() {
             placeholder="Search policy, customer or insurer..."
             leadingIconVariant="blue3d"
             containerStyle={styles.searchField}
+            renewalMotion={motion}
           />
         </View>
-      </View>
+      </View></RenewalEnter>
 
-      <View style={styles.opportunitiesHeader}>
+      <RenewalEnter enabled={motion} delay={165}><View style={styles.opportunitiesHeader}>
         <View style={styles.opportunitiesLeft}>
           <View style={styles.listIcon}><Image source={PartnerAssets.actions.quickPolicyIntake} style={styles.listArtwork} resizeMode="contain" /></View>
           <View>
@@ -199,10 +219,10 @@ export default function RenewalsScreen() {
         <View ref={sortAnchorRef} collapsable={false} style={styles.sortArea}>
           <Pressable accessibilityRole="button" accessibilityLabel="Sort renewals by due date" accessibilityHint="Opens sorting options above renewal records" accessibilityState={{ expanded: sortOpen }} onPress={toggleSort} style={({ pressed }) => [styles.sortButton, pressed && styles.pressed]}>
             <Text style={styles.sortText}>Due Date</Text>
-            <Ionicons name={sortOpen ? 'chevron-up' : 'chevron-down'} size={14} color="#42516A" />
+            <Animated.View style={{ transform: [{ rotate: arrow.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }] }}><Ionicons name="chevron-down" size={14} color="#42516A" /></Animated.View>
           </Pressable>
         </View>
-      </View>
+      </View></RenewalEnter>
 
       {collection.error && collection.rows.length && !collection.stale ? <View style={styles.inlineBanner}><PartnerBanner tone="warning" message={collection.error} /></View> : null}
     </View>
@@ -211,12 +231,12 @@ export default function RenewalsScreen() {
   const empty = (
     <View style={styles.emptyCard}>
       {collection.loading ? (
-        <RenewalLoadingRows />
+        <RenewalLoadingRows motion={motion} />
       ) : collection.error ? (
         <PartnerStateView state="error" title="Renewals could not be loaded" message={collection.error} actionLabel="Try again" onAction={() => void refreshAll()} />
       ) : (
         <>
-          <Image source={PartnerAssets.emptyStates.noRenewals} style={styles.emptyArtwork} resizeMode="contain" />
+          <RenewalEnter enabled={motion} spring><Image source={PartnerAssets.emptyStates.noRenewals} style={styles.emptyArtwork} resizeMode="contain" /></RenewalEnter>
           <Text style={styles.emptyTitle}>{mode === 'expiring' ? 'No policies in this renewal window' : 'No overdue policies found'}</Text>
           <Text style={styles.emptyMessage}>The queue is derived from your authorized policy book{`\n`}and policy expiry dates.</Text>
         </>
@@ -265,7 +285,7 @@ export default function RenewalsScreen() {
       keyExtractor={(row) => row.policy_id}
       renderItem={({ item, index }) => (
         <View style={[styles.recordCard, index === sortedRows.length - 1 && styles.recordCardLast]}>
-          <RenewalCard row={item} onOpenPolicy={() => router.push(`/policy/${item.policy_id}` as never)} />
+          <RenewalEnter enabled={motion} delay={Math.min(index, 7) * 35} replayKey={`${mode}:${debouncedSearch}:${sortDirection}:${index}`} direction={mode === 'expired' ? -1 : 1}><RenewalCard row={item} motion={motion} onOpenPolicy={() => router.push(`/policy/${item.policy_id}` as never)} /></RenewalEnter>
         </View>
       )}
       header={header}
@@ -275,10 +295,10 @@ export default function RenewalsScreen() {
       onRefresh={() => void refreshAll()}
       ItemSeparatorComponent={() => <View style={styles.recordDivider} />}
       />
-      <Modal visible={sortOpen} transparent animationType="none" statusBarTranslucent onRequestClose={() => setSortOpen(false)}>
+      <Modal visible={sortOpen} transparent animationType={motion ? "fade" : "none"} statusBarTranslucent onRequestClose={() => setSortOpen(false)}>
         <View style={styles.sortOverlay}>
           <Pressable accessibilityRole="button" accessibilityLabel="Close sort options" onPress={() => setSortOpen(false)} style={StyleSheet.absoluteFill} />
-          <View style={[styles.sortMenu, { top: sortMenuPosition.top, left: sortMenuPosition.left }]}>
+          <View style={[styles.sortMenu, { top: sortMenuPosition.top, left: sortMenuPosition.left }]}><RenewalEnter enabled={motion} spring>
             <Pressable accessibilityRole="button" accessibilityLabel="Earliest due date first" onPress={() => selectSort('asc')} style={({ pressed }) => [styles.sortOption, pressed && styles.sortOptionPressed]}>
               <Text style={[styles.sortOptionText, sortDirection === 'asc' && styles.sortOptionTextActive]}>Earliest first</Text>
               {sortDirection === 'asc' ? <Ionicons name="checkmark" size={15} color={partnerTheme.colors.brand} /> : null}
@@ -287,11 +307,101 @@ export default function RenewalsScreen() {
               <Text style={[styles.sortOptionText, sortDirection === 'desc' && styles.sortOptionTextActive]}>Latest first</Text>
               {sortDirection === 'desc' ? <Ionicons name="checkmark" size={15} color={partnerTheme.colors.brand} /> : null}
             </Pressable>
-          </View>
+          </RenewalEnter></View>
         </View>
       </Modal>
     </>
   );
+}
+
+
+function renewalHaptic() {
+  if (Platform.OS !== 'web') void Haptics.selectionAsync().catch(() => {});
+}
+
+function useRenewalMotion() {
+  const focused = useIsFocused();
+  const [foreground, setForeground] = useState(AppState.currentState === 'active');
+  const [reduced, setReduced] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    let changed = false;
+    const app = AppState.addEventListener('change', state => setForeground(state === 'active'));
+    const pref = AccessibilityInfo.addEventListener('reduceMotionChanged', value => { changed = true; setReduced(value); });
+    void AccessibilityInfo.isReduceMotionEnabled().then(value => { if (alive && !changed) setReduced(value); }).catch(() => {});
+    return () => { alive = false; app.remove(); pref.remove(); };
+  }, []);
+  return focused && foreground && !reduced;
+}
+
+function RenewalEnter({ children, enabled, delay = 0, spring = false, replayKey = '', direction }: { children: ReactNode; enabled: boolean; delay?: number; spring?: boolean; replayKey?: string; direction?: number }) {
+  const progress = useRef(new Animated.Value(1)).current;
+  const last = useRef<string | null>(null);
+  useEffect(() => {
+    if (!enabled) { progress.setValue(1); return; }
+    if (last.current === replayKey) return;
+    last.current = replayKey;
+    progress.setValue(0);
+    const a = spring
+      ? Animated.spring(progress, { toValue: 1, delay, speed: 18, bounciness: 3, useNativeDriver: true })
+      : Animated.timing(progress, { toValue: 1, delay, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true });
+    a.start();
+    return () => { a.stop(); progress.setValue(1); };
+  }, [enabled, delay, spring, replayKey, progress]);
+  return <Animated.View style={{ opacity: progress.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' }), transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [spring ? 0 : 7, 0] }) }, { translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [direction ? direction * 5 : 0, 0] }) }, { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [spring ? 0.94 : 1, 1] }) }] }}>{children}</Animated.View>;
+}
+
+function useRenewalPulse(enabled: boolean, duration: number) {
+  const progress = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!enabled) { progress.setValue(0); return; }
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(progress, { toValue: 1, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
+      Animated.timing(progress, { toValue: 0, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
+    ]));
+    loop.start(); return () => { loop.stop(); progress.setValue(0); };
+  }, [enabled, duration, progress]);
+  return progress;
+}
+
+function RenewalShine({ children, enabled }: { children: ReactNode; enabled: boolean }) {
+  const shine = useRef(new Animated.Value(0)).current;
+  const played = useRef(false);
+  useEffect(() => {
+    if (!enabled || played.current) return;
+    played.current = true;
+    const a = Animated.timing(shine, { toValue: 1, delay: 280, duration: 650, useNativeDriver: true, isInteraction: false });
+    a.start(); return () => { a.stop(); shine.setValue(1); };
+  }, [enabled, shine]);
+  return <View style={styles.shineClip}>{children}{enabled ? <Animated.View pointerEvents="none" style={[styles.shineStripe, { transform: [{ translateX: shine.interpolate({ inputRange: [0, 1], outputRange: [-12, 44] }) }, { rotate: '18deg' }] }]} /> : null}</View>;
+}
+
+function RenewalPremium({ value, enabled }: { value: number | string; enabled: boolean }) {
+  const amount = Number(value);
+  const target = Number.isFinite(amount) ? amount : 0;
+  const [shown, setShown] = useState(target);
+  const previous = useRef<number | null>(null);
+  useEffect(() => {
+    if (!enabled) { setShown(target); return; }
+    if (previous.current === target) return;
+    const start = previous.current ?? 0;
+    previous.current = target;
+    const progress = new Animated.Value(start);
+    const id = progress.addListener(({ value: current }) => setShown(current));
+    const a = Animated.timing(progress, { toValue: target, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: false });
+    a.start(({ finished }) => { if (finished) setShown(target); });
+    return () => { progress.removeListener(id); a.stop(); setShown(target); };
+  }, [target, enabled]);
+  return <Text style={styles.summaryPremium} accessibilityLabel={`Net Premium - ${formatWholeRupees(target)}`}>Net Premium - {formatWholeRupees(enabled ? shown : target)}</Text>;
+}
+
+function renewalBadgeColors(days: number) {
+  if (days < 0) return { background: '#991B1B', foreground: '#FFFFFF' };
+  if (days === 0) return { background: '#DC2626', foreground: '#FFFFFF' };
+  if (days <= 2) return { background: '#FEE2E2', foreground: '#B91C1C' };
+  if (days <= 7) return { background: '#FFEDD5', foreground: '#C2410C' };
+  if (days <= 20) return { background: '#FFF4E3', foreground: '#94611C' };
+  return { background: '#E9F2FF', foreground: '#1558B0' };
 }
 
 function formatWholeRupees(value: number | string): string {
@@ -299,13 +409,14 @@ function formatWholeRupees(value: number | string): string {
   return formatIndianCurrency(Number.isFinite(amount) ? Math.trunc(amount) : 0);
 }
 
-function ModeTab({ label, count, active, danger = false, onPress }: { label: string; count: number | null; active: boolean; danger?: boolean; onPress: () => void }) {
-  return <Pressable onPress={onPress} style={[styles.modeTab, active && styles.modeTabActive]}><Text style={[styles.modeLabel, active && styles.modeLabelActive]}>{label}</Text>{count !== null ? <View style={[styles.tabBadge, danger ? styles.tabBadgeDanger : styles.tabBadgeBlue]}><Text style={[styles.tabBadgeText, danger ? styles.tabBadgeDangerText : styles.tabBadgeBlueText]}>{count}</Text></View> : null}</Pressable>;
+function ModeTab({ label, count, active, danger = false, motion, onPress }: { label: string; count: number | null; active: boolean; danger?: boolean; motion: boolean; onPress: () => void }) {
+  return <Pressable accessibilityRole="tab" accessibilityState={{ selected: active }} onPress={onPress} style={styles.modeTab}><Text style={[styles.modeLabel, active && styles.modeLabelActive]}>{label}</Text>{count !== null ? <RenewalEnter enabled={motion} spring replayKey={String(count)}><View style={[styles.tabBadge, danger ? styles.tabBadgeDanger : styles.tabBadgeBlue]}><Text style={[styles.tabBadgeText, danger ? styles.tabBadgeDangerText : styles.tabBadgeBlueText]}>{count}</Text></View></RenewalEnter> : null}</Pressable>;
 }
 
-function RenewalLoadingRows() {
+function RenewalLoadingRows({ motion }: { motion: boolean }) {
+  const glow = useRenewalPulse(motion, 900);
   return (
-    <View style={styles.loadingRows} accessibilityRole="progressbar" accessibilityLabel="Loading renewal opportunities">
+    <Animated.View style={[styles.loadingRows, { opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [1, 0.55] }) }]} accessibilityRole="progressbar" accessibilityLabel="Loading renewal opportunities">
       {Array.from({ length: 3 }, (_, index) => (
         <View key={index} style={styles.loadingRow} importantForAccessibility="no-hide-descendants">
           <View style={styles.loadingLogo} />
@@ -317,7 +428,7 @@ function RenewalLoadingRows() {
           <View style={styles.loadingBadge} />
         </View>
       ))}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -329,8 +440,11 @@ function resolveSummarySelection(data: PartnerRenewalSummary | null | undefined,
   return { eyebrow: 'NEXT 30 DAYS', premium: data?.due_30_premium ?? 0, count: data?.due_30_count ?? 0 };
 }
 
-function RenewalCard({ row, onOpenPolicy }: { row: PartnerRenewalRow; onOpenPolicy: () => void }) {
-  const expired = daysUntil(row.end_date) < 0;
+function RenewalCard({ row, motion, onOpenPolicy }: { row: PartnerRenewalRow; motion: boolean; onOpenPolicy: () => void }) {
+  const days = daysUntil(row.end_date);
+  const expired = days < 0;
+  const colors = renewalBadgeColors(days);
+  const pulse = useRenewalPulse(motion && days >= 0 && days <= 2, 1250);
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`Open renewal policy ${row.policy_no || row.policy_code || ''} for ${row.customer_name}`} onPress={onOpenPolicy} style={({ pressed }) => [styles.renewalRow, pressed && styles.pressed]}>
       <View style={styles.renewalArtwork}><PartnerInsurerLogo name={row.insurer_name} fallback={PartnerAssets.actions.renewals} style={styles.renewalArtworkImage} /></View>
@@ -339,10 +453,10 @@ function RenewalCard({ row, onOpenPolicy }: { row: PartnerRenewalRow; onOpenPoli
         <Text numberOfLines={1} style={styles.renewalPolicy}>{row.policy_no || row.policy_code || 'Policy'}</Text>
         <Text style={styles.renewalPremium}>{formatIndianCurrency(row.net_premium)}</Text>
       </View>
-      <View style={[styles.renewalBadge, expired ? styles.badgeOverdue : styles.badgeUpcoming]}>
-        {expired ? <Ionicons name="time-outline" color="#C62626" size={13} /> : null}
-        <Text style={[styles.renewalBadgeText, expired ? styles.badgeOverdueText : styles.badgeUpcomingText]}>{renewalLabel(row.end_date)}</Text>
-      </View>
+      <Animated.View style={[styles.renewalBadge, { backgroundColor: colors.background, transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.035] }) }] }]}>
+        {expired ? <Ionicons name="time-outline" color={colors.foreground} size={13} /> : null}
+        <Text style={[styles.renewalBadgeText, { color: colors.foreground }]}>{renewalLabel(row.end_date)}</Text>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -381,7 +495,7 @@ const styles = StyleSheet.create({
   banner: { marginTop: 9 }, inlineBanner: { marginBottom: 8 },
   modeTabs: { marginTop: 0, flexDirection: 'row', gap: 0, borderBottomWidth: 1, borderBottomColor: '#D5E3F2' },
   modeTab: { flex: 1, minHeight: 43, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 5, borderBottomWidth: 3, borderBottomColor: 'transparent' },
-  modeTabActive: { borderBottomColor: '#0877EB' }, modeLabel: { color: '#29344B', fontSize: 12, fontWeight: '700' }, modeLabelActive: { color: '#111B31' },
+  slidingUnderline: { position: 'absolute', bottom: 0, left: 0, height: 3, backgroundColor: '#0877EB' }, modeLabel: { color: '#29344B', fontSize: 12, fontWeight: '700' }, modeLabelActive: { color: '#111B31' },
   tabBadge: { minWidth: 23, height: 23, paddingHorizontal: 6, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, tabBadgeBlue: { backgroundColor: '#EAF0FF' }, tabBadgeDanger: { backgroundColor: '#FFE9E9' },
   tabBadgeText: { fontSize: 10, fontWeight: '800' }, tabBadgeBlueText: { color: '#0877EB' }, tabBadgeDangerText: { color: '#EF4444' },
   searchRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center' }, searchGrow: { flex: 1 },
@@ -415,5 +529,7 @@ const styles = StyleSheet.create({
   renewalBadge: { flexDirection: 'row', flexShrink: 0, alignItems: 'center', gap: 3, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 6 },
   badgeOverdue: { backgroundColor: '#FFEBEB' }, badgeUpcoming: { backgroundColor: '#FFF4E3' },
   renewalBadgeText: { fontSize: 10, fontWeight: '800' }, badgeOverdueText: { color: '#BF2929' }, badgeUpcomingText: { color: '#94611C' },
+  shineClip: { width: 37, height: 37, overflow: 'hidden' },
+  shineStripe: { position: 'absolute', top: 0, bottom: 0, width: 8, backgroundColor: 'rgba(255,255,255,0.42)' },
   pressed: { opacity: 0.65 },
 });
