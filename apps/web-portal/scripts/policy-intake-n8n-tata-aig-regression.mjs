@@ -105,7 +105,7 @@ receiptBased.warnings.push("tata_aig_receipt_date_as_issuance");
 const verifiedReceipt=validateTataAigN8nResponse(receiptBased,IDS);
 assert.equal(get(verifiedReceipt.fields,"policy_issuance_date"),receiptDay);
 invalid(receiptBased,x=>{
- x.fields.find(f=>f.key==="policy_issuance_date").value="2026-11-25";
+ x.fields.find(f=>f.key==="policy_issuance_date").value="2026-11-24";
 },"n8n_tata_aig_printed_issue_invalid");
 invalid(receiptBased,x=>{
  x.fields.find(f=>f.key==="policy_issuance_date").evidence="Unverified receipt";
