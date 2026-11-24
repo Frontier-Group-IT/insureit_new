@@ -275,6 +275,7 @@ const INFO_WARNINGS = new Set([
   "tata_aig_human_review_required",
   "tata_aig_printed_net_rounding",
   "tata_aig_signature_date_not_in_native_text",
+  "tata_aig_receipt_date_as_issuance",
 ]);
 function object(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -352,9 +353,13 @@ export function validateTataAigN8nResponse(
   const issueField=fields.find(item=>item.key==="policy_issuance_date");
   // Explicit printed issuance is authoritative, not receipt or coverage start.
   // The bridge accepts only the current insurer PDF field and its labelled proof.
-  if(issueField && (!date(issueField.value)
-    || issueField.evidence!=="Printed Policy Issue Date / Date of Issue on current policy"
-    || issueField.label!=="Policy Issue Date (printed)"))
+  const printedIssue=issueField?.evidence==="Printed Policy Issue Date / Date of Issue on current policy"
+    &&issueField.label==="Policy Issue Date (printed)";
+  const approvedReceiptIssue=issueField?.evidence==="Tata AIG printed Receipt Date (approved issuance rule)"
+    &&issueField.label==="Issue Date (from printed receipt)"
+    &&Boolean(receiptDate && issueField.value===receiptDate
+      &&object(checks) && checks.receipt_date_document_consistent===true);
+  if(issueField && (!date(issueField.value)||(!printedIssue&&!approvedReceiptIssue)))
     fail("n8n_tata_aig_printed_issue_invalid");
   const get = (key: string) => fields.find(field => field.key === key)?.value ?? "";
   const eq = (key: string, number: number) => {
@@ -458,7 +463,8 @@ export function validateTataAigN8nResponse(
 
   if (!Array.isArray(value.warnings) || value.warnings.length > 5
     || value.warnings.some(item => typeof item !== "string" || !INFO_WARNINGS.has(item))
-    || (Boolean(issueField)===value.warnings.includes("tata_aig_issuance_date_unverified")))
+    || (Boolean(issueField)===value.warnings.includes("tata_aig_issuance_date_unverified"))
+    || Boolean(approvedReceiptIssue)!==value.warnings.includes("tata_aig_receipt_date_as_issuance"))
     fail("n8n_tata_aig_warning_invalid");
   return {
     ok:true, fields, warnings:value.warnings as string[],
