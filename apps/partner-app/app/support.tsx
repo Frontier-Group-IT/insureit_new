@@ -196,14 +196,12 @@ function FloatingHeadphones({ animate }: { animate: boolean }) {
 }
 
 function TimestampReveal({ timestamp, animate }: { timestamp: string; animate: boolean }) {
-  const changed = useRef(false);
   const previous = useRef(timestamp);
   const fade = useRef(new Animated.Value(1)).current;
   const tint = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (previous.current === timestamp) return;
     previous.current = timestamp;
-    changed.current = true;
     if (!animate) { fade.setValue(1); tint.setValue(0); return; }
     fade.setValue(0.45); tint.setValue(1);
     const animation = Animated.parallel([
@@ -235,12 +233,17 @@ function UnderlineMotion({ animate }: { animate: boolean }) {
 function ActualCount({ value, animate }: { value: number; animate: boolean }) {
   const motion = useRef(new Animated.Value(value)).current;
   const seen = useRef<number | null>(null);
+  const played = useRef(false);
   const [displayed, setDisplayed] = useState(value);
   useEffect(() => {
     const initial = seen.current === null;
-    const from = initial ? 0 : seen.current!;
+    const from = !played.current ? 0 : seen.current ?? value;
     seen.current = value;
-    if (!animate || !Number.isFinite(value) || from === value) {
+    if (!animate || !Number.isFinite(value)) {
+      motion.setValue(value); setDisplayed(value); return;
+    }
+    played.current = true;
+    if (from === value) {
       motion.setValue(value); setDisplayed(value); return;
     }
     motion.stopAnimation(); motion.setValue(from);
@@ -269,7 +272,6 @@ function OpsStat({ value, label, helper, onPress, tone, animate, delay }: {
   const iconRotate = useRef(new Animated.Value(0)).current;
   const emphasis = useRef(new Animated.Value(0)).current;
   const previous = useRef(value);
-  const increasing = previous.current < value;
   useEffect(() => {
     const was = previous.current;
     previous.current = value;
@@ -410,7 +412,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#DDEBFF' },
   sectionTitleWrap: { marginTop: 19, marginBottom: 13 },
   sectionTitle: { color: '#071B42', fontWeight: '800', fontSize: 20, letterSpacing: -0.4 },
-  sectionUnderline: { marginTop: 5, width: 50, height: 4, borderRadius: 3, backgroundColor: '#3287EF' },
+  sectionUnderline: { marginTop: 5, width: 50, height: 4, borderRadius: 3, backgroundColor: 'transparent', overflow: 'hidden' },
   statList: { gap: 12 },
   statCard: {
     minHeight: 91, borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1,
