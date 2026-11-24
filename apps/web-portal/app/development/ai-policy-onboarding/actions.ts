@@ -272,6 +272,10 @@ const APPROVED_VARIANT_LEGACY_INTAKES:Readonly<Record<string,string>>={
   "PIR-261120-74CC09":"go_digit_two_wheeler_od_native_pdf",
   "PIR-261120-32D619":"zurich_kotak_private_car_tp_native_pdf",
   "PIR-261120-370952":"zurich_kotak_private_car_tp_native_pdf",
+  "PIR-261120-6DE226":"zurich_kotak_private_car_tp_native_pdf",
+  "PIR-261120-A93337":"zurich_kotak_private_car_tp_native_pdf",
+  "PIR-261120-5BB199":"sbi_general_private_car_package_native_pdf",
+  "PIR-261124-FC9324":"hdfc_ergo_two_wheeler_tp_native_pdf",
 };
 
 export async function convertVerifiedAiIntake(id:string,confirmed:boolean):Promise<SemiAutoActionResult>{
