@@ -146,7 +146,11 @@ function extract(raw){
  checks.vehicle_identity_verified=Boolean(engine&&chassis&&engine!==chassis
    &&(engine.length>=7||explicitlyPrintedShortEngine)&&chassis.length>=14);
  checks.vehicle_specs_verified=Boolean(make&&model&&fuel&&year&&cckw&&seats&&Number(seats)>=1);
- checks.rto_resolved=Boolean(rto&&state&&(!registered||stateByPlate[rawPlate.slice(0,2)]===state));
+ // City and state are OPTIONAL enrichment. Retain either printed RTO city or
+ // validated prefix-derived state independently; unresolved RTO never blocks
+ // otherwise complete policy extraction. Contradictory *verified* geography
+ // remains a separate data-integrity conflict, not a missing-field failure.
+ checks.rto_resolved=!rto||!state||!registered||stateByPlate[rawPlate.slice(0,2)]===state;
  const idvMatch=vehicleRaw.match(/Insured Declared Value \(IDV\)[\s\S]{0,1500}?\n\s*1\s+([\d,]+)\s+0\s+0\s+0\s+0\s+([\d,.]+)/i);
  const idv=idvMatch?amount(idvMatch[2]):null;
  checks.idv_verified=Boolean(idv&&idv>0&&near(idv,amount(idvMatch[1]),0.01));
