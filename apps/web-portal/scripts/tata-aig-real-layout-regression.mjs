@@ -116,7 +116,8 @@ for(const [i,fixture] of fixtures.entries()){
   }
   const valid=validateTataAigN8nResponse(normalized,IDs);
   assert.equal(valid.checksPassed,18);
-  assert.equal(valid.fields.some(f=>f.key==="policy_issuance_date"),false);
+  assert.equal(valid.fields.find(f=>f.key==="policy_issuance_date")?.value,parsed.premium_components.receipt_date);
+  assert(valid.warnings.includes("tata_aig_receipt_date_as_issuance"),"Receipt-to-issue must retain explicit source");
   const tw=i<4;
   assert.equal(parsed.fields.vehicle_class,tw?"TWP":"PCP");
   assert.equal(parsed.fields.vehicle_registration_status,tw?"unregistered":"registered");
@@ -160,7 +161,8 @@ for(const [i,fixture] of fixtures.entries()){
       {first:()=>({json:pdfJsParsed})},
       () => ({first:()=>({json:{intake_id:IDs.intakeId,document_id:IDs.documentId,request_id:IDs.requestId}})}),
     )[0].json;
-    assert(pdfJsEnvelope.warnings.includes("tata_aig_signature_date_not_in_native_text"));
+    assert(pdfJsEnvelope.warnings.includes("tata_aig_receipt_date_as_issuance"));
+    assert(!pdfJsEnvelope.warnings.includes("tata_aig_signature_date_not_in_native_text"),"Approved printed receipt does not require native signature text");
     assert.equal(validateTataAigN8nResponse(pdfJsEnvelope,IDs).checksPassed,18);
     // Missing signing metadata must never authorize an inconsistent receipt.
     const invalidReceipt=pdfJsText.replace(/Receipt Date[^\n]*/,
