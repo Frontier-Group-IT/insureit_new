@@ -1,6 +1,7 @@
 import "server-only";
 import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { getAccessiblePolicyRmEmployeeIds, getLifeTeamPortfolioScope, type LifeTeamPortfolioScope } from "@/lib/policy-access-scope";
+import { lifeTeamReportSegments } from "@/lib/life-team-portfolio-contract";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ViewerProfile = { id: string; role: string | null };
@@ -114,11 +115,7 @@ function reportRpcArgs(scopeRmEmployeeIds:string[]|null,filters:PolicyBusinessFi
 // enter a report, even if the caller chooses "all". No database migration.
 async function loadPortfolioReport(portfolio:LifeTeamPortfolioScope,filters:PolicyBusinessFilters,pageSize:number,basis:"net"|"gross"){
  const admin=createSupabaseAdminClient();
- const segments:Array<{ids:string[];line:PolicyBusinessFilters["businessLine"]}>=[];
- if(portfolio.employeeIds.length)segments.push({ids:portfolio.employeeIds,line:filters.businessLine});
- if(portfolio.directEmployeeId)for(const line of ["Life","Health"] as const){
-  if(!filters.businessLine||filters.businessLine===line)segments.push({ids:[portfolio.directEmployeeId],line});
- }
+ const segments=lifeTeamReportSegments(portfolio,filters.businessLine);
  const rows:Record<string,unknown>[]=[];
  const options=emptyFilters();
  const seen=new Set<string>();
