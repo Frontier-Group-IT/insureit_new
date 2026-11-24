@@ -408,7 +408,7 @@ for (const required of [
   'const journeyArtworkHeight = Math.max(100, 304 - artworkReduction);',
   'Math.ceil(storyMeasuredHeight - storyViewportHeight)',
   'Math.min(204, current + Math.min(overflow, 204 - current))',
-  '<ImpactStory story={story} onOpen={openStory} artworkHeight={artworkHeight} clock={impactClock} onPause={setImpactPaused} />',
+  '<ImpactStory story={story} onOpen={openStory} artworkHeight={artworkHeight} clock={impactClock} onPause={setHeld} />',
   '<JourneyMilestoneStory story={story} artworkHeight={journeyArtworkHeight} />',
   'style={[styles.todayArtWrap, { height: artworkHeight }]}',
   'style={[styles.businessGrowth3dArtwork, { height: artworkHeight }]}',
@@ -446,7 +446,7 @@ for (const [fragment, reason] of [
   ["onPress={openStory}", 'Story title retains navigation'],
   ['onTouchStart={handleStoryTouchStart}', 'Story taps are observed without blocking native scrolling'],
   ['onTouchEnd={handleStoryTouchEnd}', 'Story taps navigate when the finger is released'],
-  ['onScrollBeginDrag={() => { navigationTouch.current = null; setImpactPaused(false); }}', 'Scrolling cancels pending tap navigation'],
+  ['onScrollBeginDrag={() => { navigationTouch.current = null; setHeld(false); }}', 'Scrolling cancels pending tap navigation'],
   ['event.stopPropagation()', 'Story links do not trigger next or previous on tap'],
   ['if (event.nativeEvent.pageX < windowWidth / 2) previous();', 'Left-side taps navigate backwards'],
   ['else next();', 'Right-side taps navigate forwards'],
@@ -463,8 +463,8 @@ for (const required of [
   "if (nativeEvent.actionName === 'decrement') previous();",
   "if (nativeEvent.actionName === 'increment') next();",
   'key={index}',
-  'if (index <= 0) return;',
-  'if (index >= data.items.length - 1) {',
+  'if (step < 0 && index <= 0) return;',
+  'if (step > 0 && index >= data.items.length - 1) {',
 ]) requireText(stories, required, 'Story navigation accessibility or boundary regression: ' + required);
 // Today story uses a dedicated responsive renewal summary; other slides remain shared.
 for (const expected of [
@@ -478,7 +478,7 @@ for (const expected of [
   "styles.todayArtWrap",
   "require('../assets/partner/stories/today-renewal.png')",
   "require('../assets/partner/stories/claims.png')",
-  "onTouchStart={(event) => event.stopPropagation()}",
+  "onTouchStart={(event) => { hold(true); event.stopPropagation(); }}",
 ]) requireText(stories, expected, 'Today renewal design regression: ' + expected);
 if (stories.includes('₹939') || stories.includes('1 renewal is due in 7 days')) throw new Error('Today story renewal values must not be hardcoded');
 // Monthly (Business) Story alone uses the new premium and policies snapshot.
@@ -495,8 +495,8 @@ for (const [needle, rationale] of [
   ["if (kind === 'business')", 'Dedicated native business artwork is used'],
   ["require('../assets/partner/stories/this-month.png')", 'New 3D financial artwork replaces flat bars and coin mockups'],
   ['style={[styles.businessGrowth3dArtwork, { height: artworkHeight }]}', '3D business artwork scales responsively'],
-  ['onTouchStart={(event) => event.stopPropagation()}', 'Business story summary link preserves route navigation without changing slides'],
-  ['onTouchEnd={(event) => event.stopPropagation()}', 'Business story link tap does not advance the slide'],
+  ['onTouchStart={(event) => { hold(true); event.stopPropagation(); }}', 'Business story summary link preserves route navigation without changing slides'],
+  ['onTouchEnd={(event) => { hold(false); event.stopPropagation(); }}', 'Business story link tap does not advance the slide'],
 ]) requireText(stories, needle, 'Business Stories snapshot regression: ' + rationale);
 for (const unexpected of [
   '₹1,11,71,203.76',
@@ -514,7 +514,7 @@ for (const marker of [
   'function ImpactStory({ story, onOpen, artworkHeight, clock, onPause }',
   'function LearnStory({ story, onOpen, artworkHeight }',
   'function StoryPanel({ children, impact = false }',
-  'style={[styles.unifiedPanel, impact && styles.impactPanel]}',
+  'style={[styles.unifiedPanel, impact && styles.impactPanel,',
   'style={styles.impactSmallGrid}',
   "story.metric !== undefined",
   "story.body.match(/([\\d,]+)\\s+customers?",

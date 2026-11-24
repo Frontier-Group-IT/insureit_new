@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, AppState, Easing, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,8 +11,41 @@ import { formatIndianCurrency } from '@/lib/format';
 import { ImpactCounter, reveal, useImpactTimeline, type ImpactTimeline } from '@/components/impact-story-motion';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 
+const STORY_DURATION_MS = 10000;
+const StoryMotion = createContext<{ enabled: boolean; running: boolean; hold: (held: boolean) => void }>({ enabled: false, running: false, hold: () => undefined });
+
 export default function StoriesScreen() {
   const router = useRouter();
+  const [focused, setFocused] = useState(false);
+  const [foreground, setForeground] = useState(AppState.currentState === 'active');
+  const [reduced, setReduced] = useState(true);
+  const [held, setHeldState] = useState(false);
+  const heldRef = useRef(false);
+  const setHeld = useCallback((value: boolean) => { heldRef.current = value; setHeldState(value); }, []);
+  const [trackWidth, setTrackWidth] = useState(0);
+  const [closing, setClosing] = useState(false);
+  const closingRef = useRef(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const direction = useRef(1);
+  const transition = useRef(new Animated.Value(1)).current;
+  const closeMotion = useRef(new Animated.Value(1)).current;
+  const closePress = useRef(new Animated.Value(0)).current;
+  const progressValue = useRef(new Animated.Value(0)).current;
+  const elapsed = useRef(0);
+  const generation = useRef(0);
+  const touchAt = useRef(0);
+  const moved = useRef(false);
+  const navAt = useRef(0);
+  const active = focused && foreground && !closing;
+  const motion = active && !reduced;
+  useFocusEffect(useCallback(() => { setFocused(true); return () => { setFocused(false); setHeld(false); }; }, [setHeld]));
+  useEffect(() => {
+    let alive = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then(value => { if (alive) setReduced(value); }).catch(() => {});
+    const preference = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
+    const app = AppState.addEventListener('change', state => { setForeground(state === 'active'); if (state !== 'active') setHeld(false); });
+    return () => { alive = false; preference.remove(); app.remove(); if (closeTimer.current) clearTimeout(closeTimer.current); closeMotion.stopAnimation(); closePress.stopAnimation(); };
+  }, [closeMotion, closePress, setHeld]);
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const params = useLocalSearchParams<{ start?: string }>();
@@ -19,7 +53,7 @@ export default function StoriesScreen() {
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const navigationTouch = useRef<{ x: number; y: number; started: number } | null>(null);
+  const navigationTouch = useRef<{ x: number; y: number } | null>(null);
   const [storyViewportHeight, setStoryViewportHeight] = useState(0);
   const [storyMeasuredHeight, setStoryMeasuredHeight] = useState(0);
   const [artworkReduction, setArtworkReduction] = useState(0);
@@ -44,22 +78,23 @@ export default function StoriesScreen() {
       setData(result);
       const start = typeof params.start === 'string' ? params.start : '';
       const startIndex = result.items.findIndex((item) => item.kind === start);
+      generation.current += 1;
+      elapsed.current = 0;
+      progressValue.setValue(0);
       setIndex(startIndex >= 0 ? startIndex : 0);
     } catch {
       setError('Your INSUREIT Stories could not be loaded.');
     } finally {
       setLoading(false);
     }
-  }, [params.start]);
+  }, [params.start, progressValue]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   const story = data?.items[index] || null;
-  const [impactPaused, setImpactPaused] = useState(false);
-  const impactClock = useImpactTimeline(!loading && !error && story?.kind === 'impact', impactPaused);
-  useEffect(() => { setImpactPaused(false); }, [index]);
+  const impactClock = useImpactTimeline(active && !loading && !error && story?.kind === 'impact', held);
 
   useEffect(() => {
     setArtworkReduction(0);
@@ -74,61 +109,104 @@ export default function StoriesScreen() {
     setArtworkReduction(current => Math.min(204, current + Math.min(overflow, 204 - current)));
   }, [storyViewportHeight, storyMeasuredHeight, artworkReduction]);
 
-  const progress = useMemo(() => {
-    if (!data?.items.length) return [];
-    return data.items.map((_, itemIndex) => itemIndex <= index);
-  }, [data, index]);
+  const closeStory = useCallback(() => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setClosing(true);
+    if (reduced || !foreground) { router.back(); return; }
+    Animated.timing(closeMotion, { toValue: 0, duration: 140, useNativeDriver: true }).start();
+    closeTimer.current = setTimeout(() => router.back(), 140);
+  }, [closeMotion, foreground, reduced, router]);
 
-  function next() {
-    if (!data) return;
-    if (index >= data.items.length - 1) {
-      router.back();
-      return;
-    }
-    setIndex((value) => value + 1);
-  }
+  const navigate = useCallback((step: number, intentional = true) => {
+    if (!data || closingRef.current || !active) return;
+    const now = Date.now();
+    if (now - navAt.current < 280) return;
+    if (step < 0 && index <= 0) return;
+    navAt.current = now;
+    if (intentional) void Haptics.selectionAsync().catch(() => {});
+    if (step > 0 && index >= data.items.length - 1) { closeStory(); return; }
+    direction.current = step;
+    generation.current += 1;
+    elapsed.current = 0;
+    progressValue.setValue(0);
+    transition.setValue(motion ? 0 : 1);
+    setIndex(value => value + step);
+  }, [active, closeStory, data, index, motion, progressValue, transition]);
+  const next = () => navigate(1);
+  const previous = () => navigate(-1);
 
-  function previous() {
-    if (index <= 0) return;
-    setIndex((value) => value - 1);
-  }
+  useEffect(() => {
+    if (!motion) { transition.setValue(1); return; }
+    const animation = Animated.timing(transition, { toValue: 1, duration: 310, easing: Easing.out(Easing.cubic), useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [index, motion, transition]);
 
+  const advanceRef = useRef(navigate);
+  useEffect(() => { advanceRef.current = navigate; }, [navigate]);
+  useEffect(() => {
+    if (!story || loading || error || !active || held || reduced) return;
+    const epoch = generation.current;
+    const initial = elapsed.current;
+    const remaining = Math.max(0, STORY_DURATION_MS - initial);
+    const started = Date.now();
+    let valid = true;
+    progressValue.setValue(initial / STORY_DURATION_MS);
+    const animation = Animated.timing(progressValue, { toValue: 1, duration: remaining, easing: Easing.linear, useNativeDriver: true, isInteraction: false });
+    animation.start();
+    const timer = setTimeout(() => { if (valid && generation.current === epoch && !heldRef.current && AppState.currentState === 'active' && !closingRef.current) advanceRef.current(1, false); }, remaining);
+    return () => {
+      valid = false;
+      clearTimeout(timer);
+      animation.stop();
+      if (generation.current === epoch) elapsed.current = Math.min(STORY_DURATION_MS, initial + Date.now() - started);
+    };
+  }, [story, index, loading, error, active, held, reduced, progressValue]);
+
+  const ambient = useStoryLoop(motion && !held, 4200);
+  const progress = data?.items ?? [];
   // Observe taps without claiming the ScrollView's responder: vertical drags still scroll.
   // Interactive story links stop propagation so opening a route never also advances the story.
   function handleStoryTouchStart(event: { nativeEvent: { pageX: number; pageY: number; touches: readonly unknown[] } }) {
     if (event.nativeEvent.touches.length !== 1) {
+      setHeld(false);
       navigationTouch.current = null;
       return;
     }
-    navigationTouch.current = { x: event.nativeEvent.pageX, y: event.nativeEvent.pageY, started: Date.now() };
-    if (story?.kind === 'impact') setImpactPaused(true);
+    moved.current = false;
+    touchAt.current = Date.now();
+    setHeld(true);
+    navigationTouch.current = { x: event.nativeEvent.pageX, y: event.nativeEvent.pageY };
   }
 
   function handleStoryTouchMove(event: { nativeEvent: { pageX: number; pageY: number } }) {
     const start = navigationTouch.current;
-    if (start && (Math.abs(start.x - event.nativeEvent.pageX) > 12 || Math.abs(start.y - event.nativeEvent.pageY) > 12)) {
-      navigationTouch.current = null;
-    }
+    if (start && (Math.abs(start.x - event.nativeEvent.pageX) > 12 || Math.abs(start.y - event.nativeEvent.pageY) > 12)) moved.current = true;
   }
 
   function handleStoryTouchEnd(event: { nativeEvent: { pageX: number; pageY: number } }) {
     const start = navigationTouch.current;
-    setImpactPaused(false);
     navigationTouch.current = null;
+    setHeld(false);
     if (!start) return;
-    if (story?.kind === 'impact' && Date.now() - start.started > 250) return;
-    if (Math.abs(start.x - event.nativeEvent.pageX) > 12 || Math.abs(start.y - event.nativeEvent.pageY) > 12) return;
+    const dx = event.nativeEvent.pageX - start.x;
+    const dy = event.nativeEvent.pageY - start.y;
+    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) { navigate(dx < 0 ? 1 : -1); return; }
+    if (moved.current || Date.now() - touchAt.current >= 280 || Math.abs(dx) > 12 || Math.abs(dy) > 12) return;
     if (event.nativeEvent.pageX < windowWidth / 2) previous();
     else next();
   }
 
   function openStory() {
     if (!story?.route) return;
+    closingRef.current = true;
+    setClosing(true);
     router.replace(story.route as never);
   }
 
   return (
-    <View style={styles.screen}>
+    <StoryMotion.Provider value={{ enabled: motion, running: motion && !held, hold: setHeld }}><Animated.View style={[styles.screen, { opacity: closeMotion, transform: [{ scale: closeMotion.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) }] }]}>
       <StatusBar style="light" backgroundColor="#092B62" />
       <View style={[styles.top, { paddingTop: insets.top + 11 }]}>
         <View style={styles.header}>
@@ -140,14 +218,14 @@ export default function StoriesScreen() {
               <Text style={styles.brandMeta}>Your business, in moments</Text>
             </View>
           </View>
-          <Pressable onPress={() => router.back()} style={styles.close} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close INSUREIT Stories">
-            <Ionicons name="close" size={24} color="#FFFFFF" />
+          <Pressable onPress={closeStory} onPressIn={() => { if (motion) Animated.spring(closePress, { toValue: 1, useNativeDriver: true }).start(); }} onPressOut={() => { if (motion) Animated.spring(closePress, { toValue: 0, useNativeDriver: true }).start(); }} style={styles.close} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close INSUREIT Stories">
+            <Animated.View style={{ transform: [{ scale: closePress.interpolate({ inputRange: [0, 1], outputRange: [1, 0.9] }) }, { rotate: closePress.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "12deg"] }) }] }}><Ionicons name="close" size={24} color="#FFFFFF" /></Animated.View>
           </Pressable>
         </View>
         <View style={styles.progress} accessibilityLabel={'Story ' + (index + 1) + ' of ' + (data?.items.length || 5)}>
-          {progress.map((active, itemIndex) => (
-            <View key={itemIndex} style={styles.progressTrack}>
-              <View style={[styles.progressFill, active && styles.progressFillActive]} />
+          {progress.map((_, itemIndex) => (
+            <View key={itemIndex} style={styles.progressTrack} onLayout={event => { if (itemIndex === 0) setTrackWidth(event.nativeEvent.layout.width); }}>
+              <Animated.View style={[styles.progressFill, { width: itemIndex <= index ? '100%' : '0%', transform: [{ translateX: itemIndex === index && !reduced ? progressValue.interpolate({ inputRange: [0, 1], outputRange: [-trackWidth, 0] }) : 0 }] }]} />
             </View>
           ))}
         </View>
@@ -194,15 +272,15 @@ export default function StoriesScreen() {
             onTouchStart={handleStoryTouchStart}
             onTouchMove={handleStoryTouchMove}
             onTouchEnd={handleStoryTouchEnd}
-            onTouchCancel={() => { navigationTouch.current = null; setImpactPaused(false); }}
-            onScrollBeginDrag={() => { navigationTouch.current = null; setImpactPaused(false); }}
+            onTouchCancel={() => { navigationTouch.current = null; setHeld(false); }}
+            onScrollBeginDrag={() => { navigationTouch.current = null; setHeld(false); }}
           >
             <View pointerEvents="none" style={styles.storyBackdrop}>
-              <Animated.View style={[styles.waveUpper, impactClock.enabled && { transform: [{ rotate: '-9deg' }, { translateX: impactClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,5]}) }] }]} />
-              <Animated.View style={[styles.waveMiddle, impactClock.enabled && { transform: [{ rotate: '-10deg' }, { translateX: impactClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,-8]}) }] }]} />
-              <Animated.View style={[styles.waveLower, impactClock.enabled && { transform: [{ rotate: '-11deg' }, { translateY: impactClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,6]}) }] }]} />
+              <Animated.View style={[styles.waveUpper, { transform: [{ rotate: '-9deg' }, { translateX: ambient.interpolate({ inputRange: [0, 1], outputRange: [0, 8] }) }] }]} />
+              <Animated.View style={[styles.waveMiddle, { transform: [{ rotate: '-10deg' }, { translateX: ambient.interpolate({ inputRange: [0, 1], outputRange: [0, -10] }) }] }]} />
+              <Animated.View style={[styles.waveLower, { transform: [{ rotate: '-11deg' }, { translateY: ambient.interpolate({ inputRange: [0, 1], outputRange: [0, -7] }) }] }]} />
             </View>
-            <View style={styles.storyContent}>
+            <Animated.View style={[styles.storyContent, { opacity: transition.interpolate({ inputRange: [0, 1], outputRange: [0.65, 1] }), transform: [{ perspective: 900 }, { translateX: transition.interpolate({ inputRange: [0, 1], outputRange: [direction.current * 34, 0] }) }, { rotateY: transition.interpolate({ inputRange: [0, 1], outputRange: [direction.current * -3 + 'deg', '0deg'] }) }, { scale: transition.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] }) }] }]}>
               {story.kind === 'today' ? (
                 <TodayRenewalStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />
               ) : story.kind === 'business' ? (
@@ -210,7 +288,7 @@ export default function StoriesScreen() {
               ) : story.kind === 'journey' ? (
                 <JourneyMilestoneStory story={story} artworkHeight={journeyArtworkHeight} />
               ) : story.kind === 'impact' ? (
-                <ImpactStory story={story} onOpen={openStory} artworkHeight={artworkHeight} clock={impactClock} onPause={setImpactPaused} />
+                <ImpactStory story={story} onOpen={openStory} artworkHeight={artworkHeight} clock={impactClock} onPause={setHeld} />
               ) : story.kind === 'learn' ? (
                 <LearnStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />
               ) : (
@@ -221,8 +299,8 @@ export default function StoriesScreen() {
               </View>
               <Pressable
                 onPress={openStory}
-                onTouchStart={(event) => { navigationTouch.current = null; event.stopPropagation(); }}
-                onTouchEnd={(event) => event.stopPropagation()}
+                onTouchStart={(event) => { navigationTouch.current = null; setHeld(true); event.stopPropagation(); }}
+                onTouchEnd={(event) => { setHeld(false); event.stopPropagation(); }} onTouchCancel={() => setHeld(false)}
                 disabled={!story.route}
                 accessibilityRole={story.route ? 'link' : undefined}
                 accessibilityLabel={story.route ? 'Open ' + story.title : undefined}
@@ -257,15 +335,51 @@ export default function StoriesScreen() {
               ) : null}
               </>
               )}
-            </View>
+            </Animated.View>
           </ScrollView>
         </>
       )}
       <View style={[styles.bottomNavigationShell, { paddingBottom: insets.bottom }]}>
         <PartnerCaseBottomNavigation activeTab="Home" />
       </View>
-    </View>
+    </Animated.View></StoryMotion.Provider>
   );
+}
+
+function useStoryLoop(enabled: boolean, duration: number) {
+  const value = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!enabled) { value.stopAnimation(); value.setValue(0); return; }
+    const animation = Animated.loop(Animated.sequence([
+      Animated.timing(value, { toValue: 1, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
+      Animated.timing(value, { toValue: 0, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
+    ]));
+    animation.start();
+    return () => animation.stop();
+  }, [enabled, duration, value]);
+  return value;
+}
+
+function MotionArtwork(props: React.ComponentProps<typeof Image>) {
+  const { running } = useContext(StoryMotion);
+  const float = useStoryLoop(running, 2800);
+  return <Animated.Image {...props} style={[props.style, { transform: [{ translateY: float.interpolate({ inputRange: [0, 1], outputRange: [0, -8] }) }, { scale: float.interpolate({ inputRange: [0, 1], outputRange: [1, 1.012] }) }, { rotate: float.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '0.6deg'] }) }] }]} />;
+}
+
+function MotionCount({ value, currency = false }: { value: number | string; currency?: boolean }) {
+  const { enabled } = useContext(StoryMotion);
+  const target = Number(String(value).replace(/,/g, ''));
+  const [shown, setShown] = useState(target);
+  useEffect(() => {
+    if (!enabled || !Number.isFinite(target)) { setShown(target); return; }
+    const start = Date.now();
+    let frame = 0;
+    const tick = () => { const t = Math.min(1, (Date.now() - start) / 650); setShown(t === 1 ? target : Math.round(target * (1 - Math.pow(1 - t, 3)))); if (t < 1) frame = requestAnimationFrame(tick); };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [enabled, target]);
+  if (!Number.isFinite(target) || !enabled) return <>{currency && Number.isFinite(target) ? formatIndianCurrency(target) : value}</>;
+  return <>{currency ? formatIndianCurrency(shown) : shown === target ? value : typeof value === 'string' && value.includes(',') ? shown.toLocaleString('en-IN') : shown}</>;
 }
 
 function storyIcon(kind: PartnerStory['kind']) {
@@ -298,16 +412,27 @@ function StoryHeading({ icon, title, tone = 'blue' }: {
   title: string;
   tone?: 'blue' | 'gold' | 'violet' | 'green';
 }) {
+  const { running } = useContext(StoryMotion);
+  const sun = useStoryLoop(running && tone === 'gold', 3800);
   return (
     <View style={[styles.unifiedHeading, tone === 'gold' && styles.unifiedHeadingGold, tone === 'violet' && styles.unifiedHeadingViolet, tone === 'green' && styles.unifiedHeadingGreen]}>
-      <Ionicons name={icon} size={19} color={tone === 'gold' ? '#B06900' : tone === 'violet' ? '#7544CD' : tone === 'green' ? '#087A57' : storyColors.blue} />
+      <Animated.View style={{ transform: [{ rotate: sun.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "18deg"] }) }] }}><Ionicons name={icon} size={19} color={tone === 'gold' ? '#B06900' : tone === 'violet' ? '#7544CD' : tone === 'green' ? '#087A57' : storyColors.blue} /></Animated.View>
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.unifiedHeadingText}>{title}</Text>
     </View>
   );
 }
 
 function StoryPanel({ children, impact = false }: { children: React.ReactNode; impact?: boolean }) {
-  return <View style={[styles.unifiedPanel, impact && styles.impactPanel]}>{children}</View>;
+  const { enabled } = useContext(StoryMotion);
+  const entrance = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!enabled) { entrance.setValue(1); return; }
+    entrance.setValue(0);
+    const animation = Animated.spring(entrance, { toValue: 1, speed: 18, bounciness: 3, useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [enabled, entrance]);
+  return <Animated.View style={[styles.unifiedPanel, impact && styles.impactPanel, { opacity: entrance, transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [7, 0] }) }] }]}>{children}</Animated.View>;
 }
 
 function ImpactStory({ story, onOpen, artworkHeight, clock, onPause }: { story: PartnerStory; onOpen: () => void; artworkHeight: number; clock: ImpactTimeline; onPause: (paused: boolean) => void }) {
@@ -387,6 +512,7 @@ function ImpactStory({ story, onOpen, artworkHeight, clock, onPause }: { story: 
 }
 
 function LearnStory({ story, onOpen, artworkHeight }: { story: PartnerStory; onOpen: () => void; artworkHeight: number }) {
+  const { hold } = useContext(StoryMotion);
   const hasRoute = Boolean(story.route);
   return (
     <View style={styles.unifiedStory}>
@@ -395,8 +521,8 @@ function LearnStory({ story, onOpen, artworkHeight }: { story: PartnerStory; onO
         <Pressable
           onPress={onOpen}
           disabled={!hasRoute}
-          onTouchStart={(event) => event.stopPropagation()}
-          onTouchEnd={(event) => event.stopPropagation()}
+          onTouchStart={(event) => { hold(true); event.stopPropagation(); }}
+          onTouchEnd={(event) => { hold(false); event.stopPropagation(); }} onTouchCancel={() => hold(false)}
           accessibilityRole={hasRoute ? 'link' : undefined}
           accessibilityLabel={hasRoute ? 'Open ' + story.title : undefined}
           style={styles.learnStoryLink}
@@ -449,7 +575,7 @@ function JourneyMilestoneStory({ story, artworkHeight }: { story: PartnerStory; 
               <View style={[styles.journeyStatIcon, styles.journeyStatIconBlue]}>
                 <Ionicons name="people" size={25} color="#146DD5" />
               </View>
-              <Text style={styles.journeyStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{formatCount(current)}</Text>
+              <Text style={styles.journeyStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}><MotionCount value={formatCount(current)} /></Text>
               <Text style={styles.journeyStatLabel}>Customers achieved</Text>
             </View>
             <View style={styles.journeyStatDivider} />
@@ -457,7 +583,7 @@ function JourneyMilestoneStory({ story, artworkHeight }: { story: PartnerStory; 
               <View style={[styles.journeyStatIcon, styles.journeyStatIconViolet]}>
                 <Ionicons name="locate" size={25} color="#8B45DB" />
               </View>
-              <Text style={styles.journeyStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{formatCount(remaining)}</Text>
+              <Text style={styles.journeyStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}><MotionCount value={formatCount(remaining)} /></Text>
               <Text style={styles.journeyStatLabel}>Customers to go</Text>
             </View>
             <View style={styles.journeyStatDivider} />
@@ -465,7 +591,7 @@ function JourneyMilestoneStory({ story, artworkHeight }: { story: PartnerStory; 
               <View style={[styles.journeyStatIcon, styles.journeyStatIconGold]}>
                 <Ionicons name="trophy" size={25} color="#E7A408" />
               </View>
-              <Text style={styles.journeyStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{formatCount(target)}</Text>
+              <Text style={styles.journeyStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}><MotionCount value={formatCount(target)} /></Text>
               <Text style={styles.journeyStatLabel}>Customer milestone</Text>
             </View>
           </View>
@@ -483,7 +609,7 @@ function JourneyMilestoneStory({ story, artworkHeight }: { story: PartnerStory; 
           </View>
           <View style={[styles.journeyScene, { height: artworkHeight }]} pointerEvents="none">
             <View style={[styles.journeySceneHalo, { height: Math.min(235, artworkHeight - 20) }]} />
-            <Image
+            <MotionArtwork
               source={require('../assets/partner/stories/my-journey.png')}
               style={[styles.storyHeroArtwork, { height: artworkHeight }]}
               resizeMode="contain"
@@ -514,6 +640,7 @@ function JourneyMilestoneStory({ story, artworkHeight }: { story: PartnerStory; 
  * of the shared narrative slide. Metrics and policy counts stay backend-driven.
  */
 function BusinessMonthStory({ story, onOpen, artworkHeight }: { story: PartnerStory; onOpen: () => void; artworkHeight: number }) {
+  const { hold } = useContext(StoryMotion);
   const policyMatch = story.title.match(/^([0-9,]+) +(polic(?:y|ies)) *(.*)$/i);
   const premium = story.metric !== undefined ? formatMetric(story) : null;
   const label = story.metric_label?.trim() || 'Gross premium';
@@ -526,8 +653,8 @@ function BusinessMonthStory({ story, onOpen, artworkHeight }: { story: PartnerSt
       <StoryPanel>
       <Pressable
         onPress={onOpen}
-        onTouchStart={(event) => event.stopPropagation()}
-        onTouchEnd={(event) => event.stopPropagation()}
+        onTouchStart={(event) => { hold(true); event.stopPropagation(); }}
+        onTouchEnd={(event) => { hold(false); event.stopPropagation(); }} onTouchCancel={() => hold(false)}
         disabled={!hasRoute}
         accessibilityRole={hasRoute ? 'link' : undefined}
         accessibilityLabel={hasRoute ? 'Open ' + story.title : undefined}
@@ -536,7 +663,7 @@ function BusinessMonthStory({ story, onOpen, artworkHeight }: { story: PartnerSt
         {premium ? (
           <>
             <Text style={styles.businessPremiumAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.42}>
-              {premium}
+              <MotionCount value={story.metric ?? 0} currency={Boolean(story.metric_label?.toLowerCase().match(/premium|idv/))} />
             </Text>
             <Text style={styles.businessPremiumCaption}>{label}</Text>
           </>
@@ -547,7 +674,7 @@ function BusinessMonthStory({ story, onOpen, artworkHeight }: { story: PartnerSt
           <View style={styles.businessPolicyText}>
             {policyMatch ? (
               <>
-                <Text style={styles.businessPolicyCount}>{policyMatch[1]}</Text>
+                <Text style={styles.businessPolicyCount}><MotionCount value={policyMatch[1]} /></Text>
                 <Text style={styles.businessPolicyLabel}>{policyMatch[2] + (policyMatch[3] ? ' ' + policyMatch[3].trim() : '')}</Text>
               </>
             ) : (
@@ -581,6 +708,16 @@ function BusinessMonthStory({ story, onOpen, artworkHeight }: { story: PartnerSt
  * text contains an actual rupee amount.
  */
 function TodayRenewalStory({ story, onOpen, artworkHeight }: { story: PartnerStory; onOpen: () => void; artworkHeight: number }) {
+  const { hold, running, enabled } = useContext(StoryMotion);
+  const arrow = useStoryLoop(running, 2200);
+  const entrance = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!enabled) { entrance.setValue(1); return; }
+    entrance.setValue(0);
+    const animation = Animated.spring(entrance, { toValue: 1, speed: 18, bounciness: 3, useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [enabled, entrance]);
   const premiumMatch = story.body.match(/₹\s*[\d,]+(?:\.\d{1,2})?/);
   const premium = premiumMatch?.[0].replace(/\s+/g, '') ?? null;
   const remainingCopy = premiumMatch
@@ -591,30 +728,31 @@ function TodayRenewalStory({ story, onOpen, artworkHeight }: { story: PartnerSto
   const isRenewal = /renew|expir|premium due/i.test(story.title + ' ' + story.body);
   const isClaim = !isRenewal && /claim/i.test(story.title + ' ' + story.body);
   const storyCategory = isClaim ? 'CLAIMS UPDATE' : isRenewal ? 'RENEWAL REMINDER' : 'TODAY\'S UPDATE';
+  const countTitle = story.title.match(/^([\d,]+)(\s+.*)$/);
   const titleParts = isRenewal ? story.title.match(/^(.*?)(\b(?:in|within)\s+\d+\s+days?)(.*)$/i) : null;
 
   return (
     <View style={styles.todaySnapshot}>
       <StoryHeading icon="sunny" title={story.eyebrow} tone="gold" />
-      <View style={styles.todayCard}>
+      <Animated.View style={[styles.todayCard, { opacity: entrance, transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }, { scale: entrance.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] }) }] }]}>
         <View pointerEvents="none" style={styles.todayCornerAccent} />
         <View style={styles.todayHeadlineRow}>
-          <View style={[styles.todaySunIcon, isClaim && styles.todayClaimsIcon]}>
+          <Animated.View style={[styles.todaySunIcon, isClaim && styles.todayClaimsIcon, { transform: [{ scale: entrance.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] }]}>
             <Ionicons name={isClaim ? 'shield-checkmark' : 'sunny-outline'} size={34} color="#FFFFFF" />
-          </View>
+          </Animated.View>
           <View style={styles.todayHeadlineText}>
             <Text style={styles.todayEyebrow}>{storyCategory}</Text>
             <Pressable
               onPress={onOpen}
               disabled={!hasRoute}
-              onTouchStart={(event) => event.stopPropagation()}
-              onTouchEnd={(event) => event.stopPropagation()}
+              onTouchStart={(event) => { hold(true); event.stopPropagation(); }}
+              onTouchEnd={(event) => { hold(false); event.stopPropagation(); }} onTouchCancel={() => hold(false)}
               accessibilityRole={hasRoute ? 'link' : undefined}
               accessibilityLabel={hasRoute ? 'Open ' + story.title : undefined}
               style={styles.todayTitleLink}
             >
-              <Text style={styles.todayHeadline}>{titleParts ? <>{titleParts[1]}<Text style={styles.todayDaysBadge}>{titleParts[2]}</Text>{titleParts[3]}</> : story.title}</Text>
-              {hasRoute ? <Ionicons name="arrow-forward" size={20} color="#0B6DD6" /> : null}
+              <Text style={styles.todayHeadline}>{titleParts ? <>{titleParts[1]}<Text style={styles.todayDaysBadge}>{titleParts[2]}</Text>{titleParts[3]}</> : countTitle ? <><MotionCount value={countTitle[1]} />{countTitle[2]}</> : story.title}</Text>
+              {hasRoute ? <Animated.View style={{ transform: [{ translateX: arrow.interpolate({ inputRange: [0, 1], outputRange: [0, 3] }) }] }}><Ionicons name="arrow-forward" size={20} color="#0B6DD6" /></Animated.View> : null}
             </Pressable>
           </View>
         </View>
@@ -637,14 +775,14 @@ function TodayRenewalStory({ story, onOpen, artworkHeight }: { story: PartnerSto
             </View>
           </View>
         ) : null}
-      </View>
+      </Animated.View>
       <View pointerEvents="none" style={[styles.todayArtWrap, { height: artworkHeight }]}>
         {isRenewal ? (
-          <Image source={require('../assets/partner/stories/today-renewal.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+          <MotionArtwork source={require('../assets/partner/stories/today-renewal.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
         ) : isClaim ? (
-          <Image source={require('../assets/partner/stories/claims.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+          <MotionArtwork source={require('../assets/partner/stories/claims.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
         ) : (
-          <Image source={require('../assets/partner/stories/your-impact.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+          <MotionArtwork source={require('../assets/partner/stories/your-impact.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
         )}
       </View>
     </View>
@@ -669,7 +807,7 @@ function StoryIllustration({ kind, body, artworkHeight = 300 }: { kind: PartnerS
     return (
       <View style={[styles.vehicleScene, { height: artworkHeight }]}>
         <View style={styles.vehicleHalo} />
-        <Image
+        <MotionArtwork
           source={require('../assets/partner/stories/learning-car.png')}
           resizeMode="contain"
           style={[styles.storyHeroArtwork, { height: artworkHeight }]}
@@ -683,7 +821,7 @@ function StoryIllustration({ kind, body, artworkHeight = 300 }: { kind: PartnerS
     return (
       <View style={[styles.businessGrowthScene, { height: artworkHeight }]}>
         <View style={styles.businessGrowthHalo} />
-        <Image source={require('../assets/partner/stories/this-month.png')} resizeMode="contain" style={[styles.businessGrowth3dArtwork, { height: artworkHeight }]} />
+        <MotionArtwork source={require('../assets/partner/stories/this-month.png')} resizeMode="contain" style={[styles.businessGrowth3dArtwork, { height: artworkHeight }]} />
       </View>
     );
   }
