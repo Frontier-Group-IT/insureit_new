@@ -314,7 +314,6 @@ export default function AiPolicyStudioScreen() {
                     <Text numberOfLines={1} style={[s.rowStatus,{color:done?'#398562':flag?'#A5773A':'#5C78A8'}]}>{status}</Text>
                     <Text numberOfLines={1} style={s.rowChecks}>{row.checks_passed?String(row.checks_passed)+' checks':'Pending'}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={15} color="#91A4B6"/>
                 </Pressable>
               </StudioRowEnter>;
             })}
@@ -442,7 +441,7 @@ const s=StyleSheet.create({
   summaryOverline:{fontSize:8,color:'#6245D2',fontWeight:'700',letterSpacing:0.6},
   summaryMain:{fontSize:19,color:'#10294D',fontWeight:'800',marginTop:2},
   summaryDescription:{fontSize:10,color:'#68798F',marginTop:3},
-  summaryDivider:{height:StyleSheet.hairlineWidth,backgroundColor:'#DFE5EE',marginTop:5,marginBottom:8},
+  summaryDivider:{height:1,backgroundColor:'#CFD9E6',marginTop:5,marginBottom:8},
   ringHolder:{width:44,height:44,alignItems:'center',justifyContent:'center',marginLeft:4},
   ringTick:{position:'absolute',left:20,top:20,width:4,height:7,borderRadius:3},
   ringText:{fontSize:9,fontWeight:'800',color:'#6844D9'},
