@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Animated, Easing, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -47,6 +47,23 @@ export default function AiPolicyStudioScreen() {
   const [fieldExpanded,setFieldExpanded]=useState(false);
   const sequence=useRef(0);
   const detailSequence=useRef(0);
+  const [search,setSearch]=useState('');
+  const [debouncedSearch,setDebouncedSearch]=useState('');
+  const [searchRows,setSearchRows]=useState<AiStudioRow[]|null>(null);
+  const [searchLoading,setSearchLoading]=useState(false);
+  const [searchError,setSearchError]=useState('');
+  const searchGeneration=useRef(0);
+  const [reduceMotion,setReduceMotion]=useState(true);
+  const ringProgress=useRef(new Animated.Value(0)).current;
+  const tabProgress=useRef(new Animated.Value(0)).current;
+  const refreshRotation=useRef(new Animated.Value(0)).current;
+  useEffect(()=>{
+    let live=true;
+    void AccessibilityInfo.isReduceMotionEnabled().then(v=>{if(live)setReduceMotion(v);}).catch(()=>{});
+    const sub=AccessibilityInfo.addEventListener('reduceMotionChanged',setReduceMotion);
+    return ()=>{live=false;sub.remove();};
+  },[]);
+  useEffect(()=>{const t=setTimeout(()=>setDebouncedSearch(search.trim().toLowerCase()),300);return ()=>clearTimeout(t);},[search]);
 
   const reload=useCallback(async(offset=0)=>{
     if(!allowed) return;
@@ -78,6 +95,49 @@ export default function AiPolicyStudioScreen() {
     return ()=>{detailSequence.current++;};
   },[selected,allowed]);
   const count=(key:AiStudioBucket)=>page.counts[key]||0;
+  const reviewPercent=count('open')>0?Math.min(100,Math.round(100*count('in_review')/count('open'))):0;
+  useEffect(()=>{
+    ringProgress.stopAnimation();
+    if(reduceMotion){ringProgress.setValue(reviewPercent/100);return;}
+    ringProgress.setValue(0);
+    const motion=Animated.timing(ringProgress,{toValue:reviewPercent/100,duration:1000,easing:Easing.out(Easing.cubic),useNativeDriver:true});
+    motion.start();return ()=>motion.stop();
+  },[ringProgress,reviewPercent,reduceMotion]);
+  useEffect(()=>{
+    const position=TABS.findIndex(t=>t.key===filter);
+    const motion=Animated.timing(tabProgress,{toValue:position,duration:reduceMotion?0:280,easing:Easing.out(Easing.cubic),useNativeDriver:true});
+    motion.start();return ()=>motion.stop();
+  },[filter,reduceMotion,tabProgress]);
+  useEffect(()=>{
+    if(!refreshing){refreshRotation.stopAnimation();refreshRotation.setValue(0);return;}
+    if(reduceMotion)return;
+    const motion=Animated.loop(Animated.timing(refreshRotation,{toValue:1,duration:850,easing:Easing.linear,useNativeDriver:true}));
+    motion.start();return ()=>motion.stop();
+  },[refreshing,reduceMotion,refreshRotation]);
+  useEffect(()=>{
+    const token=++searchGeneration.current;
+    if(!debouncedSearch){setSearchRows(null);setSearchLoading(false);setSearchError('');return;}
+    if(!allowed||loading)return;
+    setSearchRows(null);setSearchLoading(true);setSearchError('');
+    // The existing authorized RPC has no search argument. Only fetch all pages on an explicit search,
+    // and filter those authorized results locally; never search just the first 25 and imply completeness.
+    void (async()=>{
+      try{
+        const all=[...page.rows];let offset=all.length;
+        while(offset<count(filter)){
+          const next=await loadAiStudioPage(filter,offset);
+          if(token!==searchGeneration.current)return;
+          if(!next.rows.length)throw new Error('Could not search every intake. Try again.');
+          all.push(...next.rows);offset+=next.rows.length;
+        }
+        if(token!==searchGeneration.current)return;
+        setSearchRows(all.filter(row=>[row.intake_number,row.lead_source_name,row.policy_type,row.status,row.queue_state].some(value=>value?.toLowerCase().includes(debouncedSearch))));
+      }catch(e){if(token===searchGeneration.current)setSearchError(e instanceof Error?e.message:'Intake search could not be completed.');}
+      finally{if(token===searchGeneration.current)setSearchLoading(false);}
+    })();
+    return ()=>{searchGeneration.current++;};
+  },[debouncedSearch,filter,allowed,loading]);
+  const displayedRows=debouncedSearch?(searchRows??[]):page.rows;
   const refresh=()=>{setRefreshing(true);void reload();};
   const closeDetail=()=>{if(actionBusy)return;setSelected(null);setPendingAction(null);setActionError('');setResultUncertain(false);setFieldExpanded(false);};
   const openDetail=(row:AiStudioRow)=>{setSelected(row);setFieldExpanded(false);setActionError('');setResultUncertain(false);};
