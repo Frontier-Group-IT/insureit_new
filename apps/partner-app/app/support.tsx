@@ -75,12 +75,12 @@ export default function SupportScreen() {
                     <TimestampReveal timestamp={data.generated_at} animate={animate} />
                   </View>
                   <View style={styles.heroActions}>
-                    <View style={styles.heroActionBubble}>
+                    <MotionEntrance animate={animate} delay={180} style={styles.heroActionBubble}>
                       <Ionicons name="chatbubble-ellipses" size={18} color="#2681EB" />
-                    </View>
-                    <View style={styles.heroActionBubble}>
+                    </MotionEntrance>
+                    <MotionEntrance animate={animate} delay={280} style={styles.heroActionBubble}>
                       <Ionicons name="document-text" size={18} color="#1E70D4" />
-                    </View>
+                    </MotionEntrance>
                   </View>
                 </View>
               </View>
