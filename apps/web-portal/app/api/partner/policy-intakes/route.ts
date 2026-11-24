@@ -6,8 +6,6 @@ import { NextResponse } from "next/server";
 
 import { createSupabaseWithAccessToken } from "@/lib/auth";
 import { getServerAccessToken } from "@/lib/auth-server";
-import { extractPolicyIntakeDocumentTrusted } from "@/lib/policy-intake-ocr-service";
-import { extractPolicyIntakeWithN8nFallback, extractPolicyIntakeWithN8nOnly, requiresN8nForIntake } from "@/lib/policy-intake-n8n-router";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-read-access";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
@@ -702,8 +700,6 @@ async function completeUpload(
       try { await processAiQueueBatch({preferredIntakeId:input.id}); }
       catch { console.error("[partner-policy-intake] immediate n8n queue unavailable",{intakeId:input.id}); }
     });
-  } else if (!proposalForm && !aiQueueEnabled()) {
-    after(async () => { await processStoredOcr(input.id); });
   }
 
   return json({
@@ -871,8 +867,6 @@ async function completeResponse(
       try { await processAiQueueBatch({preferredIntakeId:input.id}); }
       catch { console.error("[partner-policy-intake] immediate n8n queue unavailable",{intakeId:input.id}); }
     });
-  } else if (!proposalForm && !aiQueueEnabled()) {
-    after(async () => { await processStoredOcr(input.id); });
   }
 
   return json({
@@ -1014,77 +1008,6 @@ async function authorizedSourceIds(identity: PartnerIdentity, scope: PartnerScop
     .maybeSingle<{ id: string }>();
   if (!sourceError && parentSource) ids.add(parentSource.id);
   return [...ids];
-}
-
-async function processStoredOcr(id: string) {
-  const admin = createSupabaseAdminClient();
-  const { data: intake } = await admin
-    .from("policy_intake_requests")
-    .select("id,status,policy_type,storage_bucket,storage_path,file_name,mime_type")
-    .eq("id", id)
-    .maybeSingle<{
-      id: string;
-      status: string;
-      policy_type: string | null;
-      storage_bucket: string;
-      storage_path: string;
-      file_name: string;
-      mime_type: string | null;
-    }>();
-
-  if (!intake || intake.status !== "processing") return;
-
-  await admin.from("policy_intake_requests")
-    .update({ ocr_status: "processing" })
-    .eq("id", id)
-    .eq("storage_path", intake.storage_path);
-
-  // Controlled n8n-required route: n8n fetches the private PDF itself via
-  // short-lived signed Storage URL. Google OCR is never called for this Intake.
-  const ocr = intake.policy_type === "motor" && (requiresN8nForIntake(id) || isN8nPolicyReadEnabled())
-    ? await extractPolicyIntakeWithN8nOnly(id, intake.storage_path, isN8nPolicyReadEnabled())
-    : await (async () => {
-        const { data: blob, error } = await admin.storage.from(intake.storage_bucket).download(intake.storage_path);
-        if (error || !blob) {
-          return { ok: false as const, error: "The stored policy copy could not be read automatically." };
-        }
-        const file = new File(
-          [await blob.arrayBuffer()],
-          intake.file_name,
-          { type: intake.mime_type || blob.type || "application/pdf" },
-        );
-        const formData = new FormData();
-        formData.set("policy_document", file);
-        return extractPolicyIntakeWithN8nFallback(id, intake.storage_path, file, () => extractPolicyIntakeDocumentTrusted(formData));
-      })();
-
-  if (!ocr.ok) {
-    await markOcrFailure(id, intake.storage_path, ocr.error);
-    return;
-  }
-
-  await admin.from("policy_intake_requests")
-    .update({
-      status: "ready_for_review",
-      ocr_status: "completed",
-      ocr_fields: ocr.fields,
-      ocr_parser_id: ocr.parserId,
-      ocr_parser_version: ocr.parserVersion,
-      ocr_warnings: ocr.warnings,
-      attention_reason: null,
-    })
-    .eq("id", id)
-    .eq("storage_path", intake.storage_path)
-    .eq("status", "processing");
-}
-
-async function markOcrFailure(id: string, storagePath: string, message: string) {
-  const admin = createSupabaseAdminClient();
-  await admin.from("policy_intake_requests")
-    .update({ ocr_status: "failed", ocr_warnings: [message] })
-    .eq("id", id)
-    .eq("storage_path", storagePath)
-    .eq("status", "processing");
 }
 
 function validateMeta(file: UploadMeta, policyType: PolicyType = "motor") {
