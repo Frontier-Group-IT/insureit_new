@@ -643,7 +643,7 @@ assert(workerText.includes("offset<ids.length;offset+=100")
   && workerText.includes("ids.slice(offset,offset+100)"),
   "All authorized open Intakes must contribute to AI queue counts across pages");
 assert(workerText.includes("previewSemiAutoN8nExtraction(")
-  && workerText.includes("claim_policy_intake_ai_queue_v2")
+  && workerText.includes("claim_policy_intake_ai_queue_v3")
   && workerText.includes("canonicalPreflightPassed:false"),
   "Background extraction must use current signed n8n PDF, atomically claim and never mark booking-ready on parse success");
 assert(!workerText.includes("onboardPolicy(")
