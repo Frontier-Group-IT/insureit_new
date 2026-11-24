@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, ActivityIndicator, Animated, Easing, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -47,6 +47,24 @@ export default function AiPolicyStudioScreen() {
   const [fieldExpanded,setFieldExpanded]=useState(false);
   const sequence=useRef(0);
   const detailSequence=useRef(0);
+  const [search,setSearch]=useState('');
+  const [debouncedSearch,setDebouncedSearch]=useState('');
+  const [searchRows,setSearchRows]=useState<AiStudioRow[]|null>(null);
+  const [searchLoading,setSearchLoading]=useState(false);
+  const [searchError,setSearchError]=useState('');
+  const searchGeneration=useRef(0);
+  const [reduceMotion,setReduceMotion]=useState(true);
+  const [tabsWidth,setTabsWidth]=useState(0);
+  const ringProgress=useRef(new Animated.Value(0)).current;
+  const tabProgress=useRef(new Animated.Value(0)).current;
+  const refreshRotation=useRef(new Animated.Value(0)).current;
+  useEffect(()=>{
+    let live=true;
+    void AccessibilityInfo.isReduceMotionEnabled().then(v=>{if(live)setReduceMotion(v);}).catch(()=>{});
+    const sub=AccessibilityInfo.addEventListener('reduceMotionChanged',setReduceMotion);
+    return ()=>{live=false;sub.remove();};
+  },[]);
+  useEffect(()=>{const t=setTimeout(()=>setDebouncedSearch(search.trim().toLowerCase()),300);return ()=>clearTimeout(t);},[search]);
 
   const reload=useCallback(async(offset=0)=>{
     if(!allowed) return;
@@ -78,6 +96,49 @@ export default function AiPolicyStudioScreen() {
     return ()=>{detailSequence.current++;};
   },[selected,allowed]);
   const count=(key:AiStudioBucket)=>page.counts[key]||0;
+  const reviewPercent=count('open')>0?Math.min(100,Math.round(100*count('in_review')/count('open'))):0;
+  useEffect(()=>{
+    ringProgress.stopAnimation();
+    if(reduceMotion){ringProgress.setValue(reviewPercent/100);return;}
+    ringProgress.setValue(0);
+    const motion=Animated.timing(ringProgress,{toValue:reviewPercent/100,duration:1000,easing:Easing.out(Easing.cubic),useNativeDriver:true});
+    motion.start();return ()=>motion.stop();
+  },[ringProgress,reviewPercent,reduceMotion]);
+  useEffect(()=>{
+    const position=TABS.findIndex(t=>t.key===filter);
+    const motion=Animated.timing(tabProgress,{toValue:position,duration:reduceMotion?0:280,easing:Easing.out(Easing.cubic),useNativeDriver:true});
+    motion.start();return ()=>motion.stop();
+  },[filter,reduceMotion,tabProgress]);
+  useEffect(()=>{
+    if(!refreshing){refreshRotation.stopAnimation();refreshRotation.setValue(0);return;}
+    if(reduceMotion)return;
+    const motion=Animated.loop(Animated.timing(refreshRotation,{toValue:1,duration:850,easing:Easing.linear,useNativeDriver:true}));
+    motion.start();return ()=>motion.stop();
+  },[refreshing,reduceMotion,refreshRotation]);
+  useEffect(()=>{
+    const token=++searchGeneration.current;
+    if(!debouncedSearch){setSearchRows(null);setSearchLoading(false);setSearchError('');return;}
+    if(!allowed||loading)return;
+    setSearchRows(null);setSearchLoading(true);setSearchError('');
+    // The existing authorized RPC has no search argument. Only fetch all pages on an explicit search,
+    // and filter those authorized results locally; never search just the first 25 and imply completeness.
+    void (async()=>{
+      try{
+        const all=[...page.rows];let offset=all.length;
+        while(offset<count(filter)){
+          const next=await loadAiStudioPage(filter,offset);
+          if(token!==searchGeneration.current)return;
+          if(!next.rows.length)throw new Error('Could not search every intake. Try again.');
+          all.push(...next.rows);offset+=next.rows.length;
+        }
+        if(token!==searchGeneration.current)return;
+        setSearchRows(all.filter(row=>[row.intake_number,row.lead_source_name,row.policy_type,row.status,row.queue_state].some(value=>value?.toLowerCase().includes(debouncedSearch))));
+      }catch(e){if(token===searchGeneration.current)setSearchError(e instanceof Error?e.message:'Intake search could not be completed.');}
+      finally{if(token===searchGeneration.current)setSearchLoading(false);}
+    })();
+    return ()=>{searchGeneration.current++;};
+  },[debouncedSearch,filter,allowed,loading]);
+  const displayedRows=debouncedSearch?(searchRows??[]):page.rows;
   const refresh=()=>{setRefreshing(true);void reload();};
   const closeDetail=()=>{if(actionBusy)return;setSelected(null);setPendingAction(null);setActionError('');setResultUncertain(false);setFieldExpanded(false);};
   const openDetail=(row:AiStudioRow)=>{setSelected(row);setFieldExpanded(false);setActionError('');setResultUncertain(false);};
@@ -132,67 +193,120 @@ export default function AiPolicyStudioScreen() {
           <Image source={PartnerAssets.actions.quickPolicyIntake} style={s.headerArtwork} resizeMode="contain" accessible={false}/>
           <Text style={s.topWord} numberOfLines={1}>AI Onboarding Studio</Text>
           <Pressable onPress={refresh} accessibilityRole="button" accessibilityLabel="Refresh" style={s.headerAction}>
-            <Ionicons name="refresh-outline" size={22} color="#FFFFFF"/>
+            <Animated.View style={{transform:[{rotate:refreshRotation.interpolate({inputRange:[0,1],outputRange:['0deg','360deg']})}]}}><Ionicons name="refresh-outline" size={22} color="#FFFFFF"/></Animated.View>
           </Pressable>
         </View>
       </View>
-      <ScrollView style={s.scroll} contentContainerStyle={{paddingHorizontal:22,paddingTop:13,paddingBottom:36}}
+
+      <ScrollView style={s.scroll} contentContainerStyle={s.screenContent}
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={C.blue} onRefresh={refresh}/>}>
-        <View style={s.titleRow}>
-          <View style={{flex:1}}><Text style={s.eyebrow}>POLICY OPERATIONS</Text><Text style={s.subtitle}>Review PDFs, repair drafts and securely register policies.</Text></View>
-        </View>
-        <View style={s.hero}>
-          <View style={s.heroMain}>
-            <Text style={s.heroOverline}>ALL OPEN INTAKES</Text>
-            <Text style={s.heroNumber}>{count('open')}</Text>
-            <Text style={s.heroHint}>●  Live policy queue</Text>
+        <View style={s.summarySurface}>
+          <View style={s.summaryTop}>
+            <Image source={PartnerAssets.actions.quickPolicyIntake} style={s.summaryArtwork} resizeMode="contain" accessible={false}/>
+            <View style={s.summaryText}>
+              <Text style={s.summaryOverline}>POLICY WORK QUEUE</Text>
+              <Text style={s.summaryMain}>{count('open')} Open Intakes</Text>
+              <Text style={s.summaryDescription}>Review, verify & convert policies</Text>
+            </View>
+            <View style={s.ringHolder} accessibilityLabel={reviewPercent+' percent of open intakes are in review'}>
+              {Array.from({length:24},(_,i)=>{
+                const angle=i*15;
+                return <Animated.View key={i} style={[s.ringTick,{
+                  backgroundColor: '#7757E5',
+                  opacity:ringProgress.interpolate({inputRange:[Math.max(0,i/24),(i+1)/24],outputRange:[0.14,1],extrapolate:'clamp'}),
+                  transform:[{rotate:angle+'deg'},{translateY:-18}],
+                }]}/>;
+              })}
+              <Text style={s.ringText}>{reviewPercent}%</Text>
+            </View>
           </View>
-          <View style={s.heroAside}>
-            <Text style={s.heroMini}>{count('processing')}</Text><Text style={s.heroAsideLabel}>Processing</Text>
-            <View style={s.heroDivider}/>
-            <Text style={s.heroMini}>{count('in_review')}</Text><Text style={s.heroAsideLabel}>In Review</Text>
+          <View style={s.summaryDivider}/>
+          <View style={s.summaryMetrics}>
+            {([
+              {key:'processing',title:'Processing',image:PartnerAssets.status.policyPending},
+              {key:'in_review',title:'In Review',image:PartnerAssets.status.pendingReview},
+              {key:'action',title:'Action',image:PartnerAssets.status.policyAttention},
+            ] as const).map(metric=>(
+              <View style={s.metric} key={metric.key}>
+                <Image source={metric.image} style={s.metricArtwork} resizeMode="contain" accessible={false}/>
+                <View style={s.metricCopy}>
+                  <Text style={s.metricLabel}>{metric.title}</Text>
+                  <Text style={s.metricValue}>{count(metric.key)}</Text>
+                </View>
+              </View>
+            ))}
           </View>
-          <View style={s.heroRing}/>
         </View>
-        <View style={s.quickGuide}><View style={s.guideIcon}><Ionicons name="flash-outline" size={18} color={C.blue}/></View><View style={{flex:1}}><Text style={s.guideTitle}>Your workflow</Text><Text style={s.guideText}>Open an intake → Reparse if needed → Verify & Convert</Text></View><Ionicons name="shield-checkmark-outline" size={20} color="#2D8065"/></View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabScroller} contentContainerStyle={s.segment}>
-          {TABS.map(tab=><Pressable key={tab.key} accessibilityRole="tab" accessibilityState={{selected:filter===tab.key}}
-            style={[s.segmentItem,filter===tab.key&&s.segmentActive]}
-            onPress={()=>{setFilter(tab.key);setPage(p=>({...p,rows:[]}));}}>
-            <Text style={[s.segmentLabel,filter===tab.key&&s.activeLabel]}>{tab.label}</Text>
-            <Text style={[s.segmentCount,filter===tab.key&&s.activeLabel]}>{count(tab.key)}</Text>
-          </Pressable>)}
-        </ScrollView>
-        <View style={s.sectionHead}><Text style={s.sectionTitle}>{filter==='open'?'All open policy intakes':filter==='action'?'Action required':filter==='in_review'?'In review':'Processing'}</Text>
-          <Text style={s.meta}>{count(filter)} records</Text></View>
-        {loading&&page.rows.length===0?<View style={s.center}><ActivityIndicator color={C.blue}/></View>:null}
-        {error?<Pressable style={s.error} onPress={()=>void reload()} accessibilityRole="button">
-          <Text style={s.errorText}>{error}</Text><Ionicons name="refresh" color="#A44935" size={18}/>
-        </Pressable>:null}
-        {!loading&&!error&&!page.rows.length?<View style={s.center}>
-          <Ionicons name="checkmark-circle-outline" color="#7DAB96" size={28}/>
-          <Text style={s.emptyHead}>All clear here</Text><Text style={s.emptyText}>No intakes in this view.</Text>
-        </View>:null}
-        {page.rows.length>0?<View style={s.list}>
-          {page.rows.map(row=>{
-            const done=!!row.final_policy_id,flag=row.exception_codes.length>0;
-            const status=done?'Completed':row.status==='in_review'?'In review':row.status==='processing'&&row.ocr_status!=='failed'?'Fetching details':'Action required';
-            return <Pressable key={row.id} accessibilityRole="button" accessibilityLabel={'Open '+row.intake_number}
-              style={({pressed})=>[s.row,pressed&&{backgroundColor:'#F2F6F4'}]} onPress={()=>openDetail(row)}>
-              <View style={[s.mark,{backgroundColor:done?'#54A983':flag?'#D7A662':'#8B9EDB'}]}/>
-              <View style={s.rowMain}><Text numberOfLines={1} style={s.rowTitle}>{row.intake_number.replace('PIR-','')}</Text>
-                <Text numberOfLines={1} style={s.rowSub}>{row.lead_source_name||row.policy_type||'Policy intake'}</Text></View>
-              <View style={s.rowRight}><Text style={[s.rowStatus,{color:done?'#398562':flag?'#A5773A':'#5C78A8'}]}>{status}</Text>
-                <Text style={s.rowChecks}>{row.checks_passed?String(row.checks_passed)+' checks':'Pending'}</Text></View>
-              <Ionicons name="chevron-forward" size={16} color="#9DADAF"/>
-            </Pressable>;
-          })}
-        </View>:null}
-        {!loading&&page.rows.length<count(filter)?<Pressable style={s.showMore} disabled={moreLoading}
-          onPress={()=>void reload(page.rows.length)} accessibilityRole="button">
-          {moreLoading?<ActivityIndicator color={C.ink} size="small"/>:<Text style={s.showMoreText}>Show more</Text>}
-        </Pressable>:null}
-        <Text style={s.footer}>SECURED BY INSUREIT · SUPABASE</Text>
+        <View style={s.listSection}>
+          <View style={s.listHeading}>
+            <Text style={s.listHeadingText}>Policy intakes</Text>
+            <Text style={s.recordPill}>{count(filter)} Records</Text>
+          </View>
+          <View style={s.intakePanel}>
+            <View style={s.searchBar}>
+              <Ionicons name="search-outline" size={16} color="#2274CF"/>
+              <TextInput value={search} onChangeText={setSearch} placeholder="Search customer or intake..."
+                placeholderTextColor="#8899B2" style={s.searchInput} autoCapitalize="none"
+                accessibilityLabel="Search intake or source across authorized records"
+                returnKeyType="search"/>
+              {search?<Pressable onPress={()=>setSearch('')} accessibilityRole="button" accessibilityLabel="Clear search">
+                <Ionicons name="close-circle" size={16} color="#91A1B3"/>
+              </Pressable>:<Ionicons name="options-outline" size={17} color="#6F88AA"/>}
+            </View>
+            <View style={s.tabsRow} onLayout={event=>setTabsWidth(event.nativeEvent.layout.width)}>
+              {TABS.map(tab=><Pressable key={tab.key} style={s.tabItem}
+                accessibilityRole="tab" accessibilityState={{selected:filter===tab.key}}
+                onPress={()=>{setFilter(tab.key);setPage(p=>({...p,rows:[]}));}}>
+                <Text style={[s.tabText,filter===tab.key&&s.tabTextActive]}>{tab.label==='All Open'?'All':tab.label}</Text>
+              </Pressable>)}
+              {tabsWidth>0?<Animated.View pointerEvents="none" style={[s.tabUnderline,{
+                width:tabsWidth/4,
+                transform:[{translateX:Animated.multiply(tabProgress,tabsWidth/4)}],
+              }]}/>:null}
+            </View>
+            {loading&&page.rows.length===0||searchLoading?
+              <View accessibilityRole="progressbar" accessibilityLabel="Loading policy intakes" style={s.rowsLoading}>
+                {Array.from({length:4},(_,i)=><View key={i} style={s.skeletonRow}>
+                  <View style={s.skeletonIcon}/><View style={s.skeletonCopy}><View style={s.skeletonLineWide}/><View style={s.skeletonLineShort}/></View>
+                </View>)}
+              </View>:null}
+            {error?<Pressable style={s.error} onPress={()=>void reload()} accessibilityRole="button">
+              <Text style={s.errorText}>{error}</Text><Ionicons name="refresh" color="#A44935" size={18}/>
+            </Pressable>:null}
+            {searchError?<Text style={s.errorText}>{searchError}</Text>:null}
+            {!loading&&!searchLoading&&!error&&!searchError&&displayedRows.length===0?
+              <View style={s.compactEmpty}><Text style={s.emptyHead}>{debouncedSearch?'No matching intakes':'All clear here'}</Text>
+                <Text style={s.emptyText}>{debouncedSearch?'Try another intake number or source.':'No intakes in this view.'}</Text>
+              </View>:null}
+            {!loading&&!searchLoading&&displayedRows.map((row,index)=>{
+              const done=!!row.final_policy_id,flag=row.exception_codes.length>0;
+              const status=done?'Completed':row.status==='in_review'?'In review':row.status==='processing'&&row.ocr_status!=='failed'?'Fetching details':'Action required';
+              return <StudioRowEnter key={row.id} index={index} reduceMotion={reduceMotion}>
+                <Pressable accessibilityRole="button" accessibilityLabel={'Open '+row.intake_number}
+                  style={({pressed})=>[s.compactRow,pressed&&s.compactRowPressed]} onPress={()=>openDetail(row)}>
+                  <View style={s.rowArtworkShell}>
+                    <Image source={flag?PartnerAssets.status.policyAttention:PartnerAssets.actions.impactPolicyDocument}
+                      style={s.rowArtwork} resizeMode="contain" accessible={false}/>
+                  </View>
+                  <View style={s.rowMain}>
+                    <Text numberOfLines={1} style={s.rowTitle}>{row.intake_number.replace('PIR-','')}</Text>
+                    <Text numberOfLines={1} style={s.rowSub}>{row.lead_source_name||row.policy_type||'Policy intake'}</Text>
+                  </View>
+                  <View style={s.rowRight}>
+                    <Text numberOfLines={1} style={[s.rowStatus,{color:done?'#398562':flag?'#A5773A':'#5C78A8'}]}>{status}</Text>
+                    <Text numberOfLines={1} style={s.rowChecks}>{row.checks_passed?String(row.checks_passed)+' checks':'Pending'}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={15} color="#91A4B6"/>
+                </Pressable>
+              </StudioRowEnter>;
+            })}
+            {!debouncedSearch&&!loading&&page.rows.length<count(filter)?<Pressable style={s.showMore} disabled={moreLoading}
+              onPress={()=>void reload(page.rows.length)} accessibilityRole="button">
+              {moreLoading?<ActivityIndicator color={C.ink} size="small"/>:<Text style={s.showMoreText}>Show more</Text>}
+            </Pressable>:null}
+          </View>
+        </View>
       </ScrollView>
       <View style={[s.bottomNavigationShell,{paddingBottom:insets.bottom}]}>
         <PartnerCaseBottomNavigation activeTab="More" />
@@ -273,7 +387,64 @@ export default function AiPolicyStudioScreen() {
   );
 }
 
+function StudioRowEnter({children,index,reduceMotion}:{children:ReactNode;index:number;reduceMotion:boolean}){
+  const opacity=useRef(new Animated.Value(1)).current;
+  const rise=useRef(new Animated.Value(0)).current;
+  useEffect(()=>{
+    if(reduceMotion){opacity.setValue(1);rise.setValue(0);return;}
+    opacity.setValue(0);rise.setValue(7);
+    const animation=Animated.parallel([
+      Animated.timing(opacity,{toValue:1,duration:340,delay:Math.min(index,8)*55,easing:Easing.out(Easing.cubic),useNativeDriver:true}),
+      Animated.timing(rise,{toValue:0,duration:340,delay:Math.min(index,8)*55,easing:Easing.out(Easing.cubic),useNativeDriver:true}),
+    ]);
+    animation.start();return ()=>animation.stop();
+  },[opacity,rise,reduceMotion,index]);
+  return <Animated.View style={{opacity,transform:[{translateY:rise}]}}>{children}</Animated.View>;
+}
+
 const s=StyleSheet.create({
+  screenContent:{paddingBottom:24},
+  summarySurface:{backgroundColor:'#FFFFFF',paddingHorizontal:11,paddingTop:10,paddingBottom:8},
+  summaryTop:{flexDirection:'row',alignItems:'center',minHeight:76,gap:8},
+  summaryArtwork:{width:34,height:39},
+  summaryText:{flex:1,minWidth:0},
+  summaryOverline:{fontSize:8,color:'#6245D2',fontWeight:'700',letterSpacing:0.6},
+  summaryMain:{fontSize:19,color:'#10294D',fontWeight:'800',marginTop:2},
+  summaryDescription:{fontSize:10,color:'#68798F',marginTop:3},
+  summaryDivider:{height:StyleSheet.hairlineWidth,backgroundColor:'#DFE5EE',marginTop:5,marginBottom:8},
+  ringHolder:{width:44,height:44,alignItems:'center',justifyContent:'center',marginLeft:4},
+  ringTick:{position:'absolute',left:20,top:20,width:4,height:7,borderRadius:3},
+  ringText:{fontSize:9,fontWeight:'800',color:'#6844D9'},
+  summaryMetrics:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',minHeight:47},
+  metric:{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:4,minWidth:0},
+  metricArtwork:{width:22,height:25},
+  metricCopy:{minWidth:0},
+  metricLabel:{color:'#627089',fontSize:10},
+  metricValue:{color:'#071D38',fontSize:16,fontWeight:'800'},
+  listSection:{backgroundColor:'#F4F6FB',paddingHorizontal:10,paddingTop:10,paddingBottom:18,flex:1},
+  listHeading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:8},
+  listHeadingText:{fontSize:14,fontWeight:'800',color:'#0C2342'},
+  recordPill:{fontSize:9,color:'#6048C9',backgroundColor:'#EFE8FF',borderRadius:14,overflow:'hidden',paddingVertical:5,paddingHorizontal:10},
+  intakePanel:{backgroundColor:'#FFFFFF',borderRadius:15,borderWidth:1,borderColor:'#DEE5EF',paddingHorizontal:10,paddingTop:10,paddingBottom:2,overflow:'hidden'},
+  searchBar:{height:36,borderRadius:10,borderWidth:1,borderColor:'#DCE4ED',flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:9,marginBottom:7},
+  searchInput:{flex:1,fontSize:10.5,color:'#1A365B',paddingVertical:0,minHeight:34},
+  tabsRow:{flexDirection:'row',height:30,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#DDE5EF',position:'relative'},
+  tabItem:{flex:1,alignItems:'center',justifyContent:'center',minWidth:0},
+  tabText:{fontSize:9,color:'#526784'},
+  tabTextActive:{color:'#135CB9',fontWeight:'700'},
+  tabUnderline:{position:'absolute',height:2,bottom:0,left:0,backgroundColor:'#2178EC'},
+  compactRow:{minHeight:63,flexDirection:'row',alignItems:'center',gap:7,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#E7ECF2',paddingVertical:7},
+  compactRowPressed:{backgroundColor:'#F4F8FE'},
+  rowArtworkShell:{width:28,height:32,borderRadius:7,backgroundColor:'#EAF3FF',alignItems:'center',justifyContent:'center'},
+  rowArtwork:{width:23,height:26},
+  rowsLoading:{gap:0},
+  skeletonRow:{height:63,flexDirection:'row',alignItems:'center',gap:9,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#E5EBF2'},
+  skeletonIcon:{width:28,height:32,borderRadius:7,backgroundColor:'#EDF2FA'},
+  skeletonCopy:{flex:1,gap:7},
+  skeletonLineWide:{height:9,width:'58%',borderRadius:5,backgroundColor:'#EDF2FA'},
+  skeletonLineShort:{height:7,width:'74%',borderRadius:4,backgroundColor:'#EDF2FA'},
+  compactEmpty:{minHeight:115,alignItems:'center',justifyContent:'center',gap:7,padding:20},
+
   root:{flex:1,backgroundColor:C.paper},scroll:{flex:1},
   headerShell:{backgroundColor:'#071E49'},
   top:{minHeight:64,paddingHorizontal:14,backgroundColor:'#071E49',flexDirection:'row',alignItems:'center',gap:10},

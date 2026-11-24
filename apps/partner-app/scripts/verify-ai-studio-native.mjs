@@ -15,7 +15,11 @@ assert(!data.includes('EXPO_PUBLIC_PORTAL_URL') && !data.includes('service_role'
 assert(screen.includes("loadAiStudioPage(filter,offset)") && screen.includes("loadAiStudioDetail(selected.id)"));
 assert(screen.includes("All Open") && screen.includes("In Review") && screen.includes("Processing"));
 assert(screen.includes("count('open')") && screen.includes("count('in_review')"));
-assert(screen.includes("count('processing')") && screen.includes("detail.processing_lane==='automation'"));
+assert(screen.includes("{key:'processing',title:'Processing'") && screen.includes("{key:'in_review',title:'In Review'") && screen.includes("{key:'action',title:'Action'"));
+assert(screen.includes('{count(metric.key)}') && screen.includes("detail.processing_lane==='automation'"));
+assert(screen.includes("count('in_review')/count('open')") && screen.includes('Math.round(100*'));
+assert(screen.includes('loadAiStudioPage(filter,offset)') && screen.includes('setSearchRows(all.filter('));
+assert(screen.includes('<PartnerCaseBottomNavigation activeTab="More" />'));
 const openSql=file('../../../supabase/migrations/20261124121000_partner_ai_studio_open_intake_parity.sql');
 assert(openSql.includes("p_filter text default 'open'"));
 assert(openSql.includes("where p_filter in ('open','review') or bucket=p_filter"));
