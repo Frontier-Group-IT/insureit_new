@@ -252,8 +252,11 @@ assert(!navigation.includes('href="/customer/kyc"'), "Customer sidebar must not 
 assert(!navigation.includes('href="/customer/documents"'), "Customer sidebar must not expose a separate Documents shortcut");
 assert(profilePage.includes("CustomerProfileDocuments"), "Customer Profile must embed the document vault");
 assert(profileDocuments.includes("CustomerDocumentVault"), "Customer Profile documents must reuse the authorized document vault");
-assert(profileDocuments.includes("useState(false)"), "Customer Profile document vault must be collapsed by default");
-assert(profileDocuments.includes('aria-expanded={expanded}'), "Customer Profile document vault must expose its expanded state accessibly");
+const profileVaultControls = read("components/customer-portal/customer-document-vault.tsx");
+assert(profileDocuments.includes("profileMode"), "Customer Profile must use the categorized vault mode");
+assert(profileVaultControls.includes("useState<number[]>([])"), "Customer Profile document categories must all be collapsed by default");
+assert(profileVaultControls.includes("expanded.includes(index)") && profileVaultControls.includes("old.filter(item => item !== index)") && profileVaultControls.includes("[...old, index]"), "Customer Profile categories must expand and collapse independently");
+assert(profileVaultControls.includes("aria-expanded={open}") && profileVaultControls.includes("aria-controls={") && profileVaultControls.includes("hidden={!open}"), "Each category must expose its expanded state accessibly and hide collapsed content");
 assert(documentsPage.includes("loadCustomerProfile(account.id)"), "Direct Customer Documents route must retain account-scoped access");
 assert(kycPage.includes("loadCustomerProfile(account.id)"), "Direct Customer KYC route must retain account-scoped access");
 
