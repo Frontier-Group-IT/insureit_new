@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, Animated, AppState, Easing, Image, Pressable, StyleSheet, Text, View, type TextStyle, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerCasePageHeader } from '@/components/partner-case-page-header';
@@ -16,6 +18,10 @@ import { partnerTheme } from '@/lib/theme';
 
 export default function WeeklyStoryScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
+  const [foreground, setForeground] = useState(AppState.currentState === 'active');
+  const [reduceMotion, setReduceMotion] = useState(true);
+  const animate = isFocused && foreground && !reduceMotion;
   const [data, setData] = useState<PartnerWeeklyStory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,6 +30,21 @@ export default function WeeklyStoryScreen() {
   const [comparisonData, setComparisonData] = useState<PartnerBusinessRangeSummary | null>(null);
   const [comparisonLoading, setComparisonLoading] = useState(false);
   const [comparisonError, setComparisonError] = useState('');
+  const rangeRotation = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let live = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((value) => { if (live) setReduceMotion(value); }).catch(() => {});
+    const motion = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    const app = AppState.addEventListener('change', (state) => setForeground(state === 'active'));
+    return () => { live = false; motion.remove(); app.remove(); };
+  }, []);
+
+  useEffect(() => {
+    const motion = Animated.timing(rangeRotation, { toValue: comparisonOpen ? 1 : 0, duration: animate ? 260 : 0, useNativeDriver: true });
+    motion.start();
+    return () => motion.stop();
+  }, [comparisonOpen, animate, rangeRotation]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -31,7 +52,6 @@ export default function WeeklyStoryScreen() {
     try {
       setData(await getPartnerWeeklyStory());
     } catch {
-      setData(null);
       setError('Your weekly summary could not be loaded.');
     } finally {
       setLoading(false);
@@ -74,9 +94,9 @@ export default function WeeklyStoryScreen() {
   return (
     <PartnerScreen title="A week with INSUREIT" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}>
       <PartnerCasePageHeader title="A week with INSUREIT" icon="bar-chart-outline" onBack={() => router.back()} />
-      {loading ? (
-        <PartnerStateView state="loading" title="Loading your week" />
-      ) : error || !data ? (
+      {loading && !data ? (
+        <WeeklySkeleton animate={animate} />
+      ) : error && !data ? (
         <PartnerStateView
           state="error"
           title="Your week is temporarily unavailable"
@@ -84,7 +104,7 @@ export default function WeeklyStoryScreen() {
           actionLabel="Try again"
           onAction={() => void load()}
         />
-      ) : (
+      ) : data ? (
         <View style={styles.pageBody}>
           <View style={styles.hero}>
             <View pointerEvents="none" style={styles.heroGlowLarge} />
@@ -221,7 +241,7 @@ export default function WeeklyStoryScreen() {
             <ReflectionGrowth />
           </View>
         </View>
-      )}
+      ) : null}
     </PartnerScreen>
   );
 }
