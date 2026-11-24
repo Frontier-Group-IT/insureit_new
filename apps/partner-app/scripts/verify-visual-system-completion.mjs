@@ -409,7 +409,7 @@ for (const required of [
   'Math.ceil(storyMeasuredHeight - storyViewportHeight)',
   'Math.min(204, current + Math.min(overflow, 204 - current))',
   '<ImpactStory story={story} onOpen={openStory} artworkHeight={artworkHeight} clock={impactClock} onPause={setImpactPaused} />',
-  '<JourneyMilestoneStory story={story} artworkHeight={journeyArtworkHeight} />',
+  '<JourneyMilestoneStory story={story} artworkHeight={journeyArtworkHeight} clock={journeyClock} />',
   'style={[styles.todayArtWrap, { height: artworkHeight }]}',
   'style={[styles.businessGrowth3dArtwork, { height: artworkHeight }]}',
   '<PartnerCaseBottomNavigation activeTab="Home" />',
@@ -577,20 +577,20 @@ if (claimsArtwork.byteLength < 20000 || !claimsArtwork.subarray(0,8).equals(Buff
 // Story 3 (My Journey) keeps its own milestone-focused composition and real scoped data.
 for (const [needle, rationale] of [
   ["story.kind === 'journey' ? (", 'Only the customer journey story uses its own layout'],
-  ['<JourneyMilestoneStory story={story} artworkHeight={journeyArtworkHeight} />', 'My Journey renders the dedicated milestone composition'],
-  ['function JourneyMilestoneStory({ story, artworkHeight }', 'My Journey milestone renderer exists'],
+  ['<JourneyMilestoneStory story={story} artworkHeight={journeyArtworkHeight} clock={journeyClock} />', 'My Journey renders the dedicated milestone composition'],
+  ['function JourneyMilestoneStory({ story, artworkHeight, clock }', 'My Journey milestone renderer exists'],
   ['Number(story.progress_current)', 'Achieved count comes from live story progress'],
   ['Number(story.progress_target)', 'Target comes from live story progress'],
   ['Math.max(0, target - current)', 'Remaining count derives from target minus actual progress'],
   ['Math.round(completion)', 'Percentage is calculated from live progress'],
   ['<StoryHeading icon="people" title={story.eyebrow} tone="violet" />', 'Journey uses the unified violet heading'],
-  ['style={styles.journeyBlueArc}', 'Journey uses the uninterrupted curved background'],
+  ['style={[styles.journeyBlueArc,', 'Journey uses the uninterrupted curved background'],
   ['style={styles.journeyProgressTrack}', 'Milestone progress has a dedicated track'],
   ["require('../assets/partner/stories/my-journey.png')", 'Journey road uses the new original 3D illustration'],
   ["require('../assets/partner/stories/my-journey.png')", 'Journey illustration includes a flag, gold route and trophy'],
-  ['style={styles.journeySceneTarget}', '3D road milestone target marker stays dynamic'],
-  ['style={styles.journeySceneTarget}', 'Target marker remains data-driven'],
-  ['style={styles.journeySceneAchieved}', 'Achieved marker remains data-driven'],
+  ['style={[styles.journeySceneTarget,', '3D road milestone target marker stays dynamic'],
+  ['style={[styles.journeySceneTarget,', 'Target marker remains data-driven'],
+  ['style={[styles.journeySceneAchieved,', 'Achieved marker remains data-driven'],
 ]) requireText(stories, needle, 'My Journey slide regression: ' + rationale);
 if (stories.includes('style={styles.growthBars}') || stories.includes('style={styles.sceneGrowthArrow}')) {
   throw new Error('Old generic journey bar-chart illustration must remain removed.');
@@ -1652,3 +1652,5 @@ if (policies.includes("SortPurpleGradient") || policies.includes("sortPurpleGrad
 const impactMotion = read('components/impact-story-motion.tsx');
 for (const marker of ['IMPACT_REVEAL_MS = 2800', 'reduceMotionChanged', 'AppState.addEventListener', 'time.stopAnimation', 'ambient.stopAnimation', 'clock.time.removeListener']) requireText(impactMotion, marker, 'Impact timeline lifecycle: ' + marker);
 for (const marker of ['start={200} duration={1400}', 'reveal(clock, 500, 800)', 'reveal(clock, 800, 1100)', 'reveal(clock, 1200, 1600', 'inputRange:[2000,2250,2500]', 'tabular-nums']) requireText(stories, marker, 'Impact cinematic timing: ' + marker);
+
+for (const marker of ['const shownAchieved = Math.round(achieved * fraction)', 'Math.max(0, Math.round(target) - shownAchieved)', 'shownAchieved / target * 100', 'width: `${shownCompletion}%`', 'reveal(clock,1000,1400,7)', 'clock.time.removeListener(id)']) requireText(stories, marker, 'Journey synchronized motion: ' + marker);
