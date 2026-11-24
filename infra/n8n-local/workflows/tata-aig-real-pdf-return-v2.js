@@ -28,10 +28,16 @@ const add=(key,value,label,page=null)=>{
  evidence:key==='insured_name'?'Name of Insured':'Tata AIG current-policy schedule'});
 };
 add('policy_number',f.policy_number,'Current policy number');
-add('policy_issuance_date',f.policy_issuance_date,'Policy Issue Date (printed)',null);
 if(f.policy_issuance_date){
+ const explicit=f.issue_date_source==='printed_policy_issue_date';
+ const fromReceipt=f.issue_date_source==='printed_receipt_business_rule';
+ if(!explicit&&!fromReceipt)return reject('tata_aig_issue_date_source_invalid');
+ add('policy_issuance_date',f.policy_issuance_date,
+   explicit?'Policy Issue Date (printed)':'Issue Date (from printed receipt)',null);
  const printed=fields.find(item=>item.key==='policy_issuance_date');
- printed.evidence='Printed Policy Issue Date / Date of Issue on current policy';
+ printed.evidence=explicit
+   ?'Printed Policy Issue Date / Date of Issue on current policy'
+   :'Tata AIG printed Receipt Date (approved issuance rule)';
 }
 add('insurer_name',f.insurer_name,'Current insurer');
 add('policy_product',f.policy_product,'Policy product');
@@ -86,6 +92,7 @@ return [{json:{
  warnings:[
   ...(!f.policy_issuance_date?['tata_aig_issuance_date_unverified']:[]),
   'tata_aig_human_review_required',
+  ...(f.issue_date_source==='printed_receipt_business_rule'?['tata_aig_receipt_date_as_issuance']:[]),
   ...(!f.policy_issuance_date&&!p.digital_signature_date?['tata_aig_signature_date_not_in_native_text']:[]),
   ...(Math.abs(p.component_net-p.printed_net)>0.005?['tata_aig_printed_net_rounding']:[]),
  ],
