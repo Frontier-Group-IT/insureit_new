@@ -383,7 +383,7 @@ for (const fragment of [
   "inputRange: [1000, 1800]",
   'clock.ambient.interpolate({ inputRange: [0, 1], outputRange: [0, -7] })',
   'outputRange: [1, 1.02]',
-  'style={styles.learnArtShadow}',
+  'styles.learnArtShadow',
   "source={require('../assets/partner/stories/learning-car.png')}",
   'onTouchStart={(event) => { hold(true); event.stopPropagation(); }}',
 ]) requireText(stories, fragment, 'Learning Story cinematic, pause-safe, original-art contract: ' + fragment);
