@@ -1427,13 +1427,35 @@ requireText(weeklyStory, "backgroundColor: '#FFFFFF', borderWidth: StyleSheet.ha
 requireText(weeklyStory, 'minWidth: 92, flexShrink: 0', 'Your Week This Week pill must not clip the Week label on compact widths.');
 requireText(weeklyStory, "backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#A6DFD1'", 'Your Week reflection card retains a white surface with the new mint-green border.');
 requireText(weeklyStory, "shadowColor: '#36AA97'", 'Your Week reflection card uses a subtle green shadow.');
-requireText(weeklyStory, 'style={styles.comparisonSectionHeading}', 'Your Week comparison title appears above the card.');
+requireText(weeklyStory, '<Entrance style={styles.comparisonSectionHeading} animate={animate} delay={130}>', 'Your Week comparison title appears above the card with subtle entrance motion.');
 requireText(weeklyStory, "style={styles.compareHeader}", 'Your Week range selector remains inside the comparison card.');
 requireText(weeklyStory, 'style={styles.headingRule}', 'Your Week Coming next heading has a horizontal accent rule.');
 requireText(weeklyStory, 'name="calendar-outline" size={23} color="#168C7B"', 'Your Week Coming next heading uses a green calendar icon.');
 requireText(weeklyStory, 'accessibilityState={{ expanded: comparisonOpen }}', 'Your Week comparison range control must expose expanded state.');
 requireText(weeklyStory, '[7, 14, 30].map((days)', 'Your Week comparison range control must offer 7, 14 and 30 day options.');
 requireText(weeklyStory, 'getPartnerBusinessRange(range.from, range.to)', 'Your Week non-default comparison ranges must load scoped business-range data.');
+for (const marker of [
+  'AccessibilityInfo.isReduceMotionEnabled()',
+  "AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion)",
+  "AppState.addEventListener('change'",
+  'const animate = isFocused && foreground && !reduceMotion;',
+  'function AnimatedNumber(',
+  'function AnimatedBar(',
+  'function WeeklySkeleton(',
+  'function DividerReveal(',
+  'function AmbientGlow(',
+  'useNativeDriver: true',
+  'duration={1400}',
+  'comparisonDays === 7 ? data.premium_last_week : comparisonData?.premium_previous_period ?? 0',
+  'heights = [22, 34, 48, 38, 50, 68]',
+  'void Haptics.selectionAsync().catch(() => {})',
+  'bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}',
+  'getPartnerWeeklyStory()',
+]) requireText(weeklyStory, marker, 'Your Week accessible, live-data motion contract missing: ' + marker);
+for (const dependency of ['react-native-reanimated', 'react-native-svg', 'expo-linear-gradient']) {
+  if (weeklyStory.includes(`from '${dependency}'`)) throw new Error('Native animation dependency requires a new approved native build: ' + dependency);
+}
+
 for (const tinySize of ['fontSize:7.5', 'fontSize:8.5', 'fontSize:8,', 'fontSize:9,']) if (weeklyStory.includes(tinySize)) throw new Error(`Your Week must not regress to tiny typography: ${tinySize}`);
 for (const recognitionAsset of ['status.achievement', 'actions.renewals', 'status.journey']) requireText(recognition, `PartnerAssets.${recognitionAsset}`, `Recognition is missing ${recognitionAsset} artwork.`);
 requireText(recognition, "if (icon === 'learn') return require('../assets/partner/status/learning-rhythm-3d.png');", 'Learning rhythm must use its dedicated 3D achievement artwork.');
