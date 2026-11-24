@@ -405,7 +405,7 @@ async function preparePolicyIntakeHandoffInternal(
       && ["policy_number","insured_name","vehicle_chassis_number","vehicle_engine_number",
           "policy_start_date","policy_end_date"].every(key=>
             verified.fields.some(field=>field.key===key&&field.value.trim().length>0))
-      && policyDateDecision(verified.autoAcceptedIssuanceDate?.date??"")==="valid";
+      && policyDateDecision(verified.autoAcceptedIssuanceDate?.date??"")==="allowed";
     const eligibleForVerifiedConversion=tata18Ready||verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible
       ||standardReview.eligible||niaReview.eligible||uiicReview.eligible||uiicPrivateCarReview.eligible||productVariantReview.eligible;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
