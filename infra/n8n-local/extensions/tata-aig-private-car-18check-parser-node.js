@@ -137,8 +137,11 @@ function extract(raw){
  const seats=match(vehicleSection,/\bSeating Capacity\s*\(Including\s*Driver\)\s*(\d{1,2})/i) || seating(vehicleSection);
  const rto=match(vehicleSection,/\bRTO Location\s+([A-Z]{3,30})\b/i)?.toUpperCase()??null;
  const stateByRto={JABALPUR:'MADHYA PRADESH',SATNA:'MADHYA PRADESH',BADSHAPUR:'HARYANA',REWARI:'HARYANA',GURGAON:'HARYANA',FARIDABAD:'HARYANA',PANCHKULA:'HARYANA',KOLKATA:'WEST BENGAL',DELHI:'DELHI'};
- const state=stateByRto[rto]??null;
  const stateByPlate={MP:'MADHYA PRADESH',HR:'HARYANA',DL:'DELHI',WB:'WEST BENGAL'};
+ const printedRtoState=match(vehicleSection,/\bRTO State\s+([A-Za-z][A-Za-z ]{2,45})(?:\n| {2,}|$)/i)?.toUpperCase()??null;
+ const state=printedRtoState??stateByRto[rto]??stateByPlate[rawPlate.slice(0,2)]??null;
+ // When a state appears in the PDF, prefer it to directory-derived geography.
+ // When only a valid registration prefix exists, retain that state independently.
  // Six-digit numeric engine is accepted ONLY from the exact printed Engine Number label,
  // with a separate full-length chassis. A shorter ID without source label fails closed.
  const explicitlyPrintedShortEngine=Boolean(engine&&/^\d{6}$/.test(engine)
@@ -150,7 +153,7 @@ function extract(raw){
  // validated prefix-derived state independently; unresolved RTO never blocks
  // otherwise complete policy extraction. Contradictory *verified* geography
  // remains a separate data-integrity conflict, not a missing-field failure.
- checks.rto_resolved=!rto||!state||!registered||stateByPlate[rawPlate.slice(0,2)]===state;
+ checks.rto_resolved=!rto||!state||!registered||!stateByPlate[rawPlate.slice(0,2)]||stateByPlate[rawPlate.slice(0,2)]===state;
  const idvMatch=vehicleRaw.match(/Insured Declared Value \(IDV\)[\s\S]{0,1500}?\n\s*1\s+([\d,]+)\s+0\s+0\s+0\s+0\s+([\d,.]+)/i);
  const idv=idvMatch?amount(idvMatch[2]):null;
  checks.idv_verified=Boolean(idv&&idv>0&&near(idv,amount(idvMatch[1]),0.01));
