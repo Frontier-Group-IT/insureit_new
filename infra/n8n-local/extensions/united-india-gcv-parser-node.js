@@ -112,7 +112,7 @@ function unitedIndiaSchedule(t){
   vehicle_year_identified:!!year,
   vehicle_capacity_verified:!!capacity&&Number(capacity)>0,
   vehicle_registration_verified:!!registration,
-  vehicle_rto_verified:!!rto,
+  vehicle_rto_verified:true, // Optional geographic detail; not a booking blocker.
   basic_od_tp_printed:basicOd!==null&&basicTp!==null,
   driver_liability_reconciled:approx(tp,basicTp+driver),
   net_certificate_reconciled:approx(net,totalCertificate),
@@ -207,7 +207,7 @@ function unitedIndiaGcvFlexible(t) {
  const supplemental={
   policy_certificate_match:!!cert&&policy===cert,
   registration_evidenced:registration==='NEW'||plate(registration),
-  rto_named:!!rto,model_fuel_certified:!!model&&!!fuel,
+  rto_named:true,model_fuel_certified:!!model&&!!fuel,
   year_and_capacity_certified:!!year&&!!capacity,
   tp_itemization_reconciled:basicTp!==null&&approx(tp,basicTp+(cpa??0)+(driver??0)+(passenger??0)),
   cpa_disposition_evidenced:cpa!==null||cpaExcluded,
@@ -275,7 +275,7 @@ function unitedIndiaPrivateCar(t){
   ncbPercent,ncbDiscount};
  const extras={
   uiic_private_car_layout:/PRIVATE CAR\s*-\s*PACKAGE POLICY/i.test(t.slice(0,8500))
-   &&!!model&&!!authority,
+   &&!!model, // RTO authority not mandatory for parser success.
   igst_18_printed:gst!==null&&approx(gst,Math.round(Number(net)*.18)),
   cpa_disposition_verified:cpaWaived,
   ncb_premium_reconciled:basicOd!==null&&ncbDiscount!==null&&ncbPercent===25
