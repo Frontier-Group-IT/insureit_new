@@ -46,7 +46,7 @@ CGST @ 9% 188.46
 SGST @ 9% 188.46
 Total Premium (in ₹ ) 2,471.00`;
   const result=runInNewContext(`(function(){ ${kotakScript} })()`,
-    {$input:{first:()=>({json:{text,info}})}})[0].json;
+    {$input:{first:()=>({json:{text}})}})[0].json;
   assert.equal(result.ok,true,`Kotak ${expectedMake} must retain all 16 strict checks: ${result.failed_checks}`);
   assert.equal(result.fields.find(f=>f.key==="vehicle_make")?.value,expectedMake);
   assert.equal(result.premium_components.net,2094);
@@ -57,7 +57,7 @@ Total Premium (in ₹ ) 2,471.00`;
 const parseVariant=(path,text,info={})=>{
   const source=file(path);
   return runInNewContext('(function(){'+source+'})()',
-    {$input:{first:()=>({json:{text}})}})[0].json;
+    {$input:{first:()=>({json:{text,info}})}})[0].json;
 };
 const hdfcSample=`Vehicle Details Policy Details
 Make HONDA. Policy No. 2301 2092 5528 0300 000
