@@ -146,7 +146,7 @@ export default function WeeklyStoryScreen() {
                 align="right"
                 menuWidth={142}
                 menu={(
-                  <View style={styles.rangeMenu}>
+                  <Entrance animate={animate && comparisonOpen} delay={0} style={styles.rangeMenu}>
                     {[7, 14, 30].map((days) => (
                       <Pressable
                         key={days}
@@ -167,7 +167,7 @@ export default function WeeklyStoryScreen() {
                         {comparisonDays === days ? <Ionicons name="checkmark" size={14} color="#1765C1" /> : null}
                       </Pressable>
                     ))}
-                  </View>
+                  </Entrance>
                 )}
               >
                 <Pressable
@@ -213,6 +213,7 @@ export default function WeeklyStoryScreen() {
             <Text style={styles.sectionTitle}>Coming next</Text>
             <DividerReveal animate={animate} />
           </View>
+          <Entrance animate={animate} delay={350}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Open renewals"
@@ -228,6 +229,7 @@ export default function WeeklyStoryScreen() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#0F3D8A" />
           </Pressable>
+          </Entrance>
 
           <Entrance style={styles.endCard} animate={animate} delay={450}>
             <AmbientGlow animate={animate} style={styles.reflectionGlow} delay={200} />
@@ -503,7 +505,7 @@ const styles = StyleSheet.create({
   compareCard: { borderRadius: 16, paddingHorizontal: 15, paddingTop: 13, paddingBottom: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5EAF2', shadowColor: '#163565', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   compareHeader: { position: 'relative', zIndex: 5, flexShrink: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   sectionHeader: { marginTop: 19, marginBottom: 9, paddingHorizontal: 3, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 29 },
-  headingRule: { flex: 1, height: 2, marginLeft: 3, backgroundColor: '#36AA97' },
+  headingRule: { flex: 1, height: 2, marginLeft: 3, backgroundColor: '#36AA97', overflow: 'hidden' },
   sectionTitle: { flexShrink: 1, color: '#07142F', fontSize: 15, lineHeight: 20, fontWeight: '800', letterSpacing: -0.2 },
   rangeWrap: { position: 'relative', zIndex: 10 },
   rangePill: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: '#E1E6EF', backgroundColor: '#FFFFFF' },
@@ -547,4 +549,8 @@ const styles = StyleSheet.create({
   reflectionArrow: { position: 'absolute', right: 2, top: 0, transform: [{ rotate: '36deg' }] },
   reflectionBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
   reflectionBar: { width: 12, borderTopLeftRadius: 6, borderTopRightRadius: 6, backgroundColor: '#64CFC1' },
+  weeklySkeleton: { gap: 18, paddingTop: 8, paddingBottom: 22 },
+  skeletonHero: { height: 192, borderRadius: 18, backgroundColor: '#CEE0F7', padding: 18, gap: 17 },
+  skeletonCard: { height: 86, borderRadius: 16, backgroundColor: '#E1EAF7', padding: 16, gap: 15 },
+  skeletonLine: { height: 13, borderRadius: 7, backgroundColor: '#F6FAFF' },
 });
