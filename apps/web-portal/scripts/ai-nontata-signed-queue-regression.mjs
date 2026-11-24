@@ -683,7 +683,7 @@ assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.map
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.map(f=>f.key==="vehicle_fuel_type"?{...f,evidence:"Native PDF policy schedule"}:f)}).eligible,false);
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:[...iffcoAuto.fields,iffcoAuto.fields[0]]}).eligible,false);
 assert.ok(handoff.includes("const iffcoReview=assessIffcoAutoOnboarding(")
-  && handoff.includes("eligibleForVerifiedConversion=verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible"),
+  && handoff.includes("eligibleForVerifiedConversion=tata18Ready||verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible"),
   "IFFCO source and financial validated readiness must be used for the queue");
 assert.ok(actions.includes('queued.exception_codes[0]==="registration_pending_review"')
   &&actions.includes('queued.parser_id==="iffco_tokio_cv_native_pdf"'),
@@ -695,7 +695,7 @@ assert.ok(actions.includes('const heldReview=queued?.state==="exception"')
   &&actions.includes('queued.exception_codes.length===1')
   &&actions.includes('queued.exception_codes[0]==="booking_review_required"')
   &&actions.includes("const sameReviewedFingerprint=")
-  &&actions.includes("!(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction)")
+  &&actions.includes("!(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction||reverifiedTataFailedSource||reverifiedTataPrintedDateHold)")
   &&actions.includes("const reverifiedUiicExtraction=uiicFailedSource")
   &&actions.includes("extracted.preview.documentId===queued.document_id")
   &&actions.includes("extracted.preview.documentId!==queued.document_id")
