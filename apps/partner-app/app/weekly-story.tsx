@@ -257,6 +257,7 @@ function useEntrance(animate: boolean, delay: number, duration = 410) {
       fade.setValue(1); rise.setValue(0);
       return;
     }
+    fade.setValue(0); rise.setValue(9);
     const motion = Animated.parallel([
       Animated.timing(fade, { toValue: 1, duration, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(rise, { toValue: 0, duration, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
@@ -315,6 +316,7 @@ function HeroStat({ icon, iconBackground, value, label, animate, delay }: {
   const scale = useRef(new Animated.Value(animate ? 0.9 : 1)).current;
   useEffect(() => {
     if (!animate) { scale.setValue(1); return; }
+    scale.setValue(0.9);
     const spring = Animated.spring(scale, { toValue: 1, friction: 10, tension: 75, delay, useNativeDriver: true });
     spring.start();
     return () => spring.stop();
@@ -360,6 +362,7 @@ function AnimatedBar({ height, index, animate, reflection = false }: { height: n
   const growth = useRef(new Animated.Value(animate ? 0 : 1)).current;
   useEffect(() => {
     if (!animate) { growth.setValue(1); return; }
+    growth.setValue(0);
     const animation = Animated.timing(growth, {
       toValue: 1, duration: 580, delay: (reflection ? 220 : 110) + index * 90,
       easing: Easing.out(Easing.cubic), useNativeDriver: true,
@@ -401,6 +404,7 @@ function IconTurn({ children, animate }: { children: ReactNode; animate: boolean
   const turn = useRef(new Animated.Value(animate ? 0 : 1)).current;
   useEffect(() => {
     if (!animate) { turn.setValue(1); return; }
+    turn.setValue(0);
     const animation = Animated.timing(turn, { toValue: 1, duration: 420, delay: 390, easing: Easing.out(Easing.cubic), useNativeDriver: true });
     animation.start();
     return () => animation.stop();
@@ -412,6 +416,7 @@ function DividerReveal({ animate }: { animate: boolean }) {
   const growth = useRef(new Animated.Value(animate ? 0 : 1)).current;
   useEffect(() => {
     if (!animate) { growth.setValue(1); return; }
+    growth.setValue(0);
     const animation = Animated.timing(growth, { toValue: 1, duration: 450, delay: 320, useNativeDriver: true });
     animation.start();
     return () => animation.stop();
@@ -505,7 +510,7 @@ const styles = StyleSheet.create({
   compareCard: { borderRadius: 16, paddingHorizontal: 15, paddingTop: 13, paddingBottom: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5EAF2', shadowColor: '#163565', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   compareHeader: { position: 'relative', zIndex: 5, flexShrink: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   sectionHeader: { marginTop: 19, marginBottom: 9, paddingHorizontal: 3, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 29 },
-  headingRule: { flex: 1, height: 2, marginLeft: 3, backgroundColor: '#36AA97', overflow: 'hidden' },
+  headingRule: { flex: 1, height: 2, marginLeft: 3, backgroundColor: 'transparent', overflow: 'hidden' },
   sectionTitle: { flexShrink: 1, color: '#07142F', fontSize: 15, lineHeight: 20, fontWeight: '800', letterSpacing: -0.2 },
   rangeWrap: { position: 'relative', zIndex: 10 },
   rangePill: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: '#E1E6EF', backgroundColor: '#FFFFFF' },
