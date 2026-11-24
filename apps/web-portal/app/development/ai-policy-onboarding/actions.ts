@@ -263,15 +263,21 @@ async function holdFailedAiConversion(id:string,issues:readonly SemiAutoIssue[]=
   if(error)console.error("[ai-policy] booking review hold failed",{code:error.code||"unknown"});
 }
 
+// Temporary, explicitly approved legacy recovery cohort. This is NOT an insurer
+// parser exemption: each record must still match its exact validated parser,
+// queue fingerprint, current signed PDF, and every canonical booking guard.
+// Other manual-lane Intakes retain their existing prohibition.
+const APPROVED_VARIANT_LEGACY_INTAKES:Readonly<Record<string,string>>={
+  "PIR-261120-12F51A":"united_india_tractor_tp_native_pdf",
+  "PIR-261120-74CC09":"go_digit_two_wheeler_od_native_pdf",
+  "PIR-261120-32D619":"zurich_kotak_private_car_tp_native_pdf",
+  "PIR-261120-370952":"zurich_kotak_private_car_tp_native_pdf",
+};
+
 export async function convertVerifiedAiIntake(id:string,confirmed:boolean):Promise<SemiAutoActionResult>{
   await requireDevelopmentPolicyOperator(id);
   // Invalid or unconfirmed requests do not mutate the queue.
   if(confirmed!==true)return{ok:false,ready:false,issues:[issue("Confirmation","Explicit policy registration confirmation is required.")]};
-  if(segregatePolicyIntakeLanes()){
-    const admin=createSupabaseAdminClient();
-    const{data:lane}=await admin.from("policy_intake_requests").select("processing_lane").eq("id",id).maybeSingle<{processing_lane:string}>();
-    if(lane?.processing_lane!=="automation")return{ok:false,ready:false,issues:[issue("Processing lane","Manual Intakes cannot be converted through the AI queue.")]};
-  }
   try{
     const result=await convertVerifiedAiIntakeCore(id,confirmed);
     if(!result.ok)await holdFailedAiConversion(id,result.issues);
@@ -313,7 +319,28 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
       &&(queued.state!=="verified"||queued.exception_codes.length>0))
       ||!queued.extraction_fingerprint)
     return fail("Extraction","The current Intake has other extraction or booking exceptions requiring review.");
-  const extracted=await previewSemiAutoN8nExtraction(id);
+  // Manual-lane bypass is allowed solely for the four already-verified,
+  // user-approved 2026-11-20 intakes. No update to processing_lane is needed.
+  // Validate the persisted intake/queue relationship before allowing even a
+  // manual-lane PDF preview; all strict checks below remain mandatory.
+  let approvedManualRecovery=false;
+  if(segregatePolicyIntakeLanes()){
+    const {data:lane,error:laneError}=await admin.from("policy_intake_requests")
+      .select("intake_number,processing_lane,policy_type,final_policy_id")
+      .eq("id",id).maybeSingle<{
+        intake_number:string;processing_lane:string;policy_type:string|null;final_policy_id:string|null;
+      }>();
+    if(laneError||!lane)return fail("Processing lane","The current Intake processing lane could not be verified.");
+    approvedManualRecovery=lane.processing_lane==="manual"
+      &&lane.policy_type==="motor"&&!lane.final_policy_id
+      &&APPROVED_VARIANT_LEGACY_INTAKES[lane.intake_number]===queued.parser_id
+      &&PRODUCT_VARIANT_PARSERS.has(queued.parser_id??"")
+      &&hasVerifiedN8nParserEvidence(queued.parser_id??"",queued.checks_passed,[]);
+    if(lane.processing_lane!=="automation"&&!approvedManualRecovery)
+      return fail("Processing lane","Manual Intakes cannot be converted through the AI queue.");
+  }
+  const extracted=await previewSemiAutoN8nExtraction(id,
+    {allowManualLane:approvedManualRecovery});
   if(!extracted.ok)return fail("Extraction",extracted.error);
   // Backward-compatible once for old IFFCO MP/NEW queue rows. The old
   // fingerprint excluded the printed *internal* registration reference.

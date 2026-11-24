@@ -42,13 +42,24 @@ export function selectVerifiedN8nInsuredDraftIdentity(
     "go_digit_cv_native_pdf", "iffco_tokio_cv_native_pdf", "new_india_cv_native_pdf",
     "united_india_gcv_native_pdf", "oriental_gccv_native_pdf",
   ]).has(parserId ?? "");
+  // Only the three independently validated product-variant parsers may supply
+  // a draft identity from their exact native-PDF label. Keep other insurer
+  // evidence contracts unchanged and never infer a customer match from PDF alone.
+  const variantNameEvidence: Record<string,string> = {
+    united_india_tractor_tp_native_pdf: "Native PDF: Name of the Insured",
+    go_digit_two_wheeler_od_native_pdf: "Native PDF: Name",
+    zurich_kotak_private_car_tp_native_pdf: "Native PDF: INSURED DETAILS Name",
+  };
+  const variantEvidence = variantNameEvidence[parserId ?? ""];
   // Strictly validated Tata AIG third-party parsers emit a dedicated
   // insurer evidence label, not the legacy ICICI "Name of Insured" label.
   // Only these exact parser IDs and labels may supply an automatic draft name.
   const tataTp = parserId === "tata_aig_private_car_liability_only_n8n_native_pdf"
     || parserId === "tata_aig_private_car_three_year_tp_n8n_native_pdf";
   const candidates = fields.filter(field => field.key === "insured_name"
-    && (commercial
+    && (variantEvidence
+      ? field.page === null && field.evidence === variantEvidence
+      : commercial
       ? field.page === null && field.evidence === "Native PDF policy schedule"
       : tataTp
         ? field.page === 1 && field.evidence === "Tata AIG Liability Only Policy Schedule"
@@ -61,7 +72,7 @@ export function selectVerifiedN8nInsuredDraftIdentity(
     && !/^(?:NA|N\/A|NAME|UNKNOWN|INSURED|CUSTOMER)$/i.test(candidate)
     ? candidate : "";
 
-  if (commercial && !pdfName) {
+  if ((commercial || variantEvidence) && !pdfName) {
     return { name: "", matchedCustomerId: null, needsManualReview: true, source: "missing" };
   }
   if (linkedCustomer?.id && normalizedName(linkedCustomer.name)) {
