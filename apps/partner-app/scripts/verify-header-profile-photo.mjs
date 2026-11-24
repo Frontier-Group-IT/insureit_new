@@ -25,7 +25,7 @@ assert.match(profile, /heroTopRow: \{[\s\S]*?minHeight: 82,/, 'Profile row stays
 assert.doesNotMatch(profile, /minHeight: 212,/, 'Old tall profile header must not return');
 assert.match(profile, /avatarShell: \{[\s\S]*?width: 72,[\s\S]*?height: 72,/, 'Profile photo must be enlarged to 72 px');
 assert.match(profile, /<\/View>\s*\{logoutError \?/, 'Registration cards must finish before the logout control');
-assert.match(profile, /<View style=\{styles\.heroBody\}>[\s\S]*?<Text style=\{styles\.name\} numberOfLines=\{2\}>/, 'Name must fit two lines alongside avatar without truncating');
+assert.match(profile, /<View style=\{styles\.heroBody\}>[\s\S]*?<Animated\.Text style=\{\[styles\.name, entrance\(nameEntrance\)\]\} numberOfLines=\{2\}>/, 'Name must fit two lines alongside avatar without truncating');
 assert.doesNotMatch(profile, /backgroundColor: '#1047B9'/, 'Blue profile banner must remain removed');
 assert.doesNotMatch(profile, /numberOfLines=\{1\} style=\{styles\.detailValue\}/, 'Full registration details must not truncate');
 assert.match(profile, /accessibilityLabel="Change profile photo"/, 'Camera upload remains accessible');
