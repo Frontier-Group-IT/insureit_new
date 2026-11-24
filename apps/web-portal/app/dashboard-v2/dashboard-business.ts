@@ -1,5 +1,6 @@
 import "server-only";
-import { getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
+import { getLifeTeamPortfolioReadFilter, getLifeTeamPortfolioScope, getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ProfileLike = { id: string; role?: string | null };
@@ -27,9 +28,10 @@ export type DashboardBusinessData = {
   topInsurers: DashboardBusinessRankRow[]; topProducers: DashboardBusinessRankRow[]; topGroups: DashboardBusinessRankRow[];
   commercial: { projectedPayin: number; tdsAmount: number; payinAfterTds: number; partnerPayout: number; retention: number; retentionRate: number; payinPolicies: number; payoutPolicies: number; needsReview: number; reconciliationExceptions: number } | null;
   warnings: string[];
+  lifeTeamProduction?: { teamPolicies: number; directPolicies: number; teamGross: number | null; directGross: number | null; rms: DashboardBusinessRankRow[] };
 };
 
-type PolicyRow = { id: string; vehicle_id: string | null; insurance_company_id: string | null; policy_type: string | null; business_line: string | null; issuance_date: string | null; created_at: string; intermediary_type: string | null; intermediary_code: string | null; lead_source: string | null; rm_employee_id: string | null; rm_name: string | null; intermediary_group_id: string | null; intermediary_group_name: string | null };
+type PolicyRow = { id: string; premium_amount: number | string | null; vehicle_id: string | null; insurance_company_id: string | null; policy_type: string | null; business_line: string | null; issuance_date: string | null; created_at: string; intermediary_type: string | null; intermediary_code: string | null; lead_source: string | null; rm_employee_id: string | null; rm_name: string | null; intermediary_group_id: string | null; intermediary_group_name: string | null };
 type PremiumRow = { policy_id: string; net_premium: number | string | null; gross_premium: number | string | null };
 type PayinRow = { policy_id: string; total_projected_payin: number | string | null; tds_amount: number | string | null; payin_after_tds: number | string | null; commercial_status: string | null };
 type PayoutRow = { policy_id: string; gross_payout: number | string | null; partner_payout_amount: number | string | null; retention_amount: number | string | null; commercial_status: string | null };
@@ -41,15 +43,17 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
   const empty = emptyBusiness(filters);
   if (!profile?.id) return empty;
 
-  const downlineFilter = profile.role === "operations_head_life"
+  const portfolioFilter = await getLifeTeamPortfolioReadFilter(profile.id, profile.role);
+  const portfolioScope = portfolioFilter !== null ? await getLifeTeamPortfolioScope(profile.id, profile.role) : null;
+  const downlineFilter = portfolioFilter ?? (profile.role === "operations_head_life"
     ? operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
-    : null;
+    : null);
   if (profile.role === "operations_head_life" && !downlineFilter) return empty;
-  const rmEmployeeIds = profile.role === "operations_head_life" ? null : await getAccessiblePolicyRmEmployeeIds(profile.id, profile.role, "view_policies");
+  const rmEmployeeIds = downlineFilter !== null ? null : await getAccessiblePolicyRmEmployeeIds(profile.id, profile.role, "view_policies");
   if (rmEmployeeIds !== null && rmEmployeeIds.length === 0) return empty;
 
   const admin = createSupabaseAdminClient();
-  const select = "id,vehicle_id,insurance_company_id,policy_type,business_line,issuance_date,created_at,intermediary_type,intermediary_code,lead_source,rm_employee_id,rm_name,intermediary_group_id,intermediary_group_name";
+  const select = "id,premium_amount,vehicle_id,insurance_company_id,policy_type,business_line,issuance_date,created_at,intermediary_type,intermediary_code,lead_source,rm_employee_id,rm_name,intermediary_group_id,intermediary_group_name";
   const fromCreatedAt = `${filters.fromDate}T00:00:00+05:30`;
   const dayAfterTo = indiaDate(addDays(new Date(`${filters.toDate}T00:00:00+05:30`), 1));
   const toCreatedAtExclusive = `${dayAfterTo}T00:00:00+05:30`;
@@ -57,6 +61,7 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
   // Filter the requested business period in PostgREST before rows are returned. The previous
   // implementation fetched the whole policy table and filtered in memory, so Supabase's API
   // max-rows cap silently truncated production data once the table exceeded 1,000 rows.
+  const policyResult = await fetchAllPages<PolicyRow, unknown>((from, to) => {
   let policyQuery = admin
     .from("policies")
     .select(select)
@@ -64,7 +69,8 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
   if (downlineFilter) policyQuery = policyQuery.or(downlineFilter);
   else if (rmEmployeeIds !== null) policyQuery = policyQuery.in("rm_employee_id", rmEmployeeIds);
 
-  const policyResult = await policyQuery.returns<PolicyRow[]>();
+  return policyQuery.order("id").range(from,to).returns<PolicyRow[]>();
+  });
   if (policyResult.error) return { ...empty, warnings: ["Filtered business production could not be refreshed."] };
 
   const allPolicies = policyResult.data ?? [];
@@ -113,7 +119,11 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
     const premiumResults = await Promise.all(chunkValues(policyIds, 120).map((batch) => admin.from("policy_premium_details").select("policy_id,net_premium,gross_premium").in("policy_id", batch).returns<PremiumRow[]>()));
     const premiumError = premiumResults.find((result) => result.error)?.error;
     if (premiumError) warnings.push("Premium figures could not be refreshed.");
-    else for (const result of premiumResults) for (const row of result.data ?? []) premiumByPolicy.set(row.policy_id, { net: numberValue(row.net_premium), gross: numberValue(row.gross_premium) });
+    else {
+      const bookedById = new Map(filteredPolicies.map(policy => [policy.id, numberValue(policy.premium_amount)]));
+      for (const result of premiumResults) for (const row of result.data ?? []) premiumByPolicy.set(row.policy_id, { net: numberValue(row.net_premium), gross: row.gross_premium == null ? bookedById.get(row.policy_id) ?? 0 : numberValue(row.gross_premium) });
+      for (const policy of filteredPolicies) if (!premiumByPolicy.has(policy.id)) premiumByPolicy.set(policy.id, {net: 0, gross: numberValue(policy.premium_amount)});
+    }
   }
 
   const channel = new Map<string, Accumulator>(); const vehicleClass = new Map<string, Accumulator>(); const coverage = new Map<string, Accumulator>(); const businessLine = new Map<string, Accumulator>(); const insurers = new Map<string, Accumulator>();
@@ -153,7 +163,24 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
     }
   }
 
+  const teamProduction = portfolioScope?.directEmployeeId ? (() => {
+    const directId = portfolioScope.directEmployeeId;
+    const team = filteredPolicies.filter(policy => policy.rm_employee_id !== directId);
+    const direct = filteredPolicies.filter(policy => policy.rm_employee_id === directId);
+    const gross = (rows: PolicyRow[]) => commercialAccess && rows.every(row => premiumByPolicy.has(row.id))
+      ? rows.reduce((sum, row) => sum + (premiumByPolicy.get(row.id)?.gross ?? 0), 0) : null;
+    const grouped = new Map<string, DashboardBusinessRankRow>();
+    for (const policy of team) {
+      const key = policy.rm_employee_id ?? "unassigned";
+      const row = grouped.get(key) ?? {key,label:clean(policy.rm_name) || "Unassigned",detail:null,policies:0,grossPremium:0};
+      row.policies++;
+      row.grossPremium += premiumByPolicy.get(policy.id)?.gross ?? 0;
+      grouped.set(key,row);
+    }
+    return {teamPolicies:team.length,directPolicies:direct.length,teamGross:gross(team),directGross:gross(direct),rms:[...grouped.values()].sort(rankByGrossPremium)};
+  })() : undefined;
   return {
+    lifeTeamProduction: teamProduction,
     filters, periodLabel: periodLabel(filters), periodShortLabel: periodShortLabel(filters), appliedFilterCount: appliedFilterCount(filters), options: buildOptions(allPolicies, insurerById, vehicleClassById), policyCount: filteredPolicies.length, incompletePolicies,
     activeProducerCount: new Set(filteredPolicies.map((row) => clean(row.intermediary_code)).filter(Boolean)).size, netPremium, grossPremium, averageGrossPremium: grossPremium !== null && filteredPolicies.length ? grossPremium / filteredPolicies.length : null,
     channelMix: mix(channel, commercialAccess), vehicleClassMix: mix(vehicleClass, commercialAccess), coverageMix: mix(coverage, commercialAccess), businessLineMix: mix(businessLine, commercialAccess),

@@ -1,5 +1,9 @@
 import "server-only";
 
+import { cache } from "react";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
+import { lifeTeamOwnerIds, lifeTeamReadFilter } from "@/lib/life-team-portfolio-contract";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import type { Capability } from "@/lib/roles";
 import { getAccessibleIntermediaryIds, getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -92,7 +96,8 @@ export function operationsHeadVisiblePolicyFilter(scope: { employeeIds: string[]
 /** Reusable server-side case authorization, never customer-only scope. */
 export async function canAccessOperationsHeadCase(profileId: string, caseId: string, write = false): Promise<boolean> {
   const downline = await getOperationsHeadDownlinePolicyScope(profileId);
-  const filter = write ? operationsHeadPolicyFilter(downline) : operationsHeadVisiblePolicyFilter(downline);
+  const portfolio = write ? null : await getLifeTeamPortfolioReadFilter(profileId, "operations_head_life");
+  const filter = write ? operationsHeadPolicyFilter(downline) : portfolio ?? operationsHeadVisiblePolicyFilter(downline);
   if (!caseId || !filter) return false;
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin.from("life_health_cases")
@@ -138,13 +143,83 @@ export async function getSalesExecutivePolicyIds(profileId: string) {
   return Array.from(new Set((data ?? []).map((row) => row.final_policy_id).filter((id): id is string => Boolean(id))));
 }
 
+
+/** Explicit approved shared read portfolio. Do not use this for writes or commercial grants. */
+export function usesLifeTeamPortfolio(profileId: string, role: string | null | undefined) {
+  return (profileId === "7bda6ffc-340e-48aa-bd3d-4f1f62cf85d9" && role === "sales_head")
+    || (profileId === "50fc9055-5509-44aa-8357-d60db9ce916c" && role === "operations_head_life");
+}
+
+export type LifeTeamPortfolioScope = { employeeIds: string[]; directEmployeeId: string | null };
+
+export const getLifeTeamPortfolioScope = cache(async (profileId: string, role: string | null | undefined): Promise<LifeTeamPortfolioScope | null> => {
+  if (!usesLifeTeamPortfolio(profileId, role)) return null;
+  const deny: LifeTeamPortfolioScope = { employeeIds: [], directEmployeeId: null };
+  if (!(await hasEffectiveCapability({ id: profileId, role }, "view_policies", "view"))) return deny;
+  const admin = createSupabaseAdminClient();
+  const { data: viewer, error: viewerError } = await admin.from("profiles").select("employee_id,role")
+    .eq("id", profileId).eq("is_active", true).maybeSingle<{ employee_id: string | null; role: string }>();
+  if (viewerError || !viewer?.employee_id || viewer.role !== role) return deny;
+  const scope = await getEmployeeAccessScope(profileId, role, "view_policies");
+  if (scope.mode !== "hierarchy" || !scope.employeeIds.includes("ac167429-0ce0-4ffe-90ea-4040cb4fea95")
+      || !scope.employeeIds.includes(viewer.employee_id)) return deny;
+  // Resolve independent direct ownership from the stable employee code.
+  const { data: direct, error } = await admin.from("employees").select("id")
+    .eq("employee_code", "SIBL/0027").maybeSingle<{ id: string }>();
+  if (error || !direct?.id) throw new Error("Direct business identity could not be verified.");
+  // Historical production stays in the reporting portfolio even after an RM leaves.
+  // Only the read portfolio traverses inactive employees; login and write scopes stay unchanged.
+  const employees = await fetchAllPages<{ id: string; reporting_manager_id: string | null }, unknown>((from, to) => admin.from("employees").select("id,reporting_manager_id").order("id").range(from,to).returns<Array<{ id: string; reporting_manager_id: string | null }>>());
+  if (employees.error || !employees.data) throw new Error("Historical reporting hierarchy could not be verified.");
+  const employeeIds = lifeTeamOwnerIds("ac167429-0ce0-4ffe-90ea-4040cb4fea95", employees.data, direct.id);
+  return employeeIds.includes("ac167429-0ce0-4ffe-90ea-4040cb4fea95") ? { employeeIds, directEmployeeId: direct.id } : deny;
+});
+
+export async function getLifeTeamPortfolioReadFilter(profileId: string, role: string | null | undefined) {
+  const scope = await getLifeTeamPortfolioScope(profileId, role);
+  if (scope === null) return null;
+  return lifeTeamReadFilter(scope);
+}
+
+export async function canReadLifeTeamCase(profileId: string, role: string | null | undefined, caseId: string) {
+  const filter = await getLifeTeamPortfolioReadFilter(profileId, role);
+  if (!filter || !caseId) return false;
+  const { data, error } = await createSupabaseAdminClient().from("life_health_cases")
+    .select("id").eq("id", caseId).or(filter).maybeSingle<{ id: string }>();
+  return !error && Boolean(data?.id);
+}
+
+/** New read visibility is not a new sales-head mutation grant. */
+export async function getLifeTeamSalesWriteOwnerIds(profileId: string, role: string | null | undefined): Promise<string[] | null> {
+  if (role !== "sales_head" || !usesLifeTeamPortfolio(profileId, role)) return null;
+  const portfolio = await getLifeTeamPortfolioScope(profileId, role);
+  if (!portfolio?.directEmployeeId) return [];
+  const scope = await getEmployeeAccessScope(profileId, role, "view_policies");
+  return scope.mode === "hierarchy" ? scope.employeeIds.filter(id => id !== portfolio.directEmployeeId && portfolio.employeeIds.includes(id)) : [];
+}
+export async function canWriteLifeTeamSalesCase(profileId: string, role: string | null | undefined, caseId: string) {
+  const ids = await getLifeTeamSalesWriteOwnerIds(profileId, role);
+  if (ids === null) return true;
+  if (!ids.length || !caseId) return false;
+  const { data, error } = await createSupabaseAdminClient().from("life_health_cases").select("id").eq("id",caseId).in("rm_employee_id",ids).maybeSingle<{id:string}>();
+  return !error && Boolean(data?.id);
+}
+
 export async function canAccessPolicy(
   profileId: string,
   role: string | null | undefined,
   policyId: string,
   capability: Capability = "view_policies",
   write = false,
-) {
+): Promise<boolean> {
+  if (write && capability === "view_policies" && usesLifeTeamPortfolio(profileId, role) && !(await canAccessPolicy(profileId, role, policyId, capability, false))) return false;
+  if (!write && capability === "view_policies" && usesLifeTeamPortfolio(profileId, role)) {
+    const filter = await getLifeTeamPortfolioReadFilter(profileId, role);
+    if (!filter) return false;
+    const { data, error } = await createSupabaseAdminClient().from("policies")
+      .select("id").eq("id", policyId).or(filter).maybeSingle<{ id: string }>();
+    return !error && Boolean(data?.id);
+  }
   const anjanaScope = await getAnjanaParsottamPolicyScope(profileId, role);
   if (anjanaScope && !write) {
     const filters = operationsHeadPolicyFilter(anjanaScope);
@@ -186,7 +261,8 @@ export async function canAccessPolicy(
       .select("id").eq("id", policyId).or(filter).maybeSingle<{ id: string }>();
     return !error && Boolean(data?.id);
   }
-  const rmEmployeeIds = await getAccessiblePolicyRmEmployeeIds(profileId, role, capability);
+  const salesWriteIds = write && capability === "view_policies" ? await getLifeTeamSalesWriteOwnerIds(profileId, role) : null;
+  const rmEmployeeIds = salesWriteIds ?? await getAccessiblePolicyRmEmployeeIds(profileId, role, capability);
   if (rmEmployeeIds === null) return true;
   if (!rmEmployeeIds.length) return false;
 

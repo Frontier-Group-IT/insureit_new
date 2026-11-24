@@ -1,6 +1,7 @@
 import "server-only";
 import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
-import { getAccessiblePolicyRmEmployeeIds } from "@/lib/policy-access-scope";
+import { getAccessiblePolicyRmEmployeeIds, getLifeTeamPortfolioScope, type LifeTeamPortfolioScope } from "@/lib/policy-access-scope";
+import { lifeTeamReportSegments } from "@/lib/life-team-portfolio-contract";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ViewerProfile = { id: string; role: string | null };
@@ -28,7 +29,8 @@ type PolicyBusinessFilterOptions={insurers:Array<{id:string;name:string}>;rms:Ar
 export type PolicyBusinessRow = {id:string;policy_no:string;business_date:string;policy_type:string;policy_product:string;business_type:string|null;business_line:string;category:string;start_date:string;end_date:string;status:string;customer_name:string;customer_code:string;vehicle_no:string;risk_reference:string;risk_secondary:string|null;insurer_name:string;rm_name:string|null;intermediary_code:string|null;intermediary_type:string|null;gross_premium:number;net_premium:number;od_premium:number;tp_premium:number;cpa_amount:number;insured_declared_value:number|null};
 
 export async function loadPolicyBusinessReport(profile:ViewerProfile,query:PolicyBusinessQuery){
- const {filters,scopeRmEmployeeIds,scope}=await reportContext(profile,query);
+ const {filters,scopeRmEmployeeIds,scope,portfolio}=await reportContext(profile,query);
+ if(portfolio)return{report:normalizePolicyBusinessReport(await loadPortfolioReport(portfolio,filters,positiveLimitedInteger(query.pageSize,25,200),"gross"),filters.page),filters,scopeMode:"hierarchy" as const};
  if(scopeRmEmployeeIds!==null&&scopeRmEmployeeIds.length===0)return{report:emptyPolicyBusinessReport(filters.page),filters,scopeMode:scope.mode};
  const admin=createSupabaseAdminClient();
  const reportResult=await admin.rpc("get_policy_business_report_v4",reportRpcArgs(scopeRmEmployeeIds,filters,positiveLimitedInteger(query.pageSize,25,5000)));
@@ -37,7 +39,8 @@ export async function loadPolicyBusinessReport(profile:ViewerProfile,query:Polic
 }
 
 export async function loadPolicyBusinessNetReport(profile:ViewerProfile,query:PolicyBusinessQuery){
- const {filters,scopeRmEmployeeIds,scope}=await reportContext(profile,query);
+ const {filters,scopeRmEmployeeIds,scope,portfolio}=await reportContext(profile,query);
+ if(portfolio)return{report:normalizePolicyBusinessNetReport(await loadPortfolioReport(portfolio,filters,positiveLimitedInteger(query.pageSize,25,200),"net"),filters.page),filters,scopeMode:"hierarchy" as const};
  if(scopeRmEmployeeIds!==null&&scopeRmEmployeeIds.length===0)return{report:emptyPolicyBusinessNetReport(filters.page),filters,scopeMode:scope.mode};
  const admin=createSupabaseAdminClient();
  const reportResult=await admin.rpc("get_policy_business_report_v5",reportRpcArgs(scopeRmEmployeeIds,filters,positiveLimitedInteger(query.pageSize,25,5000)));
@@ -46,8 +49,8 @@ export async function loadPolicyBusinessNetReport(profile:ViewerProfile,query:Po
 }
 
 export async function loadPolicyBusinessDailyTrend(profile:ViewerProfile,query:PolicyBusinessQuery){
- const {filters,scopeRmEmployeeIds}=await reportContext(profile,query);
- if(scopeRmEmployeeIds!==null&&scopeRmEmployeeIds.length===0)return[] as Array<{date:string;policy_count:number;net_premium:number}>;
+ const {filters,scopeRmEmployeeIds,portfolio}=await reportContext(profile,query);
+ if(!portfolio&&scopeRmEmployeeIds!==null&&scopeRmEmployeeIds.length===0)return[] as Array<{date:string;policy_count:number;net_premium:number}>;
  const admin=createSupabaseAdminClient();
  const pageSize=200;
  const totals=new Map<string,{policy_count:number;net_premium:number}>();
@@ -55,7 +58,7 @@ export async function loadPolicyBusinessDailyTrend(profile:ViewerProfile,query:P
  let totalPages=1;
  do{
   const pageFilters={...filters,page};
-  const result=await admin.rpc("get_policy_business_report_v5",reportRpcArgs(scopeRmEmployeeIds,pageFilters,pageSize));
+  const result=portfolio ? {data:await loadPortfolioReport(portfolio,pageFilters,pageSize,"net"),error:null} : await admin.rpc("get_policy_business_report_v5",reportRpcArgs(scopeRmEmployeeIds,pageFilters,pageSize));
   if(result.error)throw new Error(`Policy business daily trend query failed: ${result.error.message}`);
   const report=normalizePolicyBusinessNetReport(result.data,page);
   for(const row of report.register.rows){
@@ -72,8 +75,8 @@ export async function loadPolicyBusinessDailyTrend(profile:ViewerProfile,query:P
 }
 
 export async function loadPolicyBusinessSourceMix(profile:ViewerProfile,query:PolicyBusinessQuery){
- const {filters,scopeRmEmployeeIds}=await reportContext(profile,query);
- if(scopeRmEmployeeIds!==null&&scopeRmEmployeeIds.length===0)return[] as Array<{key:string;name:string;policy_count:number;net_premium:number;share_percent:number}>;
+ const {filters,scopeRmEmployeeIds,portfolio}=await reportContext(profile,query);
+ if(!portfolio&&scopeRmEmployeeIds!==null&&scopeRmEmployeeIds.length===0)return[] as Array<{key:string;name:string;policy_count:number;net_premium:number;share_percent:number}>;
  const admin=createSupabaseAdminClient();
  const pageSize=200;
  const totals=new Map<string,{name:string;policy_count:number;net_premium:number}>();
@@ -82,7 +85,7 @@ export async function loadPolicyBusinessSourceMix(profile:ViewerProfile,query:Po
  let totalPages=1;
  do{
   const pageFilters={...filters,page};
-  const result=await admin.rpc("get_policy_business_report_v5",reportRpcArgs(scopeRmEmployeeIds,pageFilters,pageSize));
+  const result=portfolio ? {data:await loadPortfolioReport(portfolio,pageFilters,pageSize,"net"),error:null} : await admin.rpc("get_policy_business_report_v5",reportRpcArgs(scopeRmEmployeeIds,pageFilters,pageSize));
   if(result.error)throw new Error(`Policy business source mix query failed: ${result.error.message}`);
   const report=normalizePolicyBusinessNetReport(result.data,page);
   for(const source of report.filters.intermediaries){sourceNames.set(source.code,source.name||source.code)}
@@ -101,9 +104,77 @@ export async function loadPolicyBusinessSourceMix(profile:ViewerProfile,query:Po
 async function reportContext(profile:ViewerProfile,query:PolicyBusinessQuery){
  const filters=resolvePolicyBusinessFilters(query);
  const [scopeRmEmployeeIds,scope]=await Promise.all([getAccessiblePolicyRmEmployeeIds(profile.id,profile.role,"view_reports"),getEmployeeAccessScope(profile.id,profile.role,"view_reports")]);
- return{filters,scopeRmEmployeeIds,scope};
+ const portfolio=await getLifeTeamPortfolioScope(profile.id,profile.role);
+ return{filters,scopeRmEmployeeIds,scope,portfolio};
 }
 function reportRpcArgs(scopeRmEmployeeIds:string[]|null,filters:PolicyBusinessFilters,pageSize:number){return{p_scope_rm_employee_ids:scopeRmEmployeeIds,p_from_date:filters.fromDate,p_to_date:filters.toDate,p_insurer_id:filters.insurerId,p_rm_employee_id:filters.rmEmployeeId,p_intermediary_code:filters.intermediaryCode,p_business_line:filters.businessLine,p_category:filters.category,p_page:filters.page,p_page_size:pageSize}}
+
+
+// Existing service-role RPCs already authorize RM ownership. Partition the
+// approved scope into disjoint owner sets so direct Motor/Non Motor can never
+// enter a report, even if the caller chooses "all". No database migration.
+async function loadPortfolioReport(portfolio:LifeTeamPortfolioScope,filters:PolicyBusinessFilters,pageSize:number,basis:"net"|"gross"){
+ const admin=createSupabaseAdminClient();
+ const segments=lifeTeamReportSegments(portfolio,filters.businessLine);
+ const rows:Record<string,unknown>[]=[];
+ const options=emptyFilters();
+ const seen=new Set<string>();
+ for(const segment of segments){
+  let page=1,total=0;
+  do{
+   const result=await admin.rpc("get_policy_business_report_v5",reportRpcArgs(segment.ids,{...filters,businessLine:segment.line,page},200));
+   if(result.error)throw new Error("Scoped policy business query failed: "+result.error.message);
+   const data=objectValue(result.data),register=objectValue(data.register);
+   total=numberValue(register.total_count);
+   const rawRows=arrayValue(register.rows);
+   for(const item of rawRows){
+    const row=objectValue(item),id=stringValue(row.id);
+    if(!id||seen.has(id))continue;
+    seen.add(id);rows.push(row);
+   }
+   if(page===1){
+    const source=normalizeFilters(data.filters);
+    // RPC filter options can include unfiltered business lines for a direct
+    // RM. Only publish source options derived from eligible returned rows below.
+    options.insurers.push(...source.insurers);
+    options.rms.push(...source.rms);
+    options.intermediaries.push(...source.intermediaries);
+   }
+   if(!rawRows.length&&total>(page-1)*200)throw new Error("Incomplete scoped report page");
+   page++;
+  }while((page-1)*200<total);
+ }
+ // Use policy IDs from the authorized RPC results to resolve exact insurer
+ // identifiers (names alone are not keys). No additional records are fetched.
+ const insurerByPolicy=new Map<string,string>();
+ for(let offset=0;offset<rows.length;offset+=120){
+  const ids=rows.slice(offset,offset+120).map(row=>stringValue(row.id));
+  const result=await admin.from("policies").select("id,insurance_company_id").in("id",ids).returns<Array<{id:string;insurance_company_id:string|null}>>();
+  if(result.error)throw new Error("Scoped insurer lookup failed: "+result.error.message);
+  for(const row of result.data??[])if(row.insurance_company_id)insurerByPolicy.set(row.id,row.insurance_company_id);
+ }
+ const amount=basis==="net"?"net_premium":"gross_premium";
+ const sum=(items:Record<string,unknown>[],field:string)=>items.reduce((n,row)=>n+numberValue(row[field]),0);
+ const average=(items:Record<string,unknown>[],field:string)=>{const nonzero=items.filter(row=>numberValue(row[field])!==0);return nonzero.length?sum(nonzero,field)/nonzero.length:0;};
+ const unique=(items:Record<string,unknown>[],field:string)=>new Set(items.map(row=>stringValue(row[field])).filter(Boolean)).size;
+ const motor=rows.filter(row=>row.business_line==="Motor"),nonMotor=rows.filter(row=>row.business_line==="Non Motor");
+ const group=(items:Record<string,unknown>[],key:(row:Record<string,unknown>)=>string)=>{
+  const groups=new Map<string,Record<string,unknown>[]>();
+  for(const row of items){const k=key(row);const list=groups.get(k)??[];list.push(row);groups.set(k,list);}
+  return [...groups.entries()];
+ };
+ const rank=(items:Record<string,unknown>[])=>items.sort((a,b)=>numberValue(b[amount])-numberValue(a[amount])||numberValue(b.policy_count)-numberValue(a.policy_count)||stringValue(a.name??a.category).localeCompare(stringValue(b.name??b.category))).slice(0,12);
+ const totalAmount=sum(rows,amount);
+ const insurers=rank(group(rows,row=>insurerByPolicy.get(stringValue(row.id))??"").map(([id,items])=>({id,name:stringValue(items[0].insurer_name)||"Unassigned",policy_count:items.length,[amount]:sum(items,amount),share_percent:totalAmount>0?sum(items,amount)/totalAmount*100:0})));
+ const rms=rank(group(rows,row=>stringValue(row.rm_employee_id)).map(([employee_id,items])=>({employee_id,name:stringValue(items[0].rm_name)||"Unassigned",policy_count:items.length,intermediary_count:unique(items,"intermediary_code"),[amount]:sum(items,amount),[basis==="net"?"average_net_premium":"average_premium"]:average(items,amount)})));
+ const category_mix=rank(group(nonMotor,row=>stringValue(row.category)).map(([category,items])=>({category,policy_count:items.length,[amount]:sum(items,amount)})));
+ const trend=group(rows,row=>stringValue(row.business_date).slice(0,7)+"-01").map(([month,items])=>({month,policy_count:items.length,[amount]:sum(items,amount)})).sort((a,b)=>a.month.localeCompare(b.month)).slice(-24);
+ const insurerIds=new Set(insurerByPolicy.values()),rmIds=new Set(rows.map(row=>stringValue(row.rm_employee_id))),codes=new Set(rows.map(row=>stringValue(row.intermediary_code)));
+ const distinct=<T,>(items:T[],key:(item:T)=>string)=>[...new Map(items.map(item=>[key(item),item])).values()];
+ const filterOptions={insurers:distinct(options.insurers.filter(item=>insurerIds.has(item.id)),item=>item.id),rms:distinct(options.rms.filter(item=>rmIds.has(item.id)),item=>item.id),intermediaries:distinct(options.intermediaries.filter(item=>codes.has(item.code)),item=>item.code),categories:[...new Set(nonMotor.map(row=>stringValue(row.category)).filter(Boolean))].sort()};
+ rows.sort((a,b)=>stringValue(b.business_date).localeCompare(stringValue(a.business_date))||stringValue(a.id).localeCompare(stringValue(b.id)));
+ return {summary:{policy_count:rows.length,active_policy_count:rows.filter(row=>stringValue(row.status).toLowerCase()==="active").length,gross_premium:sum(rows,"gross_premium"),net_premium:sum(rows,"net_premium"),od_premium:sum(rows,"od_premium"),tp_premium:sum(rows,"tp_premium"),cpa_amount:sum(rows,"cpa_amount"),average_premium:average(rows,"gross_premium"),average_net_premium:average(rows,"net_premium"),insurer_count:insurerIds.size,intermediary_count:unique(rows,"intermediary_code"),motor_policy_count:motor.length,non_motor_policy_count:nonMotor.length,motor_gross_premium:sum(motor,"gross_premium"),non_motor_gross_premium:sum(nonMotor,"gross_premium"),motor_net_premium:sum(motor,"net_premium"),non_motor_net_premium:sum(nonMotor,"net_premium")},trend,category_mix,insurers,rms,filters:filterOptions,register:{rows:rows.slice((filters.page-1)*pageSize,filters.page*pageSize),total_count:rows.length,page:filters.page,page_size:pageSize}};
+}
 
 export function resolvePolicyBusinessFilters(query:PolicyBusinessQuery):PolicyBusinessFilters{
  const period=isPeriod(query.period)?query.period:"mtd";const today=indiaDate(new Date());const todayDate=new Date(`${today}T00:00:00+05:30`);let fromDate:string|null=null;let toDate:string|null=today;

@@ -16,7 +16,7 @@ import { policyDateDecision } from "@/lib/policy-date-rule";
 type CaseData={id:string;caseNumber:string;businessLine:"Life"|"Health";status:string;rejectionReason:string;sourcingDate:string;customerId:string;customerName:string;customerPhone:string;customerAddress:string;insurerId:string;insurerName:string;productName:string;proposalNumber:string;ppt:string;pd:string;paymentFrequency:string;paymentMode:string;premiumAmount:number;intermediaryType:string;intermediaryCode:string;leadSource:string;intermediaryMobile:string;rmName:string;rmCode:string;remarks:string;finalPolicyId:string|null;finalPolicyNo:string|null;finalPolicyCode:string|null;convertedAt:string|null};
 type DocumentRow={id:string;document_type:string;file_name:string;created_at:string};
 type ActivityRow={id:string;action:string;createdAt:string;createdBy:string;changes?:string[]};
-type Props={caseData:CaseData;insurers:Array<{id:string;name:string}>;documents:DocumentRow[];activities:ActivityRow[]};
+type Props={readOnly?:boolean;caseData:CaseData;insurers:Array<{id:string;name:string}>;documents:DocumentRow[];activities:ActivityRow[]};
 type IssueState={policyNumber:string;issuanceDate:string;startDate:string;endDate:string;pptEndDate:string;nextInstallmentDate:string;finalPremium:string;sumInsured:string};
 type OverrideState={endDate:boolean;pptEndDate:boolean;nextInstallmentDate:boolean};
 
@@ -81,8 +81,8 @@ function nextInstallmentFrom(start:string,frequency:string){
   return"";
 }
 
-export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Props){
-  const router=useRouter(),isIssued=Boolean(caseData.finalPolicyId),isRejected=caseData.status==="rejected",isClosed=isIssued||isRejected,docMap=useMemo(()=>new Map(documents.map(d=>[d.document_type,d])),[documents]);
+export function LifeHealthCaseDetail({caseData,insurers,documents,activities,readOnly=false}:Props){
+  const router=useRouter(),isIssued=Boolean(caseData.finalPolicyId),isRejected=caseData.status==="rejected",isClosed=isIssued||isRejected||readOnly,docMap=useMemo(()=>new Map(documents.map(d=>[d.document_type,d])),[documents]);
   const[uploading,startUpload]=useTransition(),[converting,startConvert]=useTransition(),[saving,startSave]=useTransition(),[deleting,startDelete]=useTransition();
   const[documentToDelete,setDocumentToDelete]=useState<DocumentRow|null>(null),[deleteError,setDeleteError]=useState<string|null>(null),[deletingDocumentId,setDeletingDocumentId]=useState<string|null>(null),[error,setError]=useState<string|null>(null),[saveSuccess,setSaveSuccess]=useState(false),[copy,setCopy]=useState<File|null>(null),[uploadingType,setUploadingType]=useState<string|null>(null);
   const[form,setForm]=useState({customerName:caseData.customerName,customerPhone:caseData.customerPhone,customerAddress:caseData.customerAddress,insurerId:caseData.insurerId,productName:caseData.productName,proposalNumber:caseData.proposalNumber,ppt:caseData.ppt,pd:caseData.pd,paymentFrequency:canonicalPaymentFrequency(caseData.paymentFrequency),paymentMode:normalizeCasePaymentMode(caseData.paymentMode),premiumAmount:String(caseData.premiumAmount||""),sourcingDate:caseData.sourcingDate});
@@ -192,7 +192,8 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
       </div>
     </div>
 
-    {isIssued?<div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[11px] text-emerald-900"><p className="font-bold">Case Issued — View Only</p><p className="mt-1">This case has been issued and closed.</p>{caseData.finalPolicyId?<Link className="mt-2 inline-block font-bold underline" href={`/policies/${encodeURIComponent(caseData.finalPolicyId)}/edit`}>View issued policy {caseData.finalPolicyNo||""}</Link>:null}</div>:null}
+    {isIssued?<div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[11px] text-emerald-900"><p className="font-bold">Case Issued — View Only</p><p className="mt-1">This case has been issued and closed.</p>{caseData.finalPolicyId?(readOnly?<Link className="mt-2 inline-block font-bold underline" href={`/policies/${encodeURIComponent(caseData.finalPolicyId)}`}>View issued policy {caseData.finalPolicyNo||""}</Link>:<Link className="mt-2 inline-block font-bold underline" href={`/policies/${encodeURIComponent(caseData.finalPolicyId)}/edit`}>View issued policy {caseData.finalPolicyNo||""}</Link>):null}</div>:null}
+    {readOnly&&!isIssued&&!isRejected?<p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[11px] text-slate-700">Portfolio view only. Existing case ownership and edit permissions are unchanged.</p>:null}
     <fieldset disabled={isClosed} className="min-w-0 space-y-3">
     <Section number="01" title="Policy source & ownership" contentClassName="md:grid-cols-2 xl:grid-cols-4">
       <FieldWrap title="Proposal date"><DateInput value={form.sourcingDate} onChange={value=>set("sourcingDate",value)}/></FieldWrap>

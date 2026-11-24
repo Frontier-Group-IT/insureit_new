@@ -1,5 +1,5 @@
 import type { OperationsDashboardData } from "@/lib/operations-dashboard";
-import { getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
+import { getLifeTeamPortfolioReadFilter, getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
 import {
   getAccessibleCustomerIds,
   getAccessibleIntermediaryApplicationIds,
@@ -313,10 +313,11 @@ export async function getDashboardCurrentData(
 
   // The Operations Head's portfolio is an RM-or-Partner union. Customer-level scope
   // is not equivalent: one customer may hold out-of-downline policies.
-  const isDownlineHead = profile.role === "operations_head_life";
-  const downlinePolicyFilter = isDownlineHead
+  const portfolioFilter = access.viewPolicies ? await getLifeTeamPortfolioReadFilter(profile.id, profile.role) : null;
+  const isDownlineHead = profile.role === "operations_head_life" || portfolioFilter !== null;
+  const downlinePolicyFilter = portfolioFilter ?? (isDownlineHead && access.viewPolicies
     ? operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
-    : null;
+    : null);
   // For RMs, match the Policy Register's explicit RM policy ownership scope.
   // Customer visibility must not grant access to another RM's policies.
   const rmPolicyIds = profile.role === "relationship_manager" && access.viewPolicies

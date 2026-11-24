@@ -9,13 +9,17 @@ export type LifeHealthCaseSummary = {
   all: number;
 };
 
-export async function loadLifeHealthCaseSummary(admin: AdminClient): Promise<LifeHealthCaseSummary | null> {
+export async function loadLifeHealthCaseSummary(admin: AdminClient, scopeFilter: string | null = null): Promise<LifeHealthCaseSummary | null> {
   try {
+    const scoped = () => {
+      const query = admin.from("life_health_cases").select("id", { count: "exact", head: true });
+      return scopeFilter === null ? query : query.or(scopeFilter || "id.eq.00000000-0000-0000-0000-000000000000");
+    };
     const [pendingResult, rejectedResult, issuedResult, allResult] = await Promise.all([
-      admin.from("life_health_cases").select("id", { count: "exact", head: true }).is("final_policy_id", null).neq("status", "rejected"),
-      admin.from("life_health_cases").select("id", { count: "exact", head: true }).eq("status", "rejected").is("final_policy_id", null),
-      admin.from("life_health_cases").select("id", { count: "exact", head: true }).not("final_policy_id", "is", null),
-      admin.from("life_health_cases").select("id", { count: "exact", head: true }),
+      scoped().is("final_policy_id", null).neq("status", "rejected"),
+      scoped().eq("status", "rejected").is("final_policy_id", null),
+      scoped().not("final_policy_id", "is", null),
+      scoped(),
     ]);
 
     if (pendingResult.error || rejectedResult.error || issuedResult.error || allResult.error) return null;

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { requirePolicyCreator } from "@/lib/policy-access-server";
+import { requirePolicyCreator, requireLifeTeamSalesCaseWrite } from "@/lib/policy-access-server";
 import { requireOperationsHeadRecordOwnership } from "@/lib/operations-head-record-authorization";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { recordDailyWorkflowActivity } from "@/lib/daily-workflow-audit";
@@ -18,6 +18,7 @@ export async function rejectLifeHealthCase(caseId: string, submittedReason: stri
   const profile = requester?.role === "operations_head_life"
     ? await requireOperationsHeadRecordOwnership("life_health_case", caseId)
     : await requirePolicyCreator();
+  await requireLifeTeamSalesCaseWrite(profile, caseId);
   const admin = createSupabaseAdminClient();
 
   const { data: row, error: loadError } = await admin.from("life_health_cases")

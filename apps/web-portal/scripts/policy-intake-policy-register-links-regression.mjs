@@ -11,12 +11,13 @@ assert(policiesPage.includes("getRmPolicyIntakePredicates(profile.id, profile.ro
 assert(policiesPage.includes("intakeHierarchyScoped && !intakePredicates?.length"), "Empty hierarchy access must not become organization-wide");
 assert(policiesPage.includes("includeActionRequired: canReviewPolicyIntakes"), "Only reviewers may see Action Required counts");
 assert(policiesPage.includes("loadPolicyIntakeReviewSummary(admin, {"), "Policy Register must pass the authorized scope to intake summary");
+assert(policiesPage.includes("proposalScopeFilter: portfolioFilter"), "Proposal quick link must use the same portfolio as the case register");
 assert(policiesPage.includes("PolicyIntakePolicyRegisterLinksPortal"), "Policy Register must mount the Policy Intake quick-link portal");
 
 const summary = read("lib/policy-intake-review-summary.ts");
 assert(summary.includes("actionRequired: number | null"), "Policy Register summary must support hiding reviewer-only Action Required");
 assert(summary.includes("proposalPending: number | null"), "Policy Register summary must expose the Life / Health Case Register pending count");
-assert(summary.includes("loadLifeHealthCaseSummary(admin)"), "Proposal Pending must be loaded from the shared Life / Health case summary");
+assert(summary.includes("loadLifeHealthCaseSummary(admin, options.proposalScopeFilter ?? null)"), "Proposal Pending must be loaded from the shared Life / Health case summary");
 assert(summary.includes("proposalPending: proposalSummary?.pending ?? null"), "Policy Register Proposal Pending must use the shared case pending count");
 assert(summary.includes('query = query.eq("submitted_by_profile_id", options.submittedByProfileId)'), "Owner Policy Intake summaries must be filtered by the submitting profile before counts are calculated");
 assert(summary.includes("options.includeActionRequired ?? true"), "Reviewer summaries must retain Action Required by default");
@@ -97,7 +98,7 @@ assert(intakePage.includes("initialView={initialView}"), "Policy Intake route mu
 const caseRegister = read("app/policies/life-health-cases/page.tsx");
 assert(caseRegister.includes('Case register'), "Proposal Pending destination must remain the Case Register");
 assert(caseRegister.includes('type CaseFilter = "pending" | "rejected" | "issued" | "all"'), "Case Register must retain its pending default view");
-assert(caseRegister.includes("loadLifeHealthCaseSummary(admin)"), "Case Register tabs must use the same shared exact-count loader as Policy Register Proposal Pending");
+assert(caseRegister.includes("loadLifeHealthCaseSummary(admin, downlineCaseFilter)"), "Case Register tabs must use the same shared exact-count loader as Policy Register Proposal Pending");
 assert(caseRegister.includes('lineFilter === "all" && caseSummary ? caseSummary.pending'), "Case Register All-line Pending must prefer the exact shared database count while Life/Health filters use their scoped counts");
 
 const workspace = read("components/policy-intake-workspace.tsx");

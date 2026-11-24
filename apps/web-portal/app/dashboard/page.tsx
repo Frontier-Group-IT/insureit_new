@@ -1,6 +1,8 @@
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { accessRank, getEffectivePermissionAccessMap } from "@/lib/effective-permissions";
+import { getLifeTeamPortfolioReadFilter } from "@/lib/policy-access-scope";
+import { LifeTeamPortfolioSummary } from "@/components/life-team-portfolio-summary";
 import { loadLifeHealthCaseSummary } from "@/lib/life-health-case-summary";
 import { loadPolicyIntakeReviewSummary } from "@/lib/policy-intake-review-summary";
 import { getRmPolicyIntakePredicates, hierarchyIntakeRoles } from "@/lib/rm-policy-intake-scope";
@@ -84,27 +86,30 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const intakeReviewPredicates = profile?.id && profile.role && hierarchyIntakeRoles.has(profile.role) && viewPolicyIntakes && reviewPolicyIntakes
     ? await getRmPolicyIntakePredicates(profile.id, profile.role)
     : null;
+  const portfolioFilter = profile?.id && viewPolicies ? await getLifeTeamPortfolioReadFilter(profile.id, profile.role) : null;
   const intakeAttentionRequest = viewPolicyIntakes && reviewPolicyIntakes && !isDownlineHead
     ? loadPolicyIntakeReviewSummary(createSupabaseAdminClient(), {
         intakeOrFilter: intakeReviewPredicates?.join(","),
         denyAll: intakeReviewPredicates !== null && !intakeReviewPredicates.length,
         includeNeedsAttention: true,
+        proposalScopeFilter: portfolioFilter,
       })
     : Promise.resolve(null);
 
-  const proposalSummaryRequest = viewPolicies && !isDownlineHead
-    ? loadLifeHealthCaseSummary(createSupabaseAdminClient())
+  const proposalSummaryRequest = viewPolicies && (!isDownlineHead || portfolioFilter !== null)
+    ? loadLifeHealthCaseSummary(createSupabaseAdminClient(), portfolioFilter)
     : Promise.resolve(null);
 
   const [data, business, proposalSummary, intakeAttention] = await Promise.all([
     getDashboardCurrentData(profile, access, base),
-    getDashboardBusinessData(profile, query, isDownlineHead || dashboardCommercialAccess, !isDownlineHead && dashboardCommercialOperationsAccess),
+    getDashboardBusinessData(profile, query, portfolioFilter !== null || isDownlineHead || dashboardCommercialAccess, !isDownlineHead && dashboardCommercialOperationsAccess),
     proposalSummaryRequest,
     intakeAttentionRequest,
   ]);
 
   return (
     <ClaimManagerShell title="Operations Overview" activeNav="dashboard">
+      {portfolioFilter !== null && <LifeTeamPortfolioSummary operations={isDownlineHead} summary={proposalSummary} business={business} />}
       <DashboardFullyLoaded
         data={data}
         access={access}
@@ -114,7 +119,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         intakeAttention={intakeAttention}
         showRmPerformanceButton={viewReports && !isRelationshipManager}
       />
-      <DashboardRegisterSync proposalPending={proposalSummary?.pending ?? 0} />
+      <DashboardRegisterSync proposalPending={portfolioFilter !== null ? 0 : proposalSummary?.pending ?? 0} />
     </ClaimManagerShell>
   );
 }

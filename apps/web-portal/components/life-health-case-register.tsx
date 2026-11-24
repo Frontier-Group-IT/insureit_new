@@ -8,6 +8,7 @@ import { LifeHealthIssuedPolicyButton } from "@/components/life-health-issued-po
 
 export type LifeHealthCaseRegisterRow = {
   id: string;
+  readOnly?: boolean;
   caseNumber: string;
   businessLine: string;
   customerName: string;
@@ -140,10 +141,10 @@ export function LifeHealthCaseRegister({
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-center">
                   {row.finalPolicyId ? (
-                    <LifeHealthIssuedPolicyButton policyId={row.finalPolicyId} />
+                    row.readOnly ? <Link href={`/policies/${encodeURIComponent(row.finalPolicyId)}`} className="inline-flex rounded-lg border border-[#CAD7E7] px-2.5 py-1.5 font-bold text-[#315B9A]">View policy</Link> : <LifeHealthIssuedPolicyButton policyId={row.finalPolicyId} />
                   ) : (
                     <Link href={`/policies/life-health-cases/${row.id}`} className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-[#CAD7E7] bg-white px-2.5 py-1.5 text-[8.5px] font-bold text-[#315B9A]">
-                      {row.status === "rejected" ? "View Rejection" : "Open / Issue"}
+                      {row.status === "rejected" ? "View Rejection" : row.readOnly ? "Open" : "Open / Issue"}
                     </Link>
                   )}
                 </td>

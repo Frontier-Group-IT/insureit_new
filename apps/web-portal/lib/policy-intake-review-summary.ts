@@ -27,6 +27,7 @@ type PolicyIntakeReviewSummaryOptions = {
   intakeOrFilter?: string;
   denyAll?: boolean;
   includeNeedsAttention?: boolean;
+  proposalScopeFilter?: string | null;
 };
 
 export async function loadPolicyIntakeReviewSummary(
@@ -47,7 +48,7 @@ export async function loadPolicyIntakeReviewSummary(
         else if (options.submittedByProfileId) query = query.eq("submitted_by_profile_id", options.submittedByProfileId);
         return query.returns<PolicyIntakeSummaryRow[]>();
       }),
-      loadLifeHealthCaseSummary(admin),
+      loadLifeHealthCaseSummary(admin, options.proposalScopeFilter ?? null),
     ]);
     if (error) return null;
     const rows = data ?? [];

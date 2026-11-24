@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { canAccessOperationsHeadCase } from "@/lib/policy-access-scope";
+import { canAccessOperationsHeadCase, canReadLifeTeamCase, usesLifeTeamPortfolio } from "@/lib/policy-access-scope";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type DocumentRow = {
@@ -28,7 +29,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ doc
     return new NextResponse("Document not found.", { status: 404 });
   }
 
-  if (requester?.role === "operations_head_life" && !(await canAccessOperationsHeadCase(requester.id, document.case_id))) {
+  if (requester && usesLifeTeamPortfolio(requester.id, requester.role)) {
+    if (!(await hasEffectiveCapability(requester, "view_policies", "view")) || !(await canReadLifeTeamCase(requester.id, requester.role, document.case_id))) {
+      return new NextResponse("Document not found.", { status: 404 });
+    }
+  } else if (requester?.role === "operations_head_life" && !(await canAccessOperationsHeadCase(requester.id, document.case_id))) {
     return new NextResponse("Document not found.", { status: 404 });
   }
 
