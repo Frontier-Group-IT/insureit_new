@@ -19,6 +19,23 @@ function iso(input) {
   return date.toISOString().slice(0,10)===`${m[3]}-${m[2]}-${m[1]}`?`${m[3]}-${m[2]}-${m[1]}`:null;
 }
 function match(text,regexp) {const m=text.match(regexp);return m?clean(m[1]):null;}
+// Read an explicitly printed policy issue date, never the receipt, signature,
+// policy-period start or PDF metadata. Some native PDF layouts emit the date
+// immediately BEFORE its label. Conflicting labelled dates fail closed.
+function printedPolicyIssueDate(text) {
+ const label=String.raw`(?:Policy\s+(?:Issue|Issuance)\s+Date|Policy\s+Issued\s+On|Date\s+of\s+Issue)`;
+ const day=String.raw`(\d{2}\/\d{2}\/\d{4})`;
+ const found=[];
+ for(const re of [
+   new RegExp(String.raw`\b`+label+String.raw`\s*[:\-]?\s*`+day,'gi'),
+   new RegExp(day+String.raw`\s{1,30}`+label+String.raw`\b`,'gi')
+ ]) {
+   let m;while((m=re.exec(text))) found.push(iso(m[1]));
+ }
+ const dates=[...new Set(found.filter(Boolean))];
+ return {date:dates.length===1?dates[0]:null,ambiguous:found.length>0 && dates.length!==1};
+}
+
 function cash(text,regexp){const v=match(text,regexp);return v!==null?amount(v):null;}
 function firstCurrencyAfter(text,anchor,limit=200){
   const m=typeof anchor==='string'?text.indexOf(anchor):text.search(anchor);
@@ -193,6 +210,7 @@ function extract(raw){
  const headerGross=cash(text,/Premium Amount\s*\(Including GST\)\s*₹\s*([\d,.]+)/i);
  checks.tax_premium_reconciled=Boolean(tax!==null&&gross!==null&&printedNet!==null&&near(printedNet+tax,gross,0.01));
  checks.gross_premium_reconciled=Boolean(gross!==null&&headerGross!==null&&near(gross,headerGross,0.01));
+ const printedIssue=printedPolicyIssueDate(text);
  const signed=match(text,/Digitally Signed by:[\s\S]{0,100}?\bDate:\s*(\d{2}\/\d{2}\/\d{4})/i);
  const receipt=match(text,/\bReceipt Date\s*(\d{2}\/\d{2}\/\d{4})/i);
  // A rasterized digital-signature date is not guaranteed to appear in PDF.js text.
@@ -225,7 +243,7 @@ function extract(raw){
   policy_start_date:od?.from??null,policy_end_date:od?.to??null,
   third_party_start_date:tp?.from??null,third_party_end_date:tp?.to??null,
   cpa_start_date:pa?.from??null,cpa_end_date:pa?.to??null,
-  policy_issuance_date:null,od_premium:odPrinted,addon_premium:addonTotal,tp_premium:basicTp,cpa_amount:ownerDriverCpa,
+  policy_issuance_date:printedIssue.date,od_premium:odPrinted,addon_premium:addonTotal,tp_premium:basicTp,cpa_amount:ownerDriverCpa,
  };
  const rawPremium={basic_od:basicOd,ncb_discount:ncb,od_after_ncb:odPrinted,addons,addon_total:addonTotal,
   basic_tp:basicTp,owner_driver_cpa:ownerDriverCpa,paid_driver_liability:legal,
@@ -239,8 +257,8 @@ function extract(raw){
   parser_id:layout.id,parser_version:'tata-aig-layout-v1',ok:failed.length===0,
   checks,checks_passed:KEYS.length-failed.length,failed_checks:failed,fields,
   premium_components:rawPremium,form_premium_projection:form,form_premium_reconciled:near(formNet,net,0.01),
-  warnings:['Policy issuance date needs human verification; not inferred from receipt or signing date',
-    ...(!signed?['Native PDF text omits the digital signature date; verify it visually before booking']:[])],booking_ready:false,
+  warnings:[...(printedIssue.ambiguous?['Conflicting printed Policy Issue Date labels require review']:[]),
+    ...(!printedIssue.date?['Policy Issue Date is not explicitly printed; receipt is not issuance evidence']:[])],booking_ready:false,
  };
 }
 return $input.all().map(item=>{
