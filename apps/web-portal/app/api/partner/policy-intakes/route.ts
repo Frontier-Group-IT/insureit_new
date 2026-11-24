@@ -649,7 +649,7 @@ async function completeUpload(
   const { error: intakeError } = await admin.from("policy_intake_requests").insert({
     id: input.id,
     intake_number: input.number,
-    status: proposalForm ? "ready_for_review" : "processing",
+    status: "processing",
     policy_type: input.policy_type,
     processing_lane:"automation",
     ...submitter,
@@ -664,7 +664,7 @@ async function completeUpload(
     file_name: input.file.name,
     mime_type: input.file.type,
     file_size: blob.size,
-    ocr_status: proposalForm ? "completed" : "pending",
+    ocr_status: "pending",
     ...(proposalForm ? { ocr_fields: [], ocr_warnings: [] } : {}),
   });
 
@@ -693,7 +693,7 @@ async function completeUpload(
     return json({ ok: false, error: "Policy intake could not be created." }, 500);
   }
 
-  if (!proposalForm && aiQueueEnabled()) {
+  if (aiQueueEnabled()) {
     // Event-driven n8n extraction for Partner, POSP, MISP and Branch uploads.
     // The durable one-minute worker remains the recovery path on shutdown.
     after(async () => {
@@ -706,7 +706,7 @@ async function completeUpload(
     ok: true,
     id: input.id,
     number: input.number,
-    status: proposalForm ? "ready_for_review" : "processing",
+    status: "processing",
   });
 }
 
@@ -836,12 +836,12 @@ async function completeResponse(
   let update = admin
     .from("policy_intake_requests")
     .update({
-      status: proposalForm ? "ready_for_review" : "processing",
+      status: "processing",
       storage_path: input.storage_path,
       file_name: input.file.name,
       mime_type: input.file.type,
       file_size: blob.size,
-      ocr_status: proposalForm ? "completed" : "pending",
+      ocr_status: "pending",
       ocr_fields: [],
       ocr_warnings: [],
       ocr_parser_id: null,
@@ -860,7 +860,7 @@ async function completeResponse(
   const { error: updateError } = await update;
   if (updateError) return json({ ok: false, error: "Could not attach the replacement policy copy." }, 500);
 
-  if (!proposalForm && aiQueueEnabled()) {
+  if (aiQueueEnabled()) {
     // Event-driven n8n extraction for Partner, POSP, MISP and Branch uploads.
     // The durable one-minute worker remains the recovery path on shutdown.
     after(async () => {
@@ -873,7 +873,7 @@ async function completeResponse(
     ok: true,
     id: input.id,
     number: intake.intake_number,
-    status: proposalForm ? "ready_for_review" : "processing",
+    status: "processing",
   });
 }
 
