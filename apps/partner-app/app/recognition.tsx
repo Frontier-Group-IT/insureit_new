@@ -13,6 +13,7 @@ import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerRecognition, type PartnerRecognition } from '@/lib/engagement';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { usePartnerSession } from '@/providers/partner-session-provider';
+import { reconcileRecognitionHistory } from '@/lib/recognition-motion';
 
 type RecognitionItem = PartnerRecognition['items'][number];
 const PURPLE = '#6325D7';
@@ -37,7 +38,7 @@ const COUNT_MS = 680;
 
 function useScreenMotion() {
   const focused = useIsFocused();
-  const [foreground, setForeground] = useState(AppState.currentState === 'active' || Platform.OS === 'web');
+  const [foreground, setForeground] = useState(AppState.currentState == null || AppState.currentState === 'active' || Platform.OS === 'web');
   const [reduced, setReduced] = useState<boolean | null>(null);
   useEffect(() => {
     let live = true;
@@ -94,11 +95,8 @@ function useNewAchievements(data: PartnerRecognition | null, actorId: string, vi
       try {
         const raw = await AsyncStorage.getItem(key);
         if (cancelled) return;
-        const parsed: unknown = raw === null ? null : JSON.parse(raw);
-        const valid = Array.isArray(parsed) && parsed.every(code => typeof code === 'string');
-        const known = new Set<string>(valid ? parsed as string[] : []);
-        const newlyUnlocked = valid ? codes.filter(code => !known.has(code)) : [];
-        if (!valid || newlyUnlocked.length) await AsyncStorage.setItem(key, JSON.stringify([...new Set([...known, ...codes])]));
+        const { newlyUnlocked, persisted, shouldWrite } = reconcileRecognitionHistory(raw, codes);
+        if (shouldWrite) await AsyncStorage.setItem(key, persisted);
         if (cancelled || !newlyUnlocked.length) return;
         setCelebrating(new Set(newlyUnlocked));
         if (Platform.OS !== 'web') void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -212,9 +210,7 @@ const ProgressRing = memo(function ProgressRing({ progress, motion }: { progress
     return () => animation.stop();
   }, [progress, motion, value]);
   return <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
-    {RING_SEGMENTS.map((segment, index) => (
-      <View key={`base-${index}`} accessible={false} style={[styles.progressSegment, segment, { backgroundColor: '#DED1FB' }]} />
-    ))}
+    <View style={styles.ringBase} />
     {RING_SEGMENTS.map((segment, index) => (
       <Animated.View key={`fill-${index}`} accessible={false} style={[styles.progressSegment, segment, {
         backgroundColor: RING_COLORS[index],
@@ -316,11 +312,10 @@ function RecognitionContent({ actorId }: { actorId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const load = useCallback(() => setRetry(value => value + 1), []);
+  const load = useCallback(() => { setLoading(true); setRetry(value => value + 1); }, []);
   useEffect(() => {
     if (!visible) return;
     let live = true;
-    setLoading(true);
     setError('');
     void getPartnerRecognition().then(result => {
       if (live) setData(result);
@@ -434,6 +429,7 @@ const styles = StyleSheet.create({
   percentGroup: { width: 69, flexShrink: 0, alignItems: 'center', gap: 4 },
   percentCircle: { width: RING_SIZE, height: RING_SIZE, alignItems: 'center', justifyContent: 'center' },
   progressSegment: { position: 'absolute', width: 3.7, height: 2.1, borderRadius: 3 },
+  ringBase: { position: 'absolute', top: 3.45, left: 3.45, width: 43.1, height: 43.1, borderRadius: 22, borderWidth: 2.1, borderColor: '#DED1FB' },
   percentText: { color: '#241478', fontSize: 11, fontWeight: '800' },
   customersRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   currentNumber: { color: INK, fontSize: 13, fontWeight: '800' },
