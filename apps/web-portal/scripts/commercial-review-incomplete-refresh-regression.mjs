@@ -41,3 +41,10 @@ assert.ok(client.includes('filteredRows.filter(row => selected.has(row.id))'));
 assert.ok(registrationSource.includes('status === "registration_pending"'));
 assert.ok(registrationSource.includes('status === "registered"'));
 assert.ok(registrationSource.includes('filter === "all" || value === filter'));
+
+const filterCss = await readFile(new URL("../app/policies/commercial-review/commercial-review-filters.module.css", import.meta.url), "utf8");
+assert.ok(client.includes('import filterStyles from "./commercial-review-filters.module.css"'));
+assert.ok(client.includes('${filterStyles.compactFilter}'));
+assert.equal((client.match(/className=\{compactFilterClass\}/g) ?? []).length, 6);
+assert.match(filterCss, /select\.compactFilter:focus\s*\{[^}]*border-color: #D8DEE9;[^}]*box-shadow: none;[^}]*outline: none;/);
+assert.match(filterCss, /select\.compactFilter:focus-visible\s*\{[^}]*border-color: #315B9A;[^}]*box-shadow: inset/);

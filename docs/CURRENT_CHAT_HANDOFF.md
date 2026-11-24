@@ -2592,3 +2592,7 @@ PR #2170 merged as `ae609cfa573becf29ea1715096f595fb1c150047`. The first automat
 
 ### 2026-11-24 — Operations Dashboard full-height Partner QR
 The dashboard compact QR is 80×80 CSS px, anchored in the original 44px desktop header slot with 12px bottom extension into existing padding. No change to the full-size promo, QR matrix, download destination, permissions or data. Branch `ui/dashboard-full-height-partner-qr-20261124`; CI, browser scan/layout review, merge and manual production deployment pending.
+
+
+### 2026-11-24 — Commercial Review compact filter focus
+Six primary dropdowns now share page-local CSS removing the global purple border/glow on pointer focus and hover, with an inset navy keyboard-focus indicator. Both tabs use the same controls. Existing global CSS, financial calculations and filter handlers are unchanged. Branch `ui/commercial-review-filter-focus-20261124`; CI, authenticated visual review, merge and manual deploy pending.

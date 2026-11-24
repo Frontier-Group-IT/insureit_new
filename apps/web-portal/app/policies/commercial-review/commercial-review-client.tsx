@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import filterStyles from "./commercial-review-filters.module.css";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
@@ -63,7 +64,7 @@ export type CommercialReviewRow = {
 };
 
 type BackfillFilter = "all" | "incomplete" | "complete" | "zero_od" | "zero_tp" | "zero_total";
-const compactFilterClass = "h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px] shrink-0";
+const compactFilterClass = `${filterStyles.compactFilter} h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px] shrink-0`;
 const registrationLabels: Record<CommercialRegistrationFilter, string> = { all: "All reg type", new: "New", rollover: "Rollover" };
 const backfillLabels: Record<BackfillFilter, string> = { all: "All entries", incomplete: "Backfill incomplete", complete: "Complete", zero_od: "OD = 0%", zero_tp: "TP = 0%", zero_total: "Total = ₹0" };
 // Size from the selected label, not the longest option. Clamp long names.
