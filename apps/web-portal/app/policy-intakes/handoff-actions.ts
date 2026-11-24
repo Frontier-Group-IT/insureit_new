@@ -180,6 +180,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
     "tata_aig_printed_net_rounding",
     "tata_aig_signature_date_not_in_native_text",
     "tata_aig_issuance_date_requires_verified_pdf_signature",
+    "tata_aig_receipt_date_as_issuance",
   ]);
   const blockingWarnings = parsed.preview.warnings.filter(warning =>
     !isTata || !informationalTataWarnings.has(warning));
