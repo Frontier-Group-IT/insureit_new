@@ -5,7 +5,7 @@ import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel"
 import { PolicyIntakePolicyRegisterLinksPortal } from "@/components/policy-intake-policy-register-links";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
-import { getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter, getSalesExecutivePolicyIds, getAnjanaParsottamPolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
+import { getLifeTeamPortfolioReadFilter, getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter, getSalesExecutivePolicyIds, getAnjanaParsottamPolicyScope, operationsHeadPolicyFilter } from "@/lib/policy-access-scope";
 import { loadPolicyIntakeReviewSummary } from "@/lib/policy-intake-review-summary";
 import { getRmPolicyIntakePredicates, hierarchyIntakeRoles } from "@/lib/rm-policy-intake-scope";
 import { requireCapability } from "@/lib/master-data-server";
@@ -89,9 +89,10 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
   ]);
   const anjanaScope = await getAnjanaParsottamPolicyScope(profile.id, profile.role);
   const anjanaFilter = anjanaScope ? operationsHeadPolicyFilter(anjanaScope) : null;
-  const operationsHeadFilter = profile.role === "operations_head_life"
+  const portfolioFilter = await getLifeTeamPortfolioReadFilter(profile.id, profile.role);
+  const operationsHeadFilter = portfolioFilter ?? (profile.role === "operations_head_life"
     ? operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
-    : null;
+    : null);
   const afterScope = performance.now();
   const admin = createSupabaseAdminClient();
 
@@ -211,7 +212,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
       if (anjanaScope) {
         if (!anjanaFilter) return query.eq("id", "00000000-0000-0000-0000-000000000000").returns<PolicyRow[]>();
         query = query.or(anjanaFilter);
-      } else if (profile.role === "operations_head_life" && operationsHeadFilter) query = query.or(operationsHeadFilter);
+      } else if (operationsHeadFilter) query = query.or(operationsHeadFilter);
       else if (accessibleRmEmployeeIds !== null) query = query.in("rm_employee_id", accessibleRmEmployeeIds);
       return query.returns<PolicyRow[]>();
     }),
