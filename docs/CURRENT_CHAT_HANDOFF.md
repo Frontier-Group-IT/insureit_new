@@ -2596,3 +2596,7 @@ The dashboard compact QR is 80×80 CSS px, anchored in the original 44px desktop
 
 ### 2026-11-24 — Commercial Review compact filter focus
 Six primary dropdowns now share page-local CSS removing the global purple border/glow on pointer focus and hover, with an inset navy keyboard-focus indicator. Both tabs use the same controls. Existing global CSS, financial calculations and filter handlers are unchanged. Branch `ui/commercial-review-filter-focus-20261124`; CI, authenticated visual review, merge and manual deploy pending.
+
+
+### 2026-11-24 — Operations Life/Health Case Details history layout
+Activity descriptions and actor details remain left; timestamps use a right-aligned column at all widths. Remarks use the existing bracketed timestamp/blank-line append format for display-only separation, preserve untimestamped legacy content and multiline remarks, and retain stored history untouched. Branch `ui/life-health-history-right-timestamps-20261124`; CI, authenticated visual review, merge and manual production deployment pending.

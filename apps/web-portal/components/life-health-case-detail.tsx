@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { splitCaseRemarkHistory } from "@/lib/life-health-remark-history";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { FileSizeExceededPopup } from "@/components/file-size-exceeded-popup";
@@ -251,10 +252,9 @@ export function LifeHealthCaseDetail({caseData,insurers,documents,activities}:Pr
         <button type="button" aria-expanded={infoExpanded&&infoTab==="remarks"} aria-controls="life-health-case-info-panel" onClick={()=>toggleInfoTab("remarks")} className={`rounded-xl px-4 py-2.5 text-[11px] font-semibold transition-colors duration-150 ${infoTab==="remarks"?"bg-[#17365D] text-white shadow-sm":"text-[#17365D] hover:bg-[#E8EFF9] hover:shadow-sm"}`}>Remarks</button>
       </div>
       {infoExpanded?<div id="life-health-case-info-panel" role="region" aria-label={infoTab==="activity"?"Activity Status":"Remarks"} className="p-3">
-        {infoTab==="activity"?<div className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-[#FBFCFE]">{activities.length?activities.map((activity,index)=><div key={activity.id} className={`grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1fr)_260px_190px] md:items-center ${index?"border-t border-[#D9E2F0]":""}`}><div><p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#8090A5]">{index===0?"Latest Action":"Previous Action"}</p><p className="mt-1 text-[12px] font-semibold text-[#17365D]">{activity.action}</p>{activity.changes?.length?<ul className="mt-2 space-y-1">{activity.changes.map((change,i)=><li key={i} className="break-words text-[10px] text-[#52657E]">• {change}</li>)}</ul>:null}</div><p className="text-[9px] text-[#7A8AA0] md:text-right">Details: {activity.action==="Case Created"?"Created By:":"By:"} <span className="font-medium text-[#53657D]">{activity.createdBy}</span></p><p className="text-[9px] text-[#7A8AA0] md:text-right">At: {activityDate(activity.createdAt)}</p></div>):<p className="p-4 text-[10px] text-[#7A8AA0]">Activity not recorded.</p>}</div>:
-        <div className="rounded-xl border border-[#D9E2F0] bg-[#FBFCFE] p-4">
-          
-          <p className="whitespace-pre-wrap break-words text-[11px] leading-5 text-[#17365D]">{savedRemarks.trim()||"No remarks added yet."}</p>
+        {infoTab==="activity"?<div className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-[#FBFCFE]">{activities.length?activities.map((activity,index)=><div key={activity.id} className={`grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 px-4 py-3 ${index?"border-t border-[#D9E2F0]":""}`}><div className="min-w-0"><p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#8090A5]">{index===0?"Latest Action":"Previous Action"}</p><p className="mt-1 break-words text-[12px] font-semibold text-[#17365D]">{activity.action}</p><p className="mt-1 break-words text-[9px] text-[#7A8AA0]">Details: {activity.action==="Case Created"?"Created By:":"By:"} <span className="font-medium text-[#53657D]">{activity.createdBy}</span></p>{activity.changes?.length?<ul className="mt-2 space-y-1">{activity.changes.map((change,i)=><li key={i} className="break-words text-[10px] text-[#52657E]">• {change}</li>)}</ul>:null}</div><p className="max-w-[115px] text-right text-[9px] text-[#7A8AA0] sm:max-w-none">{activityDate(activity.createdAt)}</p></div>):<p className="p-4 text-[10px] text-[#7A8AA0]">Activity not recorded.</p>}</div>:
+        <div className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-[#FBFCFE]">
+          {savedRemarks.trim()?splitCaseRemarkHistory(savedRemarks).map((entry,index)=><div key={index} className={`grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 px-4 py-3 ${index?"border-t border-[#D9E2F0]":""}`}><p className="min-w-0 whitespace-pre-wrap break-words text-[11px] leading-5 text-[#17365D]">{entry.message}</p>{entry.timestamp?<p className="max-w-[115px] text-right text-[9px] leading-5 text-[#7A8AA0] sm:max-w-none">{entry.timestamp}</p>:null}</div>):<p className="p-4 text-[11px] text-[#17365D]">No remarks added yet.</p>}
         </div>}
       </div>:null}
     </section>

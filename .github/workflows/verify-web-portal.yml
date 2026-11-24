@@ -271,7 +271,7 @@ jobs:
       - name: Partner Operations non-commercial export parity regression
         run: node scripts/partner-operations-export-parity-regression.mjs
       - name: Life Health remarks popup and Case Register regression
-        run: node scripts/life-health-remarks-popup-regression.mjs
+        run: node --experimental-strip-types scripts/life-health-remarks-popup-regression.mjs
       - name: Life Health Create Case full-width remarks and appended preview regression
         run: node scripts/life-health-create-case-full-width-remarks-regression.mjs
       - name: Life Health payment mode validation regression
