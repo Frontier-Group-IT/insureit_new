@@ -85,7 +85,8 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
         </div>
 
         <div className="flex flex-wrap items-center gap-2 xl:shrink-0">
-          <div className="hidden xl:block"><CompactPartnerAppQr /></div>
+          {/* Reserve the original row height; extend the square QR into the existing header padding. */}
+          <div className="hidden h-11 shrink-0 items-end xl:flex [&>a]:-mb-3"><CompactPartnerAppQr /></div>
           <span className="mr-1 text-[8.5px] font-semibold text-[#7A879A]">
             Updated {formatHeaderTime(data.generatedAt)}
           </span>

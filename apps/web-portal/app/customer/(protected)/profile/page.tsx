@@ -24,10 +24,7 @@ export default async function CustomerProfilePage({
     <div className="space-y-4 pb-4">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/profile" />
 
-      <section className="customer-profile-hero relative isolate overflow-hidden rounded-[22px] border border-[#E4DDFB] bg-white shadow-[0_10px_30px_rgba(83,58,151,0.08)]">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-40 h-[330px] w-[520px] rounded-full border-[60px] border-white/30" />
-        <div aria-hidden="true" className="pointer-events-none absolute bottom-[-125px] right-[18%] h-[270px] w-[340px] rotate-[-25deg] rounded-[80px] bg-[#A99EF8]/15" />
-        <div className="relative flex min-h-[174px] items-center justify-between gap-5 px-5 py-5 sm:px-7 lg:px-9">
+      <section className="flex min-w-0 items-center py-2" aria-label="Customer profile">
           <div className="flex min-w-0 items-center gap-4 sm:gap-5">
             <div className="shrink-0 rounded-full bg-white/85 p-1.5 shadow-[0_8px_24px_rgba(72,45,145,0.14)] ring-1 ring-[#DBD0FF]">
               <CustomerAvatar userId={user.id} size="profile" />
@@ -44,8 +41,6 @@ export default async function CustomerProfilePage({
               {customer.company_name ? <p className="mt-2 text-[10px] font-semibold text-[#7665A2]">{customer.company_name}</p> : null}
             </div>
           </div>
-          <img src="/assets/Custom-Icons/optimized-128/customers.png" alt="" aria-hidden="true" width={132} height={132} className="hidden h-[132px] w-[132px] shrink-0 object-contain lg:block" />
-        </div>
       </section>
 
       <section className="customer-profile-detail-section relative rounded-[22px] border border-[#E6E0F5] bg-white p-4 shadow-[0_9px_24px_rgba(79,56,139,0.055)] sm:p-5">

@@ -45,11 +45,11 @@ export type AiStudioPage = {
 const object = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
-export async function loadAiStudioPage(bucket: AiStudioBucket, offset = 0): Promise<AiStudioPage> {
+export async function loadAiStudioPage(bucket: AiStudioBucket, offset = 0, limit = 25): Promise<AiStudioPage> {
   // This is an authenticated, employee-only security-definer RPC. Never query
   // raw intake/queue tables with the Partner anon client or store service keys.
   const { data, error } = await supabase.rpc('partner_app_ai_studio_list_v1', {
-    p_filter: bucket, p_offset: offset, p_limit: 25,
+    p_filter: bucket, p_offset: offset, p_limit: Math.max(1, Math.min(25, Math.trunc(limit))),
   });
   if (error) throw new Error(error.code === '42501'
     ? 'This workspace is available only to authorized IT reviewers.'

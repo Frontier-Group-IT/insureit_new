@@ -21,9 +21,30 @@ assert.match(actions, /revalidatePath\("\/policies\/commercial-review"\)/, "Serv
 // Regression: switching between POSPs and a Partner must never retain ghost table rows
 // or selected policies from the previous intermediary.
 assert.match(client, /if \(intermediary !== "all" && row\.intermediaryCode !== intermediary\) return false;/, "Intermediary filtering must compare exact policy codes.");
-assert.match(client, /const tableFilterKey = JSON\.stringify\(\[side, query, insurer, intermediary, intermediaryType, vehicleClass, status, backfill, dateFrom, dateTo\]\)/, "Table remount key must include intermediary and all displayed filters.");
+assert.match(client, /const tableFilterKey = JSON\.stringify\(\[side, query, insurer, intermediary, intermediaryType, vehicleClass, registrationType, status, backfill, dateFrom, dateTo\]\)/, "Table remount key must include intermediary and all displayed filters.");
 assert.match(client, /<tbody key=\{tableFilterKey\} className="divide-y divide-\[#EDF0F4\]">\{filteredRows\.map\(\(row\) =>/, "Visible DOM rows must be replaced from the same filtered array as the counters.");
 assert.match(client, /function changeIntermediary\(value: string\) \{[\s\S]*?setIntermediary\(value\);[\s\S]*?setSelected\(new Set\(\)\);[\s\S]*?setEditingId\(null\);/, "Switching intermediary must clear prior row selection and edit state.");
 assert.match(client, /onChange=\{\(e\) => changeIntermediary\(e\.target\.value\)\}/, "Intermediary selector must use the safe handler.");
 
 console.log("Commercial review incomplete refresh and status reconciliation regression passed.");
+
+const registrationPage = await readFile(new URL("../app/policies/commercial-review/page.tsx", import.meta.url), "utf8");
+const registrationSource = await readFile(new URL("../app/policies/commercial-review/registration-filter.ts", import.meta.url), "utf8");
+assert.ok(registrationPage.includes('id,vehicle_type,registration_status,vehicle_no'));
+assert.ok(registrationPage.includes("classifyCommercialRegistration(row)"));
+assert.ok(client.includes('useState<CommercialRegistrationFilter>("all")'));
+assert.ok(client.includes('matchesCommercialRegistration(row.registrationType, registrationType)'));
+assert.ok(client.includes('changeRegistrationType("all")'));
+assert.ok(client.includes('flex-nowrap items-center gap-2 overflow-x-auto'));
+assert.ok(client.includes('All reg type'));
+assert.ok(client.includes('filteredRows.filter(row => selected.has(row.id))'));
+assert.ok(registrationSource.includes('status === "registration_pending"'));
+assert.ok(registrationSource.includes('status === "registered"'));
+assert.ok(registrationSource.includes('filter === "all" || value === filter'));
+
+const filterCss = await readFile(new URL("../app/policies/commercial-review/commercial-review-filters.module.css", import.meta.url), "utf8");
+assert.ok(client.includes('import filterStyles from "./commercial-review-filters.module.css"'));
+assert.ok(client.includes('${filterStyles.compactFilter}'));
+assert.equal((client.match(/className=\{compactFilterClass\}/g) ?? []).length, 6);
+assert.match(filterCss, /select\.compactFilter:focus\s*\{[^}]*border-color: #D8DEE9;[^}]*box-shadow: none;[^}]*outline: none;/);
+assert.match(filterCss, /select\.compactFilter:focus-visible\s*\{[^}]*border-color: #315B9A;[^}]*box-shadow: inset/);

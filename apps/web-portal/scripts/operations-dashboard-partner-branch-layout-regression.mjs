@@ -23,4 +23,12 @@ assert.match(branches, /applicationBranchView \? "py-2 pl-3 pr-2 text-left"/, "P
 assert.match(branches, /branch\.branch_name/, "Branch names must remain visible.");
 assert.match(branches, /applicationBranchView \? "min-w-\[1160px\]"/, "Table horizontal scrolling contract must remain.");
 
+
+const promo = read("../components/partner-app-promo.tsx");
+const compactQr = promo.slice(promo.indexOf("export function CompactPartnerAppQr()"));
+assert.match(compactQr, /href="\/download\/partner"/, "QR must retain the smart download route.");
+assert.match(compactQr, /viewBox="-2 -2 41 41" className="h-20 w-20 shrink-0/, "QR must be a square 80px with its original quiet zone.");
+assert.match(dashboard, /hidden h-11 shrink-0 items-end xl:flex \[&>a\]:-mb-3/, "QR must retain the 44px desktop header slot and extend into existing padding.");
+assert.match(dashboard, /border-b border-\[#D5DEE9\] pb-4/, "Header bottom padding must remain unchanged.");
+
 console.log("Operations Dashboard, Partner tabs and Branch Register layout regression passed.");

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import filterStyles from "./commercial-review-filters.module.css";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
@@ -21,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { bulkSavePolicyCommercials, type CommercialSide, type CommercialStatus } from "@/app/policies/commercial-review/actions";
+import { matchesCommercialRegistration, type CommercialRegistrationType, type CommercialRegistrationFilter } from "./registration-filter";
 import { savePolicyCommercialRow } from "@/app/policies/commercial-review/row-actions";
 
 export type LedgerStatus = CommercialStatus | "not_entered";
@@ -58,9 +60,17 @@ export type CommercialReviewRow = {
   partnerLastAction: string | null;
   partnerLastActionAt: string | null;
   vehicleClass: string | null;
+  registrationType: CommercialRegistrationType;
 };
 
 type BackfillFilter = "all" | "incomplete" | "complete" | "zero_od" | "zero_tp" | "zero_total";
+const compactFilterClass = `${filterStyles.compactFilter} h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px] shrink-0`;
+const registrationLabels: Record<CommercialRegistrationFilter, string> = { all: "All reg type", new: "New", rollover: "Rollover" };
+const backfillLabels: Record<BackfillFilter, string> = { all: "All entries", incomplete: "Backfill incomplete", complete: "Complete", zero_od: "OD = 0%", zero_tp: "TP = 0%", zero_total: "Total = ₹0" };
+// Size from the selected label, not the longest option. Clamp long names.
+function compactFilterWidth(label: string) {
+  return Math.min(235, Math.max(66, Array.from(label).reduce((width, char) => width + (/[MW@%]/.test(char) ? 8 : /[ilI .·]/.test(char) ? 3 : 5.5), 44)));
+}
 type EditState = { od: string; tp: string; scheme: string; note: string };
 
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
@@ -91,6 +101,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
   const [intermediary, setIntermediary] = useState("all");
   const [intermediaryType, setIntermediaryType] = useState("all");
   const [vehicleClass, setVehicleClass] = useState("all");
+  const [registrationType, setRegistrationType] = useState<CommercialRegistrationFilter>("all");
   const [status, setStatus] = useState<LedgerStatus | "all">("all");
   const [backfill, setBackfill] = useState<BackfillFilter>("incomplete");
   const [dateFrom, setDateFrom] = useState("");
@@ -160,6 +171,7 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
       if (intermediary !== "all" && row.intermediaryCode !== intermediary) return false;
       if (intermediaryType !== "all" && row.intermediaryType !== intermediaryType) return false;
       if (vehicleClass !== "all" && row.vehicleClass !== vehicleClass) return false;
+      if (!matchesCommercialRegistration(row.registrationType, registrationType)) return false;
       if (backfill === "incomplete" && !incompleteStatuses.has(rowStatus)) return false;
       if (backfill === "complete" && incompleteStatuses.has(rowStatus)) return false;
       if (backfill === "zero_od" && odValue !== 0) return false;
@@ -170,12 +182,12 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
       if (!normalizedQuery) return true;
       return [row.policyNo, row.insurerName, row.intermediaryName, row.intermediaryCode ?? "", row.intermediaryType ?? "", row.vehicleClass ?? "", row.vehicleClass ? (vehicleClassLabels[row.vehicleClass] ?? row.vehicleClass) : ""].some((value) => value.toLowerCase().includes(normalizedQuery));
     });
-  }, [displayedRows, statusKey, status, insurer, intermediary, intermediaryType, vehicleClass, backfill, dateFrom, dateTo, query, side]);
+  }, [displayedRows, statusKey, status, insurer, intermediary, intermediaryType, vehicleClass, registrationType, backfill, dateFrom, dateTo, query, side]);
 
   // Give the table body a fresh DOM identity whenever the visible filter changes.
   // This prevents recycled/stale table rows from a previous intermediary remaining
   // painted when the count is already based on the new filteredRows array.
-  const tableFilterKey = JSON.stringify([side, query, insurer, intermediary, intermediaryType, vehicleClass, status, backfill, dateFrom, dateTo]);
+  const tableFilterKey = JSON.stringify([side, query, insurer, intermediary, intermediaryType, vehicleClass, registrationType, status, backfill, dateFrom, dateTo]);
   const allFilteredSelected = filteredRows.length > 0 && filteredRows.every((row) => selected.has(row.id));
   const activeTotal = side === "insurer"
     ? filteredRows.reduce((sum, row) => sum + row.projectedTotal, 0)
@@ -234,7 +246,8 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
   }
 
   function applyBulk(statusOverride?: CommercialStatus) {
-    const policyIds = Array.from(selected);
+    const policyIds = filteredRows.filter(row => selected.has(row.id)).map(row => row.id);
+    if (!policyIds.length) return;
     startTransition(async () => {
       setMessage(null);
       const result = await bulkSavePolicyCommercials({
@@ -281,7 +294,16 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
     setMessage(null);
   }
 
+  function changeRegistrationType(value: CommercialRegistrationFilter) {
+    setRegistrationType(value);
+    setSelected(new Set());
+    setEditingId(null);
+    setBulkOpen(false);
+    setMessage(null);
+  }
+
   function clearFilters() {
+    changeRegistrationType("all");
     setQuery(""); setInsurer("all"); setIntermediary("all"); setIntermediaryType("all"); setVehicleClass("all"); setStatus("all"); setBackfill("all"); setDateFrom(""); setDateTo("");
   }
 
@@ -309,13 +331,14 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
       {amountPendingReviewCount > 0 ? <p role="status" className="mt-1 text-[9px] text-[#956800]">
         {amountPendingReviewCount} {side === "insurer" ? "Pay-In" : "Payout"} case(s) have rates entered but are still marked incomplete. Review their status before completing them.
       </p> : null}
-      <div className="mt-2 grid gap-2 xl:grid-cols-[minmax(220px,1.1fr)_minmax(150px,.65fr)_minmax(190px,.8fr)_minmax(165px,.68fr)_minmax(140px,.55fr)_minmax(165px,.68fr)_auto_auto]">
-        <label className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-[#98A2B3]" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Policy / insurer / intermediary" className="h-9 w-full rounded-xl border border-[#D8DEE9] pl-9 pr-3 text-[9.5px] outline-none focus:border-[#315B9A]" /></label>
-        <select value={insurer} onChange={(e) => setInsurer(e.target.value)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All insurers</option>{insurers.map((name) => <option key={name}>{name}</option>)}</select>
-        <select value={intermediary} onChange={(e) => changeIntermediary(e.target.value)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All intermediaries</option>{intermediaries.map((row) => <option key={row.intermediaryCode ?? row.id} value={row.intermediaryCode ?? ""}>{row.intermediaryName} · {row.intermediaryCode}</option>)}</select>
-        <select value={vehicleClass} onChange={(e) => setVehicleClass(e.target.value)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All vehicle classes</option>{vehicleClasses.map((value) => <option key={value} value={value}>{value === "NON_MOTOR" ? "Non-Motor" : `${value} · ${vehicleClassLabels[value] ?? value}`}</option>)}</select>
-        <select value={status} onChange={(e) => setStatus(e.target.value as LedgerStatus | "all")} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All statuses</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
-        <select value={backfill} onChange={(e) => setBackfill(e.target.value as BackfillFilter)} className="h-9 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px]"><option value="all">All entries</option><option value="incomplete">Backfill incomplete</option><option value="complete">Complete</option><option value="zero_od">OD = 0%</option><option value="zero_tp">TP = 0%</option><option value="zero_total">Total = ₹0</option></select>
+      <div className="mt-2 flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto pb-0.5">
+        <label className="relative min-w-[160px] flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-[#98A2B3]" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Policy / insurer / intermediary" className="h-9 w-full rounded-xl border border-[#D8DEE9] pl-9 pr-3 text-[9.5px] outline-none focus:border-[#315B9A]" /></label>
+        <select value={insurer} onChange={(e) => setInsurer(e.target.value)} className={compactFilterClass} style={{ width: compactFilterWidth(insurer === "all" ? "All insurers" : insurer) }}><option value="all">All insurers</option>{insurers.map((name) => <option key={name}>{name}</option>)}</select>
+        <select value={intermediary} onChange={(e) => changeIntermediary(e.target.value)} className={compactFilterClass} style={{ width: compactFilterWidth(intermediary === "all" ? "All intermediaries" : (() => { const item = intermediaries.find(row => row.intermediaryCode === intermediary); return item ? `${item.intermediaryName} · ${item.intermediaryCode}` : intermediary; })()) }}><option value="all">All intermediaries</option>{intermediaries.map((row) => <option key={row.intermediaryCode ?? row.id} value={row.intermediaryCode ?? ""}>{row.intermediaryName} · {row.intermediaryCode}</option>)}</select>
+        <select value={vehicleClass} onChange={(e) => setVehicleClass(e.target.value)} className={compactFilterClass} style={{ width: compactFilterWidth(vehicleClass === "all" ? "All vehicle classes" : vehicleClass === "NON_MOTOR" ? "Non-Motor" : `${vehicleClass} · ${vehicleClassLabels[vehicleClass] ?? vehicleClass}`) }}><option value="all">All vehicle classes</option>{vehicleClasses.map((value) => <option key={value} value={value}>{value === "NON_MOTOR" ? "Non-Motor" : `${value} · ${vehicleClassLabels[value] ?? value}`}</option>)}</select>
+        <select aria-label="Vehicle registration type" value={registrationType} onChange={(e) => changeRegistrationType(e.target.value as CommercialRegistrationFilter)} className={compactFilterClass} style={{ width: compactFilterWidth(registrationLabels[registrationType]) }}><option value="all">All reg type</option><option value="new">New</option><option value="rollover">Rollover</option></select>
+        <select value={status} onChange={(e) => setStatus(e.target.value as LedgerStatus | "all")} className={compactFilterClass} style={{ width: compactFilterWidth(status === "all" ? "All statuses" : statusLabels[status]) }}><option value="all">All statuses</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+        <select value={backfill} onChange={(e) => setBackfill(e.target.value as BackfillFilter)} className={compactFilterClass} style={{ width: compactFilterWidth(backfillLabels[backfill]) }}><option value="all">All entries</option><option value="incomplete">Backfill incomplete</option><option value="complete">Complete</option><option value="zero_od">OD = 0%</option><option value="zero_tp">TP = 0%</option><option value="zero_total">Total = ₹0</option></select>
         <IconButton label="More filters" onClick={() => setShowMore((value) => !value)} active={showMore}><Settings2 className="h-4 w-4" /></IconButton>
         <IconButton label="Clear filters" onClick={clearFilters}><FilterX className="h-4 w-4" /></IconButton>
       </div>

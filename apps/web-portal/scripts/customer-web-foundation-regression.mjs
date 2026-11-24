@@ -236,6 +236,17 @@ const customerSettings = read("app/customer/(protected)/settings/page.tsx");
 assert(navigation.includes('href="/customer/settings"'), "Customer sidebar must offer Settings instead of direct sign out");
 assert(customerSettings.includes('fetch("/api/customer/auth/session", { method: "DELETE" })'), "Customer logout in Settings must clear the isolated session API endpoint");
 assert(customerSettings.includes("supabase.auth.signOut()"), "Customer logout in Settings must terminate Supabase Auth session");
+const appearanceStart = customerSettings.indexOf('<section aria-labelledby="settings-layout-title"');
+const appearanceEnd = customerSettings.indexOf("</section>", appearanceStart);
+const appearanceSection = customerSettings.slice(appearanceStart, appearanceEnd);
+assert(appearanceStart > customerSettings.indexOf("Account Settings") && appearanceEnd < customerSettings.indexOf('aria-labelledby="settings-account-title"'), "Appearance controls must sit between heading and My Account");
+assert(appearanceSection.includes("customer-appearance-panel w-full min-w-0") && appearanceSection.includes("flex-nowrap") && appearanceSection.includes("overflow-x-auto"), "Appearance must occupy full width and keep a single responsive row");
+assert(appearanceSection.includes('name: "Sidebar"') && appearanceSection.includes('name: "Top Menu"') && appearanceSection.includes("h-8 w-px shrink-0"), "Layout options require visible names and a vertical divider");
+assert(appearanceSection.includes("customer-theme-segment") && appearanceSection.includes("rounded-full border") && ["Light", "Dark", "System"].every(name => appearanceSection.includes('name: "' + name + '"')), "Theme options must share one rounded container with visible labels");
+assert(appearanceSection.includes("aria-pressed={navigationLayout === value}") && appearanceSection.includes("aria-pressed={theme === value}"), "Appearance controls must expose selected state");
+assert(customerSettings.includes("window.localStorage.setItem(customerNavigationPreferenceKey, next)") && customerSettings.includes("window.localStorage.setItem(customerThemeKey, next)"), "Appearance preferences must remain persistent");
+assert(customerSettings.includes("new CustomEvent(customerNavigationPreferenceEvent") && customerSettings.includes("new CustomEvent(customerThemeEvent"), "Appearance preferences must continue updating immediately");
+
 assert(!navigation.includes('href="/partner'), "Customer navigation must not expose Partner routes");
 assert(!navigation.includes('href="/reports'), "Customer navigation must not expose Operations report routes");
 assert(navigation.includes('href="/customer/vehicles"'), "Customer navigation must expose Phase 1 Vehicles");
@@ -252,8 +263,11 @@ assert(!navigation.includes('href="/customer/kyc"'), "Customer sidebar must not 
 assert(!navigation.includes('href="/customer/documents"'), "Customer sidebar must not expose a separate Documents shortcut");
 assert(profilePage.includes("CustomerProfileDocuments"), "Customer Profile must embed the document vault");
 assert(profileDocuments.includes("CustomerDocumentVault"), "Customer Profile documents must reuse the authorized document vault");
-assert(profileDocuments.includes("useState(false)"), "Customer Profile document vault must be collapsed by default");
-assert(profileDocuments.includes('aria-expanded={expanded}'), "Customer Profile document vault must expose its expanded state accessibly");
+const profileVaultControls = read("components/customer-portal/customer-document-vault.tsx");
+assert(profileDocuments.includes("profileMode"), "Customer Profile must use the categorized vault mode");
+assert(profileVaultControls.includes("useState<number[]>([])"), "Customer Profile document categories must all be collapsed by default");
+assert(profileVaultControls.includes("expanded.includes(index)") && profileVaultControls.includes("old.filter(item => item !== index)") && profileVaultControls.includes("[...old, index]"), "Customer Profile categories must expand and collapse independently");
+assert(profileVaultControls.includes("aria-expanded={open}") && profileVaultControls.includes("aria-controls={") && profileVaultControls.includes("hidden={!open}"), "Each category must expose its expanded state accessibly and hide collapsed content");
 assert(documentsPage.includes("loadCustomerProfile(account.id)"), "Direct Customer Documents route must retain account-scoped access");
 assert(kycPage.includes("loadCustomerProfile(account.id)"), "Direct Customer KYC route must retain account-scoped access");
 

@@ -54,10 +54,10 @@ Total Premium (in ₹ ) 2,471.00`;
 }
 // New insurers use fully synthetic schedule fragments; no real policyholder,
 // vehicle, phone or policy number is committed. Execute the actual n8n source.
-const parseVariant=(path,text)=>{
+const parseVariant=(path,text,info={},signature_image_evidence=null)=>{
   const source=file(path);
   return runInNewContext('(function(){'+source+'})()',
-    {$input:{first:()=>({json:{text}})}})[0].json;
+    {$input:{first:()=>({json:{text,info,signature_image_evidence}})}})[0].json;
 };
 const hdfcSample=`Vehicle Details Policy Details
 Make HONDA. Policy No. 2301 2092 5528 0300 000
@@ -89,19 +89,26 @@ assert.equal(hdfc.premium_components.gross,843);
 assert.equal(parseVariant("../../../infra/n8n-local/extensions/hdfc-ergo-two-wheeler-tp.js",
   hdfcSample.replace("Integrated Tax 18% 129","Integrated Tax 18% 99")).ok,false,
   "HDFC TP IGST tamper must fail");
+const sbiPath="../../../infra/n8n-local/extensions/sbi-general-private-car-package.js";
+const sbiMeta={CreationDate:"D:20261119190641+05'30'",IsSignaturesPresent:true};
 const sbiSample=`SBI General Insurance Company Limited | Private Car Insurance Policy - Package
 Policy / Certificate No : POPMCAR00103248565
 Period of Insurance OD : From:20/11/2026 00:00:00 To:19/11/2027 23:59:59
 Period of Insurance TP : From:20/11/2026 00:00:00 To:19/11/2027 23:59:59
+19/11/2026 POPMCAR00103248565 Period of Insurance TP
 Registration Number UK17V4864
 Tata Motors,Punch & Adventure
-REVTRN20HWXMG0907 & MAT634055PPHE1833
+Engine Number REVTRN20HWXMG0907
+Chassis Number MAT634055PPHE1833
 Year of Manufacture 2023
-1199 Petrol 2023
+Fuel Petrol
 RTO Location Roorkee
 Cubic Capacity / Kilo Watt / Gross Vehicle Weight / Horsepower 1199
 Total IDV 480000.00
+WE COVER YOU FOR
+Own Damage Premium
 Own Damage Basic 3829.20
+No Claim Bonus % 0%
 Consumable 432.00
 Depreciation Reimbursement 2784.00
 Engine Guard 576.00
@@ -115,18 +122,75 @@ Premium Receipt
 Policy Number POPMCAR00103248565
 Policy Holder Name Mr. Sample Owner Intermediary Name SAMPLE BROKER
 Receipt Date 19/11/2026
-Digitally signed by DS SBI GENERAL INSURANCE COMPANY LTD Date: 2026.11.19 19:06:41 IST
 Consolidated Stamp Duty ₹ 0.5 paid towards Insurance Policy Stamps`;
-const sbi=parseVariant("../../../infra/n8n-local/extensions/sbi-general-private-car-package.js",sbiSample);
-assert.equal(sbi.ok,true,"SBI Package requires all 20 financial and vehicle checks");
-assert.equal(Object.keys(sbi.checks).length,20);
-assert.equal(sbi.premium_components.odBasic,3829.2);
+const sbiWithPrevious=sbiSample.replace("Premium Receipt",
+  "Previous Policy Details Previous Insurer SBI General Policy Number POPMCAR00999999999 Policy Expiry 18/11/2026\nPremium Receipt");
+const previousResult=parseVariant(sbiPath,sbiWithPrevious,sbiMeta);
+assert.equal(previousResult.ok,true,
+ "Prior policy number must not override current policy identity in SBI receipt");
+assert.equal(previousResult.checks.policy_identity_verified,true);
+assert.equal(parseVariant(sbiPath,sbiSample.replace(
+ "Policy Number POPMCAR00103248565\nPolicy Holder Name",
+ "Policy Number POPMCAR00999999999\nPolicy Holder Name"),sbiMeta).ok,false,
+ "A genuinely mismatched current receipt number must still fail");
+const sbi=parseVariant(sbiPath,sbiSample,sbiMeta);
+assert.equal(sbi.failed_checks.length,0,"SBI Tata 0% NCB Package must pass all 20");
+assert.equal(sbi.premium_components.odBasicAfterNcb,3829.2);
 assert.equal(sbi.premium_components.addOn,3922);
-assert.equal(sbi.premium_components.cpa,325);
-assert.equal(sbi.premium_components.net,11492.2);
-assert.equal(parseVariant("../../../infra/n8n-local/extensions/sbi-general-private-car-package.js",
-  sbiSample.replace("PA to Owner Driver 325.00","PA to Owner Driver 425.00")).ok,false,
-  "SBI CPA tamper must fail");
+const mahindraSample=sbiSample
+ .replaceAll("POPMCAR00103248565","POPMCAR00103251697")
+ .replaceAll("19/11/2026","20/11/2026")
+ .replaceAll("20/11/2026 00:00:00 To:19/11/2027","21/11/2026 00:00:00 To:20/11/2027")
+ .replace("UK17V4864","UK07FH9086")
+ .replace("Tata Motors,Punch & Adventure","Vehicle Make Mahindra & Mahindra Vehicle Model XUV 300 - Petrol Vehicle Variant W8 (O)")
+ .replace("REVTRN20HWXMG0907","NMNZH28977")
+ .replace("MAT634055PPHE1833","MA1NM2NM1N2H56654")
+ .replace("Year of Manufacture 2023","Year of Manufacture 2022")
+ .replace("Horsepower 1199","Horsepower 1197")
+ .replace("Roorkee","Dehra Dun")
+ .replace("480000.00","900000.00")
+ .replace("3829.20","2871.90")
+ .replace("No Claim Bonus % 0%","No Claim Bonus % 45%")
+ .replace("Consumable 432.00","Consumable 630.00")
+ .replace("Depreciation Reimbursement 2784.00","Depreciation Reimbursement 3600.00")
+ .replace("Engine Guard 576.00","Engine Guard 720.00\nKey Replacement Cover 500.00\nLoss of Personal Belongings 250.00")
+ .replace("TOTAL OWN DAMAGE PREMIUM 7751.20","TOTAL OWN DAMAGE PREMIUM 7409.54")
+ .replace("TOTAL PREMIUM 11492.20 GST 2068.60 FINAL PREMIUM 13561.00",
+  "TOTAL PREMIUM 11150.54\nSBI General Insurance Company Limited Page No 4 of 12\nGST 2007.10 FINAL PREMIUM 13158.00")
+ .replace("Mr. Sample Owner","Mrs. Example Customer");
+const mahindraMeta={CreationDate:"D:20261120170827+05'30'",IsSignaturesPresent:true};
+const mahindra=parseVariant(sbiPath,mahindraSample,mahindraMeta);
+assert.equal(mahindra.failed_checks.length,0,"SBI Mahindra 45% NCB and six add-ons must pass");
+assert.equal(mahindra.layout_variant,"mahindra_xuv300_package");
+assert.equal(mahindra.premium_components.od,7409.54);
+assert.equal(mahindra.premium_components.ncbDiscount,1292.36);
+assert.equal(mahindra.premium_components.odBasicAfterNcb,1579.54);
+assert.equal(mahindra.premium_components.addOn,5830);
+assert.equal(mahindra.premium_components.net,11150.54);
+assert.equal(mahindra.premium_components.gross,13158);
+assert.equal(parseVariant(sbiPath,sbiSample.replace("PA to Owner Driver 325.00","PA to Owner Driver 425.00"),sbiMeta).ok,false);
+assert.equal(parseVariant(sbiPath,mahindraSample.replace("No Claim Bonus % 45%","No Claim Bonus % 0%"),mahindraMeta).ok,false);
+assert.equal(parseVariant(sbiPath,mahindraSample.replace("TOTAL PREMIUM 11150.54","TOTAL PREMIUM 10150.54"),mahindraMeta).ok,false);
+// Printed schedule issuance date is authoritative even if receipt or PDF metadata differ.
+const priority=parseVariant(sbiPath,sbiSample.replace("Receipt Date 19/11/2026","Receipt Date 18/11/2026"),
+ {...sbiMeta,CreationDate:"D:20261118190000+05'30'"});
+assert.equal(priority.ok,true);
+assert.equal(priority.fields.find(f=>f.key==="policy_issuance_date").value,"2026-11-19");
+assert.equal(priority.issuance_evidence.source,"printed_policy_issue_date");
+const noPrintedDate=sbiSample.replace("19/11/2026 POPMCAR00103248565 Period of Insurance TP",
+ "Policy Issue Date unavailable POPMCAR00103248565 Period of Insurance TP");
+// Receipt and PDF metadata are NOT sufficient for fallback.
+assert.equal(parseVariant(sbiPath,noPrintedDate,sbiMeta).ok,false);
+// Verified signature-image evidence from a document-bound upstream verifier can fill a missing date.
+const trustedImage={source:"verified_pdf_signature_image",verified:true,document_bound:true,date:"19/11/2026"};
+const restored=parseVariant(sbiPath,noPrintedDate,sbiMeta,trustedImage);
+assert.equal(restored.ok,true);
+assert.equal(restored.issuance_evidence.source,"verified_signature_image_fallback");
+assert.equal(parseVariant(sbiPath,noPrintedDate,sbiMeta,{...trustedImage,verified:false}).ok,false);
+assert.equal(parseVariant(sbiPath,noPrintedDate,sbiMeta,{...trustedImage,document_bound:false}).ok,false);
+// An image date never overrides a printed issue date.
+assert.equal(parseVariant(sbiPath,sbiSample,sbiMeta,{...trustedImage,date:"18/11/2026"}).issuance_evidence.date,"2026-11-19");
+
 assert.ok(signed.includes("hdfc_ergo_two_wheeler_tp_native_pdf")
   &&signed.includes("sbi_general_private_car_package_native_pdf")
   &&eligibility.includes("checks:20")

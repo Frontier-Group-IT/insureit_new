@@ -49,7 +49,11 @@ assert.match(premiumSection, /<FieldWrap title="Remarks"><button/, "Remarks has 
 assert.match(premiumSection, /<MessageSquareText className="h-4 w-4"\/>Add Remark/, "Third field has the Add Remark button");
 const remarksTab = detail.slice(detail.indexOf('{infoTab==="activity"?'),detail.indexOf('{remarkOpen?<div'));
 assert.doesNotMatch(remarksTab, /setRemarkOpen\(true\)/, "Remarks tab must only display history, not another Add Remark button");
-assert.match(remarksTab, /savedRemarks\.trim\(\)\|\|"No remarks added yet\."/,"Remarks tab displays saved content or an empty state");
+assert.match(remarksTab, /savedRemarks\.trim\(\)\?splitCaseRemarkHistory\(savedRemarks\)/, "Remarks tab renders the stored history");
+assert.match(remarksTab, /No remarks added yet\./, "Remarks tab retains an empty state");
+assert.match(remarksTab, /text-right[^"]*">\{activityDate\(activity.createdAt\)\}/, "Activity timestamp is right-aligned at all widths");
+assert.match(remarksTab, /text-right[^"]*">\{entry.timestamp\}/, "Remark timestamp is right-aligned at all widths");
+assert.match(remarksTab, /whitespace-pre-wrap break-words[^"]*">\{entry.message\}/, "Remark text preserves multiline formatting");
 assert.match(detail, /role="dialog" aria-modal="true" aria-label="Add case remark"/, "Case Details new remark opens an accessible popup");
 assert.match(detail, /appendLifeHealthCaseRemark\(data\)/, "New Case Details remark uses append-only server action");
 assert.doesNotMatch(detail, /<LifeHealthRemarksEditor/, "Do not retain editable remarks popup on Case Details");
@@ -80,3 +84,17 @@ assert.match(register, /<th className="px-4 py-3 text-center">Action<\/th>/, "Ac
 assert.match(register, /<LifeHealthIssuedPolicyButton policyId=\{row\.finalPolicyId\}/, "Issued policy navigation is preserved");
 assert.match(register, /href=\{\`\/policies\/life-health-cases\/\$\{row\.id\}\`\}/, "Pending case navigation is preserved");
 console.log("Life/Health remarks preservation and Remarks-free Case Register regression passed");
+
+const { splitCaseRemarkHistory } = await import("../lib/life-health-remark-history.ts");
+const first = "13 Nov 2026, 12:08 pm";
+const second = "13 Nov 2026, 01:48 pm";
+assert.deepEqual(splitCaseRemarkHistory(""), []);
+assert.deepEqual(splitCaseRemarkHistory("Old note\n\nSecond paragraph"), [{message:"Old note\n\nSecond paragraph",timestamp:null}]);
+assert.deepEqual(splitCaseRemarkHistory("Legacy note\n\n[" + first + "] Line 1\n\nLine 2\n\n[" + second + "] Case rejected: reason"), [
+  {message:"Legacy note",timestamp:null},
+  {message:"Line 1\n\nLine 2",timestamp:first},
+  {message:"Case rejected: reason",timestamp:second},
+]);
+assert.deepEqual(splitCaseRemarkHistory("[" + first + "] Text [not a timestamp]"), [{message:"Text [not a timestamp]",timestamp:first}]);
+assert.deepEqual(splitCaseRemarkHistory("[" + first + "] A\r\n\r\n[" + second + "] B"), [{message:"A",timestamp:first},{message:"B",timestamp:second}]);
+console.log("Life/Health case history timestamp layout and legacy remarks regression passed");

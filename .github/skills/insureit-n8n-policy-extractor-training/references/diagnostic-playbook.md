@@ -41,7 +41,7 @@ Inspect *the matching n8n execution*, not an unrelated latest execution. Confirm
 - Explicit `Name of registration authority` is stronger evidence than the policyholder residence, office location, financier address or GST issuing office.
 - `TATA MOTOR/1918 AZURA` is a make/model pair; canonical make may be `Tata`, but that does not solve a missing RTO. Validate the actual dropdown ID and normalization.
 - For commercial GCV, `GVW: 18500` is not `18500 cc`; a printed `0cc` must never become nonzero displacement.
-- Different insurer families require different issuance rules; never treat coverage start, receipt, generated time and signature time as interchangeable.
+- Mandatory priority: explicitly printed policy issue date FIRST (some PDF text outputs place the value before the label), signature-image date only as verified document-bound FALLBACK if printed missing; unverified receipt, creation timestamp, signature-presence flag and coverage inception are NEVER issuance fallback.\n- Inspect page rendering and a missing image-verification step before claiming the fallback is implemented. Preserve separate date approvals and OTP.\n- When SBI Package shows NCB or cross-page totals, first verify printed PRODUCT remains Private Car Package, then parse layout-specific premium subrows: basic OD minus NCB + add-ons = OD; TP basic + CPA; net + GST = gross. Do not train by intake ID.\n- See insurer-layout-incidents-2026-11.md for 0%/45% NCB, downstream HDFC TWP / SBI PCP mapping, and live/published version pitfalls.
 - CPA/paid-driver liability, nil-depreciation endorsement, mixed GST rates, OD/TP subrows and insurer tax schedule must be reconciled by named row and exact bucket before booking.
 
 ## Minimum train/verify loop
