@@ -1,8 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, ActivityIndicator, Animated, AppState, Easing, Image, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsFocused } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
+import * as Haptics from 'expo-haptics';
+import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
+import { PartnerAssets } from '@/lib/partner-assets';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { canPartnerUseAiStudio } from '@/lib/partner-permissions';
 import { aiStudioActionsEnabled, performAiStudioAction, type StudioAction } from '@/lib/ai-studio-actions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -24,10 +29,14 @@ const fieldName = (key:string) => ({
 
 export default function AiPolicyStudioScreen() {
   const router=useRouter();
-  const insets=useSafeAreaInsets();
   const {context}=usePartnerSession();
   const allowed=canPartnerUseAiStudio(context);
   const [filter,setFilter]=useState<AiStudioBucket>('open');
+  const [query,setQuery]=useState('');
+  const [tabWidth,setTabWidth]=useState(0);
+  const motion=useStudioMotion();
+  const tabPosition=useRef(new Animated.Value(0)).current;
+  const refreshTurn=useRef(new Animated.Value(0)).current;
   const [page,setPage]=useState<AiStudioPage>({counts:{open:0,action:0,in_review:0,processing:0},rows:[]});
   const [loading,setLoading]=useState(true);
   const [refreshing,setRefreshing]=useState(false);
@@ -48,7 +57,7 @@ export default function AiPolicyStudioScreen() {
   const reload=useCallback(async(offset=0)=>{
     if(!allowed) return;
     const token=++sequence.current;
-    if(offset===0){setLoading(true);setError('');}else setMoreLoading(true);
+    if(offset===0){setLoading(true);setError('');setMoreLoading(false);}else setMoreLoading(true);
     try {
       const next=await loadAiStudioPage(filter,offset);
       if(token!==sequence.current)return;
@@ -75,7 +84,13 @@ export default function AiPolicyStudioScreen() {
     return ()=>{detailSequence.current++;};
   },[selected,allowed]);
   const count=(key:AiStudioBucket)=>page.counts[key]||0;
-  const refresh=()=>{setRefreshing(true);void reload();};
+  const refresh=()=>{if(loading||refreshing)return;setRefreshing(true);void reload();};
+  const searchTerm=query.trim().toLowerCase();
+  const visibleRows=useMemo(()=>page.rows.filter(row=>!searchTerm||[row.intake_number,row.lead_source_name,row.policy_type].some(value=>value?.toLowerCase().includes(searchTerm))),[page.rows,searchTerm]);
+  const reviewShare=count('open')>0?Math.max(0,Math.min(1,count('in_review')/count('open'))):0;
+  useEffect(()=>{const a=Animated.timing(tabPosition,{toValue:TABS.findIndex(t=>t.key===filter),duration:motion?240:0,easing:Easing.out(Easing.cubic),useNativeDriver:Platform.OS!=='web'});a.start();return()=>a.stop();},[filter,motion,tabPosition]);
+  useEffect(()=>{refreshTurn.setValue(0);if(!motion||!refreshing)return;const a=Animated.loop(Animated.timing(refreshTurn,{toValue:1,duration:850,easing:Easing.linear,useNativeDriver:Platform.OS!=='web',isInteraction:false}));a.start();return()=>{a.stop();refreshTurn.setValue(0);};},[refreshing,motion,refreshTurn]);
+  const selectFilter=(next:AiStudioBucket)=>{if(next===filter)return;sequence.current++;setLoading(true);setError('');setMoreLoading(false);setFilter(next);setPage(p=>({...p,rows:[]}));if(Platform.OS!=='web')void Haptics.selectionAsync().catch(()=>{});};
   const closeDetail=()=>{if(actionBusy)return;setSelected(null);setPendingAction(null);setActionError('');setResultUncertain(false);setFieldExpanded(false);};
   const openDetail=(row:AiStudioRow)=>{setSelected(row);setFieldExpanded(false);setActionError('');setResultUncertain(false);};
   const reloadSelected=async()=>{
@@ -119,75 +134,98 @@ export default function AiPolicyStudioScreen() {
     </SafeAreaView>
   );
   return (
-    <SafeAreaView style={s.root} edges={['top']}>
-      <View style={s.top}>
-        <Pressable onPress={()=>router.back()} accessibilityRole="button" accessibilityLabel="Back to More" style={s.circle}>
-          <Ionicons name="arrow-back" size={20} color={C.ink}/>
+    <SafeAreaView style={s.studioRoot} edges={['top']}>
+      <StatusBar style="light" backgroundColor="#071E49"/>
+      <View style={s.studioTop}>
+        <Pressable onPress={()=>router.back()} accessibilityRole="button" accessibilityLabel="Back to More" style={s.headerButton}>
+          <Ionicons name="arrow-back" size={23} color="#FFFFFF"/>
         </Pressable>
-        <Text style={s.topWord}>INSUREIT  /  OPERATIONS</Text>
-        <Pressable onPress={refresh} accessibilityRole="button" accessibilityLabel="Refresh" style={s.circle}>
-          <Ionicons name="refresh-outline" size={20} color={C.ink}/>
+        <Image source={PartnerAssets.actions.quickPolicyIntake} style={s.headerArt} resizeMode="contain" accessible={false}/>
+        <Text style={s.headerTitle} numberOfLines={1} adjustsFontSizeToFit>AI Onboarding Studio</Text>
+        <Pressable onPress={refresh} disabled={loading||refreshing} accessibilityRole="button" accessibilityLabel="Refresh" accessibilityState={{disabled:loading||refreshing,busy:refreshing}} style={s.headerButton}>
+          <Animated.View style={{transform:[{rotate:refreshTurn.interpolate({inputRange:[0,1],outputRange:['0deg','360deg']})}]}}><Ionicons name="refresh-outline" size={23} color="#FFFFFF"/></Animated.View>
         </Pressable>
       </View>
-      <ScrollView style={s.scroll} contentContainerStyle={{paddingHorizontal:22,paddingTop:13,paddingBottom:insets.bottom+36}}
-        refreshControl={<RefreshControl refreshing={refreshing} tintColor={C.blue} onRefresh={refresh}/>}>
-        <View style={s.titleRow}>
-          <View style={{flex:1}}><Text style={s.eyebrow}>POLICY OPERATIONS</Text><Text style={s.title}>AI Onboarding <Text style={{color:C.blue}}>Studio</Text></Text><Text style={s.subtitle}>Review PDFs, repair drafts and securely register policies.</Text></View>
-          <View style={s.sparkle}><Ionicons name="sparkles" color={C.blue} size={22}/></View>
-        </View>
-        <View style={s.hero}>
-          <View style={s.heroMain}>
-            <Text style={s.heroOverline}>ALL OPEN INTAKES</Text>
-            <Text style={s.heroNumber}>{count('open')}</Text>
-            <Text style={s.heroHint}>●  Live policy queue</Text>
+      <ScrollView style={s.studioCanvas} keyboardShouldPersistTaps="handled" contentContainerStyle={s.studioContent}
+        refreshControl={<RefreshControl refreshing={refreshing} tintColor={C.blue} colors={[C.blue]} onRefresh={refresh}/>}>
+        <View style={s.summaryPanel}>
+          <StudioEntrance motion={motion} delay={0}>
+            <View style={s.summaryHeadline}>
+              <Image source={PartnerAssets.actions.quickPolicyIntake} style={s.summaryArt} resizeMode="contain" accessible={false}/>
+              <View style={s.summaryAccent}/>
+              <View style={s.summaryCopy}>
+                <Text style={s.summaryEyebrow}>POLICY WORK QUEUE</Text>
+                <Text style={s.summaryTitle} numberOfLines={1} adjustsFontSizeToFit>{loading&&!page.rows.length&&count('open')===0?'Loading queue':count('open').toLocaleString('en-IN')+' Open Intakes'}</Text>
+                <Text style={s.summarySubtitle}>Review, verify & convert policies</Text>
+              </View>
+              <View style={s.ringColumn}>
+                <StudioReviewRing value={reviewShare} motion={motion}/>
+                <Text style={s.ringLabel}>In review share</Text>
+              </View>
+            </View>
+          </StudioEntrance>
+          <View style={s.summaryRule}/>
+          <View style={s.metricRow}>
+            <StudioMetric label="Processing" value={count('processing')} artwork={PartnerAssets.status.documentUpload} motion={motion} delay={80}/>
+            <View style={s.metricDivider}/>
+            <StudioMetric label="In Review" value={count('in_review')} artwork={PartnerAssets.status.pendingReview} motion={motion} delay={145}/>
+            <View style={s.metricDivider}/>
+            <StudioMetric label="Action" value={count('action')} artwork={PartnerAssets.status.policyAttention} motion={motion} delay={210}/>
           </View>
-          <View style={s.heroAside}>
-            <Text style={s.heroMini}>{count('processing')}</Text><Text style={s.heroAsideLabel}>Processing</Text>
-            <View style={s.heroDivider}/>
-            <Text style={s.heroMini}>{count('in_review')}</Text><Text style={s.heroAsideLabel}>In Review</Text>
-          </View>
-          <View style={s.heroRing}/>
         </View>
-        <View style={s.quickGuide}><View style={s.guideIcon}><Ionicons name="flash-outline" size={18} color={C.blue}/></View><View style={{flex:1}}><Text style={s.guideTitle}>Your workflow</Text><Text style={s.guideText}>Open an intake → Reparse if needed → Verify & Convert</Text></View><Ionicons name="shield-checkmark-outline" size={20} color="#2D8065"/></View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabScroller} contentContainerStyle={s.segment}>
-          {TABS.map(tab=><Pressable key={tab.key} accessibilityRole="tab" accessibilityState={{selected:filter===tab.key}}
-            style={[s.segmentItem,filter===tab.key&&s.segmentActive]}
-            onPress={()=>{setFilter(tab.key);setPage(p=>({...p,rows:[]}));}}>
-            <Text style={[s.segmentLabel,filter===tab.key&&s.activeLabel]}>{tab.label}</Text>
-            <Text style={[s.segmentCount,filter===tab.key&&s.activeLabel]}>{count(tab.key)}</Text>
-          </Pressable>)}
-        </ScrollView>
-        <View style={s.sectionHead}><Text style={s.sectionTitle}>{filter==='open'?'All open policy intakes':filter==='action'?'Action required':filter==='in_review'?'In review':'Processing'}</Text>
-          <Text style={s.meta}>{count(filter)} records</Text></View>
-        {loading&&page.rows.length===0?<View style={s.center}><ActivityIndicator color={C.blue}/></View>:null}
-        {error?<Pressable style={s.error} onPress={()=>void reload()} accessibilityRole="button">
-          <Text style={s.errorText}>{error}</Text><Ionicons name="refresh" color="#A44935" size={18}/>
-        </Pressable>:null}
-        {!loading&&!error&&!page.rows.length?<View style={s.center}>
-          <Ionicons name="checkmark-circle-outline" color="#7DAB96" size={28}/>
-          <Text style={s.emptyHead}>All clear here</Text><Text style={s.emptyText}>No intakes in this view.</Text>
-        </View>:null}
-        {page.rows.length>0?<View style={s.list}>
-          {page.rows.map(row=>{
-            const done=!!row.final_policy_id,flag=row.exception_codes.length>0;
-            const status=done?'Completed':row.status==='in_review'?'In review':row.status==='processing'&&row.ocr_status!=='failed'?'Fetching details':'Action required';
-            return <Pressable key={row.id} accessibilityRole="button" accessibilityLabel={'Open '+row.intake_number}
-              style={({pressed})=>[s.row,pressed&&{backgroundColor:'#F2F6F4'}]} onPress={()=>openDetail(row)}>
-              <View style={[s.mark,{backgroundColor:done?'#54A983':flag?'#D7A662':'#8B9EDB'}]}/>
-              <View style={s.rowMain}><Text numberOfLines={1} style={s.rowTitle}>{row.intake_number.replace('PIR-','')}</Text>
-                <Text numberOfLines={1} style={s.rowSub}>{row.lead_source_name||row.policy_type||'Policy intake'}</Text></View>
-              <View style={s.rowRight}><Text style={[s.rowStatus,{color:done?'#398562':flag?'#A5773A':'#5C78A8'}]}>{status}</Text>
-                <Text style={s.rowChecks}>{row.checks_passed?String(row.checks_passed)+' checks':'Pending'}</Text></View>
-              <Ionicons name="chevron-forward" size={16} color="#9DADAF"/>
-            </Pressable>;
-          })}
-        </View>:null}
-        {!loading&&page.rows.length<count(filter)?<Pressable style={s.showMore} disabled={moreLoading}
-          onPress={()=>void reload(page.rows.length)} accessibilityRole="button">
-          {moreLoading?<ActivityIndicator color={C.ink} size="small"/>:<Text style={s.showMoreText}>Show more</Text>}
-        </Pressable>:null}
-        <Text style={s.footer}>SECURED BY INSUREIT · SUPABASE</Text>
+        <View style={s.queueSection}>
+          <View style={s.sectionHead}>
+            <Text style={s.queueTitle}>Policy intakes</Text>
+            <View style={s.recordPill}><Text style={s.recordPillText}>{count(filter).toLocaleString('en-IN')} Records</Text></View>
+          </View>
+          <View style={s.queueCard}>
+            <View style={s.searchBox}>
+              <Ionicons name="search-outline" size={20} color="#1675CF"/>
+              <TextInput accessibilityLabel="Search loaded intakes by intake number, lead source or policy type" value={query} onChangeText={setQuery} autoCapitalize="none" autoCorrect={false} returnKeyType="search" placeholder="Search intake or lead source..." placeholderTextColor="#8792A5" style={s.searchInput}/>
+              {query?<Pressable accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={8} onPress={()=>setQuery('')}><Ionicons name="close-circle-outline" size={19} color="#71828C"/></Pressable>:null}
+            </View>
+            <View style={s.queueTabs} onLayout={e=>setTabWidth(e.nativeEvent.layout.width)}>
+              {TABS.map((tab,i)=><Pressable key={tab.key} accessibilityRole="tab" accessibilityState={{selected:filter===tab.key}} accessibilityLabel={tab.label+' '+count(tab.key)}
+                style={[s.queueTab,i>0&&s.queueTabDivider]} onPress={()=>selectFilter(tab.key)}>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={[s.queueTabText,filter===tab.key&&s.activeLabel]}>{tab.label}</Text>
+                <Text style={[s.segmentCount,filter===tab.key&&s.activeLabel]}>{count(tab.key)}</Text>
+              </Pressable>)}
+              {tabWidth>0?<Animated.View pointerEvents="none" style={[s.queueUnderline,{width:tabWidth/TABS.length,transform:[{translateX:Animated.multiply(tabPosition,tabWidth/TABS.length)}]}]}/>:null}
+            </View>
+            {searchTerm?<Text style={s.searchHint}>{visibleRows.length} matching loaded records · {page.rows.length} of {count(filter)} loaded</Text>:null}
+            {loading&&page.rows.length===0?<StudioSkeleton motion={motion}/>:null}
+            {error?<Pressable style={s.error} onPress={()=>void reload()} accessibilityRole="button">
+              <Text style={s.errorText}>{error}</Text><Ionicons name="refresh" color="#A44935" size={18}/>
+            </Pressable>:null}
+            {!loading&&!error&&!visibleRows.length?<View style={s.center}>
+              <Image source={searchTerm?PartnerAssets.emptyStates.noSearchResults:PartnerAssets.emptyStates.noPolicies} style={s.emptyArt} resizeMode="contain" accessible={false}/>
+              <Text style={s.emptyHead}>{searchTerm?'No matching loaded intakes':'All clear here'}</Text><Text style={s.emptyText}>{searchTerm?'Try another search or load more records.':'No intakes in this view.'}</Text>
+            </View>:null}
+            {visibleRows.map((row,index)=>{
+              const done=!!row.final_policy_id,flag=row.exception_codes.length>0;
+              const status=done?'Completed':row.status==='in_review'?'In review':row.status==='processing'&&row.ocr_status!=='failed'?'Fetching details':'Action required';
+              const color=done?'#398562':status==='Action required'?'#B54738':status==='Fetching details'?'#94611C':'#6842B7';
+              return <StudioEntrance key={row.id} motion={motion} delay={Math.min(index,6)*35}>
+                <Pressable accessibilityRole="button" accessibilityLabel={'Open '+row.intake_number} style={({pressed})=>[s.row,pressed&&{backgroundColor:'#F0F5FF'}]} onPress={()=>openDetail(row)}>
+                  <Image source={PartnerAssets.actions.quickPolicyIntake} style={s.rowArt} resizeMode="contain" accessible={false}/>
+                  <View style={s.rowMain}><Text numberOfLines={1} style={s.rowTitle}>{row.intake_number.replace('PIR-','')}</Text>
+                    <Text numberOfLines={1} style={s.rowSub}>{row.lead_source_name||row.policy_type||'Policy intake'}</Text></View>
+                  <View style={s.rowRight}><Text style={[s.rowStatus,{color}]}>{status}</Text>
+                    <Text style={s.rowChecks}>{row.checks_passed?String(row.checks_passed)+' checks':'Pending'}</Text>
+                    {flag&&status!=='Action required'?<Text style={s.rowFlag}>Exceptions</Text>:null}</View>
+                  <Ionicons name="chevron-forward" size={15} color="#9DADAF"/>
+                </Pressable>
+              </StudioEntrance>;
+            })}
+            {!loading&&page.rows.length<count(filter)?<Pressable style={s.showMore} disabled={moreLoading}
+              onPress={()=>void reload(page.rows.length)} accessibilityRole="button">
+              {moreLoading?<ActivityIndicator color={C.ink} size="small"/>:<Text style={s.showMoreText}>Show more</Text>}
+            </Pressable>:null}
+          </View>
+          <Text style={s.footer}>SECURED BY INSUREIT · SUPABASE</Text>
+        </View>
       </ScrollView>
+      <PartnerStackBottomNavigation activeTab="more" includeBottomInset/>
 
       <Modal visible={Boolean(selected)} presentationStyle="pageSheet" animationType="slide" onRequestClose={closeDetail}>
         <SafeAreaView style={s.sheet}>
@@ -264,7 +302,87 @@ export default function AiPolicyStudioScreen() {
   );
 }
 
+function useStudioMotion(){
+  const focused=useIsFocused();
+  const [foreground,setForeground]=useState(AppState.currentState==null||AppState.currentState==='active');
+  const [reduced,setReduced]=useState(true);
+  useEffect(()=>{let alive=true,changed=false;const app=AppState.addEventListener('change',state=>setForeground(state==='active'));const pref=AccessibilityInfo.addEventListener('reduceMotionChanged',value=>{changed=true;setReduced(value);});void AccessibilityInfo.isReduceMotionEnabled().then(value=>{if(alive&&!changed)setReduced(value);}).catch(()=>{});return()=>{alive=false;app.remove();pref.remove();};},[]);
+  return focused&&foreground&&!reduced;
+}
+function StudioEntrance({children,motion,delay=0}:{children:ReactNode;motion:boolean;delay?:number}){
+  const value=useRef(new Animated.Value(1)).current;
+  const played=useRef(false);
+  useEffect(()=>{if(!motion){value.setValue(1);return;}if(played.current)return;played.current=true;value.setValue(0);const a=Animated.timing(value,{toValue:1,duration:280,delay,easing:Easing.out(Easing.cubic),useNativeDriver:Platform.OS!=='web',isInteraction:false});a.start();return()=>{a.stop();value.setValue(1);};},[motion,delay,value]);
+  return <Animated.View style={{opacity:value,transform:[{translateY:value.interpolate({inputRange:[0,1],outputRange:[5,0]})}]}}>{children}</Animated.View>;
+}
+function useStudioCount(value:number,motion:boolean,delay=0){
+  const [shown,setShown]=useState(value);
+  const previous=useRef<number|null>(null);
+  useEffect(()=>{if(!motion){setShown(value);return;}if(previous.current===value)return;const start=previous.current??0;previous.current=value;const counter=new Animated.Value(start);const id=counter.addListener(({value:v})=>setShown(v));const a=Animated.timing(counter,{toValue:value,duration:650,delay,easing:Easing.out(Easing.cubic),useNativeDriver:false,isInteraction:false});a.start(({finished})=>{if(finished)setShown(value);});return()=>{counter.removeListener(id);a.stop();setShown(value);};},[value,motion,delay]);
+  return motion?shown:value;
+}
+function StudioMetric({label,value,artwork,motion,delay}:{label:string;value:number;artwork:number;motion:boolean;delay:number}){
+  const shown=useStudioCount(value,motion,delay);
+  return <View style={s.metricCell}><Image source={artwork} style={s.metricArt} resizeMode="contain" accessible={false}/><View style={s.metricCopy}><Text style={s.metricLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{label}</Text><Text style={s.metricValue} accessibilityLabel={label+' '+value} numberOfLines={1} adjustsFontSizeToFit>{Math.round(shown).toLocaleString('en-IN')}</Text></View></View>;
+}
+const REVIEW_SEGMENTS=48;
+function StudioReviewRing({value,motion}:{value:number;motion:boolean}){
+  const shown=useStudioCount(value,motion);
+  return <View style={s.reviewRing} accessible accessibilityRole="progressbar" accessibilityLabel="Share of open intakes in review, not booking completion" accessibilityValue={{min:0,max:100,now:Math.round(value*100)}}>{Array.from({length:REVIEW_SEGMENTS},(_,i)=>{const a=i*Math.PI*2/REVIEW_SEGMENTS;return <View key={i} style={[s.ringSegment,{left:24+Math.sin(a)*19-1,top:24-Math.cos(a)*19-2,transform:[{rotate:(i*360/REVIEW_SEGMENTS)+'deg'}],backgroundColor:i<Math.round(shown*REVIEW_SEGMENTS)?'#7956D1':'#E6DEFA'}]}/>;})}<Text style={s.ringValue}>{Math.round(shown*100)}%</Text></View>;
+}
+function StudioSkeleton({motion}:{motion:boolean}){
+  const value=useRef(new Animated.Value(1)).current;
+  useEffect(()=>{if(!motion){value.setValue(1);return;}const a=Animated.loop(Animated.sequence([Animated.timing(value,{toValue:.55,duration:850,useNativeDriver:Platform.OS!=='web',isInteraction:false}),Animated.timing(value,{toValue:1,duration:850,useNativeDriver:Platform.OS!=='web',isInteraction:false})]));a.start();return()=>{a.stop();value.setValue(1);};},[motion,value]);
+  return <Animated.View accessibilityRole="progressbar" accessibilityLabel="Loading policy intakes" style={{opacity:value}}>{Array.from({length:3},(_,i)=><View key={i} style={s.row}><View style={s.skeletonIcon}/><View style={s.rowMain}><View style={s.skeletonLine}/><View style={[s.skeletonLine,{width:'80%',marginTop:7}]}/></View><View style={[s.skeletonLine,{width:65}]}/></View>)}</Animated.View>;
+}
+
 const s=StyleSheet.create({
+  studioRoot:{flex:1,backgroundColor:'#071E49'},
+  studioTop:{minHeight:64,paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:9,backgroundColor:'#071E49'},
+  headerButton:{width:36,minHeight:44,alignItems:'center',justifyContent:'center'},
+  headerArt:{width:34,height:34},
+  headerTitle:{flex:1,minWidth:0,color:'#FFFFFF',fontSize:18,fontWeight:'800'},
+  studioCanvas:{flex:1,backgroundColor:'#F4F5F9'},
+  studioContent:{paddingBottom:20},
+  summaryPanel:{backgroundColor:'#FFFFFF',paddingHorizontal:12,paddingTop:13,paddingBottom:11,borderBottomWidth:1,borderBottomColor:'#D7DFEB'},
+  summaryHeadline:{flexDirection:'row',alignItems:'center',gap:7,minHeight:70},
+  summaryArt:{width:40,height:40},
+  summaryAccent:{width:2,height:43,backgroundColor:'#A78DEB'},
+  summaryCopy:{flex:1,minWidth:0,gap:3},
+  summaryEyebrow:{color:'#7654CE',fontSize:10,fontWeight:'800',letterSpacing:.4},
+  summaryTitle:{color:'#17233A',fontSize:18,fontWeight:'800'},
+  summarySubtitle:{color:'#667085',fontSize:10.5,fontWeight:'600'},
+  ringColumn:{alignItems:'center',width:78,gap:3},
+  reviewRing:{width:48,height:48,alignItems:'center',justifyContent:'center'},
+  ringSegment:{position:'absolute',width:2,height:4,borderRadius:1},
+  ringValue:{color:'#7956D1',fontSize:11,fontWeight:'800'},
+  ringLabel:{color:'#7654CE',fontSize:9,textAlign:'center'},
+  summaryRule:{height:1,backgroundColor:'#E3E7EE',marginVertical:11},
+  metricRow:{flexDirection:'row',alignItems:'center'},
+  metricCell:{flex:1,minWidth:0,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:5,paddingHorizontal:3},
+  metricArt:{width:28,height:28},
+  metricCopy:{flexShrink:1,minWidth:0},
+  metricDivider:{width:1,height:36,backgroundColor:'#CDD6E4'},
+  metricLabel:{color:'#667085',fontSize:10,fontWeight:'600'},
+  metricValue:{color:'#17233A',fontSize:17,fontWeight:'800',fontVariant:['tabular-nums']},
+  queueSection:{paddingHorizontal:14,paddingTop:14},
+  queueTitle:{color:'#17233A',fontSize:17,fontWeight:'800'},
+  recordPill:{backgroundColor:'#E9E1FA',borderRadius:14,paddingHorizontal:10,paddingVertical:5},
+  recordPillText:{color:'#6942B9',fontSize:10,fontWeight:'700'},
+  queueCard:{backgroundColor:'#FFFFFF',borderRadius:17,borderWidth:1,borderColor:C.line,paddingHorizontal:10,paddingTop:10,overflow:'hidden'},
+  searchBox:{minHeight:42,flexDirection:'row',alignItems:'center',gap:8,borderWidth:1,borderColor:'#D8E0EB',borderRadius:12,paddingHorizontal:10},
+  searchInput:{flex:1,minWidth:0,color:C.ink,fontSize:12,paddingVertical:8},
+  queueTabs:{flexDirection:'row',position:'relative',marginTop:12,marginBottom:7,borderBottomWidth:1,borderBottomColor:'#E3E7EE'},
+  queueTab:{flex:1,minWidth:0,minHeight:43,alignItems:'center',justifyContent:'center',paddingHorizontal:2,gap:3},
+  queueTabDivider:{borderLeftWidth:StyleSheet.hairlineWidth,borderLeftColor:'#D1D9E6'},
+  queueTabText:{color:'#667085',fontSize:10.5,fontWeight:'600'},
+  queueUnderline:{position:'absolute',bottom:0,left:0,height:3,backgroundColor:'#2387ED'},
+  searchHint:{fontSize:10,color:C.faint,paddingVertical:8},
+  rowArt:{width:32,height:32},
+  rowFlag:{color:'#94611C',fontSize:9},
+  emptyArt:{width:64,height:64},
+  skeletonIcon:{width:32,height:32,borderRadius:8,backgroundColor:'#E9EDF4'},
+  skeletonLine:{height:8,width:'60%',borderRadius:4,backgroundColor:'#E9EDF4'},
   root:{flex:1,backgroundColor:C.paper},scroll:{flex:1},
   top:{height:58,paddingHorizontal:20,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   circle:{width:43,height:43,borderRadius:23,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:C.line,alignItems:'center',justifyContent:'center'},
@@ -298,7 +416,7 @@ const s=StyleSheet.create({
   sectionTitle:{fontSize:15,color:C.ink,fontWeight:'800',letterSpacing:-.3},
   meta:{fontSize:11,fontWeight:'600',color:C.faint},
   list:{backgroundColor:'#FFFFFF',borderRadius:22,borderWidth:1,borderColor:C.line,overflow:'hidden'},
-  row:{minHeight:86,flexDirection:'row',alignItems:'center',gap:11,paddingHorizontal:14,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:C.line},
+  row:{minHeight:66,flexDirection:'row',alignItems:'center',gap:7,paddingHorizontal:2,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:C.line},
   mark:{width:4,height:34,borderRadius:3},
   rowMain:{flex:1,minWidth:0},
   rowTitle:{fontSize:13,fontWeight:'800',color:C.ink},
