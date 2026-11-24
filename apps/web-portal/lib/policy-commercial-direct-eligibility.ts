@@ -29,16 +29,15 @@ export function assessStandardCommercialDirectConversion(input:Input):{eligible:
   const required=["insured_name","policy_number","policy_issuance_date","policy_start_date",
     "policy_end_date","third_party_start_date","third_party_end_date","insurer_name",
     "vehicle_class","vehicle_make","vehicle_model","vehicle_fuel_type",
-    "vehicle_manufacturing_year","vehicle_capacity","vehicle_rto_state",
-    "vehicle_rto_name","vehicle_registration_number","vehicle_registration_status",
+    "vehicle_manufacturing_year","vehicle_capacity",
+    "vehicle_registration_number","vehicle_registration_status",
     "vehicle_chassis_number","vehicle_engine_number","policy_product","idv","cpa_premium"];
   const missing=required.find(key=>!get(key));
   if(missing)return fail("missing_verified_"+missing);
   if(get("vehicle_registration_status")!=="registered"
     ||!/^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{3,4}$/i.test(get("vehicle_registration_number").replace(/[ -]/g,"")))
     return fail("registered_rto_evidence_required");
-  // RTO name/state are required populated onboarding fields above. Do not
-  // require a separate authority evidence label for a registered vehicle.
+  // RTO city/state are optional; a complete registered plate is still required.
   // Canonical field mapping and all premium/registration checks still apply.
   if(!["Goods Carrying Vehicle","Commercial Vehicle - Miscellaneous Class D"].includes(get("vehicle_class"))
     ||!/^(?:19|20)\d{2}$/.test(get("vehicle_manufacturing_year"))
@@ -90,7 +89,7 @@ export function assessNiaNamedAuthorityUnregisteredConversion(input:Input):{elig
     "policy_start_date","policy_end_date","third_party_start_date","third_party_end_date",
     "policy_product","vehicle_registration_status","vehicle_class","vehicle_make",
     "vehicle_model","vehicle_fuel_type","vehicle_manufacturing_year","vehicle_capacity",
-    "vehicle_rto_state","vehicle_rto_name","vehicle_chassis_number","vehicle_engine_number",
+    "vehicle_chassis_number","vehicle_engine_number",
     "idv","cpa_premium","od_premium","tp_premium"]){
     if(!get(key))return fail("nia_missing_verified_"+key);
   }
@@ -104,9 +103,9 @@ export function assessNiaNamedAuthorityUnregisteredConversion(input:Input):{elig
   );
   const printedPrefix=fields.get("vehicle_registration_status")?.evidence??"";
   const sourcePrefix=printedPrefix.match(/^NIA PDF partial registration prefix MP-(\d{2}); no full plate$/);
-  if(!authorityMatch||authorityMatch[1].trim()!==get("vehicle_rto_name")
-    ||!sourcePrefix||sourcePrefix[1]!==authorityMatch[2]
-    ||get("vehicle_rto_state")!=="Madhya Pradesh")
+  if(!sourcePrefix||(get("vehicle_rto_name") && (!authorityMatch
+      ||authorityMatch[1].trim()!==get("vehicle_rto_name")
+      ||sourcePrefix[1]!==authorityMatch[2])))
     return fail("nia_named_rto_authority_not_verified");
   // Only this source-certified model/layout family is enabled initially.
   // Other NIA goods vehicles remain review-controlled until their own tests.
@@ -175,7 +174,7 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
     "policy_start_date","policy_end_date","third_party_start_date","third_party_end_date",
     "policy_product","vehicle_class","vehicle_make","vehicle_model","vehicle_fuel_type",
     "vehicle_manufacturing_year","vehicle_capacity","vehicle_chassis_number",
-    "vehicle_engine_number","vehicle_rto_name","vehicle_rto_state",
+    "vehicle_engine_number",
     "vehicle_registration_status","vehicle_registration_number","idv",
     "od_premium","tp_premium","cpa_premium"]){
     if(!get(key))return fail("uiic_missing_verified_"+key);
@@ -196,8 +195,7 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
   const authority=fields.get("vehicle_rto_name")?.evidence??"";
   const match=authority.match(/^UIIC PDF vehicle Registration Authority: (?:MP\d{2} ([A-Z ]{3,35})|(KATNI) ARTO) INDIA$/);
   const city=match?.[1]?.trim()??match?.[2]??"";
-  if(!city||city!==get("vehicle_rto_name")
-    ||get("vehicle_rto_state")!=="Madhya Pradesh")
+  if(get("vehicle_rto_name") && city && city!==get("vehicle_rto_name"))
     return fail("uiic_vehicle_registration_authority_unverified");
   const reg=get("vehicle_registration_number").replace(/[ -]/g,"");
   const status=get("vehicle_registration_status");
@@ -249,8 +247,8 @@ export function assessUiicPrivateCarDirectConversion(input:Input):{eligible:bool
    "policy_issuance_date","policy_start_date","policy_end_date",
    "third_party_start_date","third_party_end_date","vehicle_class","vehicle_make",
    "vehicle_model","vehicle_fuel_type","vehicle_manufacturing_year","vehicle_capacity",
-   "vehicle_registration_number","vehicle_registration_status","vehicle_rto_name",
-   "vehicle_rto_state","vehicle_chassis_number","vehicle_engine_number","idv",
+   "vehicle_registration_number","vehicle_registration_status",
+   "vehicle_chassis_number","vehicle_engine_number","idv",
    "od_premium","tp_premium","cpa_premium"]){
   if(!get(k))return fail("uiic_private_car_missing_"+k);
  }
@@ -263,9 +261,7 @@ export function assessUiicPrivateCarDirectConversion(input:Input):{eligible:bool
   return fail("uiic_private_car_vehicle_product_conflict");
  if(!/^MP20[A-Z]{1,3}\d{4}$/i.test(get("vehicle_registration_number"))
   ||get("vehicle_registration_status")!=="registered"
-  ||get("vehicle_rto_name")!=="JABALPUR"
-  ||get("vehicle_rto_state")!=="Madhya Pradesh"
-  ||fields.get("vehicle_rto_name")?.evidence!=="UIIC Private Car PDF Registration Authority: MP20 JABALPUR INDIA")
+)
   return fail("uiic_private_car_registration_authority_unverified");
  const validDate=(v:string)=>/^\d{4}-\d\d-\d\d$/.test(v)
   &&Number.isFinite(Date.parse(v+"T00:00:00Z"))
