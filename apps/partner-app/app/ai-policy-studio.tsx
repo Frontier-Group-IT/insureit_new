@@ -200,7 +200,7 @@ export default function AiPolicyStudioScreen() {
           <Pressable onPress={()=>router.back()} accessibilityRole="button" accessibilityLabel="Back to More" style={s.headerAction}>
             <Ionicons name="arrow-back" size={22} color="#FFFFFF"/>
           </Pressable>
-          <Image source={PartnerAssets.actions.quickPolicyIntake} style={s.headerArtwork} resizeMode="contain" accessible={false}/>
+          <Image source={PartnerAssets.actions.policyChecklist} style={s.headerArtwork} resizeMode="contain" accessible={false}/>
           <Text style={s.topWord} numberOfLines={1}>AI Onboarding Studio</Text>
           <Pressable onPress={refresh} accessibilityRole="button" accessibilityLabel="Refresh" style={s.headerAction}>
             <Animated.View style={{transform:[{rotate:refreshRotation.interpolate({inputRange:[0,1],outputRange:['0deg','360deg']})}]}}><Ionicons name="refresh-outline" size={22} color="#FFFFFF"/></Animated.View>
@@ -213,7 +213,7 @@ export default function AiPolicyStudioScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={C.blue} onRefresh={refresh}/>}>
         <View style={s.summarySurface}>
           <View style={s.summaryTop}>
-            <Image source={PartnerAssets.actions.quickPolicyIntake} style={s.summaryArtwork} resizeMode="contain" accessible={false}/>
+            <Image source={PartnerAssets.actions.policyChecklist} style={s.summaryArtwork} resizeMode="contain" accessible={false}/>
             <View style={s.summaryText}>
               <Text style={s.summaryOverline}>POLICY WORK QUEUE</Text>
               <Text style={s.summaryMain}>{count('open')} Open Intakes</Text>
@@ -235,7 +235,7 @@ export default function AiPolicyStudioScreen() {
           <View style={s.summaryMetrics}>
             {([
               {key:'processing',title:'Processing',image:PartnerAssets.status.policyPending},
-              {key:'in_review',title:'In Review',image:PartnerAssets.status.pendingReview},
+              {key:'in_review',title:'In Review',image:PartnerAssets.actions.documentSearch},
               {key:'action',title:'Action',image:PartnerAssets.status.policyAttention},
             ] as const).map(metric=>(
               <View style={s.metric} key={metric.key}>
@@ -251,7 +251,7 @@ export default function AiPolicyStudioScreen() {
         <View style={s.listSection}>
           <View style={s.listHeading}>
             <Text style={s.listHeadingText}>Policy intakes</Text>
-            <Text style={s.recordPill}>{count(filter)} Records</Text>
+            <Text style={s.recordPill}>{searchLoading?'Searching…':`${matchingCount} ${matchingCount===1?"Record":"Records"}`}</Text>
           </View>
           <View style={s.intakePanel}>
             <View style={s.searchBar}>
@@ -286,8 +286,11 @@ export default function AiPolicyStudioScreen() {
             </Pressable>:null}
             {searchError?<Text style={s.errorText}>{searchError}</Text>:null}
             {!loading&&!searchLoading&&!error&&!searchError&&displayedRows.length===0?
-              <View style={s.compactEmpty}><Text style={s.emptyHead}>{debouncedSearch?'No matching intakes':'All clear here'}</Text>
-                <Text style={s.emptyText}>{debouncedSearch?'Try another intake number or source.':'No intakes in this view.'}</Text>
+              <View style={s.compactEmpty}>
+                <Image source={debouncedSearch?PartnerAssets.emptyStates.noSearchResults:PartnerAssets.emptyStates.noDocuments}
+                  style={s.emptyArtwork} resizeMode="contain" accessible={false}/>
+                <Text style={s.emptyHead}>{debouncedSearch?'No matching intakes':'No intakes found'}</Text>
+                <Text style={s.emptyText}>{debouncedSearch?'Try another intake number or source.':'There are no intakes in this view.'}</Text>
               </View>:null}
             {!loading&&!searchLoading&&!error&&!searchError&&displayedRows.map((row,index)=>{
               const done=!!row.final_policy_id,flag=row.exception_codes.length>0;
@@ -296,7 +299,7 @@ export default function AiPolicyStudioScreen() {
                 <Pressable accessibilityRole="button" accessibilityLabel={'Open '+row.intake_number}
                   style={({pressed})=>[s.compactRow,pressed&&s.compactRowPressed]} onPress={()=>openDetail(row)}>
                   <View style={s.rowArtworkShell}>
-                    <Image source={flag?PartnerAssets.status.policyAttention:PartnerAssets.actions.impactPolicyDocument}
+                    <Image source={flag?PartnerAssets.status.policyAttention:done?PartnerAssets.status.verified:row.status==='in_review'?PartnerAssets.actions.documentSearch:row.status==='processing'?PartnerAssets.status.policyPending:PartnerAssets.actions.policyChecklist}
                       style={s.rowArtwork} resizeMode="contain" accessible={false}/>
                   </View>
                   <View style={s.rowMain}>
@@ -430,7 +433,7 @@ const s=StyleSheet.create({
   screenContent:{paddingBottom:24},
   summarySurface:{backgroundColor:'#FFFFFF',paddingHorizontal:11,paddingTop:10,paddingBottom:8},
   summaryTop:{flexDirection:'row',alignItems:'center',minHeight:76,gap:8},
-  summaryArtwork:{width:34,height:39},
+  summaryArtwork:{width:43,height:45},
   summaryText:{flex:1,minWidth:0},
   summaryOverline:{fontSize:8,color:'#6245D2',fontWeight:'700',letterSpacing:0.6},
   summaryMain:{fontSize:19,color:'#10294D',fontWeight:'800',marginTop:2},
@@ -440,8 +443,8 @@ const s=StyleSheet.create({
   ringTick:{position:'absolute',left:20,top:20,width:4,height:7,borderRadius:3},
   ringText:{fontSize:9,fontWeight:'800',color:'#6844D9'},
   summaryMetrics:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',minHeight:47},
-  metric:{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:4,minWidth:0},
-  metricArtwork:{width:22,height:25},
+  metric:{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:3,minWidth:0},
+  metricArtwork:{width:33,height:33},
   metricCopy:{minWidth:0},
   metricLabel:{color:'#627089',fontSize:10},
   metricValue:{color:'#071D38',fontSize:16,fontWeight:'800'},
@@ -459,15 +462,22 @@ const s=StyleSheet.create({
   tabUnderline:{position:'absolute',height:2,bottom:0,left:0,backgroundColor:'#2178EC'},
   compactRow:{minHeight:63,flexDirection:'row',alignItems:'center',gap:7,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#E7ECF2',paddingVertical:7},
   compactRowPressed:{backgroundColor:'#F4F8FE'},
-  rowArtworkShell:{width:28,height:32,borderRadius:7,backgroundColor:'#EAF3FF',alignItems:'center',justifyContent:'center'},
-  rowArtwork:{width:23,height:26},
+  rowArtworkShell:{width:33,height:35,borderRadius:7,alignItems:'center',justifyContent:'center'},
+  rowArtwork:{width:32,height:33},
   rowsLoading:{gap:0},
   skeletonRow:{height:63,flexDirection:'row',alignItems:'center',gap:9,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#E5EBF2'},
   skeletonIcon:{width:28,height:32,borderRadius:7,backgroundColor:'#EDF2FA'},
   skeletonCopy:{flex:1,gap:7},
   skeletonLineWide:{height:9,width:'58%',borderRadius:5,backgroundColor:'#EDF2FA'},
   skeletonLineShort:{height:7,width:'74%',borderRadius:4,backgroundColor:'#EDF2FA'},
-  compactEmpty:{minHeight:115,alignItems:'center',justifyContent:'center',gap:7,padding:20},
+  compactEmpty:{minHeight:115,alignItems:'center',justifyContent:'center',gap:5,padding:12},
+  emptyArtwork:{width:49,height:49},
+  paginationRow:{minHeight:44,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:6,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:'#E6ECF4',paddingTop:7,paddingBottom:5},
+  paginationInfo:{color:'#78889A',fontSize:10,flexShrink:1},
+  paginationActions:{flexDirection:'row',alignItems:'center',gap:7},
+  paginationButton:{width:29,height:29,alignItems:'center',justifyContent:'center',borderRadius:8,borderWidth:1,borderColor:'#DFE8F2'},
+  paginationDisabled:{opacity:0.35},
+  paginationPage:{fontSize:10,fontWeight:'700',color:'#195BBA'},
 
   root:{flex:1,backgroundColor:C.paper},scroll:{flex:1},
   headerShell:{backgroundColor:'#071E49'},
