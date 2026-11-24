@@ -98,10 +98,11 @@ export const NON_TATA_COMMERCIAL_N8N_IDS = new Set([
   "united_india_gcv_native_pdf", "oriental_gccv_native_pdf",
   "zurich_kotak_private_car_tp_native_pdf", "go_digit_two_wheeler_od_native_pdf",
   "united_india_tractor_tp_native_pdf",
+  "hdfc_ergo_two_wheeler_tp_native_pdf", "sbi_general_private_car_package_native_pdf",
 ]);
 export type TrainedN8nParserFamily = "icici" | "tata_private_car" | "tata_two_wheeler" | "commercial";
 export function trainedN8nParserProfile(parserId: string | null): {
-  checks: 13 | 16 | 17 | 18; family: TrainedN8nParserFamily;
+  checks: 13 | 16 | 17 | 18 | 20; family: TrainedN8nParserFamily;
 } | null {
   if (!parserId) return null;
   if (ICICI_N8N_IDS.has(parserId)) return { checks:13, family:"icici" };
@@ -110,6 +111,8 @@ export function trainedN8nParserProfile(parserId: string | null): {
     return { checks:16, family:"tata_private_car" };
   if (TATA_AIG_PRIVATE_CAR_N8N_IDS.has(parserId)) return { checks:18, family:"tata_private_car" };
   if (parserId===TATA_AIG_TWO_WHEELER_N8N_ID) return { checks:18, family:"tata_two_wheeler" };
+  if (parserId==="sbi_general_private_car_package_native_pdf") return {checks:20,family:"commercial"};
+  if (parserId==="hdfc_ergo_two_wheeler_tp_native_pdf") return {checks:18,family:"commercial"};
   if (parserId==="zurich_kotak_private_car_tp_native_pdf") return {checks:16,family:"commercial"};
   if (parserId==="go_digit_two_wheeler_od_native_pdf"
     || parserId==="united_india_tractor_tp_native_pdf") return {checks:18,family:"commercial"};
