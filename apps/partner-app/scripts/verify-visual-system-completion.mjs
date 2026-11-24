@@ -374,7 +374,7 @@ if (stories.includes('storySkeleton: { margin: 24')) throw new Error('Old short 
 if (stories.indexOf('<PartnerCaseBottomNavigation activeTab="Home" />') < stories.indexOf('</ScrollView>')) throw new Error('Stories Home tab bar must stay outside loading and story content.');
 
 for (const fragment of [
-  "const learnClock = useImpactTimeline(active && !loading && !error && story?.kind === 'learn', held);",
+  "const learnClock = useImpactTimeline(focused && !closing && !loading && !error && story?.kind === 'learn', held);",
   '<LearnStory story={story} onOpen={openStory} artworkHeight={artworkHeight} clock={learnClock} />',
   'reveal(clock, 0, 300, 5, 0.96)',
   'reveal(clock, 200, 550, 7, 0.98)',
