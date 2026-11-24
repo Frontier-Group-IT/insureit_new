@@ -27,6 +27,7 @@ export default function StoriesScreen() {
   const closingRef = useRef(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const direction = useRef(1);
+  const storyScrollRef = useRef<ScrollView>(null);
   const transition = useRef(new Animated.Value(1)).current;
   const closeMotion = useRef(new Animated.Value(1)).current;
   const closePress = useRef(new Animated.Value(0)).current;
@@ -130,7 +131,8 @@ export default function StoriesScreen() {
     generation.current += 1;
     elapsed.current = 0;
     progressValue.setValue(0);
-    transition.setValue(motion ? 0 : 1);
+    transition.stopAnimation();
+    storyScrollRef.current?.scrollTo({ y: 0, animated: false });
     setIndex(value => value + step);
   }, [active, closeStory, data, index, motion, progressValue, transition]);
   const next = () => navigate(1);
@@ -138,7 +140,8 @@ export default function StoriesScreen() {
 
   useEffect(() => {
     if (!motion) { transition.setValue(1); return; }
-    const animation = Animated.timing(transition, { toValue: 1, duration: 310, easing: Easing.out(Easing.cubic), useNativeDriver: true });
+    transition.setValue(0);
+    const animation = Animated.timing(transition, { toValue: 1, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: true });
     animation.start();
     return () => animation.stop();
   }, [index, motion, transition]);
@@ -254,8 +257,9 @@ export default function StoriesScreen() {
       ) : (
         <>
           <ScrollView
-            key={index}
+            ref={storyScrollRef}
             style={styles.scroll}
+            removeClippedSubviews={false}
             scrollEnabled={storyScrollEnabled}
             bounces={storyScrollEnabled}
             alwaysBounceVertical={false}
@@ -280,7 +284,7 @@ export default function StoriesScreen() {
               <Animated.View style={[styles.waveMiddle, { transform: [{ rotate: '-10deg' }, { translateX: ambient.interpolate({ inputRange: [0, 1], outputRange: [0, -10] }) }] }]} />
               <Animated.View style={[styles.waveLower, { transform: [{ rotate: '-11deg' }, { translateY: ambient.interpolate({ inputRange: [0, 1], outputRange: [0, -7] }) }] }]} />
             </View>
-            <Animated.View style={[styles.storyContent, { opacity: transition.interpolate({ inputRange: [0, 1], outputRange: [0.65, 1] }), transform: [{ perspective: 900 }, { translateX: transition.interpolate({ inputRange: [0, 1], outputRange: [direction.current * 34, 0] }) }, { rotateY: transition.interpolate({ inputRange: [0, 1], outputRange: [direction.current * -3 + 'deg', '0deg'] }) }, { scale: transition.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] }) }] }]}>
+            <Animated.View key={index} style={[styles.storyContent, { transform: [{ translateX: transition.interpolate({ inputRange: [0, 1], outputRange: [direction.current * 12, 0] }) }, { scale: transition.interpolate({ inputRange: [0, 1], outputRange: [0.995, 1] }) }] }]}>
               {story.kind === 'today' ? (
                 <TodayRenewalStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />
               ) : story.kind === 'business' ? (
@@ -432,7 +436,13 @@ function StoryPanel({ children, impact = false }: { children: React.ReactNode; i
     animation.start();
     return () => animation.stop();
   }, [enabled, entrance]);
-  return <Animated.View style={[styles.unifiedPanel, impact && styles.impactPanel, { opacity: entrance, transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [7, 0] }) }] }]}>{children}</Animated.View>;
+  return <Animated.View style={[styles.unifiedPanel, impact && styles.impactPanel, { transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [7, 0] }) }] }]}>{children}</Animated.View>;
+}
+
+// Keep all foreground content visible even when the staged timeline restarts.
+function visibleImpactReveal(clock: ImpactTimeline, start: number, end: number, distance = 6, scale = 0.98) {
+  const { opacity: _opacity, ...transformStyle } = reveal(clock, start, end, distance, scale);
+  return transformStyle;
 }
 
 function ImpactStory({ story, onOpen, artworkHeight, clock, onPause }: { story: PartnerStory; onOpen: () => void; artworkHeight: number; clock: ImpactTimeline; onPause: (paused: boolean) => void }) {
@@ -447,11 +457,11 @@ function ImpactStory({ story, onOpen, artworkHeight, clock, onPause }: { story: 
   const glow = clock.ambient.interpolate({inputRange:[0,1],outputRange:[0,0.22]});
   return (
     <View style={styles.unifiedStory}>
-      <Animated.View style={[{ alignItems: 'center', maxWidth: '100%' }, reveal(clock, 0, 300, 4, 0.96)]}>
+      <Animated.View style={[{ alignItems: 'center', maxWidth: '100%' }, visibleImpactReveal(clock, 0, 300, 4, 0.96)]}>
         {clock.enabled ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 25, backgroundColor: '#9ACBFF', opacity: glow, transform: [{scale:1.04}] }]} /> : null}
         <StoryHeading icon="shield-checkmark-outline" title={story.eyebrow} />
       </Animated.View>
-      <Animated.View style={[{ width: '100%' }, reveal(clock, 0, 200, 5)]}><StoryPanel impact>
+      <Animated.View style={[{ width: '100%' }, visibleImpactReveal(clock, 0, 200, 5)]}><StoryPanel impact>
         {clock.enabled ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, {borderRadius:21,borderWidth:2,borderColor:'#81BEFF',opacity:accent}]} /> : null}
         <Pressable
           onPress={onOpen}
@@ -470,7 +480,7 @@ function ImpactStory({ story, onOpen, artworkHeight, clock, onPause }: { story: 
             </>
           ) : null}
           {vehicleMatch ? (
-            <Animated.View style={[styles.impactVehicleRow, reveal(clock, 500, 800)]}>
+            <Animated.View style={[styles.impactVehicleRow, visibleImpactReveal(clock, 500, 800)]}>
               <Ionicons name="car-sport-outline" size={27} color={storyColors.blue} />
               <View style={styles.impactVehicleCopy}>
                 <ImpactCounter clock={clock} value={Number(vehicleMatch[1].replace(/,/g, ''))} start={500} duration={650} format={count} style={styles.impactVehicleNumber} />
@@ -482,14 +492,14 @@ function ImpactStory({ story, onOpen, artworkHeight, clock, onPause }: { story: 
         {customerMatch || claimMatch ? (
           <View style={styles.impactSmallGrid}>
             {customerMatch ? (
-              <Animated.View style={[styles.impactSmallTile, reveal(clock, 800, 1100)]}>
+              <Animated.View style={[styles.impactSmallTile, visibleImpactReveal(clock, 800, 1100)]}>
                 <Ionicons name="people" size={24} color={storyColors.blue} />
                 <ImpactCounter clock={clock} value={Number(customerMatch[1].replace(/,/g, ''))} start={800} duration={650} format={count} style={styles.impactSmallValue} />
                 <Text style={styles.impactSmallLabel}>Customers served</Text>
               </Animated.View>
             ) : null}
             {claimMatch ? (
-              <Animated.View style={[styles.impactSmallTile, reveal(clock, 800, 1100)]}>
+              <Animated.View style={[styles.impactSmallTile, visibleImpactReveal(clock, 800, 1100)]}>
                 <Ionicons name="checkbox-outline" size={24} color={storyColors.blue} />
                 <ImpactCounter clock={clock} value={Number(claimMatch[1].replace(/,/g, ''))} start={800} duration={650} format={count} style={styles.impactSmallValue} />
                 <Text style={styles.impactSmallLabel}>Claims assisted</Text>
@@ -499,7 +509,7 @@ function ImpactStory({ story, onOpen, artworkHeight, clock, onPause }: { story: 
         ) : <Text style={styles.impactFallback}>{story.body}</Text>}
       </StoryPanel></Animated.View>
       <View pointerEvents="none" style={[styles.unifiedArtworkBox, { height: artworkHeight }]}>
-        <Animated.View style={[{width:'100%',height:artworkHeight,alignItems:'center',justifyContent:'center'}, reveal(clock, 1200, 1600, 8)]}>
+        <Animated.View style={[{width:'100%',height:artworkHeight,alignItems:'center',justifyContent:'center'}, visibleImpactReveal(clock, 1200, 1600, 8)]}>
           {clock.enabled ? <Animated.View style={{position:'absolute',bottom:4,width:'60%',height:12,borderRadius:20,backgroundColor:'#6FA8DF',opacity:clock.ambient.interpolate({inputRange:[0,1],outputRange:[0.12,0.06]}),transform:[{scaleX:clock.ambient.interpolate({inputRange:[0,1],outputRange:[1,0.96]})}]}} /> : null}
           <Animated.View style={[{width:'100%',height:artworkHeight,alignItems:'center'}, clock.enabled && {transform:[{translateY:clock.ambient.interpolate({inputRange:[0,1],outputRange:[0,-8]})},{scale:clock.ambient.interpolate({inputRange:[0,1],outputRange:[1,1.015]})},{rotate:clock.ambient.interpolate({inputRange:[0,1],outputRange:['0deg','0.35deg']})}]}]}>
             <Image source={require('../assets/partner/stories/your-impact.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
@@ -734,7 +744,7 @@ function TodayRenewalStory({ story, onOpen, artworkHeight }: { story: PartnerSto
   return (
     <View style={styles.todaySnapshot}>
       <StoryHeading icon="sunny" title={story.eyebrow} tone="gold" />
-      <Animated.View style={[styles.todayCard, { opacity: entrance, transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }, { scale: entrance.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] }) }] }]}>
+      <Animated.View style={[styles.todayCard, { transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }, { scale: entrance.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] }) }] }]}>
         <View pointerEvents="none" style={styles.todayCornerAccent} />
         <View style={styles.todayHeadlineRow}>
           <Animated.View style={[styles.todaySunIcon, isClaim && styles.todayClaimsIcon, { transform: [{ scale: entrance.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] }]}>
@@ -856,11 +866,11 @@ const styles = StyleSheet.create({
   close: { width: 42, height: 42, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2D5998' },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1, paddingHorizontal: 14, paddingTop: 18, paddingBottom: 20, justifyContent: 'flex-start' },
-  storyBackdrop: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+  storyBackdrop: { ...StyleSheet.absoluteFillObject, zIndex: 0, overflow: 'hidden' },
   waveUpper: { position: 'absolute', top: -205, left: -110, width: '150%', height: 255, borderBottomLeftRadius: 250, borderBottomRightRadius: 145, backgroundColor: '#0A3478', transform: [{ rotate: '-9deg' }] },
   waveMiddle: { position: 'absolute', top: -45, left: -100, width: '160%', height: 200, borderTopLeftRadius: 245, borderTopRightRadius: 180, backgroundColor: '#CFE2FF', opacity: 0.9, transform: [{ rotate: '-10deg' }] },
   waveLower: { position: 'absolute', bottom: -110, right: -130, width: '155%', height: 230, borderTopLeftRadius: 240, borderTopRightRadius: 280, backgroundColor: '#D6E6FF', opacity: 0.88, transform: [{ rotate: '-11deg' }] },
-  storyContent: { alignItems: 'center', width: '100%', paddingTop: 3 },
+  storyContent: { position: 'relative', zIndex: 1, alignItems: 'center', width: '100%', paddingTop: 3 },
 
   unifiedStory: { width: '100%', alignItems: 'center', paddingTop: 4, gap: 8 },
   unifiedHeading: { minHeight: 32, maxWidth: '96%', borderRadius: 25, paddingHorizontal: 17, paddingVertical: 4, gap: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F9FF', borderWidth: 1, borderColor: '#DCEAFF', shadowColor: '#185AAB', shadowOpacity: 0.12, shadowRadius: 7, elevation: 2 },
