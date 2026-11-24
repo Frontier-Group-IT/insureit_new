@@ -4,9 +4,9 @@ import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
 import { enrichIffcoCertifiedMachineFamily } from "@/lib/policy-iffco-machine-family";
 
 type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "oriental_gccv_native_pdf";
-type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf";
+type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf" | "hdfc_ergo_two_wheeler_tp_native_pdf" | "sbi_general_private_car_package_native_pdf";
 type Insurer = ExistingInsurer | NewProductVariant;
-const NEW_VARIANTS = new Set<Insurer>(["zurich_kotak_private_car_tp_native_pdf","go_digit_two_wheeler_od_native_pdf","united_india_tractor_tp_native_pdf"]);
+const NEW_VARIANTS = new Set<Insurer>(["zurich_kotak_private_car_tp_native_pdf","go_digit_two_wheeler_od_native_pdf","united_india_tractor_tp_native_pdf","hdfc_ergo_two_wheeler_tp_native_pdf","sbi_general_private_car_package_native_pdf"]);
 type OcrField = { key: string; label: string; value: string; confidence: null; page: number | null; evidence: string };
 export type NonTataCommercialRead = {
   parserId: Insurer;
@@ -14,7 +14,7 @@ export type NonTataCommercialRead = {
   fields: OcrField[];
   warnings: string[];
   checksPassed: number;
-  premium: { od: number; tp: number; net: number; gst: number; gross: number };
+  premium: { od: number; tp: number; net: number; gst: number; gross: number; cpa?: number; addOn?: number; odBasic?: number };
 };
 // Use the SAME approved self-hosted webhook as the production ICICI/Tata bridge.
 // Commercial policy verification stays isolated by the insurer classifier and its
@@ -101,6 +101,12 @@ function insurerForText(head: string): Insurer | null {
   if (/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(issuer)
       && /MISCELLANEOUS AND SPECIAL TYPE OF VEHICLES\s*-\s*LIABILITY ONLY POLICY/i.test(product))
     matches.push("united_india_tractor_tp_native_pdf");
+  if (/HDFC ERGO General Insurance Company Limited/i.test(product)
+      && /Motor Insurance\s*-\s*Two Wheeler Liability only/i.test(product))
+    matches.push("hdfc_ergo_two_wheeler_tp_native_pdf");
+  if (/SBI General Insurance Company Limited/i.test(issuer)
+      && /Private Car Insurance Policy\s*-\s*Package/i.test(product))
+    matches.push("sbi_general_private_car_package_native_pdf");
   return matches.length === 1 ? matches[0] : null;
 }
 
@@ -130,6 +136,19 @@ const NEW_VARIANT_CHECKS: Record<NewProductVariant, string[]> = {
     "capacity_and_year_verified","idv_zero_valid","od_zero_valid",
     "paid_driver_ll_reconciled","net_tp_reconciled","tax_evidenced",
     "stamp_separately_disclosed","cpa_waiver_evidenced"],
+  hdfc_ergo_two_wheeler_tp_native_pdf:[
+    "issuer_verified","product_verified","policy_number_verified","insured_name_verified",
+    "period_verified","issuance_date_verified","registration_printed","vehicle_identity_verified",
+    "make_model_verified","manufacturing_year_and_cc_verified","rto_named","model_fuel_certified",
+    "tp_only_zero_od","cpa_waiver_evidenced","liability_premium_printed",
+    "igst_rounding_verified","gross_reconciled","stamp_separately_disclosed"],
+  sbi_general_private_car_package_native_pdf:[
+    "insurer_verified","package_product_verified","policy_identity_verified","issue_and_signature_date_consistent",
+    "od_period_evidenced","tp_period_evidenced","registered_plate_evidenced","make_model_evidenced",
+    "vehicle_identity_evidenced","registration_year_and_fuel_verified","capacity_evidenced","rto_authority_evidenced",
+    "idv_printed","od_basic_and_addons_printed","od_including_addons_reconciled",
+    "tp_and_cpa_separate","total_net_reconciled","gst_18_percent_reconciled",
+    "gross_rounded_reconciled","stamp_separately_disclosed"],
   go_digit_two_wheeler_od_native_pdf:[
     "insurer_verified","standalone_od_product_verified","identity_verified",
     "insured_vehicle_registered","od_period_verified","issuance_date_evidenced",
@@ -184,7 +203,14 @@ function validateNewVariant(
  }
  if((byKey.get("policy_end_date")||"")<(byKey.get("policy_start_date")||""))
    throw new Error("n8n_extension_invalid_coverage");
- if(insurer==="go_digit_two_wheeler_od_native_pdf"){
+ if(insurer==="sbi_general_private_car_package_native_pdf"){
+   if(byKey.get("policy_product")!=="Package"
+     ||byKey.get("vehicle_class")!=="Private Car"
+     ||!byKey.get("vehicle_manufacturing_year")
+     ||!(Number(byKey.get("idv"))>0)
+     ||!(Number(byKey.get("cpa_premium"))>0))
+     throw new Error("n8n_extension_sbi_package_product_invalid");
+ }else if(insurer==="go_digit_two_wheeler_od_native_pdf"){
    if(byKey.get("policy_product")!=="Stand-alone Own Damage"
      ||byKey.get("vehicle_class")!=="Two Wheeler"||!byKey.get("vehicle_registration_year")
      ||byKey.has("vehicle_manufacturing_year"))
@@ -204,7 +230,13 @@ function validateNewVariant(
  if(!object(p)||![p.od,p.tp,p.net,p.gst,p.gross].every(isMoney))
    throw new Error("n8n_extension_premium_shape_invalid");
  const {od,tp,net,gst,gross}=p as {od:number,tp:number,net:number,gst:number,gross:number};
- if(Math.abs(cents(od+tp)-cents(net))>6
+ const sbi=insurer==="sbi_general_private_car_package_native_pdf";
+ const cpa=sbi?p.cpa:0,addOn=sbi?p.addOn:0,odBasic=sbi?p.odBasic:0;
+ if(sbi&&(!isMoney(cpa)||!isMoney(addOn)||!isMoney(odBasic)
+    ||cents(Number(byKey.get("cpa_premium")))!==cents(cpa)
+    ||Math.abs(cents((odBasic as number)+(addOn as number))-cents(od))>6))
+   throw new Error("n8n_extension_sbi_financial_split_invalid");
+ if(Math.abs(cents(od+tp+(sbi?(cpa as number):0))-cents(net))>6
     ||Math.abs(cents(net+gst)-cents(gross))>50
     ||cents(Number(byKey.get("od_premium")))!==cents(od)
     ||cents(Number(byKey.get("tp_premium")))!==cents(tp)
@@ -213,7 +245,8 @@ function validateNewVariant(
  // The PDF mobile is masked; never use it as customer contact. The intake
  // supplied phone is handled by canonical booking identity/duplicate checks.
  return {parserId:insurer,parserVersion:"insureit-product-extension-v1",
-   fields,warnings:[],checksPassed:expected.length,premium:{od,tp,net,gst,gross}};
+   fields,warnings:[],checksPassed:expected.length,
+   premium:{od,tp,net,gst,gross,...(sbi?{cpa:cpa as number,addOn:addOn as number,odBasic:odBasic as number}:{})}};
 }
 
 function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | "document_id" | "request_id", string>): NonTataCommercialRead {
