@@ -62,7 +62,7 @@ assert.deepEqual(mapVerifiedProductVariantPremium({od:2312.46,tp:0,net:2312.46,g
 const hdfc=fixture("hdfc_ergo_two_wheeler_tp_native_pdf",{
  insurer_name:"HDFC ERGO General Insurance Company Limited",policy_product:"Third-Party Only",
  vehicle_class:"Two Wheeler",vehicle_make:"HONDA",vehicle_model:"ACTIVA-3G",
- vehicle_fuel_type:"Petrol",vehicle_capacity:"109",idv:"0",od_premium:"0",
+ vehicle_fuel_type:"Petrol",vehicle_capacity:"109",vehicle_manufacturing_year:"2016",idv:"0",od_premium:"0",
  tp_premium:"714",cpa_premium:"0",third_party_end_date:"2027-11-16",
 }, {od:0,tp:714,net:714,gst:129,gross:843});
 hdfc.fields.find(f=>f.key==="cpa_premium").evidence="Native PDF: Compulsory PA waiver declaration";
