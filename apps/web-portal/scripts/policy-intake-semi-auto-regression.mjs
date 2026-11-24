@@ -997,7 +997,7 @@ assert(actionsText.includes("async function holdFailedAiConversion(id:string,iss
   && actionsText.includes("if(!result.ok)await holdFailedAiConversion(id,result.issues)")
   && actionsText.includes("await holdFailedAiConversion(id);"),
   "Failed and uncertain conversions must hold previously verified queue rows; certified NIA coverage conflicts retain their exact reason");
-assert(workbenchText.includes('booking_review_required:"Bulk booking requires manual review"'),
+assert(workbenchText.includes('booking_review_required:"Automated conversion needs attention"'),
   "Held bulk bookings must show a specific manual-review reason");
 // Surface a sanitized status without revealing n8n response bodies, signed
 // PDF URLs, secret headers or policy data; stop a batch on shared service error.
