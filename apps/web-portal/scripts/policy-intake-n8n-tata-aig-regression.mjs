@@ -52,6 +52,41 @@ for(const permitted of ["CNG","LPG","ELECTRIC"]){
 invalid(packageDiesel,x=>{
   x.fields.find(field=>field.key==="vehicle_fuel_type").value="KEROSENE";
 },"n8n_tata_aig_vehicle_or_policy_invalid");
+// Regression for the three reported Tata AIG Package intakes (anonymized):
+// the native parser passes 18/18 for WB/Kolkata, HR/Panchkula and DL/Delhi,
+// but the older portal bridge still restricted RTO state to HR/DL and rejected
+// WB or unlisted cities. RTO location is independent OPTIONAL PDF enrichment.
+const withVehicle=(overrides={})=>{
+  const doc=copy(packageDiesel);
+  const fields=new Map(doc.fields.map(f=>[f.key,f]));
+  for(const [key,value] of Object.entries(overrides)){
+    if(value===null) doc.fields=doc.fields.filter(f=>f.key!==key);
+    else if(fields.has(key))fields.get(key).value=value;
+    else doc.fields.push({key,label:key,value,confidence:null,page:1,evidence:"Synthetic printed vehicle schedule"});
+  }
+  return doc;
+};
+const variants=[
+  ["WB Kolkata",{"vehicle_registration_number":"WB08H0751","vehicle_rto_name":"KOLKATA","vehicle_rto_state":"WEST BENGAL"}],
+  ["HR Panchkula",{"vehicle_registration_number":"HR03AB1234","vehicle_rto_name":"PANCHKULA","vehicle_rto_state":"HARYANA"}],
+  ["DL Delhi",{"vehicle_registration_number":"DL04AB1234","vehicle_rto_name":"DELHI","vehicle_rto_state":"DELHI"}],
+  ["Rajasthan Jaipur",{"vehicle_registration_number":"RJ14AB1234","vehicle_rto_name":"JAIPUR","vehicle_rto_state":null}],
+  ["city only",{"vehicle_registration_number":"WB08H0751","vehicle_rto_name":"KOLKATA","vehicle_rto_state":null}],
+  ["state only",{"vehicle_registration_number":"WB08H0751","vehicle_rto_name":null,"vehicle_rto_state":"WEST BENGAL"}],
+  ["both absent",{"vehicle_registration_number":"WB08H0751","vehicle_rto_name":null,"vehicle_rto_state":null}],
+];
+for(const [label,fields] of variants){
+  const verified=validateTataAigN8nResponse(withVehicle(fields),IDS);
+  assert.equal(verified.ok,true,label+" should not fail for RTO geography");
+  assert.equal(verified.checksPassed,18);
+}
+invalid(withVehicle({"vehicle_registration_number":"WB08H0751","vehicle_rto_state":"WEST BENGAL"}),x=>{
+  x.fields.find(f=>f.key==="vehicle_rto_state").value="HARYANA";
+},"n8n_tata_aig_registration_invalid");
+invalid(withVehicle({"vehicle_registration_number":"WB08H0751","vehicle_rto_state":null}),x=>{
+  x.fields.find(f=>f.key==="vehicle_registration_number").value="WB08";
+},"n8n_tata_aig_registration_invalid");
+
 const combos=[
   {name:"saod",product:"Stand-Alone Own Damage",registrationMode:"registered",gross:9178},
   {name:"package",product:"Package",registrationMode:"registered",gross:23505},

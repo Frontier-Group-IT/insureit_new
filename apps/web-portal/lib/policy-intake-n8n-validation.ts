@@ -266,8 +266,7 @@ const REQUIRED_FIELDS = [
   "policy_number", "insurer_name", "policy_product", "insured_name",
   "vehicle_registration_status", "vehicle_class", "vehicle_make", "vehicle_model",
   "vehicle_fuel_type", "vehicle_manufacturing_year", "vehicle_capacity",
-  "vehicle_chassis_number", "vehicle_engine_number", "vehicle_rto_name",
-  "vehicle_rto_state", "idv", "policy_start_date", "policy_end_date",
+  "vehicle_chassis_number", "vehicle_engine_number", "idv", "policy_start_date", "policy_end_date",
   "third_party_start_date", "third_party_end_date", "od_premium",
   "add_on_premium", "tp_premium", "cpa_premium", "cpa_opted",
 ];
@@ -371,10 +370,8 @@ export function validateTataAigN8nResponse(
       : /^[0-9]{2,5}(?:\.\d{1,2})?$/.test(get("vehicle_capacity")))
     || get("vehicle_engine_number").length < 6 || get("vehicle_chassis_number").length < 12
     || get("vehicle_engine_number") === get("vehicle_chassis_number")
-    || !/^[a-z ]{2,60}$/i.test(get("vehicle_rto_name"))
-    || !(twoWheeler ? get("vehicle_rto_state").toUpperCase() === "MADHYA PRADESH"
-      && ["JABALPUR", "SATNA"].includes(get("vehicle_rto_name").toUpperCase())
-      : ["HARYANA", "DELHI"].includes(get("vehicle_rto_state").toUpperCase())))
+    || (get("vehicle_rto_name") && !/^[a-z .-]{2,60}$/i.test(get("vehicle_rto_name")))
+    || (get("vehicle_rto_state") && !/^[a-z ]{2,60}$/i.test(get("vehicle_rto_state"))))
 
     fail("n8n_tata_aig_vehicle_or_policy_invalid");
 
@@ -384,8 +381,19 @@ export function validateTataAigN8nResponse(
     // A verified Tata PDF may print a Haryana district+4-digit number
     // without an alphabetic series. The 18-check parser requires the
     // separately printed historic registration date for this narrow shape.
-    if (twoWheeler || !(/^(?:HR|DL)[A-Z0-9]{7,13}$/.test(plate) || /^HR\d{6}$/.test(plate))
-      || (plate.startsWith("HR") ? "HARYANA" : "DELHI") !== get("vehicle_rto_state").toUpperCase())
+    // A printed Indian registration plate is NOT limited to HR/DL. RTO
+    // city/state remain independently optional; neither is needed for
+    // extraction. If the document positively prints a state that conflicts
+    // with a known registered prefix, retain the independent conflict block.
+    const completeIndianPlate=/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4}$/.test(plate);
+    const historicalHaryanaPlate=!twoWheeler&&/^HR\d{6}$/.test(plate);
+    const stateByPrefix:Record<string,string>={
+      HR:"HARYANA",DL:"DELHI",MP:"MADHYA PRADESH",WB:"WEST BENGAL",
+    };
+    const printedState=get("vehicle_rto_state").toUpperCase();
+    const expectedState=stateByPrefix[plate.slice(0,2)];
+    if ((!completeIndianPlate&&!historicalHaryanaPlate)
+       ||(printedState&&expectedState&&printedState!==expectedState))
       fail("n8n_tata_aig_registration_invalid");
   } else if (status === "unregistered") {
     if (plate || seen.has("vehicle_registration_number")) fail("n8n_tata_aig_registration_invalid");
