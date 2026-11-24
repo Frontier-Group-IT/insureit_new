@@ -129,5 +129,5 @@ console.log("Dashboard performance regression passed.");
   assert.ok(!banner.includes("d={qrPath}") && qr.includes("d={qrPath}"), "QR must be separate while reusing the existing matrix.");
   assert.ok(banner.includes("grid-cols-2") && !banner.includes("flex-col"), "Store buttons must use one row and two columns.");
   assert.ok(header.indexOf("<CompactPartnerAppPromo />") < header.indexOf("<CompactPartnerAppQr />") && header.indexOf("<CompactPartnerAppQr />") < header.indexOf("Updated "), "QR must precede the existing right-side controls.");
-  assert.ok(header.includes("items-end justify-center xl:flex"), "Banner must center in the available header space.");
+  assert.ok(header.includes("flex w-full min-w-0 max-w-[370px] flex-col gap-1.5") && header.includes("hidden w-full min-w-0 xl:flex"), "Banner must be left-aligned below the date in its bounded responsive column.");
 }
