@@ -42,7 +42,7 @@ export function CustomerDocumentVault({ customerId, documents, profileMode = fal
       form.set("file", file);
       const response = await fetch("/api/customer/documents", { method: "POST", body: form });
       const body = await response.json() as { error?: string };
-      if (!response.ok) { const error = body.error || "Document upload failed."; setUploadError(error); return setMessage(error); }
+      if (!response.ok) { setUploadError(body.error || "Document upload failed."); return setMessage(body.error || "Document upload failed."); }
       if (inputRef.current) inputRef.current.value = "";
       if (profileMode) { setPicked(null); setExpanded(old => Array.from(new Set([...old, documentGroup(type)]))); dialogRef.current?.close(); }
       router.refresh();
