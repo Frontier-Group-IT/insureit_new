@@ -202,7 +202,7 @@ assert(tataReturn.includes("Tata AIG printed Receipt Date (approved issuance rul
 const sourceValidation=read("../lib/policy-intake-n8n-validation.ts");
 assert(sourceValidation.includes("approvedReceiptIssue")
   &&sourceValidation.includes("issueField.value===receiptDate")
-  &&sourceValidation.includes("checks.receipt_date_document_consistent===true"),
+  &&sourceValidation.includes("checks[receiptProofKey]===true"),
  "Tata receipt issue date must be PDF-labelled, 18-check verified and consistent");
 const conversion=read("../app/development/ai-policy-onboarding/actions.ts");
 assert(conversion.includes("!hasVerifiedN8nParserEvidence(extracted.preview.parserId,"),
