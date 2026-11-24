@@ -26,11 +26,14 @@ function printedPolicyIssueDate(text) {
  const label=String.raw`(?:Policy\s+(?:Issue|Issuance)\s+Date|Policy\s+Issued\s+On|Date\s+of\s+Issue)`;
  const day=String.raw`(\d{2}\/\d{2}\/\d{4})`;
  const found=[];
- for(const re of [
-   new RegExp(String.raw`\b`+label+String.raw`\s*[:\-]?\s*`+day,'gi'),
-   new RegExp(day+String.raw`\s{1,30}`+label+String.raw`\b`,'gi')
- ]) {
-   let m;while((m=re.exec(text))) found.push(iso(m[1]));
+ const forward=new RegExp(String.raw`\b`+label+String.raw`\s*[:\-]?\s*`+day,'gi');
+ let m;while((m=forward.exec(text)))found.push(iso(m[1]));
+ // Use reverse reading order ONLY when no forward label/date pair exists.
+ // Otherwise a preceding receipt or signature timestamp can incorrectly be
+ // captured as a second policy issuance date.
+ if(found.length===0){
+   const reverse=new RegExp(day+String.raw`\s{1,30}`+label+String.raw`\b`,'gi');
+   while((m=reverse.exec(text)))found.push(iso(m[1]));
  }
  const dates=[...new Set(found.filter(Boolean))];
  return {date:dates.length===1?dates[0]:null,ambiguous:found.length>0 && dates.length!==1};
