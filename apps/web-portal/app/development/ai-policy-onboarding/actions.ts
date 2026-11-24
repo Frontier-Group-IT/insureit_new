@@ -579,7 +579,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
         ?forwarded.draft.remarks.includes("IFFCO_PROVISIONAL_RTO_FROM_INSURED_ADDRESS:")
         :forwarded.draft.remarks.includes("IFFCO_REGISTERED_RTO_FROM_PLATE:"))
       ||!forwarded.draft.remarks.includes("IFFCO_FUEL_FROM_JCB_MODEL:")))))
-    return fail("Verified commercial fields","The saved commercial identity, class, year, CC, RTO, fuel, registration status, source notes or Package selection differs from the verified PDF.");
+    return fail("Verified commercial fields","The saved commercial identity, class, year, CC, any independently printed RTO value, fuel, registration status, source notes or Package selection differs from the verified PDF.");
   if(isOdElectricTwoWheeler
       && (forwarded.draft.vehicleClass!=="TWP"
         ||forwarded.draft.fuelType!=="Electric"
