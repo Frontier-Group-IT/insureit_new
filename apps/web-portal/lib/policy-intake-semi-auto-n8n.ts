@@ -5,7 +5,6 @@ import { acceptedTataAigIssuanceDate } from "@/lib/ai-policy-onboarding-eligibil
 import { createHash, randomUUID } from "node:crypto";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createCurrentIntakePdfSignedSource } from "@/lib/policy-intake-n8n-signed-source";
-import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
 import { requestN8nPolicyIntakeBySignedSource, type N8nOcrField, type N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-bridge";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { tryReadNonTataCommercialSignedPolicy, type NonTataCommercialRead } from "@/lib/policy-nontata-commercial-n8n";
@@ -17,7 +16,6 @@ const ALLOWED_STATUSES = new Set(["processing", "ready_for_review", "in_review",
 
 type Intake = {
   id: string; intake_number: string; status: string; policy_type: string | null;
-  processing_lane?: "manual" | "automation";
   ocr_status: string; ocr_fields: N8nOcrField[] | null; created_at: string;
   storage_bucket: string; storage_path: string; file_name: string; mime_type: string | null;
 };
@@ -94,11 +92,11 @@ export function semiAutoN8nApplyEnabled(): boolean {
     && process.env.INSUREIT_N8N_OCR_ALLOW_REVIEW_APPLY === "true";
 }
 
-async function currentSnapshot(id: string, allowManualLane = false): Promise<SourceSnapshot | null> {
+async function currentSnapshot(id: string): Promise<SourceSnapshot | null> {
   const admin = createSupabaseAdminClient();
   const [record, copy] = await Promise.all([
     admin.from("policy_intake_requests")
-      .select("id,intake_number,status,policy_type,processing_lane,ocr_status,ocr_fields,created_at,storage_bucket,storage_path,file_name,mime_type")
+      .select("id,intake_number,status,policy_type,ocr_status,ocr_fields,created_at,storage_bucket,storage_path,file_name,mime_type")
       .eq("id", id).maybeSingle<Intake>(),
     admin.from("policy_intake_documents")
       .select("id,storage_bucket,storage_path,file_name,mime_type")
@@ -106,8 +104,7 @@ async function currentSnapshot(id: string, allowManualLane = false): Promise<Sou
   ]);
   if (record.error || copy.error || !record.data || !copy.data) return null;
   const intake = record.data, document = copy.data;
-  if ((segregatePolicyIntakeLanes() && intake.processing_lane!=="automation" && !allowManualLane)
-      || (intake.policy_type !== null
+  if ((intake.policy_type !== null
       && !["motor", "non_motor", "life", "health"].includes(intake.policy_type))
       || !ALLOWED_STATUSES.has(intake.status)
       || intake.storage_bucket !== BUCKET || document.storage_bucket !== BUCKET
@@ -137,12 +134,12 @@ function fingerprint(
 }
 
 export async function previewSemiAutoN8nExtraction(
-  id: string, options: { allowManualLane?: boolean } = {},
+  id: string,
 ): Promise<SemiAutoN8nResult> {
   if (!semiAutoN8nEnabledForIntake(id)) {
     return { ok: false, error: "n8n processing is not enabled for this Intake." };
   }
-  const snapshot = await currentSnapshot(id, options.allowManualLane === true);
+  const snapshot = await currentSnapshot(id);
   if (!snapshot) return { ok: false, error: "The current Intake PDF is unavailable, changed or not eligible for extraction." };
   // The portal validates the current version and grants a short-lived link,
   // but never downloads or forwards the PDF bytes to n8n. n8n fetches it.
@@ -253,7 +250,7 @@ export async function previewSemiAutoN8nExtraction(
     return { ok: false, reason: "untrained_or_unverified",
       error: "This Intake belongs to an untrained policy category. n8n has retrieved the private PDF, but a policy-type-specific parser is required before its fields can be accepted. No Google OCR fallback or booking was performed." };
   }
-  const current = await currentSnapshot(id, options.allowManualLane === true);
+  const current = await currentSnapshot(id);
   if (!current || current.document.id !== snapshot.document.id
       || current.intake.storage_path !== snapshot.intake.storage_path
       || current.intake.status !== snapshot.intake.status
