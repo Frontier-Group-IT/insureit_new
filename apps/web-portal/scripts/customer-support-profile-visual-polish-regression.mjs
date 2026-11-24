@@ -28,13 +28,20 @@ assert.doesNotMatch(editor, /<Pencil className="h-3\.5 w-3\.5" \/> Edit/, "Remov
 assert.match(editor, /setEditing\(true\)/, "Edit button still opens the modal");
 assert.match(editor, /router\.refresh\(\)/, "Profile saving still refreshes");
 
-assert.match(vault, /\{documents\.length\} files/, "Keep actual document count");
-assert.match(vault, /bg-transparent px-3 py-2.*hover:bg-\[#F4EEFF\]/, "File-count default must remain transparent");
-assert.match(vault, /grid w-full grid-cols-2 gap-2 lg:grid-cols-4/, "Four vault categories must fill the desktop row");
-assert.match(vault, /customer-profile-category flex min-w-0 w-full/, "Category tiles should fill each grid cell");
-for (const category of ["Policy Documents", "ID Proofs", "Address Proofs", "Other Documents"]) assert.ok(vault.includes(category), "Preserve vault category " + category);
-assert.doesNotMatch(vault, /bottom-\[-25px\]|-right-24 -top-28/, "Decorative placeholder art must be absent");
-assert.match(vault, /<CustomerDocumentVault customerId=\{customerId\} documents=\{documents\}\s*\/>/, "Preserve document vault operations");
-assert.match(vault, /aria-controls="customer-profile-vault-content"/, "Preserve expansion control");
-
+const profile = read("../app/customer/(protected)/profile/page.tsx");
+const vaultControls = read("../components/customer-portal/customer-document-vault.tsx");
+assert.match(profile, /aria-label="Customer profile"/, "Keep a minimal profile header");
+assert.doesNotMatch(profile, /customer-profile-hero|optimized-128\/customers\.png|rotate-\[-25deg\]/, "Remove decorative profile card and art");
+assert.match(profile, /<CustomerAvatar userId=\{user\.id\} size="profile"\s*\/>/, "Keep photo management");
+assert.match(profile, /customer\.contact_name/, "Keep profile name");
+assert.match(profile, /customer\.phone/, "Keep phone");
+assert.match(profile, /customer\.email/, "Keep email");
+assert.match(vault, /<CustomerDocumentVault key=\{customerId\} customerId=\{customerId\} documents=\{documents\} profileMode\s*\/>/, "Keep scoped document operations");
+assert.match(vaultControls, /\{documents\.length\} files/, "Keep actual document count");
+for (const category of ["Policy Documents", "ID Proofs", "Address Proofs", "Other Documents"]) assert.ok(vaultControls.includes(category), "Preserve category " + category);
+assert.match(vaultControls, /documentGroup\(doc\.document_type\) === index/, "Group by stored document type");
+assert.match(vaultControls, /aria-expanded=\{open\}/, "Independent accessible expansion");
+assert.match(vaultControls, /dialogRef\.current\?\.showModal\(\)/, "Prominent upload opens dialog");
+assert.match(vaultControls, /5 \* 1024 \* 1024/, "Keep upload limit");
+assert.match(vaultControls, /fetch\("\/api\/customer\/documents"/, "Preserve upload and deletion APIs");
 console.log("Customer Support and Profile visual-polish regression passed.");
