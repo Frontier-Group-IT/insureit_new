@@ -26,14 +26,27 @@ function printedPolicyIssueDate(text) {
  const label=String.raw`(?:Policy\s+(?:Issue|Issuance)\s+Date|Policy\s+Issued\s+On|Date\s+of\s+Issue)`;
  const day=String.raw`(\d{2}\/\d{2}\/\d{4})`;
  const found=[];
+ const forwardLabels=new Set();
  const forward=new RegExp(String.raw`\b`+label+String.raw`\s*[:\-]?\s*`+day,'gi');
- let m;while((m=forward.exec(text)))found.push(iso(m[1]));
- // Use reverse reading order ONLY when no forward label/date pair exists.
- // Otherwise a preceding receipt or signature timestamp can incorrectly be
- // captured as a second policy issuance date.
- if(found.length===0){
-   const reverse=new RegExp(day+String.raw`\s{1,30}`+label+String.raw`\b`,'gi');
-   while((m=reverse.exec(text)))found.push(iso(m[1]));
+ let m;
+ while((m=forward.exec(text))){
+   found.push(iso(m[1]));
+   forwardLabels.add(m.index);
+ }
+ // Inspect both PDF reading orders. A reverse candidate that points at a
+ // label ALREADY read in forward order is not a new date: the preceding
+ // signature/receipt/coverage date can otherwise be mistakenly paired with
+ // that already-resolved label. A second distinct label is always checked.
+ const reverse=new RegExp(day+String.raw`\s{1,30}`+label+String.raw`\b`,'gi');
+ const bareLabel=new RegExp(label,'i');
+ while((m=reverse.exec(text))){
+   const labelOffset=m[0].search(bareLabel);
+   if(labelOffset<0||forwardLabels.has(m.index+labelOffset))continue;
+   const preceding=text.slice(Math.max(0,m.index-40),m.index);
+   // Do not reuse a timestamp printed on a Receipt Date or signature line
+   // as an issue-date value merely because a later label follows it.
+   if(/(?:Receipt Date|Digitally Signed by[^\n]*Date:)\s*$/i.test(preceding))continue;
+   found.push(iso(m[1]));
  }
  const dates=[...new Set(found.filter(Boolean))];
  return {date:dates.length===1?dates[0]:null,ambiguous:found.length>0 && dates.length!==1};
