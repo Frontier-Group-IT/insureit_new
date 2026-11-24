@@ -44,7 +44,7 @@ export function CustomerDocumentVault({ customerId, documents, profileMode = fal
       const body = await response.json() as { error?: string };
       if (!response.ok) { const error = body.error || "Document upload failed."; setUploadError(error); return setMessage(error); }
       if (inputRef.current) inputRef.current.value = "";
-      if (profileMode) { setPicked(null); setExpanded(old => Array.from(new Set([...old, documentGroup(type)]))); dialogRef.current?.close(); setMessage("Document uploaded."); }
+      if (profileMode) { setPicked(null); setExpanded(old => Array.from(new Set([...old, documentGroup(type)]))); dialogRef.current?.close(); }
       router.refresh();
     } catch { setUploadError("Document upload failed."); setMessage("Document upload failed."); }
     finally { setBusy(false); }
