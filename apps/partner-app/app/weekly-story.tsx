@@ -106,9 +106,9 @@ export default function WeeklyStoryScreen() {
         />
       ) : data ? (
         <View style={styles.pageBody}>
-          <View style={styles.hero}>
-            <View pointerEvents="none" style={styles.heroGlowLarge} />
-            <View pointerEvents="none" style={styles.heroGlowSmall} />
+          <Entrance style={styles.hero} animate={animate} delay={0}>
+            <AmbientGlow animate={animate} style={styles.heroGlowLarge} delay={0} />
+            <AmbientGlow animate={animate} style={styles.heroGlowSmall} delay={220} />
 
             <View style={styles.heroTopRow}>
               <Text style={styles.dates}>{formatDate(data.week_start)} – {formatDate(data.week_end)}</Text>
@@ -120,25 +120,23 @@ export default function WeeklyStoryScreen() {
 
             <View style={styles.heroMainRow}>
               <View style={styles.heroCopy}>
-                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.heroValue}>
-                  {formatIndianCurrency(data.premium_this_week)}
-                </Text>
+                <AnimatedCurrency value={data.premium_this_week} style={styles.heroValue} animate={animate} />
                 <Text style={styles.heroLabel}>Gross premium recorded this week</Text>
               </View>
-              <GrowthBars />
+              <GrowthBars animate={animate} />
             </View>
 
             <View style={styles.heroDivider} />
             <View style={styles.heroStats}>
-              <HeroStat icon="document-text" iconBackground="#6267E9" value={data.policies_this_week} label="Policies" />
+              <HeroStat icon="document-text" iconBackground="#6267E9" value={data.policies_this_week} label="Policies" animate={animate} delay={100} />
               <View style={styles.statDivider} />
-              <HeroStat icon="people" iconBackground="#28A790" value={data.customers_this_week} label="Customers added" />
+              <HeroStat icon="people" iconBackground="#28A790" value={data.customers_this_week} label="Customers added" animate={animate} delay={200} />
               <View style={styles.statDivider} />
-              <HeroStat icon="shield-checkmark" iconBackground="#D96C47" value={data.claims_progressed_this_week} label="Claims progressed" />
+              <HeroStat icon="shield-checkmark" iconBackground="#D96C47" value={data.claims_progressed_this_week} label="Claims progressed" animate={animate} delay={300} />
             </View>
-          </View>
+          </Entrance>
 
-          <View style={styles.comparisonSectionHeading}>
+          <Entrance style={styles.comparisonSectionHeading} animate={animate} delay={130}>
             <Text style={styles.sectionTitle}>{comparisonDays === 7 ? 'Compared with last week' : `Compared with previous ${comparisonDays} days`}</Text>
           <View style={styles.compareHeader}>
             <View style={styles.rangeWrap}>
@@ -157,6 +155,7 @@ export default function WeeklyStoryScreen() {
                         onPress={() => {
                           setComparisonDays(days as 7 | 14 | 30);
                           setComparisonOpen(false);
+                          void Haptics.selectionAsync().catch(() => {});
                         }}
                         style={({ pressed }) => [
                           styles.rangeOption,
@@ -180,13 +179,13 @@ export default function WeeklyStoryScreen() {
                 >
                   <Ionicons name="calendar-outline" size={14} color="#33415F" />
                   <Text style={styles.rangePillText}>{`Last ${comparisonDays} days`}</Text>
-                  <Ionicons name={comparisonOpen ? 'chevron-up' : 'chevron-down'} size={14} color="#33415F" />
+                  <Animated.View style={{ transform: [{ rotate: rangeRotation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }] }}><Ionicons name="chevron-down" size={14} color="#33415F" /></Animated.View>
                 </Pressable>
               </PartnerAnchoredDropdown>
             </View>
           </View>
-          </View>
-          <View style={styles.compareCard}>
+          </Entrance>
+          <Entrance style={styles.compareCard} animate={animate} delay={180}>
 
             {comparisonLoading ? (
               <View style={styles.compareMessage}><Text style={styles.compareMessageText}>Updating comparison…</Text></View>
@@ -198,21 +197,21 @@ export default function WeeklyStoryScreen() {
                   <View style={styles.compareIcon}><MiniBars /></View>
                   <View style={styles.previousCopy}>
                     <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={styles.compareValue}>
-                      {formatIndianCurrency(comparisonDays === 7 ? data.premium_last_week : comparisonData?.premium_previous_period ?? 0)}
+                      <AnimatedCurrencyText value={comparisonDays === 7 ? data.premium_last_week : comparisonData?.premium_previous_period ?? 0} animate={animate} />
                     </Text>
                     <Text style={styles.compareLabel}>{comparisonDays === 7 ? 'Last week premium' : `Previous ${comparisonDays} days premium`}</Text>
                   </View>
                 </View>
                 <View style={styles.compareDivider} />
-                <Trend value={Number(comparisonDays === 7 ? data.premium_change_percent || 0 : comparisonData?.premium_change_percent ?? 0)} caption={comparisonDays === 7 ? undefined : `vs previous ${comparisonDays} days`} />
+                <Trend value={Number(comparisonDays === 7 ? data.premium_change_percent || 0 : comparisonData?.premium_change_percent ?? 0)} caption={comparisonDays === 7 ? undefined : `vs previous ${comparisonDays} days`} animate={animate} />
               </View>
             )}
-          </View>
+          </Entrance>
 
           <View style={styles.sectionHeader}>
             <Ionicons name="calendar-outline" size={23} color="#168C7B" />
             <Text style={styles.sectionTitle}>Coming next</Text>
-            <View style={styles.headingRule} />
+            <DividerReveal animate={animate} />
           </View>
           <Pressable
             accessibilityRole="button"
@@ -221,7 +220,7 @@ export default function WeeklyStoryScreen() {
             style={({ pressed }) => [styles.nextCard, pressed && styles.cardPressed]}
           >
             <View style={styles.nextIcon}>
-              <Image source={PartnerAssets.actions.quickRenewals} style={styles.nextArtwork} resizeMode="contain" />
+              <IconTurn animate={animate}><Image source={PartnerAssets.actions.quickRenewals} style={styles.nextArtwork} resizeMode="contain" /></IconTurn>
             </View>
             <View style={styles.nextBody}>
               <Text style={styles.nextTitle}>{data.renewals_next_week} renewal{data.renewals_next_week === 1 ? '' : 's'} next week</Text>
@@ -230,16 +229,16 @@ export default function WeeklyStoryScreen() {
             <Ionicons name="chevron-forward" size={20} color="#0F3D8A" />
           </Pressable>
 
-          <View style={styles.endCard}>
-            <View pointerEvents="none" style={styles.reflectionGlow} />
+          <Entrance style={styles.endCard} animate={animate} delay={450}>
+            <AmbientGlow animate={animate} style={styles.reflectionGlow} delay={200} />
             <View style={styles.reflectionIcon}><Ionicons name="document-text-outline" size={22} color="#079A87" /></View>
-            <View style={styles.reflectionCopy}>
+            <Entrance style={styles.reflectionCopy} animate={animate} delay={560}>
               <Text style={styles.endEyebrow}>WEEKLY REFLECTION</Text>
               <Text style={styles.endTitle}>{data.policies_this_week > 0 ? 'Real progress, recorded.' : 'A quiet week is still useful data.'}</Text>
               <Text style={styles.endText}>{data.policies_this_week > 0 ? 'Keep up the good work and continue building momentum this week.' : 'Use the signals from this week to focus the next conversation and opportunity.'}</Text>
-            </View>
-            <ReflectionGrowth />
-          </View>
+            </Entrance>
+            <ReflectionGrowth animate={animate} />
+          </Entrance>
         </View>
       ) : null}
     </PartnerScreen>
