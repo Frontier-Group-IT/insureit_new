@@ -171,7 +171,7 @@ export default function PolicyDetailScreen() {
           <View style={styles.unifiedSection}>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }} onPress={() => setShowPremiumDetails((value) => !value)} style={({ pressed }) => [styles.premiumDisclosure, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="premium-breakup" size={22} showBadge={false} />
-              <View style={styles.disclosureText}><Text style={styles.cardTitle}>Premium breakup</Text><Text style={styles.disclosureSummary}>{formatIndianCurrency(data.premium.gross_premium)}</Text></View>
+              <View style={styles.disclosureText}><Text style={styles.cardTitle}>Premium breakup</Text></View><Text style={styles.premiumHeaderAmount}>{formatIndianCurrency(data.premium.gross_premium)}</Text>
 
             </Pressable>
             {showPremiumDetails ? (
@@ -254,7 +254,8 @@ function QuickAction({ iconKind, label, onPress }: {
 }
 
 function OverviewItem({ iconKind, label, value, insurerName }: { iconKind: PartnerPolicyDetailIconKind; label: string; value: string; insurerName?: string | null }) {
-  return <View style={styles.overviewItem}>{insurerName ? <View style={styles.overviewLogoWrap}><PartnerInsurerLogo name={insurerName} fallback={PartnerAssets.products.motorInsurance} style={styles.overviewLogo} /></View> : <PartnerPolicyDetailIcon kind={iconKind} size={17} tone="neutral" />}<View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text numberOfLines={2} style={styles.overviewValue}>{value}</Text></View></View>;
+  const tone = label === "Business Type" ? styles.tileAmber : label === "Issuance Date" || label === "Total Premium" ? styles.tileGreen : styles.tileBlue;
+  return <View style={[styles.overviewItem, tone]}><View style={styles.overviewLabelRow}>{insurerName ? <View style={styles.overviewLogoWrap}><PartnerInsurerLogo name={insurerName} fallback={PartnerAssets.products.motorInsurance} style={styles.overviewLogo} /></View> : <PartnerPolicyDetailIcon kind={iconKind} size={14} tone="neutral" />}<Text style={styles.overviewLabel}>{label}</Text></View><Text style={styles.overviewValue}>{value}</Text></View>;
 }
 
 function EntityRow({ image, icon, title, subtitle, onPress }: { image?: ImageSourcePropType; icon?: keyof typeof Ionicons.glyphMap; title: string; subtitle: string; onPress?: () => void }) {
@@ -323,7 +324,8 @@ function InsurerMiniInfo({ name }: { name: string | null | undefined }) {
   );
 }
 function MiniInfo({ label, value, compact = false, threeColumn = false }: { label: string; value: string; compact?: boolean; threeColumn?: boolean }) {
-  return <View style={[styles.miniInfo, compact && styles.miniInfoCompact, threeColumn && styles.miniInfoThreeColumn]}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>;
+  const tone = label === "Net premium" || label === "RM" ? styles.tileGreen : label === "GST" || label === "Policy lifecycle" ? styles.tileAmber : label === "CPA" || label === "Group" ? styles.tileSlate : ["OD premium", "TP premium", "Intermediary"].includes(label) ? styles.tileBlue : null;
+  return <View style={[styles.miniInfo, compact && styles.miniInfoCompact, threeColumn && styles.miniInfoThreeColumn, tone]}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>;
 }
 function policyArtwork(category: string): ImageSourcePropType { if (category === 'Motor') return PartnerAssets.products.motorInsurance; if (category === 'Health') return PartnerAssets.products.healthInsurance; if (category === 'Life') return PartnerAssets.products.familyInsurance; return PartnerAssets.products.commercialInsurance; }
 function displayParts(...values: Array<string | number | null | undefined>) { return values.map((value) => value == null ? '' : String(value).trim()).filter((value) => value && value.toLowerCase() !== 'null' && value.toLowerCase() !== 'undefined').join(' · '); }
@@ -338,26 +340,26 @@ const styles = StyleSheet.create({
   headerBackButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: '#FFFFFF', fontSize: 16, lineHeight: 22, fontWeight: '700', letterSpacing: -0.12 },
   stateWrap: { marginTop: 14 },
-  contentWrap: { marginTop: 0, gap: 7, paddingBottom: 15 },
+  contentWrap: { marginTop: 0, gap: 5, paddingBottom: 15 },
   summaryCard: {
-    paddingHorizontal: 14, paddingTop: 10, paddingBottom: 9,
+    paddingHorizontal: 14, paddingTop: 6, paddingBottom: 5,
     marginHorizontal: -partnerTheme.spacing.lg,
     backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3E9F1',
   },
   summaryTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  summaryArtworkWrap: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
+  summaryArtworkWrap: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   summaryArtwork: { width: 34, height: 34 },
   summaryBody: { flex: 1, minWidth: 0 },
   summaryPolicyNo: { color: '#1B2536', fontSize: 18, lineHeight: 23, fontWeight: '800', flexShrink: 1, minWidth: 0 },
   policyNoRow: { flexDirection: 'row', alignItems: 'center', gap: 7, minWidth: 0 },
-  summaryNetPremium: { marginTop: 4, color: '#53677F', fontSize: 12, lineHeight: 17, fontWeight: '700' },
-  categoryPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFF2DE', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 },
+  summaryNetPremium: { marginTop: 2, color: '#53677F', fontSize: 12, lineHeight: 17, fontWeight: '700' },
+  categoryPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFF2DE', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   categoryLabel: { color: '#895519', fontSize: 10, fontWeight: '700' },
   motorCategoryPill: { backgroundColor: '#0A234A' },
   motorCategoryLabel: { color: '#FFFFFF' },
   periodIcon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1375DC' },
   summaryInsurer: { color: '#75849A', fontSize: 9, lineHeight: 12, marginTop: 2 },
-  summaryBadges: { alignItems: 'flex-end', justifyContent: 'center', gap: 7, maxWidth: '45%' },
+  summaryBadges: { alignItems: 'flex-end', justifyContent: 'center', gap: 3, maxWidth: '45%' },
   summaryDivider: { height: StyleSheet.hairlineWidth, marginTop: 12, backgroundColor: '#E6EBF2' },
   premiumRow: { minHeight: 47, flexDirection: 'row', alignItems: 'center', paddingTop: 7 },
   premiumBlock: { flex: 1 }, premiumLabel: { color: '#718096', fontSize: 9, lineHeight: 11 },
@@ -373,40 +375,46 @@ const styles = StyleSheet.create({
   externalSectionHeading: { marginLeft: -6, paddingLeft: 0, paddingRight: 2 },
   card: { overflow: 'hidden', borderRadius: 15, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DEDFF1', backgroundColor: '#FFFFFF' },
   customerVehicleBorder: { borderColor: '#3993F5', borderWidth: 1, backgroundColor: '#FFFFFF' },
-  cardHeader: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  cardHeaderCompact: { minHeight: 30 },
-  cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 14, lineHeight: 18, fontWeight: '700' },
+  cardHeader: { minHeight: 32, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  cardHeaderCompact: { minHeight: 26 },
+  cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 13, lineHeight: 17, fontWeight: '700' },
   cardHeaderAction: { flexDirection: 'row', alignItems: 'center', gap: 1, minHeight: 32, paddingLeft: 8 }, cardHeaderActionText: { color: '#0969CF', fontSize: 9, lineHeight: 12, fontWeight: '700' },
-  quickSection: { marginHorizontal: 0, paddingVertical: 8 },
-  quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 9, color: '#17365D', fontSize: 13, lineHeight: 18, fontWeight: '800' },
+  quickSection: { marginHorizontal: 0, paddingVertical: 3 },
+  quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 4, color: '#17365D', fontSize: 13, lineHeight: 18, fontWeight: '800' },
   quickGrid: { flexDirection: 'row', alignItems: 'stretch', gap: 6 },
   quickAction: {
-    flex: 1, minWidth: 0, minHeight: 82, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 3, paddingVertical: 5, gap: 5, borderRadius: 13,
+    flex: 1, minWidth: 0, minHeight: 68, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 3, paddingVertical: 3, gap: 3, borderRadius: 13,
     backgroundColor: 'transparent',
   },
-  quickActionIcon: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
-  quickActionArtwork: { width: 54, height: 54 },
-  quickActionArtworkCompact: { width: 43, height: 43 },
+  quickActionIcon: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  quickActionArtwork: { width: 44, height: 44 },
+  quickActionArtworkCompact: { width: 38, height: 38 },
   quickLabel: {
     color: '#102D55', textAlign: 'center', fontSize: 9.25, lineHeight: 12,
     fontWeight: '800', width: '100%', includeFontPadding: false,
   },
-  overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, paddingHorizontal: 9, paddingTop: 1, paddingBottom: 10 },
-  overviewItem: { width: '31%', flexGrow: 1, minWidth: 0, minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 6, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E4E8EE', backgroundColor: '#FFFFFF', borderRadius: 9 },
-  overviewLogoWrap: { width: 23, height: 23, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 20, height: 20 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#778397', fontSize: 10, lineHeight: 13 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 11, lineHeight: 14, fontWeight: '700' },
+  overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, paddingHorizontal: 7, paddingTop: 5, paddingBottom: 5 },
+  overviewItem: { width: '31%', flexGrow: 1, minWidth: 0, minHeight: 44, justifyContent: 'center', gap: 2, paddingVertical: 4, paddingHorizontal: 5, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E4E8EE', backgroundColor: '#FFFFFF', borderRadius: 9 },
+  tileBlue: { backgroundColor: '#EAF2FD', borderColor: '#DCE8F7' },
+  tileGreen: { backgroundColor: '#E5F4EF', borderColor: '#D3EAE1' },
+  tileAmber: { backgroundColor: '#FFF3E0', borderColor: '#F2E3CB' },
+  tileSlate: { backgroundColor: '#EDF0F8', borderColor: '#E0E5F0' },
+  overviewLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  overviewLogoWrap: { width: 23, height: 23, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 20, height: 20 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { flexShrink: 1, color: '#53677F', fontSize: 9, lineHeight: 12 }, overviewValue: { color: '#192B46', fontSize: 11, lineHeight: 14, fontWeight: '700' },
   unifiedSectionDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E3E9F1', marginHorizontal: 10, marginVertical: 2 },
-  premiumDisclosure: { minHeight: 46, paddingHorizontal: 11, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#E6EFF9' },
-  commercialRow: { minHeight: 46, paddingHorizontal: 11, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#E6EFF9' },
+  premiumDisclosure: { minHeight: 32, paddingHorizontal: 11, paddingVertical: 3, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#E6EFF9' },
+  commercialRow: { minHeight: 32, paddingHorizontal: 11, paddingVertical: 3, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#E6EFF9' },
+  premiumHeaderAmount: { color: '#102A51', fontSize: 12, fontWeight: '700', flexShrink: 1 },
   disclosureText: { flex: 1, minWidth: 0 }, disclosureTitle: { color: '#152945', fontSize: 10.5, lineHeight: 13, fontWeight: '700' }, disclosureSummary: { marginTop: 2, color: '#6F7F94', fontSize: 8.5, lineHeight: 11 },
-  premiumDetailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 10 },
-  detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 10 }, miniInfo: { width: '47%', minHeight: 44, padding: 8, borderRadius: 10, backgroundColor: '#F5F7FA' }, miniLabel: { color: '#778397', fontSize: 9, lineHeight: 12, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 11, lineHeight: 14, fontWeight: '700' },
+  premiumDetailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, paddingHorizontal: 7, paddingTop: 5, paddingBottom: 5 },
+  detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, paddingHorizontal: 7, paddingTop: 5, paddingBottom: 5 }, miniInfo: { width: '47%', minHeight: 36, padding: 5, borderRadius: 8, backgroundColor: '#F5F7FA' }, miniLabel: { color: '#53677F', fontSize: 9, lineHeight: 12, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 11, lineHeight: 14, fontWeight: '700' },
   miniInfoCompact: { width: '31%', flexGrow: 1, minWidth: 0, paddingHorizontal: 5 },
   miniInfoThreeColumn: { width: '31%', flexGrow: 1, minWidth: 0 },
   insurerMiniInfo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   insurerMiniLogo: { width: 25, height: 25, alignItems: 'center', justifyContent: 'center' },
   insurerMiniCopy: { flex: 1, minWidth: 0 },
-  customerVehicleRow: { minHeight: 59, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 18, paddingVertical: 9 },
+  customerVehicleRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, paddingVertical: 5 },
   customerVehicleTitleRow: { flexDirection: 'row', alignItems: 'center', minWidth: 0, gap: 5 },
   customerVehicleRegistration: { color: '#142A49', fontSize: 10, lineHeight: 13, fontWeight: '800', flexShrink: 1 },
   entityStack: { paddingHorizontal: 10, paddingBottom: 8 }, entityRow: { minHeight: 45, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDF1F6' }, entityIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF5FF' }, entityArtwork: { width: 27, height: 27 }, entityBody: { flex: 1, minWidth: 0 }, entityTitle: { color: '#142A49', fontSize: 10, lineHeight: 13, fontWeight: '800' }, entityMeta: { marginTop: 2, color: '#7C899B', fontSize: 8.5, lineHeight: 11 },
