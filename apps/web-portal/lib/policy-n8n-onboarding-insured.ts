@@ -40,7 +40,7 @@ export function selectVerifiedN8nInsuredDraftIdentity(
   // ICICI page-1 "Name of Insured" field. Never accept an unrecognized parser.
   const commercial = new Set([
     "go_digit_cv_native_pdf", "iffco_tokio_cv_native_pdf", "new_india_cv_native_pdf",
-    "united_india_gcv_native_pdf", "oriental_gccv_native_pdf",
+    "united_india_gcv_native_pdf", "united_india_private_car_package_native_pdf", "oriental_gccv_native_pdf",
   ]).has(parserId ?? "");
   // Only the three independently validated product-variant parsers may supply
   // a draft identity from their exact native-PDF label. Keep other insurer
