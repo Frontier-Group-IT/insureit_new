@@ -54,7 +54,7 @@ const aiIssueTitles: Record<string,string> = {
   coverage_conflict:"Policy coverage conflict",
   draft_conflict:"Saved field differs from PDF",
   preflight_pending:"Canonical booking preflight pending",
-  booking_review_required:"Bulk booking requires manual review",
+  booking_review_required:"Automated conversion needs attention",
   stale_document:"Source PDF changed",
 };
 /** Saved OCR offers diagnostics only; source PDF and canonical checks remain authoritative. */
