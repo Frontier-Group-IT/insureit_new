@@ -174,9 +174,9 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
             <div className="flex items-center gap-2">
               <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#45627e] bg-[#1c344f] px-3 text-[10px] font-semibold text-[#c1d7e5]">
                 <span aria-hidden="true" className={queueActive ? "h-1.5 w-1.5 rounded-full bg-[#65dec4]" : "h-1.5 w-1.5 rounded-full bg-amber-300"}/>
-                {queueActive ? "n8n queue enabled" : primaryN8n ? "n8n review mode" : "Manual review"}
+                {queueActive ? "n8n queue enabled" : primaryN8n ? "n8n review mode" : "AI review unavailable"}
               </span>
-              <Link href="/policy-intakes" className="inline-flex h-8 items-center rounded-md border border-[#607a97] bg-white px-3 text-[10px] font-bold text-[#163a5b] hover:bg-[#f0f7ff]">{segregatePolicyIntakeLanes()?"Manual Onboarding":"Policy Intake Register"}</Link>
+              <Link href="/policy-intakes" className="inline-flex h-8 items-center rounded-md border border-[#607a97] bg-white px-3 text-[10px] font-bold text-[#163a5b] hover:bg-[#f0f7ff]">Policy Intake Register</Link>
             </div>
           </div>
         </header>
