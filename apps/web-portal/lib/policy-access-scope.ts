@@ -146,20 +146,32 @@ export function usesLifeTeamPortfolio(profileId: string, role: string | null | u
     || (profileId === "50fc9055-5509-44aa-8357-d60db9ce916c" && role === "operations_head_life");
 }
 
-export async function getLifeTeamPortfolioReadFilter(profileId: string, role: string | null | undefined) {
+export type LifeTeamPortfolioScope = { employeeIds: string[]; directEmployeeId: string | null };
+
+export async function getLifeTeamPortfolioScope(profileId: string, role: string | null | undefined): Promise<LifeTeamPortfolioScope | null> {
   if (!usesLifeTeamPortfolio(profileId, role)) return null;
-  const scope = await getEmployeeAccessScope(profileId, role, "view_policies");
-  const deny = "id.eq.00000000-0000-0000-0000-000000000000";
-  if (scope.mode !== "hierarchy" || !scope.employeeIds.includes("ac167429-0ce0-4ffe-90ea-4040cb4fea95")) return deny;
+  const deny: LifeTeamPortfolioScope = { employeeIds: [], directEmployeeId: null };
   const admin = createSupabaseAdminClient();
-  // Resolve the independent direct source by its stable employee code, not display name.
+  const { data: viewer, error: viewerError } = await admin.from("profiles").select("employee_id,role")
+    .eq("id", profileId).eq("is_active", true).maybeSingle<{ employee_id: string | null; role: string }>();
+  if (viewerError || !viewer?.employee_id || viewer.role !== role) return deny;
+  const scope = await getEmployeeAccessScope(profileId, role, "view_policies");
+  if (scope.mode !== "hierarchy" || !scope.employeeIds.includes("ac167429-0ce0-4ffe-90ea-4040cb4fea95")
+      || !scope.employeeIds.includes(viewer.employee_id)) return deny;
+  // Resolve independent direct ownership from the stable employee code.
   const { data: direct, error } = await admin.from("employees").select("id")
     .eq("employee_code", "SIBL/0027").maybeSingle<{ id: string }>();
   if (error || !direct?.id) throw new Error("Direct business identity could not be verified.");
-  const employeeIds = scope.employeeIds.filter(id => id !== direct.id);
-  const filters = employeeIds.length ? [`rm_employee_id.in.(${employeeIds.join(",")})`] : [];
-  filters.push(`and(business_line.in.(Life,Health),rm_employee_id.eq.${direct.id})`);
-  return filters.join(",");
+  return { employeeIds: scope.employeeIds.filter(id => id !== direct.id), directEmployeeId: direct.id };
+}
+
+export async function getLifeTeamPortfolioReadFilter(profileId: string, role: string | null | undefined) {
+  const scope = await getLifeTeamPortfolioScope(profileId, role);
+  if (scope === null) return null;
+  const filters: string[] = [];
+  if (scope.employeeIds.length) filters.push(`rm_employee_id.in.(${scope.employeeIds.join(",")})`);
+  if (scope.directEmployeeId) filters.push(`and(business_line.in.(Life,Health),rm_employee_id.eq.${scope.directEmployeeId})`);
+  return filters.join(",") || "id.eq.00000000-0000-0000-0000-000000000000";
 }
 
 export async function canReadLifeTeamCase(profileId: string, role: string | null | undefined, caseId: string) {
