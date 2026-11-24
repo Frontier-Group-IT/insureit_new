@@ -236,6 +236,17 @@ const customerSettings = read("app/customer/(protected)/settings/page.tsx");
 assert(navigation.includes('href="/customer/settings"'), "Customer sidebar must offer Settings instead of direct sign out");
 assert(customerSettings.includes('fetch("/api/customer/auth/session", { method: "DELETE" })'), "Customer logout in Settings must clear the isolated session API endpoint");
 assert(customerSettings.includes("supabase.auth.signOut()"), "Customer logout in Settings must terminate Supabase Auth session");
+const appearanceStart = customerSettings.indexOf('<section aria-labelledby="settings-layout-title"');
+const appearanceEnd = customerSettings.indexOf("</section>", appearanceStart);
+const appearanceSection = customerSettings.slice(appearanceStart, appearanceEnd);
+assert(appearanceStart > customerSettings.indexOf("Account Settings") && appearanceEnd < customerSettings.indexOf('aria-labelledby="settings-account-title"'), "Appearance controls must sit between heading and My Account");
+assert(appearanceSection.includes("customer-appearance-panel w-full min-w-0") && appearanceSection.includes("flex-nowrap") && appearanceSection.includes("overflow-x-auto"), "Appearance must occupy full width and keep a single responsive row");
+assert(appearanceSection.includes('name: "Sidebar"') && appearanceSection.includes('name: "Top Menu"') && appearanceSection.includes("h-8 w-px shrink-0"), "Layout options require visible names and a vertical divider");
+assert(appearanceSection.includes("customer-theme-segment") && appearanceSection.includes("rounded-full border") && ["Light", "Dark", "System"].every(name => appearanceSection.includes('name: "' + name + '"')), "Theme options must share one rounded container with visible labels");
+assert(appearanceSection.includes("aria-pressed={navigationLayout === value}") && appearanceSection.includes("aria-pressed={theme === value}"), "Appearance controls must expose selected state");
+assert(customerSettings.includes("window.localStorage.setItem(customerNavigationPreferenceKey, next)") && customerSettings.includes("window.localStorage.setItem(customerThemeKey, next)"), "Appearance preferences must remain persistent");
+assert(customerSettings.includes("new CustomEvent(customerNavigationPreferenceEvent") && customerSettings.includes("new CustomEvent(customerThemeEvent"), "Appearance preferences must continue updating immediately");
+
 assert(!navigation.includes('href="/partner'), "Customer navigation must not expose Partner routes");
 assert(!navigation.includes('href="/reports'), "Customer navigation must not expose Operations report routes");
 assert(navigation.includes('href="/customer/vehicles"'), "Customer navigation must expose Phase 1 Vehicles");

@@ -49,34 +49,33 @@ export default function CustomerSettingsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 items-center gap-3 py-2">
-          <img src="/assets/customer-3d-icons/settings.png" alt="" aria-hidden="true" width={76} height={76} className="h-14 w-14 shrink-0 object-contain sm:h-[76px] sm:w-[76px]" />
-          <div className="min-w-0">
-            <h1 className="text-[clamp(22px,2.3vw,29px)] font-extrabold leading-tight text-[#29265B]">Account Settings</h1>
-            <p className="mt-1.5 text-[12px] leading-4 text-[#777896]">Manage your account and keep your information up to date.</p>
+      <div className="flex min-w-0 items-center gap-3 py-2">
+        <img src="/assets/customer-3d-icons/settings.png" alt="" aria-hidden="true" width={76} height={76} className="h-14 w-14 shrink-0 object-contain sm:h-[76px] sm:w-[76px]" />
+        <div className="min-w-0">
+          <h1 className="text-[clamp(22px,2.3vw,29px)] font-extrabold leading-tight text-[#29265B]">Account Settings</h1>
+          <p className="mt-1.5 text-[12px] leading-4 text-[#777896]">Manage your account and keep your information up to date.</p>
+        </div>
+      </div>
+
+      <section aria-labelledby="settings-layout-title" className="customer-appearance-panel w-full min-w-0 rounded-xl border border-[#EAE5F4] bg-white px-3 py-2.5 sm:px-4">
+        <div className="flex w-full min-w-0 flex-nowrap items-center gap-3 overflow-x-auto py-0.5">
+          <h2 id="settings-layout-title" className="shrink-0 whitespace-nowrap text-[13px] font-bold text-[#292655]">Appearance &amp; Layout</h2>
+          <div role="group" aria-label="Navigation layout" className="flex shrink-0 flex-1 items-center justify-evenly gap-2">
+            {([{ value: "sidebar", label: "Sidebar (Default)", name: "Sidebar", icon: PanelLeft }, { value: "top", label: "Top Menu Bar", name: "Top Menu", icon: PanelTop }] as const).map(({ value, label, name, icon: Icon }) => (
+              <button key={value} type="button" title={label} aria-label={label} aria-pressed={navigationLayout === value} onClick={() => setPreferredLayout(value)} className="customer-appearance-option inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-transparent px-3 text-[11px] font-semibold text-[#733BD4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7843DC]"><Icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" /><span>{name}</span></button>
+            ))}
+          </div>
+          <span aria-hidden="true" className="h-8 w-px shrink-0 bg-[#EAE5F4]" />
+          <div role="group" aria-label="Color theme" className="flex shrink-0 flex-1 items-center justify-evenly gap-3">
+            <span className="shrink-0 text-[12px] font-bold text-[#292655]">Theme</span>
+            <div className="customer-theme-segment flex shrink-0 flex-1 items-center gap-1 rounded-full border border-[#EAE5F4] p-1">
+              {([{ value: "light", label: "Light theme", name: "Light", icon: Sun }, { value: "dark", label: "Dark theme", name: "Dark", icon: Moon }, { value: "system", label: "System theme", name: "System", icon: Monitor }] as const).map(({ value, label, name, icon: Icon }) => (
+                <button key={value} type="button" title={label} aria-label={label} aria-pressed={theme === value} onClick={() => setPreferredTheme(value)} className="customer-appearance-option inline-flex h-8 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-transparent px-3 text-[11px] font-semibold text-[#733BD4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7843DC]"><span>{name}</span><Icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" /></button>
+              ))}
+            </div>
           </div>
         </div>
-        <section aria-labelledby="settings-layout-title" className="customer-appearance-panel w-full rounded-xl border border-[#EAE5F4] bg-white px-3 py-2 lg:w-auto lg:min-w-[245px] lg:shrink-0">
-          <h2 id="settings-layout-title" className="mb-1.5 text-[13px] font-bold text-[#292655]">Appearance &amp; Layout</h2>
-          <div role="group" aria-label="Navigation layout" className="flex items-center justify-between gap-3">
-            <span className="text-[11px] font-semibold text-[#777896]">Layout</span>
-            <div className="flex gap-1">
-              {([{ value: "sidebar", label: "Sidebar (Default)", icon: PanelLeft }, { value: "top", label: "Top Menu Bar", icon: PanelTop }] as const).map(({ value, label, icon: Icon }) => (
-                <button key={value} type="button" title={label} aria-label={label} aria-pressed={navigationLayout === value} onClick={() => setPreferredLayout(value)} className="customer-appearance-option grid h-8 w-9 place-items-center rounded-md border border-transparent text-[#733BD4]"><Icon className="h-[18px] w-[18px]" aria-hidden="true" /></button>
-              ))}
-            </div>
-          </div>
-          <div role="group" aria-label="Color theme" className="mt-1 flex items-center justify-between gap-3">
-            <span className="text-[11px] font-semibold text-[#777896]">Theme</span>
-            <div className="flex gap-1">
-              {([{ value: "light", label: "Light theme", icon: Sun }, { value: "dark", label: "Dark theme", icon: Moon }, { value: "system", label: "System theme", icon: Monitor }] as const).map(({ value, label, icon: Icon }) => (
-                <button key={value} type="button" title={label} aria-label={label} aria-pressed={theme === value} onClick={() => setPreferredTheme(value)} className="customer-appearance-option grid h-8 w-9 place-items-center rounded-md border border-transparent text-[#733BD4]"><Icon className="h-[18px] w-[18px]" aria-hidden="true" /></button>
-              ))}
-            </div>
-          </div>
-        </section>
-      </div>
+      </section>
 
       <section className="overflow-hidden rounded-xl border border-[#EAE5F4] bg-white p-3 shadow-[0_4px_20px_rgba(91,62,143,.035)]" aria-labelledby="settings-account-title">
         <div className="flex items-center gap-3 px-1 pb-3 pt-1">
