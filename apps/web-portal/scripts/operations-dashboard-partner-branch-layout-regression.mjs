@@ -32,3 +32,11 @@ assert.match(dashboard, /hidden h-11 shrink-0 items-end xl:flex \[&>a\]:-mb-3/, 
 assert.match(dashboard, /border-b border-\[#D5DEE9\] pb-4/, "Header bottom padding must remain unchanged.");
 
 console.log("Operations Dashboard, Partner tabs and Branch Register layout regression passed.");
+
+const dashboardHeader = dashboard.slice(dashboard.indexOf("<header"), dashboard.indexOf("</header>"));
+assert.match(dashboardHeader, /<h1 className="sr-only">Operations Overview<\/h1>/, "Keep accessible heading without displaying it.");
+assert.ok(dashboardHeader.indexOf("formatHeaderDate(data.generatedAt)") < dashboardHeader.indexOf("<CompactPartnerAppPromo />"), "Date must precede the left app banner.");
+assert.ok(dashboardHeader.indexOf("<CompactPartnerAppPromo />") < dashboardHeader.indexOf("<CompactPartnerAppQr />") && dashboardHeader.indexOf("<CompactPartnerAppQr />") < dashboardHeader.indexOf("Updated {formatHeaderTime"), "QR follows banner before right-hand actions.");
+assert.match(dashboardHeader, /flex w-full min-w-0 max-w-\[370px\] flex-col gap-1\.5/, "Date and banner are stacked.");
+assert.match(compactQr, /\[writing-mode:vertical-rl\] rotate-180">Scan to download/, "Scan label is vertical and reads bottom to top.");
+assert.ok(compactQr.indexOf("</svg>") < compactQr.indexOf("Scan to download</span>"), "Vertical scan label is right of the QR.");

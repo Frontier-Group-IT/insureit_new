@@ -2600,3 +2600,7 @@ Six primary dropdowns now share page-local CSS removing the global purple border
 
 ### 2026-11-24 — Operations Life/Health Case Details history layout
 Activity descriptions and actor details remain left; timestamps use a right-aligned column at all widths. Remarks use the existing bracketed timestamp/blank-line append format for display-only separation, preserve untimestamped legacy content and multiline remarks, and retain stored history untouched. Branch `ui/life-health-history-right-timestamps-20261124`; CI, authenticated visual review, merge and manual production deployment pending.
+
+
+### 2026-11-24 — Operations Dashboard left-aligned Partner promo
+The visible Operations Overview title is replaced by the left-aligned app banner, with date above, existing 80px QR adjacent and bottom-to-top vertical Scan to download label on its right. Semantic heading, breadcrumb, download destinations, right-side actions and original desktop QR slot/padding preserved. Branch `ui/dashboard-left-app-promo-20261124`; CI, browser layout and scan verification, merge and manual deployment pending.
