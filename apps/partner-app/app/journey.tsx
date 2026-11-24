@@ -141,13 +141,15 @@ export default function JourneyScreen() {
                 <View style={styles.achievementRow}>
                 {achievements.map((item, index) => {
                   return (
-                    <View key={`${item.kind}-${item.date}-${index}`} style={styles.achievement}>
-                      <View style={styles.achievementIcon}>
-                        <Image source={journeyMilestoneArtwork(item.kind, item.title)} style={styles.achievementArtwork} resizeMode="contain" accessibilityLabel={item.title} />
-                      </View>
-                      <Text style={styles.achievementTitle} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}>{item.title}</Text>
-                      <Text style={styles.achievementDate}>{formatDate(item.date)}</Text>
-                    </View>
+                    <MotionEntrance key={`${item.kind}-${item.date}-${index}`} reducedMotion={reducedMotion} delay={300 + index * 100} style={styles.achievement}>
+                      <PressScale reducedMotion={reducedMotion} style={styles.achievement} accessibilityLabel={item.title}>
+                        <MotionEntrance reducedMotion={reducedMotion} delay={380 + index * 100} icon style={styles.achievementIcon}>
+                          <Image source={journeyMilestoneArtwork(item.kind, item.title)} style={styles.achievementArtwork} resizeMode="contain" accessibilityLabel={item.title} />
+                        </MotionEntrance>
+                        <Text style={styles.achievementTitle} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}>{item.title}</Text>
+                        <Text style={styles.achievementDate}>{formatDate(item.date)}</Text>
+                      </PressScale>
+                    </MotionEntrance>
                   );
                 })}
                 </View>
@@ -160,40 +162,53 @@ export default function JourneyScreen() {
               <Text style={styles.sectionTitle}>Journey timeline</Text>
             </View>
             <View style={styles.card}>
-              <View style={styles.filters}>
+              <View style={styles.filters} onLayout={(event) => setFilterWidth(event.nativeEvent.layout.width)}>
               {JOURNEY_FILTERS.map((choice, index) => (
                 <Pressable
                   key={choice.key}
                   accessibilityRole="button"
                   accessibilityState={{ selected: filter === choice.key }}
-                  onPress={() => { setFilter(choice.key); setShowAll(false); }}
+                  onPress={() => changeFilter(choice.key)}
                   style={[styles.filterButton, filter === choice.key && styles.filterActive]}
                 >
                   <View style={[styles.filterLabelRow, index === JOURNEY_FILTERS.length - 1 && styles.filterLabelLast]}>
-                    <Text style={[styles.filterText, filter === choice.key && styles.filterActiveText]}>{choice.label}</Text>
+                    <Animated.Text style={[styles.filterText, {
+                      color: filterPosition.interpolate({
+                        inputRange: [0, 1, 2, 3],
+                        outputRange: JOURNEY_FILTERS.map((candidate) => candidate.key === choice.key ? '#17233A' : '#667085'),
+                      }),
+                    }]}>{choice.label}</Animated.Text>
                   </View>
-                  <View style={[styles.filterUnderline, filter === choice.key && styles.filterUnderlineActive]}/>
+                  <View style={styles.filterUnderline}/>
                 </Pressable>
               ))}
+              {filterWidth > 0 ? <Animated.View pointerEvents="none" style={[styles.filterSlidingUnderline, {
+                width: filterWidth / JOURNEY_FILTERS.length,
+                transform: [{ translateX: Animated.multiply(filterPosition, filterWidth / JOURNEY_FILTERS.length) }],
+              }]} /> : null}
             </View>
+            <Animated.View style={{ opacity: timelineOpacity, transform: [{ translateY: timelineOffset }] }}>
             {visible.length ? (
               <View style={styles.timeline}>
-                {visible.map((item, index) => {
-                  return (
-                    <View key={`${item.kind}-${item.date}-${index}`} style={[styles.timelineRow, index > 0 && styles.timelineDivider]}>
-                      <Image source={journeyMilestoneArtwork(item.kind, item.title)} style={styles.timelineArtwork} resizeMode="contain" accessible={false} />
+                {visible.map((item, index) => (
+                  <MotionEntrance key={`${item.kind}-${item.date}-${index}`} reducedMotion={reducedMotion} delay={Math.min(index, 6) * 55} style={index > 0 ? styles.timelineDivider : undefined}>
+                    <PressScale reducedMotion={reducedMotion} style={styles.timelineRow} accessibilityLabel={item.title}>
+                      <MotionEntrance reducedMotion={reducedMotion} delay={Math.min(index, 6) * 55 + 40} icon>
+                        <Image source={journeyMilestoneArtwork(item.kind, item.title)} style={styles.timelineArtwork} resizeMode="contain" accessible={false} />
+                      </MotionEntrance>
                       <View style={styles.timelineBody}>
                         <Text style={styles.timelineTitle} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}>{item.title}</Text>
                         {item.subtitle ? <Text style={styles.timelineText} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.subtitle}>{item.subtitle}</Text> : null}
                       </View>
                       <Text style={styles.timelineDate}>{formatDate(item.date)}</Text>
-                    </View>
-                  );
-                })}
+                    </PressScale>
+                  </MotionEntrance>
+                ))}
               </View>
             ) : (
               <PartnerStateView state="empty" title={filter === 'all' ? 'Your journey is just beginning' : 'No milestones in this category'} message="Recorded milestones will appear here when achieved." asset={PartnerAssets.status.journey} />
             )}
+            </Animated.View>
             {filtered.length > 8 ? (
               <Pressable accessibilityRole="button" accessibilityLabel={showAll ? 'Show fewer milestones' : 'View all milestones'} onPress={() => setShowAll(!showAll)} style={styles.showMore}>
                 <Text style={styles.showMoreText}>{showAll ? 'Show less' : `View all ${filtered.length} milestones`}</Text>
@@ -282,7 +297,8 @@ const styles = StyleSheet.create({
   milestoneCopy: { flex: 1, minWidth: 0, justifyContent: 'center', gap: 2 },
   milestoneEyebrow: { color: '#7154CE', fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
   heroTitle: { color: '#17233A', fontSize: 15, lineHeight: 19, fontWeight: '800' },
-  milestoneSubtitle: { flex: 1, minWidth: 0, color: '#53637C', fontSize: 9, lineHeight: 13, transform: [{ translateY: -6 }] },
+  milestoneSubtitle: { flex: 1, minWidth: 0, transform: [{ translateY: -6 }] },
+  milestoneSubtitleText: { color: '#53637C', fontSize: 9, lineHeight: 13 },
   progressColumn: { width: 86, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   progressCircle: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   progressSegment: { position: 'absolute', width: 1.6, height: 3, borderRadius: 1 },
@@ -310,13 +326,14 @@ const styles = StyleSheet.create({
   achievementArtwork: { width: 48, height: 48 },
   achievementTitle: { width: '100%', color: '#192333', fontSize: 10.5, lineHeight: 14, fontWeight: '700', textAlign: 'center' },
   achievementDate: { color: '#7A8698', fontSize: 9, lineHeight: 13, textAlign: 'center', marginTop: 3 },
-  filters: { flexDirection: 'row', gap: 0, width: '100%', marginBottom: 18 },
+  filters: { flexDirection: 'row', gap: 0, width: '100%', marginBottom: 18, position: 'relative' },
   filterButton: { flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'flex-end' },
   filterLabelRow: { width: '100%', alignItems: 'center', justifyContent: 'center', minHeight: 34, paddingHorizontal: 1, borderRightWidth: 1, borderRightColor: '#A6B3C6' },
   filterActive: {},
   filterLabelLast: { borderRightWidth: 0 },
   filterUnderline: { width: '100%', height: 1, backgroundColor: '#E3E8F0' },
   filterUnderlineActive: { height: 3, backgroundColor: '#2488ED' },
+  filterSlidingUnderline: { position: 'absolute', left: 0, bottom: 0, height: 3, backgroundColor: '#2488ED' },
   filterText: { fontSize: 10, fontWeight: '700', color: '#667085' },
   filterActiveText: { color: '#17233A' },
   timeline: { borderTopWidth: 1, borderTopColor: '#E7E9EE' },
