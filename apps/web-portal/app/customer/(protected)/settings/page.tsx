@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Loader2, LogOut, ShieldCheck, PanelLeft, PanelTop } from "lucide-react";
+import { ChevronRight, Loader2, LogOut, ShieldCheck, PanelLeft, PanelTop, Sun, Moon, Monitor } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import { customerNavigationPreferenceEvent, customerNavigationPreferenceKey } from "@/components/customer-portal/customer-sidebar-shell";
+
+import { customerThemeKey, customerThemeEvent, readCustomerTheme, type CustomerTheme } from "@/components/customer-portal/customer-theme";
 
 const accountLinks = [
   { href: "/customer/profile", title: "My Profile", detail: "View and update your personal information", icon: "profile" },
@@ -15,13 +17,21 @@ const accountLinks = [
 export default function CustomerSettingsPage() {
   const [signingOut, setSigningOut] = useState(false);
   const [navigationLayout, setNavigationLayout] = useState<"sidebar" | "top">("sidebar");
+  const [theme, setTheme] = useState<CustomerTheme>("light");
   useEffect(() => {
+    setTheme(readCustomerTheme());
     try { setNavigationLayout(window.localStorage.getItem(customerNavigationPreferenceKey) === "top" ? "top" : "sidebar"); } catch { /* keep sidebar */ }
   }, []);
   function setPreferredLayout(next: "sidebar" | "top") {
     setNavigationLayout(next);
     try { window.localStorage.setItem(customerNavigationPreferenceKey, next); } catch { /* session only */ }
     window.dispatchEvent(new CustomEvent(customerNavigationPreferenceEvent, { detail: { layout: next } }));
+  }
+
+  function setPreferredTheme(next: CustomerTheme) {
+    setTheme(next);
+    try { window.localStorage.setItem(customerThemeKey, next); } catch { /* session only */ }
+    window.dispatchEvent(new CustomEvent(customerThemeEvent, { detail: next }));
   }
 
   async function signOut() {
@@ -39,16 +49,34 @@ export default function CustomerSettingsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      <section className="relative isolate overflow-hidden rounded-xl border border-[#E4E8F1] bg-white">
-        <div className="relative flex min-h-[120px] items-center gap-5 px-5 py-5 sm:min-h-[140px] sm:px-6">
-          <img src="/assets/customer-3d-icons/settings.png" alt="" aria-hidden="true" width={76} height={76} className="h-[76px] w-[76px] shrink-0 object-contain" />
-          
-          <div className="max-w-[440px]">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-3 py-2">
+          <img src="/assets/customer-3d-icons/settings.png" alt="" aria-hidden="true" width={76} height={76} className="h-14 w-14 shrink-0 object-contain sm:h-[76px] sm:w-[76px]" />
+          <div className="min-w-0">
             <h1 className="text-[clamp(22px,2.3vw,29px)] font-extrabold leading-tight text-[#29265B]">Account Settings</h1>
-            <p className="mt-1.5 max-w-[320px] text-[12px] leading-4 text-[#777896]">Manage your account and keep your information up to date.</p>
+            <p className="mt-1.5 text-[12px] leading-4 text-[#777896]">Manage your account and keep your information up to date.</p>
           </div>
         </div>
-      </section>
+        <section aria-labelledby="settings-layout-title" className="customer-appearance-panel w-full rounded-xl border border-[#EAE5F4] bg-white px-3 py-2 lg:w-auto lg:min-w-[245px] lg:shrink-0">
+          <h2 id="settings-layout-title" className="mb-1.5 text-[13px] font-bold text-[#292655]">Appearance &amp; Layout</h2>
+          <div role="group" aria-label="Navigation layout" className="flex items-center justify-between gap-3">
+            <span className="text-[11px] font-semibold text-[#777896]">Layout</span>
+            <div className="flex gap-1">
+              {([{ value: "sidebar", label: "Sidebar (Default)", icon: PanelLeft }, { value: "top", label: "Top Menu Bar", icon: PanelTop }] as const).map(({ value, label, icon: Icon }) => (
+                <button key={value} type="button" title={label} aria-label={label} aria-pressed={navigationLayout === value} onClick={() => setPreferredLayout(value)} className="customer-appearance-option grid h-8 w-9 place-items-center rounded-md border border-transparent text-[#733BD4]"><Icon className="h-[18px] w-[18px]" aria-hidden="true" /></button>
+              ))}
+            </div>
+          </div>
+          <div role="group" aria-label="Color theme" className="mt-1 flex items-center justify-between gap-3">
+            <span className="text-[11px] font-semibold text-[#777896]">Theme</span>
+            <div className="flex gap-1">
+              {([{ value: "light", label: "Light theme", icon: Sun }, { value: "dark", label: "Dark theme", icon: Moon }, { value: "system", label: "System theme", icon: Monitor }] as const).map(({ value, label, icon: Icon }) => (
+                <button key={value} type="button" title={label} aria-label={label} aria-pressed={theme === value} onClick={() => setPreferredTheme(value)} className="customer-appearance-option grid h-8 w-9 place-items-center rounded-md border border-transparent text-[#733BD4]"><Icon className="h-[18px] w-[18px]" aria-hidden="true" /></button>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
 
       <section className="overflow-hidden rounded-xl border border-[#EAE5F4] bg-white p-3 shadow-[0_4px_20px_rgba(91,62,143,.035)]" aria-labelledby="settings-account-title">
         <div className="flex items-center gap-3 px-1 pb-3 pt-1">
@@ -69,18 +97,6 @@ export default function CustomerSettingsPage() {
         </div>
       </section>
 
-      <section aria-labelledby="settings-layout-title" className="rounded-xl border border-[#EAE5F4] bg-white p-4">
-        <div className="mb-3 flex items-center gap-2 text-[#733BD4]"><PanelLeft className="h-5 w-5" /><h2 id="settings-layout-title" className="text-[15px] font-bold text-[#292655]">Appearance &amp; Layout</h2></div>
-        <p className="mb-4 text-[11px] text-[#8683A2]">Choose your preferred Customer Portal navigation layout.</p>
-        <div role="group" aria-label="Navigation layout" className="grid gap-3 sm:grid-cols-2">
-          <button type="button" aria-pressed={navigationLayout === "sidebar"} onClick={() => setPreferredLayout("sidebar")} className={"flex items-center gap-3 rounded-xl border p-4 text-left transition " + (navigationLayout === "sidebar" ? "border-[#7950DA] bg-white ring-1 ring-[#7950DA]/20" : "border-[#EAE5F4] hover:bg-[#F8F5FF]")}>
-            <PanelLeft className="h-7 w-7 shrink-0 text-[#733BD4]" /><span><strong className="block text-[13px] text-[#292655]">Sidebar (Default)</strong><span className="block text-[11px] text-[#8683A2]">Left navigation with comfortable content width</span></span>
-          </button>
-          <button type="button" aria-pressed={navigationLayout === "top"} onClick={() => setPreferredLayout("top")} className={"flex items-center gap-3 rounded-xl border p-4 text-left transition " + (navigationLayout === "top" ? "border-[#7950DA] bg-[#F3EDFF]" : "border-[#EAE5F4] hover:bg-[#F8F5FF]")}>
-            <PanelTop className="h-7 w-7 shrink-0 text-[#733BD4]" /><span><strong className="block text-[13px] text-[#292655]">Top Menu Bar</strong><span className="block text-[11px] text-[#8683A2]">Horizontal navigation and full-width pages</span></span>
-          </button>
-        </div>
-      </section>
       <section className="overflow-hidden rounded-xl border border-[#EAE5F4] bg-white p-3 shadow-[0_4px_20px_rgba(91,62,143,.035)]" aria-labelledby="settings-security-title">
         <div className="flex items-center gap-3 px-1 pb-3 pt-1">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F0E9FF] text-[#733BD4]"><ShieldCheck className="h-6 w-6" aria-hidden="true" /></span>
