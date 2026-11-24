@@ -18,6 +18,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useIsFocused } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useActivityMotion } from '@/components/activity-motion';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerMotionBadge } from '@/components/ui/partner-motion-badge';
@@ -358,6 +359,18 @@ export default function ClaimsScreen() {
 function ClaimsEmptyState({ filtered, settled }: { filtered: boolean; settled: boolean }) {
   const { width } = useWindowDimensions();
   const illustrationScale = Math.min(0.88, Math.max(0.68, (width - 48) / 340));
+  const { motion } = useActivityMotion();
+  const emptyFloat = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    emptyFloat.setValue(0);
+    if (!motion) return;
+    const animation = Animated.loop(Animated.sequence([
+      Animated.timing(emptyFloat, { toValue: -5, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== 'web', isInteraction: false }),
+      Animated.timing(emptyFloat, { toValue: 0, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== 'web', isInteraction: false }),
+    ]));
+    animation.start();
+    return () => { animation.stop(); emptyFloat.setValue(0); };
+  }, [motion, emptyFloat]);
   const title = filtered
     ? 'A little quieter here'
     : settled
@@ -370,7 +383,7 @@ function ClaimsEmptyState({ filtered, settled }: { filtered: boolean; settled: b
   return (
     <View style={styles.claimsEmptyCard} accessibilityLiveRegion="polite">
       <View style={{ width: 270 * illustrationScale, height: 205 * illustrationScale, alignItems: 'center', justifyContent: 'center' }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none">
-      <View style={[styles.claimsEmptyIllustration, { transform: [{ scale: illustrationScale }] }]}>
+      <Animated.View style={[styles.claimsEmptyIllustration, { opacity: 0.43, transform: [{ translateY: emptyFloat }, { scale: illustrationScale }] }]}>
         <View style={styles.claimsEmptyHalo} />
         <View style={styles.claimsEmptyLeafLeft} />
         <View style={styles.claimsEmptyLeafRight} />
@@ -401,7 +414,7 @@ function ClaimsEmptyState({ filtered, settled }: { filtered: boolean; settled: b
         <View style={styles.claimsEmptySparkOne} />
         <View style={styles.claimsEmptySparkTwo} />
         <View style={styles.claimsEmptySparkThree} />
-      </View>
+      </Animated.View>
       </View>
       <Text style={styles.claimsEmptyTitle}>{title}</Text>
       <Text style={styles.claimsEmptyMessage}>{message}</Text>
@@ -773,8 +786,8 @@ const styles = StyleSheet.create({
   claimsEmptySparkOne: { position: 'absolute', right: 34, top: 9, width: 4, height: 18, borderRadius: 3, backgroundColor: '#1764CE', transform: [{ rotate: '20deg' }] },
   claimsEmptySparkTwo: { position: 'absolute', right: 15, top: 25, width: 4, height: 17, borderRadius: 3, backgroundColor: '#1764CE', transform: [{ rotate: '52deg' }] },
   claimsEmptySparkThree: { position: 'absolute', right: 8, top: 47, width: 4, height: 14, borderRadius: 3, backgroundColor: '#1764CE', transform: [{ rotate: '79deg' }] },
-  claimsEmptyTitle: { marginTop: 2, color: '#092653', fontSize: 20, lineHeight: 27, fontWeight: '800', textAlign: 'center' },
-  claimsEmptyMessage: { marginTop: 7, maxWidth: 290, color: '#425673', fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  claimsEmptyTitle: { marginTop: 2, color: '#64748B', fontSize: 20, lineHeight: 27, fontWeight: '800', textAlign: 'center' },
+  claimsEmptyMessage: { marginTop: 7, maxWidth: 290, color: '#6B778A', fontSize: 13, lineHeight: 19, textAlign: 'center' },
   emptyContent: { flexGrow: 1 },
   emptyWrap: { flex: 1, paddingHorizontal: 10, paddingTop: 14, backgroundColor: '#FFFFFF' },
   emptyWrapFull: { flexGrow: 1, justifyContent: 'flex-start', paddingTop: 24, paddingBottom: 10 },
