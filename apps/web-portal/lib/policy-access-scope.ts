@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import type { Capability } from "@/lib/roles";
 import { getAccessibleIntermediaryIds, getEmployeeAccessScope } from "@/lib/employee-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -148,9 +150,10 @@ export function usesLifeTeamPortfolio(profileId: string, role: string | null | u
 
 export type LifeTeamPortfolioScope = { employeeIds: string[]; directEmployeeId: string | null };
 
-export async function getLifeTeamPortfolioScope(profileId: string, role: string | null | undefined): Promise<LifeTeamPortfolioScope | null> {
+export const getLifeTeamPortfolioScope = cache(async (profileId: string, role: string | null | undefined): Promise<LifeTeamPortfolioScope | null> => {
   if (!usesLifeTeamPortfolio(profileId, role)) return null;
   const deny: LifeTeamPortfolioScope = { employeeIds: [], directEmployeeId: null };
+  if (!(await hasEffectiveCapability({ id: profileId, role }, "view_policies", "view"))) return deny;
   const admin = createSupabaseAdminClient();
   const { data: viewer, error: viewerError } = await admin.from("profiles").select("employee_id,role")
     .eq("id", profileId).eq("is_active", true).maybeSingle<{ employee_id: string | null; role: string }>();
@@ -163,7 +166,7 @@ export async function getLifeTeamPortfolioScope(profileId: string, role: string 
     .eq("employee_code", "SIBL/0027").maybeSingle<{ id: string }>();
   if (error || !direct?.id) throw new Error("Direct business identity could not be verified.");
   return { employeeIds: scope.employeeIds.filter(id => id !== direct.id), directEmployeeId: direct.id };
-}
+});
 
 export async function getLifeTeamPortfolioReadFilter(profileId: string, role: string | null | undefined) {
   const scope = await getLifeTeamPortfolioScope(profileId, role);
