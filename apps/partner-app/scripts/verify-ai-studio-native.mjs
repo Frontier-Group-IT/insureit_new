@@ -18,7 +18,7 @@ assert(screen.includes("count('open')") && screen.includes("count('in_review')")
 assert(screen.includes("count('processing')") && screen.includes("detail.processing_lane==='automation'"));
 const openSql=file('../../../supabase/migrations/20261124121000_partner_ai_studio_open_intake_parity.sql');
 assert(openSql.includes("p_filter text default 'open'"));
-assert(openSql.includes("where p_filter='open' or bucket=p_filter"));
+assert(openSql.includes("where p_filter in ('open','review') or bucket=p_filter"));
 assert(openSql.includes("when c.status='in_review' then 'in_review'"));
 assert(openSql.includes("c.status='processing' and c.ocr_status='failed'"));
 assert(openSql.includes("exists(select 1 from public.policies p where p.policy_no_normalized=c.policy_no)"));
