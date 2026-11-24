@@ -1,4 +1,5 @@
 import "server-only";
+import { getLifeTeamPortfolioReadFilter } from "@/lib/policy-access-scope";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolvePolicyBusinessFilters, type PolicyBusinessQuery } from "@/lib/reports/policy-business";
@@ -147,7 +148,8 @@ const SELECT = `
 
 export async function loadPolicyBusinessMisExport(profile: ViewerProfile, query: PolicyBusinessQuery) {
   const filters = resolvePolicyBusinessFilters(query);
-  const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_reports");
+  const portfolioFilter = await getLifeTeamPortfolioReadFilter(profile.id, profile.role);
+  const customerIds = portfolioFilter !== null ? null : await getAccessibleCustomerIds(profile.id, profile.role, "view_reports");
   if (customerIds !== null && customerIds.length === 0) return { rows: [] as PolicyBusinessMisRow[], truncated: false };
 
   const admin = createSupabaseAdminClient();
@@ -173,7 +175,8 @@ export async function loadPolicyBusinessMisExport(profile: ViewerProfile, query:
         .order("id", { ascending: true })
         .range(offset, offset + PAGE_SIZE - 1);
 
-      if (scopedIds !== null) request = request.in("customer_id", scopedIds);
+      if (portfolioFilter !== null) request = request.or(portfolioFilter);
+      else if (scopedIds !== null) request = request.in("customer_id", scopedIds);
       if (filters.fromDate) request = request.gte("issuance_date", filters.fromDate);
       if (filters.toDate) request = request.lte("issuance_date", filters.toDate);
       if (filters.insurerId) request = request.eq("insurance_company_id", filters.insurerId);
