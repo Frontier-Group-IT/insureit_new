@@ -65,28 +65,24 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
   return (
     <div className="mx-auto max-w-[1580px] pb-10">
       <header className="flex flex-col gap-4 border-b border-[#D5DEE9] pb-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex min-w-0 flex-1 items-end gap-3">
-        <div className="min-w-0 xl:shrink-0">
-          <div className="flex items-center gap-2 text-[8px] font-black uppercase tracking-[.15em] text-[#7B8799]">
-            <span>Operations</span>
-            <span className="h-1 w-1 bg-[#18BFC2]" />
-            <span>{formatHeaderDate(data.generatedAt)}</span>
-            <a href="/download/partner" className="ml-1 normal-case tracking-normal text-[#174B83] underline xl:hidden">Partner App</a>
+        <div className="flex min-w-0 flex-1 items-end gap-2">
+          <h1 className="sr-only">Operations Overview</h1>
+          <div className="flex w-full min-w-0 max-w-[370px] flex-col gap-1.5">
+            <div className="flex items-center gap-2 text-[8px] font-black uppercase tracking-[.15em] text-[#7B8799]">
+              <span>Operations</span>
+              <span className="h-1 w-1 bg-[#18BFC2]" />
+              <span>{formatHeaderDate(data.generatedAt)}</span>
+              <a href="/download/partner" className="ml-1 normal-case tracking-normal text-[#174B83] underline xl:hidden">Partner App</a>
+            </div>
+            <div className="hidden w-full min-w-0 xl:flex" style={{ containerType: "inline-size" }}>
+              <CompactPartnerAppPromo />
+            </div>
           </div>
-          <h1 className="portal-display mt-1.5 text-[30px] font-semibold leading-none tracking-[-.025em] text-[#10213D] sm:text-[34px]">
-            Operations Overview
-          </h1>
-        </div>
-        <div className="hidden min-w-0 flex-1 items-end justify-center xl:flex">
-          <div className="flex w-full min-w-0 max-w-[370px]" style={{ containerType: "inline-size" }}>
-            <CompactPartnerAppPromo />
-          </div>
-        </div>
+          {/* Keep the original desktop QR slot and its extension into existing padding. */}
+          <div className="hidden h-11 shrink-0 items-end xl:flex [&>a]:-mb-3"><CompactPartnerAppQr /></div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 xl:shrink-0">
-          {/* Reserve the original row height; extend the square QR into the existing header padding. */}
-          <div className="hidden h-11 shrink-0 items-end xl:flex [&>a]:-mb-3"><CompactPartnerAppQr /></div>
           <span className="mr-1 text-[8.5px] font-semibold text-[#7A879A]">
             Updated {formatHeaderTime(data.generatedAt)}
           </span>
