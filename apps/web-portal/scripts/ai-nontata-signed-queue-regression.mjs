@@ -124,7 +124,7 @@ Policy Holder Name Mr. Sample Owner Intermediary Name SAMPLE BROKER
 Receipt Date 19/11/2026
 Consolidated Stamp Duty ₹ 0.5 paid towards Insurance Policy Stamps`;
 const sbi=parseVariant(sbiPath,sbiSample,sbiMeta);
-assert.deepEqual(sbi.failed_checks,[],"SBI Tata 0% NCB Package must pass all 20");
+assert.equal(sbi.failed_checks.length,0,"SBI Tata 0% NCB Package must pass all 20");
 assert.equal(sbi.premium_components.odBasicAfterNcb,3829.2);
 assert.equal(sbi.premium_components.addOn,3922);
 const mahindraSample=sbiSample
@@ -150,7 +150,7 @@ const mahindraSample=sbiSample
  .replace("Mr. Sample Owner","Mrs. Example Customer");
 const mahindraMeta={CreationDate:"D:20261120170827+05'30'",IsSignaturesPresent:true};
 const mahindra=parseVariant(sbiPath,mahindraSample,mahindraMeta);
-assert.deepEqual(mahindra.failed_checks,[],"SBI Mahindra 45% NCB and six add-ons must pass");
+assert.equal(mahindra.failed_checks.length,0,"SBI Mahindra 45% NCB and six add-ons must pass");
 assert.equal(mahindra.layout_variant,"mahindra_xuv300_package");
 assert.equal(mahindra.premium_components.od,7409.54);
 assert.equal(mahindra.premium_components.ncbDiscount,1292.36);
