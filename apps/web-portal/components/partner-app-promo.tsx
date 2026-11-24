@@ -81,3 +81,30 @@ export function PartnerAppPromo() {
     </aside>
   );
 }
+
+/** Header-only promotion: bounded height, no new dashboard row or network fetch. */
+export function CompactPartnerAppPromo() {
+  return (
+    <aside aria-label="INSUREIT Partner App downloads" className="relative flex h-11 min-w-0 max-w-[370px] flex-1 items-center justify-between gap-2 overflow-hidden rounded-lg bg-[linear-gradient(110deg,#061B4D,#075DCE)] px-2 text-white">
+      <a href="/download/partner" className="flex min-w-0 items-center gap-1.5 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-white" aria-label="Get the INSUREIT Partner App">
+        <Image src="/assets/brand/insureit-mark.webp" alt="" width={28} height={28} className="h-7 w-7 shrink-0 rounded bg-white object-contain p-0.5" />
+        <span className="hidden min-w-0 leading-tight @[200px]:block">
+          <span className="block truncate text-[9px] font-bold">insureit <span className="text-[#FFCE3A]">Partner</span></span>
+          <span className="block truncate text-[10px] font-bold">Get the Partner App</span>
+        </span>
+      </a>
+      <div className="hidden shrink-0 flex-col gap-0.5 @[290px]:flex">
+        <a href={STORE_PLAY} target="_blank" rel="noopener noreferrer" className="flex h-[17px] items-center gap-1 rounded bg-black px-1.5 text-[8px] font-semibold focus-visible:outline focus-visible:outline-white" aria-label="Download from Google Play"><svg aria-hidden="true" viewBox="0 0 48 48" className="h-3.5 w-3.5 shrink-0"><path fill="#00D7FE" d="M5 3v42l22-21z"/><path fill="#00F076" d="M5 3q2-2 5 0l25 14-8 7z"/><path fill="#FFCE00" d="M35 17l10 6q2 1 0 3l-10 6-8-8z"/><path fill="#F33C51" d="M5 45q2 2 5 0l25-13-8-8z"/></svg>Google Play</a>
+        <a href={STORE_APPLE} target="_blank" rel="noopener noreferrer" className="flex h-[17px] items-center gap-1 rounded bg-black px-1.5 text-[8px] font-semibold focus-visible:outline focus-visible:outline-white" aria-label="Download from Apple App Store"><svg aria-hidden="true" viewBox="0 0 48 48" className="h-3.5 w-3.5 shrink-0"><g fill="none" stroke="white" strokeWidth="5.5" strokeLinecap="round"><path d="M11 29h26M12 40l3-5M18 29 29 10M19 10l2.5 4.5M28 26l8 14"/></g></svg>App Store</a>
+      </div>
+      <a href="/download/partner" aria-label="Scan or open INSUREIT Partner App download" className="flex shrink-0 items-center gap-1.5 rounded focus-visible:outline focus-visible:outline-white">
+        <span className="hidden text-[8px] font-semibold @[340px]:block">Scan to<br />download</span>
+        <svg role="img" aria-label="Partner App download QR code" viewBox="-2 -2 41 41" className="hidden h-10 w-10 rounded-sm bg-white @[200px]:block" shapeRendering="crispEdges">
+          <rect x="-2" y="-2" width="41" height="41" fill="#FFFFFF" />
+          <path d={qrPath} fill="#071D49" />
+        </svg>
+        <QrCode aria-hidden className="h-4 w-4 @[200px]:hidden" />
+      </a>
+    </aside>
+  );
+}
