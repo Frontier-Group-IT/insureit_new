@@ -1261,7 +1261,7 @@ for (const forbidden of [
 ]) {
   if (profile.includes(forbidden)) throw new Error('Profile must not restore duplicate icons, a blue card, or header logout: ' + forbidden);
 }
-requireText(profile, 'style={styles.heroArtwork}', '3D team hero must stay visible.');
+requireText(profile, 'style={[styles.heroArtwork,', '3D team hero must stay visible.');
 if (!/<View style=\{styles\.heroTopRow\}>[\s\S]*?profile-team-3d\.png[\s\S]*?<\/View>/.test(profile)) {
   throw new Error('Profile avatar, details and 3D art must share the top row');
 }
@@ -1674,3 +1674,6 @@ for (const marker of ['start={200} duration={1400}', 'visibleImpactReveal(clock,
 // Keep the scrolling viewport stable and prohibit 3D layer intersections on story changes.
 for (const marker of ['removeClippedSubviews={false}', 'storyBackdrop: { ...StyleSheet.absoluteFillObject, zIndex: 0', "storyContent: { position: 'relative', zIndex: 1", 'storyScrollRef.current?.scrollTo({ y: 0, animated: false })', 'function visibleImpactReveal(']) requireText(stories, marker, 'Stories transition layering regression: ' + marker);
 if (/rotateY\s*:|perspective\s*:|opacity:\s*transition\.interpolate/.test(stories)) throw new Error('Story transition must not introduce 3D layer intersections or fade away the entire foreground.');
+
+for (const marker of ['useActivityMotion()', 'ringSegments.map', 'pickerBusy.current', 'setPhotoSuccess(true)', 'animation.stop()', 'Haptics.ImpactFeedbackStyle.Light', 'entrance(avatarEntrance', 'entrance(iconAppear', 'onPressIn={logoutPress.onPressIn}']) requireText(profile, marker, 'Profile motion contract: ' + marker);
+if (profile.indexOf('setPhotoSuccess(true)') < profile.indexOf('if (!refreshedAvatar) throw')) throw new Error('Photo success must follow confirmed upload and refresh');
