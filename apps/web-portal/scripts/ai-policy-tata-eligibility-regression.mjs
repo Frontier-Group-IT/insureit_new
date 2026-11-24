@@ -90,6 +90,26 @@ assert(worker.includes('ICICI_N8N_IDS.has(extraction.preview.parserId)'),
  "only warning-free ICICI may use canonical OCR-sync RPC");
 assert(worker.includes("sync_verified_ai_intake_tata_tp_ocr_v1"),
  "strict Tata AIG TP OCR must use dedicated guarded RPC");
+assert(worker.includes('const tata18 = [')
+  &&worker.includes('sync_verified_ai_intake_tata_18_ocr_v1')
+  &&worker.includes('|| tataTpOnly || tata18'),
+  "All 18-check Tata AIG source-verified PDFs must persist OCR, not remain Processing");
+const tata18Migration=read("../../../supabase/migrations/20261124190000_tata_aig_18check_verified_ocr_sync.sql");
+assert(tata18Migration.includes("current_user <> 'service_role'")
+  &&tata18Migration.includes("p_checks_passed <> 18")
+  &&tata18Migration.includes("p_parser_version <> 'tata-aig-layout-v1'")
+  &&tata18Migration.includes("q.leased_until>now()")
+  &&tata18Migration.includes("d.is_current=true")
+  &&tata18Migration.includes("i.final_policy_id is null")
+  &&tata18Migration.includes("not exists (")
+  &&tata18Migration.includes("policy_intake_onboarding_drafts")
+  &&tata18Migration.includes("status='ready_for_review'")
+  &&tata18Migration.includes("ocr_status='completed'")
+  &&!tata18Migration.includes("insert into public.policies")
+  &&!tata18Migration.includes("insert into public.customers"),
+  "Tata AIG OCR sync must be current-PDF, lease, revision and no-booking guarded");
+assert.deepEqual(codes(evaluate(standalone,{issuanceDateVerified:false})).filter(x=>x==="issuance_date_unverified"),["issuance_date_unverified"],
+  "Missing verified issuance remains review-controlled even after OCR sync");
 assert(worker.includes("sync_verified_ai_intake_ocr_v2"),
  "existing guarded ICICI OCR sync remains unchanged");
 assert(worker.includes("p_checks_passed:extraction.preview.checksPassed,"),
