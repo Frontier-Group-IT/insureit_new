@@ -39,7 +39,7 @@ assert(screen.includes("Reparse PDF") && screen.includes("Verify & Convert"));
 assert(screen.includes("setPendingAction('reparse')") && screen.includes("setPendingAction('convert')"));
 assert(screen.includes("performAiStudioAction(selected.id,pendingAction)"));
 assert(screen.includes('resultUncertain') && screen.includes('Refresh intake status'));
-assert(screen.includes("aiStudioActionsEnabled&&!detail.final_policy_id"));
+assert(screen.includes("aiStudioActionsEnabled&&detail.processing_lane==='automation'&&!detail.final_policy_id"));
 assert(screen.includes("!aiStudioActionsEnabled&&!detail.final_policy_id"));
 assert(screen.includes('fieldExpanded?detail.fields:detail.fields.slice(0,8)'));
 assert(screen.indexOf("setPendingAction('convert')") < screen.indexOf('Extracted policy details'));
