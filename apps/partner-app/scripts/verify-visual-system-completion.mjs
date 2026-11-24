@@ -432,8 +432,8 @@ for (const snippet of [
 // Stories reference: continuous illustrated slide, not the former floating card.
 for (const [fragment, reason] of [
   ['style={styles.storyBackdrop}', 'Stories use a shared blue curved canvas'],
-  ['style={styles.waveUpper}', 'Header wave is integrated with the story'],
-  ['style={styles.waveMiddle}', 'Blue-white flowing background continues behind story copy'],
+  ['style={[styles.waveUpper,', 'Header wave is integrated with the story'],
+  ['style={[styles.waveMiddle,', 'Blue-white flowing background continues behind story copy'],
   ['style={styles.lessonBadge}', 'Eyebrow is a centered rounded badge'],
   ['style={styles.titleRule}', 'Centered title has the reference underline'],
   ['style={styles.body}', 'Story question is centered'],
@@ -446,7 +446,7 @@ for (const [fragment, reason] of [
   ["onPress={openStory}", 'Story title retains navigation'],
   ['onTouchStart={handleStoryTouchStart}', 'Story taps are observed without blocking native scrolling'],
   ['onTouchEnd={handleStoryTouchEnd}', 'Story taps navigate when the finger is released'],
-  ['onScrollBeginDrag={() => { navigationTouch.current = null; }}', 'Scrolling cancels pending tap navigation'],
+  ['onScrollBeginDrag={() => { navigationTouch.current = null; setHeld(false); }}', 'Scrolling cancels pending tap navigation'],
   ['event.stopPropagation()', 'Story links do not trigger next or previous on tap'],
   ['if (event.nativeEvent.pageX < windowWidth / 2) previous();', 'Left-side taps navigate backwards'],
   ['else next();', 'Right-side taps navigate forwards'],
