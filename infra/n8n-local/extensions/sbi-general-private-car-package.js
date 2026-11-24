@@ -13,7 +13,13 @@ const fields=[],put=(key,value,evidence)=>{if(value===null||value===undefined||v
 const insurer=/SBI General Insurance Company Limited/i.test(flat);
 const product=/Private Car Insurance Policy\s*-\s*Package/i.test(flat);
 const number=grab(/Policy\s*\/\s*Certificate No\s*:\s*(POPMCAR\d{11})/i);
-const numberReceipt=grab(/Policy Number\s+(POPMCAR\d{11})/i);
+// The policy may print an older reference in Previous Policy Details.
+// Match the CURRENT policy number only in the dedicated Premium Receipt block.
+const receiptStart=flat.search(/\bPremium Receipt\b/i);
+const receiptText=receiptStart>=0?flat.slice(receiptStart):'';
+const numberReceipt=receiptStart>=0
+  ?grab(/\bPolicy Number\s+(POPMCAR\d{11})\b/i,receiptText)
+  :null;
 const insured=grab(/Policy Holder Name\s+((?:Mr|Mrs|Ms)\.?\s+[A-Za-z ]{3,65})\s+Intermediary Name/i);
 // Issuance-date precedence: explicitly printed schedule date first.
 // The signature image is a fallback ONLY when the printed date is absent.
