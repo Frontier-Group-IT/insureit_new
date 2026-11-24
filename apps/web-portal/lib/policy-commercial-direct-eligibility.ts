@@ -36,7 +36,7 @@ export function assessStandardCommercialDirectConversion(input:Input):{eligible:
   if(missing)return fail("missing_verified_"+missing);
   if(get("vehicle_registration_status")!=="registered"
     ||!/^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{3,4}$/i.test(get("vehicle_registration_number").replace(/[ -]/g,"")))
-    return fail("registered_rto_evidence_required");
+    return fail("registered_plate_evidence_required");
   // RTO city/state are optional; a complete registered plate is still required.
   // Canonical field mapping and all premium/registration checks still apply.
   if(!["Goods Carrying Vehicle","Commercial Vehicle - Miscellaneous Class D"].includes(get("vehicle_class"))
@@ -233,8 +233,7 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
 
 
 /** United India Private Car Package, separately certified from Goods Carrying.
- * Source-bound Maruti Swift ZDI layout, explicit printed issue/CPA/NCB and
- * Jabalpur vehicle authority. Other UIIC Private Car models stay review held. */
+ * Source-bound Maruti Swift ZDI, issue/CPA/NCB. RTO geography is optional. */
 export function assessUiicPrivateCarDirectConversion(input:Input):{eligible:boolean;reason:string}{
  const fail=(reason:string)=>({eligible:false,reason});
  if(input.parserId!=="united_india_private_car_package_native_pdf"
