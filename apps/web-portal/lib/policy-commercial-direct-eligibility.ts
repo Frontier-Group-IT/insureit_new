@@ -232,3 +232,66 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
     return fail("uiic_printed_od_tp_cpa_gst_unreconciled");
   return {eligible:true,reason:""};
 }
+
+
+/** United India Private Car Package, separately certified from Goods Carrying.
+ * Source-bound Maruti Swift ZDI layout, explicit printed issue/CPA/NCB and
+ * Jabalpur vehicle authority. Other UIIC Private Car models stay review held. */
+export function assessUiicPrivateCarDirectConversion(input:Input):{eligible:boolean;reason:string}{
+ const fail=(reason:string)=>({eligible:false,reason});
+ if(input.parserId!=="united_india_private_car_package_native_pdf"
+   ||input.checksPassed!==18||input.warnings.length)
+   return fail("uiic_private_car_parser_unverified");
+ const fields=new Map<string,Field>();
+ for(const f of input.fields){if(fields.has(f.key))return fail("uiic_private_car_duplicate_pdf_field");fields.set(f.key,f);}
+ const get=(key:string)=>fields.get(key)?.value.trim()??"";
+ for(const k of ["policy_number","insured_name","insurer_name","policy_product",
+   "policy_issuance_date","policy_start_date","policy_end_date",
+   "third_party_start_date","third_party_end_date","vehicle_class","vehicle_make",
+   "vehicle_model","vehicle_fuel_type","vehicle_manufacturing_year","vehicle_capacity",
+   "vehicle_registration_number","vehicle_registration_status","vehicle_rto_name",
+   "vehicle_rto_state","vehicle_chassis_number","vehicle_engine_number","idv",
+   "od_premium","tp_premium","cpa_premium"]){
+  if(!get(k))return fail("uiic_private_car_missing_"+k);
+ }
+ if(get("insurer_name")!=="United India Insurance Company Limited"
+  ||get("policy_product")!=="Package"||get("vehicle_class")!=="Private Car"
+  ||get("vehicle_make")!=="MARUTI SUZUKI"
+  ||get("vehicle_model")!=="SWIFT(2011 - ) ZDI"
+  ||get("vehicle_fuel_type")!=="Diesel"
+  ||get("vehicle_manufacturing_year")!=="2018"||get("vehicle_capacity")!=="1248")
+  return fail("uiic_private_car_vehicle_product_conflict");
+ if(!/^MP20[A-Z]{1,3}\d{4}$/i.test(get("vehicle_registration_number"))
+  ||get("vehicle_registration_status")!=="registered"
+  ||get("vehicle_rto_name")!=="JABALPUR"
+  ||get("vehicle_rto_state")!=="Madhya Pradesh"
+  ||fields.get("vehicle_rto_name")?.evidence!=="UIIC Private Car PDF Registration Authority: MP20 JABALPUR INDIA")
+  return fail("uiic_private_car_registration_authority_unverified");
+ const validDate=(v:string)=>/^\d{4}-\d\d-\d\d$/.test(v)
+  &&Number.isFinite(Date.parse(v+"T00:00:00Z"))
+  &&new Date(v+"T00:00:00Z").toISOString().slice(0,10)===v;
+ const issue=get("policy_issuance_date");
+ if(!["policy_issuance_date","policy_start_date","policy_end_date",
+    "third_party_start_date","third_party_end_date"].every(k=>validDate(get(k)))
+    ||fields.get("policy_issuance_date")?.evidence!=="UIIC Private Car printed Date of Issue: "+issue
+    ||get("policy_end_date")<get("policy_start_date")
+    ||get("third_party_start_date")!==get("policy_start_date")
+    ||get("third_party_end_date")!==get("policy_end_date"))
+  return fail("uiic_private_car_printed_dates_unverified");
+ if(get("cpa_premium")!=="0"
+  ||fields.get("cpa_premium")?.evidence!=="UIIC Private Car PDF explicitly removes owner-driver CPA")
+  return fail("uiic_private_car_cpa_not_waived_by_pdf");
+ const p=input.commercialPremium;
+ if(!p)return fail("uiic_private_car_premium_missing");
+ const cent=(v:number)=>Math.round(v*100);
+ const validMoney=(v:number)=>Number.isFinite(v)&&v>=0&&v<=1e9&&Math.abs(v*100-cent(v))<.00001;
+ if(![p.od,p.tp,p.net,p.gst,p.gross,Number(get("idv")),Number(get("od_premium")),Number(get("tp_premium"))].every(validMoney)
+  ||p.od<=0||p.tp<=0||Number(get("idv"))<=0
+  ||Math.abs(cent(p.od)+cent(p.tp)-cent(p.net))>6
+  ||Math.abs(cent(p.net)+cent(p.gst)-cent(p.gross))>6
+  ||Math.abs(cent(p.net*.18)-cent(p.gst))>55
+  ||cent(Number(get("od_premium")))!==cent(p.od)
+  ||cent(Number(get("tp_premium")))!==cent(p.tp))
+  return fail("uiic_private_car_printed_ncb_premium_not_reconciled");
+ return {eligible:true,reason:""};
+}
