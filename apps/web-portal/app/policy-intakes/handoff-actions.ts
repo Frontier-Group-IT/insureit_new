@@ -185,7 +185,16 @@ export async function prepareVerifiedN8nIntakeHandoff(
         "united_india_gcv_native_pdf","oriental_gccv_native_pdf"].includes(parsed.preview.parserId)
        || PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId))
     && parsed.preview.checksPassed === (trainedN8nParserProfile(parsed.preview.parserId)?.checks ?? 0)
-    && Math.abs((commercial!.od+commercial!.tp)-commercial!.net)<0.07
+    // SBI Package prints owner-driver CPA separately from TP. Reuse its
+    // certified product assessor (including NCB, add-ons, CPA and GST)
+    // rather than applying the zero-CPA commercial equation to this layout.
+    && (parsed.preview.parserId==="sbi_general_private_car_package_native_pdf"
+      ? assessProductVariantDirectConversion({
+        parserId:parsed.preview.parserId,checksPassed:parsed.preview.checksPassed,
+        warnings:parsed.preview.warnings,fields:parsed.preview.fields,
+        commercialPremium:commercial,
+      }).eligible
+      : Math.abs((commercial!.od+commercial!.tp)-commercial!.net)<0.07)
     && Math.abs((commercial!.net+commercial!.gst)-commercial!.gross)<(PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId)?0.51:0.07);
   const acceptableCommercialWarning=(value:string)=>
     parsed.preview.parserId==="new_india_cv_native_pdf"
