@@ -1,12 +1,13 @@
 Partner production OTA trigger
-release=partner-impact-premium-motion
+release=partner-ai-studio-workbench-actions
 source=verified-merged-main
-source_pr=5165
-source_merge=ee858b1d116f51913f418c761413320ed5e314e6
-reason=user-approved-merge-and-publish-protection-delivered-motion
+source_pr=5166
+source_merge=0e2ec6329b2cb28542da7afd435ad044dc0c2c0f
+reason=user-approved-merge-and-publish-ai-studio-mobile-redesign
 channel=production
 runtime=0.2.0
 requested=2026-11-24
+backend_conversion_enabled=false
 no_native_build=true
 no_apk=true
 no_aab=true
