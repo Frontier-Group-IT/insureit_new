@@ -152,6 +152,7 @@ export default function LearnScreen() {
                 submitting={submitting}
                 animate={animate}
                 fresh={Boolean(freshResult?.cardId === data.card?.id && showAnswerFeedback)}
+                celebrate={Boolean(freshResult?.correct && freshResult?.cardId === data.card?.id && showAnswerFeedback)}
                 onChoose={() => {
                   if (data.answered_today || submitting) return;
                   setSelectedOptionKey(option.key);
@@ -346,9 +347,9 @@ function QuestionBorderGlow({ animate }: { animate: boolean }) {
   return <Animated.View pointerEvents="none" style={[styles.questionBorderHighlight, { opacity }]} />;
 }
 
-function QuizOption({ index, label, color, selected, correct, wrong, finished, submitting, animate, fresh, onChoose }: {
+function QuizOption({ index, label, color, selected, correct, wrong, finished, submitting, animate, fresh, celebrate, onChoose }: {
   index: number; label: string; color: string; selected: boolean; correct: boolean; wrong: boolean;
-  finished: boolean; submitting: boolean; animate: boolean; fresh: boolean; onChoose: () => void;
+  finished: boolean; submitting: boolean; animate: boolean; fresh: boolean; celebrate: boolean; onChoose: () => void;
 }) {
   const entrance = useEntrance(animate, 245 + index * 80);
   const scale = useRef(new Animated.Value(1)).current;
@@ -400,7 +401,7 @@ function QuizOption({ index, label, color, selected, correct, wrong, finished, s
             fresh && wrong ? <Ionicons name="close" size={15} color="#FFFFFF" /> :
             selected ? <View style={styles.radioCenter} /> : null}
         </View>
-        {fresh && correct ? <ConfettiBurst animate={animate} /> : null}
+        {celebrate && correct ? <ConfettiBurst animate={animate} /> : null}
       </Pressable>
     </Animated.View>
   );
