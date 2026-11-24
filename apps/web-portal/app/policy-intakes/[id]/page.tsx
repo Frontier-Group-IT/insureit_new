@@ -2,11 +2,8 @@ import Link from "next/link";
 import { FileText, Phone, ShieldCheck, UserRound } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { PolicyIntakeDocumentButton } from "@/components/policy-intake-document-button";
-import { PolicyIntakeHandoffButton } from "@/components/policy-intake-handoff-button";
 import { PolicyIntakeResponseUpload } from "@/components/policy-intake-response-upload";
-import { PolicyIntakeReviewActions } from "@/components/policy-intake-review-actions";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
-import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { requirePolicyIntakeViewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -18,7 +15,6 @@ type Intake = {
   id: string;
   intake_number: string;
   status: string;
-  processing_lane?: "manual" | "automation";
   lead_source_name: string;
   lead_source_type: string;
   lead_source_code: string | null;
@@ -70,7 +66,7 @@ const policyKeys = [
 
 function statusLabel(row: Intake, duplicate = false) {
   if (duplicate) return "Duplicate";
-  if (row.status === "processing" && row.ocr_status === "failed") return "Manual review required";
+  if (row.status === "processing" && row.ocr_status === "failed") return "Automated extraction needs attention";
   return ({ processing: "Fetching policy & vehicle details", ready_for_review: "Ready for review", in_review: "In review", needs_attention: "Needs attention", completed: "Completed", rejected: "Rejected" } as Record<string, string>)[row.status] ?? row.status;
 }
 function statusClass(row: Intake, duplicate = false) {
@@ -78,7 +74,7 @@ function statusClass(row: Intake, duplicate = false) {
   if (row.status === "processing" && row.ocr_status === "failed") return "bg-amber-50 text-amber-800";
   return ({ processing: "bg-blue-50 text-blue-700", ready_for_review: "bg-indigo-50 text-indigo-700", in_review: "bg-violet-50 text-violet-700", needs_attention: "bg-amber-50 text-amber-800", completed: "bg-emerald-50 text-emerald-700", rejected: "bg-rose-50 text-rose-700" } as Record<string, string>)[row.status] ?? "bg-slate-50 text-slate-700";
 }
-function ocrLabel(status: string) { return status === "completed" ? "Details fetched" : status === "failed" ? "Manual review" : status === "processing" ? "Fetching details" : "Queued"; }
+function ocrLabel(status: string) { return status === "completed" ? "Details fetched" : status === "failed" ? "Action required" : status === "processing" ? "Fetching details" : "Queued"; }
 
 export default async function PolicyIntakeDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -88,9 +84,8 @@ export default async function PolicyIntakeDetail({ params }: { params: Promise<{
     profile.role === "operations_head_life" ? Promise.resolve(true) : hasEffectiveCapability(profile, "finalize_policy_intakes", "approve"),
   ]);
   const admin = createSupabaseAdminClient();
-  const { data } = await admin.from("policy_intake_requests").select("id,intake_number,status,lead_source_name,lead_source_type,lead_source_code,customer_mobile,matched_customer_id,file_name,ocr_status,ocr_fields,ocr_warnings,attention_reason,created_at,submitted_by_profile_id,submitted_by_portal_account_id,assigned_to_profile_id,final_policy_id,processing_lane").eq("id", id).maybeSingle<Intake>();
+  const { data } = await admin.from("policy_intake_requests").select("id,intake_number,status,lead_source_name,lead_source_type,lead_source_code,customer_mobile,matched_customer_id,file_name,ocr_status,ocr_fields,ocr_warnings,attention_reason,created_at,submitted_by_profile_id,submitted_by_portal_account_id,assigned_to_profile_id,final_policy_id").eq("id", id).maybeSingle<Intake>();
   if (!data) return <AppShell title="Policy Intake" backHref="/policy-intakes"><div className="rounded-xl bg-white p-5 text-[11px]">Intake not found.</div></AppShell>;
-  const automated=segregatePolicyIntakeLanes() && data.processing_lane==="automation";
   const owner = data.submitted_by_profile_id === profile.id;
   if (!reviewer && !finalizer && !owner) return <AppShell title="Policy Intake" backHref="/policy-intakes"><div className="rounded-xl bg-white p-5 text-[11px]">You do not have access to this intake.</div></AppShell>;
 
@@ -137,7 +132,7 @@ export default async function PolicyIntakeDetail({ params }: { params: Promise<{
             <HeaderMeta icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Lead source" value={data.lead_source_name} hint={`${data.lead_source_type.toUpperCase()}${data.lead_source_code ? ` · ${data.lead_source_code}` : ""}`} />
             <HeaderMeta icon={<FileText className="h-3.5 w-3.5" />} label="Policy copy" value={data.file_name} hint="Original source document" />
           </div>
-          {automated ? <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] text-blue-900">This Intake belongs to AI Automation. Operations review and manual onboarding actions are disabled. <Link className="font-bold underline" href={"/development/ai-policy-onboarding?intake_id="+encodeURIComponent(data.id)}>Open AI workbench</Link> (IT/Admin access required).</div> : null}
+          {["it_super_user","super_admin"].includes(profile.role??"") ? <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] text-blue-900">All Intakes use AI Policy Studio for verified extraction and conversion. Problems remain in Action Required. <Link className="font-bold underline" href={"/development/ai-policy-onboarding?intake_id="+encodeURIComponent(data.id)}>Open AI workbench</Link> (IT/Admin access required).</div> : null}
           {data.attention_reason ? <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[9px] font-medium text-amber-900">Operations note: {data.attention_reason}</div> : null}
         </header>
 
@@ -149,11 +144,11 @@ export default async function PolicyIntakeDetail({ params }: { params: Promise<{
         </ReviewSection>
 
         <ReviewSection number="02" title="Vehicle details" subtitle={data.ocr_status === "completed" ? "Fetched from the uploaded policy copy for Operations review." : "Vehicle information will appear here when available."}>
-          {vehicleFields.length ? vehicleFields.map((item) => <ReviewField key={item.key} label={item.label} value={item.value} source="OCR" confidence={item.confidence} />) : <SectionEmpty text={manualReview ? "Automatic vehicle extraction was unavailable. Use the saved policy copy during onboarding." : "Fetching vehicle details from the saved policy copy…"} />}
+          {vehicleFields.length ? vehicleFields.map((item) => <ReviewField key={item.key} label={item.label} value={item.value} source="OCR" confidence={item.confidence} />) : <SectionEmpty text={manualReview ? "Automatic vehicle extraction needs attention in AI Policy Studio." : "Fetching vehicle details from the saved policy copy…"} />}
         </ReviewSection>
 
         <ReviewSection number="03" title="Policy & premium" subtitle={data.ocr_status === "completed" ? "Proposal only. Operations confirms these values in Policy Onboarding." : "Policy and premium information will appear here when available."}>
-          {policyFields.length ? policyFields.map((item) => <ReviewField key={item.key} label={item.label} value={item.value} source="OCR" confidence={item.confidence} />) : <SectionEmpty text={manualReview ? "Automatic policy extraction was unavailable. Continue with manual review from the policy copy." : "Fetching policy and premium details…"} />}
+          {policyFields.length ? policyFields.map((item) => <ReviewField key={item.key} label={item.label} value={item.value} source="OCR" confidence={item.confidence} />) : <SectionEmpty text={manualReview ? "Automatic policy extraction needs a supported parser; see AI Policy Studio." : "Fetching policy and premium details…"} />}
         </ReviewSection>
 
         {data.ocr_warnings?.length ? <div className="border-t border-[#E5ECF5] bg-amber-50/60 px-4 py-3 sm:px-5"><p className="text-[8px] font-bold uppercase tracking-[.08em] text-amber-800">Review notes</p>{data.ocr_warnings.map((warning) => <p key={warning} className="mt-1 text-[9px] leading-4 text-amber-900">{warning}</p>)}</div> : null}
@@ -175,10 +170,8 @@ export default async function PolicyIntakeDetail({ params }: { params: Promise<{
           {(reviewer || finalizer) ? <Link href={duplicateMatch.kind === "registered_policy" ? `/policies/${duplicateMatch.policyId}/edit` : `/policy-intakes/${duplicateMatch.intakeId}`} className="mt-2 inline-flex h-8 items-center rounded-lg border border-rose-200 bg-white px-2.5 text-[8.5px] font-bold text-rose-800 hover:bg-rose-100">{duplicateMatch.kind === "registered_policy" ? "View Existing Policy" : "View Earlier Intake"}</Link> : null}
         </section> : null}
         {!duplicateCheck.ok ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[8.5px] leading-4 text-amber-900">Duplicate protection could not be verified. Review and Policy Onboarding actions are temporarily disabled.</div> : null}
-        {!automated && !duplicateBlocked && owner && data.status === "needs_attention" ? <PolicyIntakeResponseUpload id={data.id} /> : null}
-        {!automated && !duplicateBlocked && reviewer && !["completed", "rejected"].includes(data.status) ? <PolicyIntakeReviewActions id={data.id} /> : null}
-        {!automated && !duplicateBlocked && finalizer && (!["completed", "rejected", "needs_attention", "processing"].includes(data.status) || manualReview) ? <PolicyIntakeHandoffButton id={data.id} status={data.status} /> : null}
-        <div className="rounded-xl bg-[#F3F7FB] px-3 py-2.5 text-[8.5px] leading-4 text-[#64748B]"><UserRound className="mb-1.5 h-3.5 w-3.5 text-[#315B9A]" />This is a pre-onboarding review sheet. The saved policy copy remains the source document; final corrections are made in Policy Onboarding.</div>
+        {!duplicateBlocked && owner && data.status === "needs_attention" ? <PolicyIntakeResponseUpload id={data.id} /> : null}
+        <div className="rounded-xl bg-[#F3F7FB] px-3 py-2.5 text-[8.5px] leading-4 text-[#64748B]"><UserRound className="mb-1.5 h-3.5 w-3.5 text-[#315B9A]" />The current policy copy remains the source document. AI Policy Studio validates PDF evidence before registration.</div>
       </aside>
     </div>
   </AppShell>;
