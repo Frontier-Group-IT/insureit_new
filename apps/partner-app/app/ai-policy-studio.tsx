@@ -193,7 +193,7 @@ export default function AiPolicyStudioScreen() {
           <Image source={PartnerAssets.actions.quickPolicyIntake} style={s.headerArtwork} resizeMode="contain" accessible={false}/>
           <Text style={s.topWord} numberOfLines={1}>AI Onboarding Studio</Text>
           <Pressable onPress={refresh} accessibilityRole="button" accessibilityLabel="Refresh" style={s.headerAction}>
-            <Ionicons name="refresh-outline" size={22} color="#FFFFFF"/>
+            <Animated.View style={{transform:[{rotate:refreshRotation.interpolate({inputRange:[0,1],outputRange:['0deg','360deg']})}]}}><Ionicons name="refresh-outline" size={22} color="#FFFFFF"/></Animated.View>
           </Pressable>
         </View>
       </View>
