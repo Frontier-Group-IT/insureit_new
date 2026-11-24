@@ -48,7 +48,9 @@ for(const fixture of fixtures) {
   const validated=validateTataAigN8nResponse(response,{intakeId:ids.intake_id,documentId:ids.document_id,requestId:ids.request_id});
   assert.equal(validated.checksPassed,18);
   assert.match(validated.receiptDate,/^\d{4}-\d{2}-\d{2}$/);
-  assert.equal(validated.fields.some(f=>f.key==="policy_issuance_date"),false,"signing metadata is not certified issuance");
+  assert.equal(validated.fields.find(f=>f.key==="policy_issuance_date")?.value,validated.receiptDate,"Current PDF printed Receipt Date is accepted only under the Tata-specific 18-check rule");
+  assert(validated.warnings.includes("tata_aig_receipt_date_as_issuance"));
+  assert.notEqual(first.verification,"detached_signature_integrity_verified","Signature metadata proposal remains distinct from the approved printed receipt business rule");
 }
 const handoff=read("../app/policy-intakes/handoff-actions.ts");
 const bridge=read("../lib/policy-intake-n8n-bridge.ts");
