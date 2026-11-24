@@ -252,7 +252,7 @@ const CHECKS = new Set([
   "receipt_date_document_consistent", "policy_number_receipt_agree",
 ]);
 const FIELD_KEYS = new Set([
-  "policy_number", "insurer_name", "policy_product", "insured_name",
+  "policy_number", "insurer_name", "policy_product", "insured_name", "policy_issuance_date",
   "vehicle_registration_status", "vehicle_registration_number", "vehicle_class",
   "vehicle_make", "vehicle_model", "vehicle_fuel_type", "vehicle_manufacturing_year",
   "vehicle_capacity", "vehicle_motor_power_kw", "vehicle_chassis_number",
@@ -348,8 +348,15 @@ export function validateTataAigN8nResponse(
   // SAOD provides only new own-damage coverage. The policy may reference
   // a previous insurer's TP period, but that is not a new TP cover here.
   if (REQUIRED_FIELDS.some(key => !(saod && (key === "third_party_start_date" || key === "third_party_end_date")) && !seen.has(key))
-    || seen.has("policy_issuance_date"))
+)
     fail("n8n_required_field_missing");
+  const issueField=fields.find(item=>item.key==="policy_issuance_date");
+  // Explicit printed issuance is authoritative, not receipt or coverage start.
+  // The bridge accepts only the current insurer PDF field and its labelled proof.
+  if(issueField && (!date(issueField.value)
+    || issueField.evidence!=="Printed Policy Issue Date / Date of Issue on current policy"
+    || issueField.label!=="Policy Issue Date (printed)"))
+    fail("n8n_tata_aig_printed_issue_invalid");
   const get = (key: string) => fields.find(field => field.key === key)?.value ?? "";
   const eq = (key: string, number: number) => {
     const raw = get(key).replace(/,/g, "");
@@ -452,7 +459,7 @@ export function validateTataAigN8nResponse(
 
   if (!Array.isArray(value.warnings) || value.warnings.length > 5
     || value.warnings.some(item => typeof item !== "string" || !INFO_WARNINGS.has(item))
-    || !value.warnings.includes("tata_aig_issuance_date_unverified"))
+    || (Boolean(issueField)===value.warnings.includes("tata_aig_issuance_date_unverified")))
     fail("n8n_tata_aig_warning_invalid");
   return {
     ok:true, fields, warnings:value.warnings as string[],
