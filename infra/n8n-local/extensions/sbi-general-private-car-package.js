@@ -18,12 +18,11 @@ const insured=grab(/Policy Holder Name\s+((?:Mr|Mrs|Ms)\.?\s+[A-Za-z ]{3,65})\s+
 const issue=toIso(grab(/Receipt Date\s+(\d{2}\/\d{2}\/\d{4})/i));
 const signatureDate=grab(/Digitally signed by DS SBI\s+GENERAL INSURANCE\s+COMPANY LTD\s+Date:\s+(\d{4}\.\d{2}\.\d{2})/i);
 const signedDate=signatureDate?.replace(/\./g,'-');
-const printedIssue=toIso(grab(/Policy Issue\s+Date\s+Policy\/\s*certificate no/i))
-  ||toIso(grab(/(?:ABOUT YOUR POLICY[\s\S]{0,700}?)(\d{2}\/\d{2}\/\d{4})\s+POPMCAR\d{11}/i,text));
+const printedIssue=toIso(grab(/(\d{2}\/\d{2}\/\d{4})\s+POPMCAR\d{11}\s+Period of Insurance TP/i));
 const policyIssueReceipt=toIso(grab(/Receipt Date\s+(\d{2}\/\d{2}\/\d{4})/i));
 // PDF metadata is corroborating document evidence, NOT a cryptographic
 // signature-chain or signed-attribute verification. Preserve that distinction. 
-const issueDateCorroborated=!!issue&&issue===policyIssueReceipt
+const issueDateCorroborated=!!issue&&issue===policyIssueReceipt&&issue===printedIssue
   &&!!pdfCreationDay&&issue===pdfCreationDay&&info.IsSignaturesPresent===true
   &&(!signedDate||signedDate===issue);
 const period=flat.match(/Period of Insurance OD\s*:\s*From:(\d{2}\/\d{2}\/\d{4})\s+\d{2}:\d{2}:\d{2}\s+To:(\d{2}\/\d{2}\/\d{4})/i)||[];
