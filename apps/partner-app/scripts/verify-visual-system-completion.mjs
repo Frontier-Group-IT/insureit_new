@@ -927,7 +927,7 @@ requireText(renewals, "summaryCountBadge: { flexShrink: 0, minHeight: 28", 'Poli
 requireText(renewals, "renewalArtworkImage: { width: 32, height: 32 }", 'Insurer logo must be compact without changing brand mapping.');
 requireText(renewals, "renewalRow: { minHeight: 64", 'Renewal rows must be compact.');
 requireText(renewals, 'styles.summaryDivider', 'A thin divider separates the full-width summary from the tabs.');
-requireText(renewals, 'Net Premium - {formatWholeRupees(selectedSummary.premium)}', 'Summary must display whole-rupee net premium inline.');
+requireText(renewals, '<RenewalPremium value={selectedSummary.premium} enabled={motion} />', 'Summary must display whole-rupee net premium inline.');
 requireText(renewals, 'Math.trunc(amount)', 'Summary premium must remove paise without rounding up.');
 requireText(renewals, "formatIndianCurrency(Number.isFinite(amount) ? Math.trunc(amount) : 0)", 'Whole-rupee summary must use Indian digit grouping.');
 

@@ -31,7 +31,7 @@ for (const path of ['app/insurers.tsx', 'app/network.tsx', 'app/search.tsx', 'ap
 }
 // Renewal Work Queue intentionally uses compact, screen-local placeholders.
 const renewals = read('app/renewals.tsx');
-assert.match(renewals, /<RenewalLoadingRows \/>/, 'Renewal Opportunities retains a compact loading skeleton');
+assert.match(renewals, /<RenewalLoadingRows motion=\{motion\} \/>/, 'Renewal Opportunities retains a compact loading skeleton');
 assert.match(renewals, /function RenewalLoadingRows\(/, 'Renewals declares its compact skeleton rows');
 assert.match(renewals, /Array\.from\(\{ length: 3 \}/, 'Renewals uses only three compact placeholder rows');
 assert.match(renewals, /accessibilityRole="progressbar" accessibilityLabel="Loading renewal opportunities"/, 'Renewal placeholders have an accessible loading label');
