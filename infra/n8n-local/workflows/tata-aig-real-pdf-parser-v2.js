@@ -254,7 +254,9 @@ function extract(raw){
  const formNet=cent((form.od_premium??NaN)+(form.addon_premium??NaN)+(form.tp_premium??NaN)+form.cpa_amount);
  return {
   contract_version:'tata_aig_candidate_v2',review_required:true,auto_finalize_allowed:false,
-  parser_id:layout.id,parser_version:'tata-aig-layout-v1',ok:failed.length===0,
+  parser_id:layout.id,parser_version:'tata-aig-layout-v1',
+  printed_issue_date_ambiguous:printedIssue.ambiguous,
+  ok:failed.length===0&&!printedIssue.ambiguous,
   checks,checks_passed:KEYS.length-failed.length,failed_checks:failed,fields,
   premium_components:rawPremium,form_premium_projection:form,form_premium_reconciled:near(formNet,net,0.01),
   warnings:[...(printedIssue.ambiguous?['Conflicting printed Policy Issue Date labels require review']:[]),
