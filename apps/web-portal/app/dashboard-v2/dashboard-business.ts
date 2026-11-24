@@ -1,5 +1,6 @@
 import "server-only";
 import { getLifeTeamPortfolioReadFilter, getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ProfileLike = { id: string; role?: string | null };
@@ -29,7 +30,7 @@ export type DashboardBusinessData = {
   warnings: string[];
 };
 
-type PolicyRow = { id: string; vehicle_id: string | null; insurance_company_id: string | null; policy_type: string | null; business_line: string | null; issuance_date: string | null; created_at: string; intermediary_type: string | null; intermediary_code: string | null; lead_source: string | null; rm_employee_id: string | null; rm_name: string | null; intermediary_group_id: string | null; intermediary_group_name: string | null };
+type PolicyRow = { id: string; premium_amount: number | string | null; vehicle_id: string | null; insurance_company_id: string | null; policy_type: string | null; business_line: string | null; issuance_date: string | null; created_at: string; intermediary_type: string | null; intermediary_code: string | null; lead_source: string | null; rm_employee_id: string | null; rm_name: string | null; intermediary_group_id: string | null; intermediary_group_name: string | null };
 type PremiumRow = { policy_id: string; net_premium: number | string | null; gross_premium: number | string | null };
 type PayinRow = { policy_id: string; total_projected_payin: number | string | null; tds_amount: number | string | null; payin_after_tds: number | string | null; commercial_status: string | null };
 type PayoutRow = { policy_id: string; gross_payout: number | string | null; partner_payout_amount: number | string | null; retention_amount: number | string | null; commercial_status: string | null };
@@ -50,7 +51,7 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
   if (rmEmployeeIds !== null && rmEmployeeIds.length === 0) return empty;
 
   const admin = createSupabaseAdminClient();
-  const select = "id,vehicle_id,insurance_company_id,policy_type,business_line,issuance_date,created_at,intermediary_type,intermediary_code,lead_source,rm_employee_id,rm_name,intermediary_group_id,intermediary_group_name";
+  const select = "id,premium_amount,vehicle_id,insurance_company_id,policy_type,business_line,issuance_date,created_at,intermediary_type,intermediary_code,lead_source,rm_employee_id,rm_name,intermediary_group_id,intermediary_group_name";
   const fromCreatedAt = `${filters.fromDate}T00:00:00+05:30`;
   const dayAfterTo = indiaDate(addDays(new Date(`${filters.toDate}T00:00:00+05:30`), 1));
   const toCreatedAtExclusive = `${dayAfterTo}T00:00:00+05:30`;
@@ -58,6 +59,7 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
   // Filter the requested business period in PostgREST before rows are returned. The previous
   // implementation fetched the whole policy table and filtered in memory, so Supabase's API
   // max-rows cap silently truncated production data once the table exceeded 1,000 rows.
+  const policyResult = await fetchAllPages<PolicyRow, unknown>((from, to) => {
   let policyQuery = admin
     .from("policies")
     .select(select)
@@ -65,7 +67,8 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
   if (downlineFilter) policyQuery = policyQuery.or(downlineFilter);
   else if (rmEmployeeIds !== null) policyQuery = policyQuery.in("rm_employee_id", rmEmployeeIds);
 
-  const policyResult = await policyQuery.returns<PolicyRow[]>();
+  return policyQuery.order("id").range(from,to).returns<PolicyRow[]>();
+  });
   if (policyResult.error) return { ...empty, warnings: ["Filtered business production could not be refreshed."] };
 
   const allPolicies = policyResult.data ?? [];
@@ -114,7 +117,11 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
     const premiumResults = await Promise.all(chunkValues(policyIds, 120).map((batch) => admin.from("policy_premium_details").select("policy_id,net_premium,gross_premium").in("policy_id", batch).returns<PremiumRow[]>()));
     const premiumError = premiumResults.find((result) => result.error)?.error;
     if (premiumError) warnings.push("Premium figures could not be refreshed.");
-    else for (const result of premiumResults) for (const row of result.data ?? []) premiumByPolicy.set(row.policy_id, { net: numberValue(row.net_premium), gross: numberValue(row.gross_premium) });
+    else {
+      const bookedById = new Map(filteredPolicies.map(policy => [policy.id, numberValue(policy.premium_amount)]));
+      for (const result of premiumResults) for (const row of result.data ?? []) premiumByPolicy.set(row.policy_id, { net: numberValue(row.net_premium), gross: row.gross_premium == null ? bookedById.get(row.policy_id) ?? 0 : numberValue(row.gross_premium) });
+      for (const policy of filteredPolicies) if (!premiumByPolicy.has(policy.id)) premiumByPolicy.set(policy.id, {net: 0, gross: numberValue(policy.premium_amount)});
+    }
   }
 
   const channel = new Map<string, Accumulator>(); const vehicleClass = new Map<string, Accumulator>(); const coverage = new Map<string, Accumulator>(); const businessLine = new Map<string, Accumulator>(); const insurers = new Map<string, Accumulator>();
