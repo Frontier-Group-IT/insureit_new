@@ -45,18 +45,16 @@ export function assessIffcoAutoOnboarding(input:Input):{eligible:boolean;reason:
   // Both location fields are optional. Never substitute insured-address city
   // for the registration authority; keep its provenance when available.
   if(isPending){
-    if(!/^MP\/NEW\/\d{3,6}$/.test(registration)
-)
-      return fail("iffco_provisional_location_source_missing");
+    if(!/^MP\/NEW\/\d{3,6}$/.test(registration))
+      return fail("iffco_provisional_registration_unverified");
   }else{
     // The PDF's empty Registration Authority box must never be replaced
     // with the insured's mailing city. Trust only an identified MP RTO code
     // attached to the *same* printed vehicle registration number.
     const match=registration.match(/^MP(\d{2})[A-Z]{1,3}\d{3,4}$/);
     if(!match
-
       ||!get("vehicle_chassis_number")||!get("vehicle_engine_number"))
-      return fail("iffco_registered_rto_evidence_missing");
+      return fail("iffco_registered_plate_or_vehicle_identity_unverified");
   }
   const cpa=Number(get("cpa_premium"));
   if(!Number.isFinite(cpa)||cpa<0||!input.commercialPremium)
