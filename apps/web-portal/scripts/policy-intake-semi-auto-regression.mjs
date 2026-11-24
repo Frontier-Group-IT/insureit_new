@@ -319,8 +319,8 @@ assert(handoff.includes('await requireCapability("manage_system","approve")')
   && handoff.includes("await requirePolicyCreator()"),
   "The directly callable n8n handoff server action must recheck Development and Policy Creator rights");
 assert(handoff.includes("const parsed=await previewSemiAutoN8nExtraction(id")
-  && handoff.includes("allowManualLane:replaceExistingDraft"),
-  "The handoff must re-extract the current private PDF server-side, not accept browser OCR fields");
+  && !handoff.includes("allowManualLane:replaceExistingDraft"),
+  "The AI handoff must re-extract the current private PDF without a manual-lane bypass");
 assert(handoff.includes("parsed.preview.fingerprint!==expectedFingerprint"),
   "A changed extraction must block a previously reviewed handoff");
 assert(n8nServer.includes("JSON.stringify({ intakeId: id, documentId, fields, warnings, premium,")
@@ -758,14 +758,14 @@ assert(workbenchText.includes("Check customer matches")
 // be invoked when the verified n8n workbench/queue is enabled.
 assert(normalUploadActions.includes("processAiQueueBatch({preferredIntakeId:input.id})")
   && normalUploadActions.split("processAiQueueBatch({preferredIntakeId:input.id})").length===3
-  && normalUploadActions.includes('if(aiQueueEnabled() && (!segregatePolicyIntakeLanes() || lane==="automation"))')
-  && normalUploadActions.includes('if(aiQueueEnabled() && !segregatePolicyIntakeLanes())'),
-  "Operations originals must dispatch immediate n8n only in automation lane; manual replacements cannot bypass isolation");
+  && normalUploadActions.includes('processing_lane:"automation"')
+  && !normalUploadActions.includes("manualSplit"),
+  "Operations originals and replacements use automation without layout/legacy OCR detours");
 assert(partnerUploadApi.includes("processAiQueueBatch({preferredIntakeId:input.id})")
   && partnerUploadApi.split("processAiQueueBatch({preferredIntakeId:input.id})").length===3
-  && partnerUploadApi.includes('if (!proposalForm && aiQueueEnabled() && (!segregatePolicyIntakeLanes() || lane==="automation"))')
-  && partnerUploadApi.includes('if (!proposalForm && aiQueueEnabled() && (!segregatePolicyIntakeLanes() || intake.processing_lane==="automation"))'),
-  "Partner and Branch originals and replacements must dispatch n8n only for automation lane");
+  && partnerUploadApi.includes('processing_lane:"automation"')
+  && !partnerUploadApi.includes("manualSplit"),
+  "Partner/POSP/MISP originals and replacements use the same n8n automation");
 assert(workerText.includes("const MAX_BATCH = 6")
   && workerText.includes("const MAX_CONCURRENT = 3")
   && workerText.includes("Promise.all(wave.map(")
