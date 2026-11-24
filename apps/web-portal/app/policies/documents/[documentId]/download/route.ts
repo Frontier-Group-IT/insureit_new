@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { canAccessCustomer } from "@/lib/employee-access-scope";
-import { canAccessPolicy } from "@/lib/policy-access-scope";
+import { canAccessPolicy, usesLifeTeamPortfolio } from "@/lib/policy-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -18,7 +18,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ doc
     .eq("id", documentId)
     .eq("document_type", "policy_copy")
     .maybeSingle<{ policy_id: string; storage_bucket: string; storage_path: string; policies: { customer_id: string } | null }>();
-  const allowed = document?.policies?.customer_id && (profile.role === "operations_head_life"
+  const allowed = document?.policies?.customer_id && (profile.role === "operations_head_life" || usesLifeTeamPortfolio(profile.id, profile.role)
     ? await canAccessPolicy(profile.id, profile.role, document.policy_id, "view_policies")
     : await canAccessCustomer(profile.id, profile.role, document.policies.customer_id, "view_policies"));
   if (!allowed) {
