@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useIsFocused } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
-import { Image, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, AppState, Easing, Image, type ImageSourcePropType, Platform, Pressable, StyleSheet, Text, View, type TextStyle, type StyleProp } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
@@ -9,6 +12,7 @@ import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-na
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerRecognition, type PartnerRecognition } from '@/lib/engagement';
 import { PartnerAssets } from '@/lib/partner-assets';
+import { usePartnerSession } from '@/providers/partner-session-provider';
 
 type RecognitionItem = PartnerRecognition['items'][number];
 const PURPLE = '#6325D7';
@@ -25,6 +29,147 @@ const RING_SEGMENTS = Array.from({ length: RING_COUNT }, (_, index) => {
     transform: [{ rotate: `${angle}deg` as `${number}deg` }],
   };
 });
+
+const NATIVE_MOTION = Platform.OS !== 'web';
+const EASE = Easing.out(Easing.cubic);
+const SPRING = { stiffness: 190, damping: 21, mass: 0.8, overshootClamping: true, useNativeDriver: NATIVE_MOTION, isInteraction: false } as const;
+const COUNT_MS = 680;
+
+function useScreenMotion() {
+  const focused = useIsFocused();
+  const [foreground, setForeground] = useState(AppState.currentState === 'active' || Platform.OS === 'web');
+  const [reduced, setReduced] = useState<boolean | null>(null);
+  useEffect(() => {
+    let live = true;
+    let changed = false;
+    const app = AppState.addEventListener('change', state => setForeground(state === 'active'));
+    const preference = AccessibilityInfo.addEventListener('reduceMotionChanged', value => {
+      changed = true;
+      if (live) setReduced(value);
+    });
+    void AccessibilityInfo.isReduceMotionEnabled().then(value => {
+      if (live && !changed) setReduced(value);
+    }).catch(() => { if (live && !changed) setReduced(true); });
+    return () => { live = false; app.remove(); preference.remove(); };
+  }, []);
+  const visible = focused && foreground;
+  return { visible, motion: visible && reduced === false };
+}
+
+function useEntrance(motion: boolean, delay = 0) {
+  const value = useRef(new Animated.Value(1)).current;
+  const played = useRef(false);
+  useEffect(() => {
+    if (!motion) { value.setValue(1); return; }
+    if (played.current) return;
+    played.current = true;
+    value.setValue(0);
+    const animation = Animated.sequence([Animated.delay(delay), Animated.spring(value, { ...SPRING, toValue: 1 })]);
+    animation.start();
+    return () => { animation.stop(); value.setValue(1); };
+  }, [motion, delay, value]);
+  return value;
+}
+function entrance(value: Animated.Value) {
+  return { opacity: value.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' }),
+    transform: [{ translateY: value.interpolate({ inputRange: [0, 1], outputRange: [7, 0], extrapolate: 'clamp' }) }] };
+}
+function Entrance({ children, motion, delay = 0 }: { children: ReactNode; motion: boolean; delay?: number }) {
+  const value = useEntrance(motion, delay);
+  return <Animated.View style={entrance(value)}>{children}</Animated.View>;
+}
+
+function useNewAchievements(data: PartnerRecognition | null, actorId: string, visible: boolean) {
+  const [celebrating, setCelebrating] = useState<ReadonlySet<string>>(() => new Set());
+  const writes = useRef<Promise<void>>(Promise.resolve());
+  useEffect(() => {
+    setCelebrating(previous => previous.size ? new Set() : previous);
+    if (!data || !actorId || !visible) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const key = `partner:recognition-seen:v1:${actorId}`;
+    const codes = [...new Set(data.items.map(item => item.code).filter(Boolean))];
+    writes.current = writes.current.catch(() => {}).then(async () => {
+      if (cancelled) return;
+      try {
+        const raw = await AsyncStorage.getItem(key);
+        if (cancelled) return;
+        const parsed: unknown = raw === null ? null : JSON.parse(raw);
+        const valid = Array.isArray(parsed) && parsed.every(code => typeof code === 'string');
+        const known = new Set<string>(valid ? parsed as string[] : []);
+        const newlyUnlocked = valid ? codes.filter(code => !known.has(code)) : [];
+        if (!valid || newlyUnlocked.length) await AsyncStorage.setItem(key, JSON.stringify([...new Set([...known, ...codes])]));
+        if (cancelled || !newlyUnlocked.length) return;
+        setCelebrating(new Set(newlyUnlocked));
+        if (Platform.OS !== 'web') void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        timer = setTimeout(() => { if (!cancelled) setCelebrating(new Set()); }, 1250);
+      } catch {
+        // Cannot prove a new unlock when storage fails; do not celebrate.
+      }
+    });
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+  }, [data, actorId, visible]);
+  return celebrating;
+}
+
+const PARTICLES = [[-13,-15],[5,-21],[24,-14],[31,3],[23,20],[4,23],[-16,13],[-22,-1]] as const;
+function Celebration({ enabled }: { enabled: boolean }) {
+  const value = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!enabled) return;
+    value.setValue(0);
+    const animation = Animated.timing(value, { toValue: 1, duration: 1100, easing: EASE, useNativeDriver: NATIVE_MOTION, isInteraction: false });
+    animation.start();
+    return () => animation.stop();
+  }, [enabled, value]);
+  if (!enabled) return null;
+  return <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.particleOrigin}>
+    {PARTICLES.map(([x,y], index) => <Animated.View key={index} style={[styles.particle, {
+      opacity: value.interpolate({ inputRange: [0, 0.12, 0.65, 1], outputRange: [0, 1, 0.8, 0] }),
+      transform: [{ translateX: value.interpolate({ inputRange: [0, 1], outputRange: [0, x * 1.65] }) },
+        { translateY: value.interpolate({ inputRange: [0, 1], outputRange: [0, y * 1.65] }) },
+        { rotate: value.interpolate({ inputRange: [0, 1], outputRange: ['0deg', index % 2 ? '55deg' : '-45deg'] }) }],
+    }]}>{index % 3 === 0 ? <Ionicons name="sparkles" size={9} color="#E4AA32" /> : <View style={[styles.confettiPiece, index % 2 === 0 && styles.confettiLavender]} />}</Animated.View>)}
+  </View>;
+}
+function AchievementCard({ item, index, motion, celebrate }: { item: RecognitionItem; index: number; motion: boolean; celebrate: boolean }) {
+  const delay = Math.min(index, 8) * 100;
+  const appear = useEntrance(motion, delay);
+  const shine = useRef(new Animated.Value(0)).current;
+  const played = useRef(false);
+  useEffect(() => {
+    if (!motion || played.current) return;
+    played.current = true;
+    const animation = Animated.sequence([Animated.delay(delay + 100), Animated.timing(shine, { toValue: 1, duration: 850, easing: Easing.inOut(Easing.sin), useNativeDriver: NATIVE_MOTION, isInteraction: false })]);
+    animation.start();
+    return () => { animation.stop(); shine.setValue(0); };
+  }, [motion, delay, shine]);
+  return <Animated.View style={[styles.card, entrance(appear)]}>
+    <Animated.View pointerEvents="none" accessible={false} style={[styles.cardGlow, { opacity: shine.interpolate({ inputRange: [0, 0.45, 1], outputRange: [0, 0.6, 0] }) }]} />
+    <View style={styles.artworkTile}>
+      <Image source={milestoneArtwork(item.icon, item.title)} style={styles.achievementArtwork} resizeMode="contain" />
+      <View pointerEvents="none" accessible={false} style={styles.iconShineClip}>
+        <Animated.View style={[styles.iconShine, {
+          opacity: shine.interpolate({ inputRange: [0, 0.25, 0.75, 1], outputRange: [0, 0.28, 0.28, 0] }),
+          transform: [{ translateX: shine.interpolate({ inputRange: [0, 1], outputRange: [-35, 65] }) }, { rotate: '24deg' }],
+        }]} />
+      </View>
+      <Celebration enabled={motion && celebrate} />
+    </View>
+    <View style={styles.verticalRule} />
+    <View style={styles.achievementHeading}>
+      <Text style={styles.title}>{item.title}</Text>
+      <Text style={styles.supportingText}>A great start!</Text>
+    </View>
+    <View style={styles.achievementMeta}>
+      <Animated.View style={[styles.earnedPill, { transform: [{ scale: appear.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1], extrapolate: 'clamp' }) }] }]}>
+        <Ionicons name="checkmark-circle" size={14} color={PURPLE} />
+        <Text style={styles.earnedPillText}>ACHIEVED</Text>
+      </Animated.View>
+      {item.date ? <View style={styles.dateRow}><Ionicons name="calendar-outline" size={13} color={PURPLE} /><Text style={styles.date}>{formatDate(item.date)}</Text></View> : null}
+    </View>
+  </Animated.View>;
+}
 
 export default function RecognitionScreen() {
   const router = useRouter();
