@@ -95,7 +95,7 @@ export default function StoriesScreen() {
 
   const story = data?.items[index] || null;
   const impactClock = useImpactTimeline(active && !loading && !error && story?.kind === 'impact', held);
-  const learnClock = useImpactTimeline(active && !loading && !error && story?.kind === 'learn', held);
+  const learnClock = useImpactTimeline(focused && !closing && !loading && !error && story?.kind === 'learn', held);
 
   useEffect(() => {
     setArtworkReduction(0);
