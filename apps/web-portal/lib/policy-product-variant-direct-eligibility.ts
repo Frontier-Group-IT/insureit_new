@@ -91,7 +91,7 @@ export function assessProductVariantDirectConversion(input:Input):{eligible:bool
  }else if(input.parserId==="zurich_kotak_private_car_tp_native_pdf"){
    if(field("insurer_name")!=="Zurich Kotak General Insurance Company (India) Limited"
      ||field("vehicle_class")!=="Private Car"
-     ||!["HYUNDAI","MARUTI"].includes(field("vehicle_make"))
+     ||!["HYUNDAI","MARUTI","TATA"].includes(field("vehicle_make"))
      ||!["Petrol","Diesel"].includes(field("vehicle_fuel_type"))
      ||Math.abs(cents(printed.gst)-cents(printed.net*.18))>2)
      return no("zurich_kotak_tp_variant_unverified");
