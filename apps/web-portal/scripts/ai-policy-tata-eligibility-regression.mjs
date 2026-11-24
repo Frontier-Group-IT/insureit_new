@@ -28,6 +28,45 @@ const evaluate=(preview,extra={})=>assessAiPolicyIntake({
  bundledPeriodsVerified:true,canonicalPreflightPassed:false,...extra,
 });
 assert.equal(fixtures.length,6);
+// Full parser -> return round trip for all six sanitized native-PDF layouts.
+// These documents print Receipt Date but do not print a distinct Issue Date.
+for(const fixture of fixtures){
+ const extracted=parser({all:()=>[{json:{text:fixture.text}}]})[0].json;
+ const response=normalizer({first:()=>({json:extracted})},
+   ()=>({first:()=>({json:ids})}))[0].json;
+ assert.equal(extracted.checks_passed,18);
+ assert.equal(extracted.fields.issue_date_source,"printed_receipt_business_rule");
+ assert.equal(response.ok,true);
+ assert(response.warnings.includes("tata_aig_receipt_date_as_issuance"));
+ assert(!response.warnings.includes("tata_aig_issuance_date_unverified"));
+ assert.equal(response.fields.find(f=>f.key==="policy_issuance_date")?.value,
+   extracted.premium_components.receipt_date);
+ assert.equal(response.fields.find(f=>f.key==="policy_issuance_date")?.evidence,
+   "Tata AIG printed Receipt Date (approved issuance rule)");
+}
+// A separately printed issue day outranks a different receipt/signature day.
+// PDF.js reading order can also present date first. Conflicting labelled
+// issue dates must never silently choose either value.
+const source=fixtures[4].text;
+const issueForward=source.replace("Receipt Date 17/11/2026",
+  "Policy Issue Date 18/11/2026\\nReceipt Date 17/11/2026");
+const issueReverse=source.replace("Receipt Date 17/11/2026",
+  "18/11/2026 Date of Issue\\nReceipt Date 17/11/2026");
+for(const sample of [issueForward,issueReverse]){
+ const extracted=parser({all:()=>[{json:{text:sample}}]})[0].json;
+ const response=normalizer({first:()=>({json:extracted})},
+   ()=>({first:()=>({json:ids})}))[0].json;
+ assert.equal(response.ok,true);
+ assert.equal(extracted.fields.policy_issuance_date,"2026-11-18");
+ assert.equal(extracted.fields.issue_date_source,"printed_policy_issue_date");
+ assert(!response.warnings.includes("tata_aig_receipt_date_as_issuance"));
+}
+const conflicting=source.replace("Receipt Date 17/11/2026",
+  "Policy Issue Date 18/11/2026\\nDate of Issue 19/11/2026\\nReceipt Date 17/11/2026");
+const refused=parser({all:()=>[{json:{text:conflicting}}]})[0].json;
+assert.equal(refused.ok,false);
+assert.equal(refused.printed_issue_date_ambiguous,true);
+
 // SAOD policies have no newly issued TP coverage. The canonical queue must
 // not label a fully verified OD-only schedule "Mandatory field missing".
 const standalone=JSON.parse(read("./fixtures/tata-aig-n8n-saod-synthetic.json"));
