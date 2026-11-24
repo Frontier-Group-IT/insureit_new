@@ -31,6 +31,12 @@ export default function WeeklyStoryScreen() {
   const [comparisonLoading, setComparisonLoading] = useState(false);
   const [comparisonError, setComparisonError] = useState('');
   const rangeRotation = useRef(new Animated.Value(0)).current;
+  const renewalPressScale = useRef(new Animated.Value(1)).current;
+  const pressRenewal = (pressed: boolean) => {
+    const animation = Animated.spring(renewalPressScale, { toValue: animate && pressed ? 0.985 : 1, speed: 22, bounciness: 0, useNativeDriver: true });
+    animation.start();
+  };
+  useEffect(() => () => renewalPressScale.stopAnimation(), [renewalPressScale]);
 
   useEffect(() => {
     let live = true;
@@ -214,10 +220,13 @@ export default function WeeklyStoryScreen() {
             <DividerReveal animate={animate} />
           </View>
           <Entrance animate={animate} delay={350}>
+          <Animated.View style={{ transform: [{ scale: renewalPressScale }] }}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Open renewals"
             onPress={() => router.push('/renewals')}
+            onPressIn={() => pressRenewal(true)}
+            onPressOut={() => pressRenewal(false)}
             style={({ pressed }) => [styles.nextCard, pressed && styles.cardPressed]}
           >
             <View style={styles.nextIcon}>
@@ -229,6 +238,7 @@ export default function WeeklyStoryScreen() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#0F3D8A" />
           </Pressable>
+          </Animated.View>
           </Entrance>
 
           <Entrance style={styles.endCard} animate={animate} delay={450}>
@@ -392,7 +402,7 @@ function ReflectionGrowth({ animate }: { animate: boolean }) {
   const motion = useEntrance(animate, 400);
   return (
     <View pointerEvents="none" style={styles.reflectionGrowth}>
-      <Animated.View style={[styles.reflectionArrow, motion]}><Ionicons name="arrow-up-outline" size={28} color="#69CFC2" /></Animated.View>
+      <Animated.View style={[{ position: 'absolute', right: 2, top: 0 }, motion]}><Ionicons name="arrow-up-outline" size={28} color="#69CFC2" style={{ transform: [{ rotate: '36deg' }] }} /></Animated.View>
       <View style={styles.reflectionBars}>
         {[18, 31, 48].map((height, index) => <AnimatedBar key={index} height={height} index={index} animate={animate} reflection />)}
       </View>
