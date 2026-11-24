@@ -394,14 +394,14 @@ const unified=file("../components/policy-unified-form.tsx");
 const shell=file("../components/policy-commercial-shell.tsx");
 assert.ok(niaHandoff.includes('niaVerified')&&niaHandoff.includes("FASTag ID:"),
   "NIA stale drafts must not show FASTag ID as the registration authority");
-assert.ok(niaHandoff.includes('nia_missing_registration_authority') && !niaHandoff.includes('const niaMissingCpa='));
+assert.ok(niaHandoff.includes('const niaHoldCode=null') && !niaHandoff.includes('const niaMissingCpa='));
 assert.ok(niaPage.includes('readVerifiedNiaPrintedPremiumReference(')
   && niaPage.includes('queue.data.document_id===document.data.id'));
 assert.ok(unified.includes('printedPremiumReference!.gst')
   && unified.includes('Math.round(od*100)===Math.round(printedPremiumReference.od*100)')
   && unified.includes('form.cpaOpted==="No"'));
 assert.ok(shell.includes('printedPremiumReference={props.printedPremiumReference}'));
-assert.ok(component.includes('NIA PDF verified · provisional RTO pending')
+assert.ok(component.includes('RTO city and state are optional.')
   && component.includes('Go Digit · manufacturing year unavailable'));
 
 // Approved operational rule: only when the policy fails to print manufacture
