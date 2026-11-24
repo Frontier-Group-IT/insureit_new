@@ -36,7 +36,6 @@ export default function AiPolicyStudioScreen() {
   const [page,setPage]=useState<AiStudioPage>({counts:{open:0,action:0,in_review:0,processing:0},rows:[]});
   const [loading,setLoading]=useState(true);
   const [refreshing,setRefreshing]=useState(false);
-  const [moreLoading,setMoreLoading]=useState(false);
   const [error,setError]=useState('');
   const [selected,setSelected]=useState<AiStudioRow|null>(null);
   const [detail,setDetail]=useState<AiStudioDetail|null>(null);
@@ -83,7 +82,7 @@ export default function AiPolicyStudioScreen() {
     } catch(e) {
       if(token===sequence.current) setError(e instanceof Error?e.message:'Could not load the queue.');
     } finally {
-      if(token===sequence.current){setLoading(false);setRefreshing(false);setMoreLoading(false);}
+      if(token===sequence.current){setLoading(false);setRefreshing(false);}
     }
   },[allowed,filter,pageIndex]);
   useFocusEffect(useCallback(()=>{
