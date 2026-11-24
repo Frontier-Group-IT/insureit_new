@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 
-export type AiStudioBucket = 'review' | 'processing' | 'done';
+export type AiStudioBucket = 'open' | 'action' | 'in_review' | 'processing';
 export type AiStudioRow = {
   id: string;
   intake_number: string;
@@ -33,6 +33,7 @@ export type AiStudioDetail = {
   last_error_code: string | null;
   fields: AiStudioField[];
   final_policy_id: string | null;
+  processing_lane: 'manual' | 'automation';
   draft_revision: number | null;
   updated_at: string;
 };
@@ -75,9 +76,10 @@ export async function loadAiStudioPage(bucket: AiStudioBucket, offset = 0): Prom
       bucket,
     } satisfies AiStudioRow));
   return { counts: {
-    review: Number(counts.review) || 0,
+    open: Number(counts.open) || 0,
+    action: Number(counts.action) || 0,
+    in_review: Number(counts.in_review) || 0,
     processing: Number(counts.processing) || 0,
-    done: Number(counts.done) || 0,
   }, rows };
 }
 
@@ -103,6 +105,7 @@ export async function loadAiStudioDetail(id: string): Promise<AiStudioDetail> {
     exception_codes: Array.isArray(data.exception_codes) ? data.exception_codes.filter((x): x is string => typeof x === 'string') : [],
     last_error_code: typeof data.last_error_code === 'string' ? data.last_error_code : null,
     final_policy_id: typeof data.final_policy_id === 'string' ? data.final_policy_id : null,
+    processing_lane: data.processing_lane === 'automation' ? 'automation' : 'manual',
     draft_revision: typeof data.draft_revision === 'number' ? data.draft_revision : null,
     updated_at: typeof data.updated_at === 'string' ? data.updated_at : '',
     fields: data.fields.filter(object)

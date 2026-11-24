@@ -10,7 +10,7 @@ import { loadAiStudioDetail, loadAiStudioPage, type AiStudioBucket, type AiStudi
 
 const C = { ink:'#182C38', faint:'#71828C', paper:'#F4F7FD', line:'#E3EAF4', navy:'#122A49', blue:'#3158CF', mint:'#B9EAD0' };
 const TABS: Array<{key:AiStudioBucket;label:string}> = [
-  {key:'review',label:'Review'}, {key:'processing',label:'Running'}, {key:'done',label:'Done'},
+  {key:'open',label:'All Open'}, {key:'action',label:'Action'}, {key:'in_review',label:'In Review'}, {key:'processing',label:'Processing'},
 ];
 const humanize = (value:string) => value.replace(/_/g,' ').replace(/\b\w/g,s=>s.toUpperCase());
 const fieldName = (key:string) => ({
@@ -27,8 +27,8 @@ export default function AiPolicyStudioScreen() {
   const insets=useSafeAreaInsets();
   const {context}=usePartnerSession();
   const allowed=canPartnerUseAiStudio(context);
-  const [filter,setFilter]=useState<AiStudioBucket>('review');
-  const [page,setPage]=useState<AiStudioPage>({counts:{review:0,processing:0,done:0},rows:[]});
+  const [filter,setFilter]=useState<AiStudioBucket>('open');
+  const [page,setPage]=useState<AiStudioPage>({counts:{open:0,action:0,in_review:0,processing:0},rows:[]});
   const [loading,setLoading]=useState(true);
   const [refreshing,setRefreshing]=useState(false);
   const [moreLoading,setMoreLoading]=useState(false);
@@ -98,7 +98,7 @@ export default function AiPolicyStudioScreen() {
         return;
       }
       setPendingAction(null);setSelected(null);
-      if(result.policy_booked)setFilter('done');else void reload();
+      if(result.policy_booked)setFilter('open');void reload();
     }catch(e){
       const message=e instanceof Error?e.message:'The operation could not be confirmed.';
       setActionError(message);
@@ -137,27 +137,27 @@ export default function AiPolicyStudioScreen() {
         </View>
         <View style={s.hero}>
           <View style={s.heroMain}>
-            <Text style={s.heroOverline}>AWAITING ATTENTION</Text>
-            <Text style={s.heroNumber}>{count('review')}</Text>
+            <Text style={s.heroOverline}>ALL OPEN INTAKES</Text>
+            <Text style={s.heroNumber}>{count('open')}</Text>
             <Text style={s.heroHint}>●  Live policy queue</Text>
           </View>
           <View style={s.heroAside}>
             <Text style={s.heroMini}>{count('processing')}</Text><Text style={s.heroAsideLabel}>Processing</Text>
             <View style={s.heroDivider}/>
-            <Text style={s.heroMini}>{count('done')}</Text><Text style={s.heroAsideLabel}>Completed</Text>
+            <Text style={s.heroMini}>{count('in_review')}</Text><Text style={s.heroAsideLabel}>In Review</Text>
           </View>
           <View style={s.heroRing}/>
         </View>
         <View style={s.quickGuide}><View style={s.guideIcon}><Ionicons name="flash-outline" size={18} color={C.blue}/></View><View style={{flex:1}}><Text style={s.guideTitle}>Your workflow</Text><Text style={s.guideText}>Open an intake → Reparse if needed → Verify & Convert</Text></View><Ionicons name="shield-checkmark-outline" size={20} color="#2D8065"/></View>
-        <View style={s.segment}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabScroller} contentContainerStyle={s.segment}>
           {TABS.map(tab=><Pressable key={tab.key} accessibilityRole="tab" accessibilityState={{selected:filter===tab.key}}
             style={[s.segmentItem,filter===tab.key&&s.segmentActive]}
             onPress={()=>{setFilter(tab.key);setPage(p=>({...p,rows:[]}));}}>
             <Text style={[s.segmentLabel,filter===tab.key&&s.activeLabel]}>{tab.label}</Text>
             <Text style={[s.segmentCount,filter===tab.key&&s.activeLabel]}>{count(tab.key)}</Text>
           </Pressable>)}
-        </View>
-        <View style={s.sectionHead}><Text style={s.sectionTitle}>{filter==='review'?'Needs your eye':filter==='processing'?'In the pipeline':'Finished'}</Text>
+        </ScrollView>
+        <View style={s.sectionHead}><Text style={s.sectionTitle}>{filter==='open'?'All open policy intakes':filter==='action'?'Action required':filter==='in_review'?'In review':'Processing'}</Text>
           <Text style={s.meta}>{count(filter)} records</Text></View>
         {loading&&page.rows.length===0?<View style={s.center}><ActivityIndicator color={C.blue}/></View>:null}
         {error?<Pressable style={s.error} onPress={()=>void reload()} accessibilityRole="button">
@@ -170,7 +170,7 @@ export default function AiPolicyStudioScreen() {
         {page.rows.length>0?<View style={s.list}>
           {page.rows.map(row=>{
             const done=!!row.final_policy_id,flag=row.exception_codes.length>0;
-            const status=done?'Completed':row.bucket==='review'?(flag?'Needs review':'Ready'):(flag?'Attention':'In progress');
+            const status=done?'Completed':row.status==='in_review'?'In review':row.status==='processing'&&row.ocr_status!=='failed'?'Fetching details':'Action required';
             return <Pressable key={row.id} accessibilityRole="button" accessibilityLabel={'Open '+row.intake_number}
               style={({pressed})=>[s.row,pressed&&{backgroundColor:'#F2F6F4'}]} onPress={()=>openDetail(row)}>
               <View style={[s.mark,{backgroundColor:done?'#54A983':flag?'#D7A662':'#8B9EDB'}]}/>
@@ -210,14 +210,14 @@ export default function AiPolicyStudioScreen() {
               <Ionicons name="information-circle-outline" size={18} color="#996A33"/>
               <Text style={s.issueText}>{humanize(detail.last_error_code||detail.exception_codes.join(', '))}</Text>
             </View>:null}
-            {!aiStudioActionsEnabled&&!detail.final_policy_id?<View style={s.actionsWrap}>
+            {(!aiStudioActionsEnabled||detail.processing_lane!=='automation')&&!detail.final_policy_id?<View style={s.actionsWrap}>
               <View style={s.actionsRow}>
                 <View style={[s.reparseButton,s.disabledAction]}><Ionicons name="refresh-outline" color="#7F8EAB" size={22}/><Text style={s.reparseLabel}>Reparse PDF</Text><Text style={s.actionSub}>Awaiting activation</Text></View>
                 <View style={[s.convertButton,s.disabledConvert]}><Ionicons name="lock-closed-outline" color="#FFFFFF" size={22}/><Text style={s.convertLabel}>Verify & Convert</Text><Text style={s.convertSub}>Awaiting activation</Text></View>
               </View>
-              <View style={s.disabledNotice}><Ionicons name="lock-closed-outline" size={20} color="#8F7033"/><View style={{flex:1}}><Text style={s.disabledTitle}>Secure actions awaiting activation</Text><Text style={s.disabledText}>These buttons unlock after the backend passes authenticated booking checks. Your current intakes are unchanged.</Text></View></View>
+              <View style={s.disabledNotice}><Ionicons name="lock-closed-outline" size={20} color="#8F7033"/><View style={{flex:1}}><Text style={s.disabledTitle}>Secure actions awaiting activation</Text><Text style={s.disabledText}>{detail.processing_lane==='manual'?'This intake uses the website’s manual onboarding lane. Secure AI conversion is restricted to eligible automation intakes.':'These buttons unlock after the backend passes authenticated booking checks. Your current intakes are unchanged.'}</Text></View></View>
             </View>:null}
-            {aiStudioActionsEnabled&&!detail.final_policy_id?<View style={s.actionsWrap}>
+            {aiStudioActionsEnabled&&detail.processing_lane==='automation'&&!detail.final_policy_id?<View style={s.actionsWrap}>
               {actionError?<Text style={s.actionError}>{actionError}</Text>:null}
               {resultUncertain?<View style={s.uncertain}><Ionicons name="warning-outline" size={18} color="#966126"/><Text style={s.uncertainText}>Result uncertain. Refresh and inspect booking status before retrying.</Text></View>:null}
               {resultUncertain?<Pressable style={s.refreshRecord} accessibilityRole="button" onPress={()=>void reloadSelected()}><Ionicons name="refresh" size={17} color={C.blue}/><Text style={s.refreshRecordText}>Refresh intake status</Text></Pressable>:null}
@@ -287,8 +287,9 @@ const s=StyleSheet.create({
   quickGuide:{flexDirection:'row',alignItems:'center',gap:10,padding:13,borderRadius:17,backgroundColor:'#FFFFFF',borderColor:'#DFE8F5',borderWidth:1,marginBottom:16},
   guideIcon:{width:39,height:39,borderRadius:12,backgroundColor:'#EAF0FF',justifyContent:'center',alignItems:'center'},
   guideTitle:{fontSize:12,fontWeight:'800',color:C.ink},guideText:{fontSize:10.5,lineHeight:15,color:C.faint,marginTop:4},
-  segment:{flexDirection:'row',backgroundColor:'#E9EFFA',borderRadius:17,padding:4,marginBottom:20},
-  segmentItem:{flex:1,minHeight:43,borderRadius:13,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:6},
+  tabScroller:{flexGrow:0,marginBottom:20},
+  segment:{flexDirection:'row',backgroundColor:'#E9EFFA',borderRadius:17,padding:4,gap:2},
+  segmentItem:{minWidth:100,minHeight:43,paddingHorizontal:8,borderRadius:13,alignItems:'center',justifyContent:'center',flexDirection:'row',gap:5},
   segmentActive:{backgroundColor:'#FFFFFF'},
   segmentLabel:{fontSize:12,fontWeight:'600',color:C.faint},
   segmentCount:{fontSize:10,fontWeight:'700',color:'#92A19F'},
