@@ -66,6 +66,7 @@ const privateFields=common.map(x=>({
  :x.key==="vehicle_manufacturing_year"?"2018"
  :x.key==="vehicle_capacity"?"1248"
  :x.key==="policy_product"?"Package":x.value,
+ evidence:x.key==="policy_issuance_date"?"UIIC Private Car printed Date of Issue: 2026-11-19":x.evidence,
 }));
 const privateResult=assessUiicPrivateCarDirectConversion({
  parserId:"united_india_private_car_package_native_pdf",
