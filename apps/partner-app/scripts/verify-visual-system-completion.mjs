@@ -1233,7 +1233,14 @@ if (activity.includes('<Text numberOfLines={1} style={styles.meta}>{item.meta}</
 if (activity.includes('<Ionicons name="chevron-forward" size={20} color="#071C70" />')) throw new Error('Recent Activity record rows must not show a right-side chevron.');
 requireText(activity, 'width: 52', 'Recent Activity logo tile must stay compact so details sit closer to the logo.');
 requireText(activity, 'marginRight: 4', 'Recent Activity logo-to-detail spacing must stay compact.');
-for (const marker of ['AccessibilityInfo.isReduceMotionEnabled()', 'reduceMotionChanged', 'function useEntrance(', 'function MetricText(', 'cancelAnimationFrame(frame)', 'stickyFirstChild', 'animateSelection', 'onPressIn={press.onPressIn}', 'recordTop("journey"', 'useNativeDriver: native']) requireText(impact, marker, 'Impact accessible motion regression: ' + marker);
+const impactHeaderScreen = read('components/partner-screen.tsx');
+requireText(impactHeaderScreen, '{fixedHeader ?? null}', 'Impact fixed header must render outside the scroll view.');
+if (impactHeaderScreen.indexOf('{fixedHeader ?? null}') > impactHeaderScreen.indexOf('<Animated.ScrollView')) throw new Error('Fixed header must precede the scroll view.');
+if (impact.includes('stickyFirstChild')) throw new Error('Impact must not use native sticky child wrapping.');
+requireText(impact, 'height: 52, paddingHorizontal: 16,', 'Impact fixed header must remain full-width and 52px high.');
+requireText(impact, 'flexDirection: \'row\', alignItems: \'center\', gap: 8, backgroundColor: \'#0A234A\'', 'Impact header must retain its horizontal alignment.');
+requireText(impact, '<Text style={styles.headerTitle} numberOfLines={1}>Protection delivered</Text>', 'Impact title must remain visible.');
+for (const marker of ['AccessibilityInfo.isReduceMotionEnabled()', 'reduceMotionChanged', 'function useEntrance(', 'function MetricText(', 'cancelAnimationFrame(frame)', 'fixedHeader={(', 'animateSelection', 'onPressIn={press.onPressIn}', 'recordTop("journey"', 'useNativeDriver: native']) requireText(impact, marker, 'Impact accessible motion regression: ' + marker);
 for (const impactMarker of [
   'function ImpactIcon(',
   'PartnerAssets.actions.impactBlue3dCar',
