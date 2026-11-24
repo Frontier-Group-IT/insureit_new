@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, Animated, Easing, Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -17,6 +17,56 @@ export default function JourneyScreen() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<JourneyFilter>('all');
   const [showAll, setShowAll] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const filterPosition = useRef(new Animated.Value(0)).current;
+  const timelineOpacity = useRef(new Animated.Value(1)).current;
+  const timelineOffset = useRef(new Animated.Value(0)).current;
+  const [filterWidth, setFilterWidth] = useState(0);
+  const filterTransition = useRef<Animated.CompositeAnimation | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (mounted) setReducedMotion(enabled);
+    }).catch(() => {});
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion);
+    return () => { mounted = false; subscription.remove(); };
+  }, []);
+
+  useEffect(() => () => {
+    filterTransition.current?.stop();
+    filterPosition.stopAnimation();
+    timelineOpacity.stopAnimation();
+    timelineOffset.stopAnimation();
+  }, [filterPosition, timelineOpacity, timelineOffset]);
+
+  const changeFilter = useCallback((next: JourneyFilter) => {
+    if (next === filter) return;
+    filterTransition.current?.stop();
+    const nextIndex = JOURNEY_FILTERS.findIndex((choice) => choice.key === next);
+    if (reducedMotion) {
+      filterPosition.setValue(nextIndex);
+      timelineOpacity.setValue(1);
+      timelineOffset.setValue(0);
+      setFilter(next);
+      setShowAll(false);
+      return;
+    }
+    Animated.timing(filterPosition, { toValue: nextIndex, duration: 280, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }).start();
+    const exit = Animated.timing(timelineOpacity, { toValue: 0, duration: 120, easing: Easing.out(Easing.quad), useNativeDriver: true });
+    filterTransition.current = exit;
+    exit.start(({ finished }) => {
+      if (!finished) return;
+      setFilter(next);
+      setShowAll(false);
+      timelineOffset.setValue(7);
+      filterTransition.current = Animated.parallel([
+        Animated.timing(timelineOpacity, { toValue: 1, duration: 160, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(timelineOffset, { toValue: 0, duration: 160, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      ]);
+      filterTransition.current.start();
+    });
+  }, [filter, filterPosition, reducedMotion, timelineOpacity, timelineOffset]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -56,28 +106,28 @@ export default function JourneyScreen() {
         <>
           <View style={styles.hero}>
             <View style={styles.heroHeadline}>
-              <Image source={require('../assets/partner/status/journey-trophy-reference.png')} style={styles.milestoneTrophy} resizeMode="contain" accessible={false} />
+              <MotionEntrance reducedMotion={reducedMotion} delay={60} icon><Image source={require('../assets/partner/status/journey-trophy-reference.png')} style={styles.milestoneTrophy} resizeMode="contain" accessible={false} /></MotionEntrance>
               <View style={styles.milestoneVerticalDivider} accessible={false}/>
               <View style={styles.milestoneBody}>
                 <View style={styles.milestoneTopRow}>
-                  <View style={styles.milestoneCopy}>
+                  <MotionEntrance reducedMotion={reducedMotion} delay={120} style={styles.milestoneCopy}>
                     <Text style={styles.milestoneEyebrow}>NEXT MILESTONE</Text>
                     <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} accessibilityLabel={data.next_milestone.title}>{data.next_milestone.title}</Text>
-                  </View>
-                  <CircularMilestoneProgress progress={progress} current={data.next_milestone.current} target={data.next_milestone.target} />
+                  </MotionEntrance>
+                  <CircularMilestoneProgress progress={progress} current={data.next_milestone.current} target={data.next_milestone.target} reducedMotion={reducedMotion} />
                 </View>
                 <View style={styles.milestoneBottomRow}>
-                  <Text style={styles.milestoneSubtitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>{"Keep going, you're on track!"}</Text>
+                  <MotionEntrance reducedMotion={reducedMotion} delay={160} style={styles.milestoneSubtitle}><Text style={styles.milestoneSubtitleText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>{"Keep going, you're on track!"}</Text></MotionEntrance>
                   <Text style={styles.heroProgressLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>Milestone progress</Text>
                 </View>
               </View>
             </View>
             <View style={styles.summary}>
-              <Summary value={data.policy_count} label="Policies" artwork={PartnerAssets.actions.quickPolicyIntake} onPress={() => router.push('/(tabs)/policies')} />
-              <View style={styles.summaryDivider} accessible={false}/>
-              <Summary value={data.customer_count} label="Customers" artwork={PartnerAssets.actions.quickCustomers} onPress={() => router.push('/customers')} />
-              <View style={styles.summaryDivider} accessible={false}/>
-              <Summary value={data.claim_count} label="Claims" artwork={PartnerAssets.actions.quickClaims} onPress={() => router.push('/(tabs)/claims')} />
+              <Summary value={data.policy_count} label="Policies" artwork={PartnerAssets.actions.quickPolicyIntake} onPress={() => router.push('/(tabs)/policies')} reducedMotion={reducedMotion} delay={120} />
+              <MotionEntrance reducedMotion={reducedMotion} delay={180} style={styles.summaryDivider} />
+              <Summary value={data.customer_count} label="Customers" artwork={PartnerAssets.actions.quickCustomers} onPress={() => router.push('/customers')} reducedMotion={reducedMotion} delay={220} />
+              <MotionEntrance reducedMotion={reducedMotion} delay={280} style={styles.summaryDivider} />
+              <Summary value={data.claim_count} label="Claims" artwork={PartnerAssets.actions.quickClaims} onPress={() => router.push('/(tabs)/claims')} reducedMotion={reducedMotion} delay={320} />
             </View>
           </View>
 
