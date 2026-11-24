@@ -98,14 +98,14 @@ export default function LearnScreen() {
         >
           <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
         </Pressable>
-        <Image source={require('../assets/partner/learn-stopwatch-reference.png')} style={styles.headerArtwork} resizeMode="contain" />
+        <StopwatchArtwork animate={animate} />
         <View style={styles.headerCopy}>
           <Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={styles.referenceTitle}>60-Second Learn</Text>
-          <Text numberOfLines={1} style={styles.headerSubtitle}>Learn • Practice • Grow</Text>
+          <MotionEnter animate={animate} delay={110}><Text numberOfLines={1} style={styles.headerSubtitle}>Learn • Practice • Grow</Text></MotionEnter>
         </View>
       </View>
-      {loading ? (
-        <PartnerStateView state="loading" title="Loading today’s learning card" />
+      {loading && !data ? (
+        <LearnSkeleton animate={animate} />
       ) : error && !data ? (
         <PartnerStateView state="error" title="Learning is temporarily unavailable" message={error} actionLabel="Try again" onAction={() => void load()} />
       ) : !data?.available || !data.card ? (
@@ -114,21 +114,24 @@ export default function LearnScreen() {
         <>
 
           <View style={styles.statsCard}>
-            <Stat value={data.stats.attempted_days} label="Learning days" icon="school" iconColor="#1373D7" />
+            <Stat value={data.stats.attempted_days} label="Learning days" icon="school" iconColor="#1373D7" animate={animate} delay={90} />
             <View style={styles.statsDivider} />
-            <Stat value={data.stats.total_attempts} label="Cards completed" icon="checkbox" iconColor="#08A58D" />
+            <Stat value={data.stats.total_attempts} label="Cards completed" icon="checkbox" iconColor="#08A58D" animate={animate} delay={180} completedPulse={Boolean(freshResult && showAnswerFeedback)} />
           </View>
 
+          <MotionEnter animate={animate} delay={180}>
           <View style={styles.questionSection}>
+            <QuestionBorderGlow animate={animate} />
             <View style={styles.questionHeadingRow}>
-              <View style={styles.lightbulbCircle}><Ionicons name="bulb" size={27} color="#0876E9" /></View>
+              <BulbArtwork animate={animate} />
               <View style={styles.questionHeadingCopy}>
                 <Text style={styles.questionMeta}>TODAY’S QUESTION</Text>
-                <View style={styles.headingUnderline} />
+                <UnderlineReveal animate={animate} />
               </View>
             </View>
-            <Text style={styles.question}>{data.card.prompt}</Text>
+            <MotionEnter animate={animate} delay={220}><Text style={styles.question}>{data.card.prompt}</Text></MotionEnter>
           </View>
+          </MotionEnter>
 
           <View style={styles.optionsList} accessibilityRole="radiogroup">
             {data.card.options.map((option, index) => {
@@ -137,34 +140,31 @@ export default function LearnScreen() {
               const showCorrect = Boolean(answer && isCorrect);
               const showWrong = Boolean(answer && isSelected && !answer.is_correct);
               const optionColor = ['#1256C9', '#079D82', '#F87814', '#8524AF'][index % 4];
-              return (
-                <Pressable
-                  key={option.key}
-                  accessibilityRole="radio"
-                  accessibilityLabel={'Answer ' + String.fromCharCode(65 + index) + ': ' + option.label}
-                  accessibilityState={{ disabled: Boolean(data.answered_today || submitting), checked: Boolean(isSelected) }}
-                  disabled={Boolean(data.answered_today || submitting)}
-                  onPress={() => setSelectedOptionKey(option.key)}
-                  style={({ pressed }) => [styles.option, isSelected && styles.optionSelected, pressed && !answer && styles.optionPressed]}
-                >
-                  <View style={[styles.optionIndexHalo, { backgroundColor: optionColor + '12' }]}>
-                    <View style={[styles.optionIndex, { backgroundColor: optionColor }]}>
-                      <Text style={styles.optionIndexText}>{String.fromCharCode(65 + index)}</Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.optionText, (showCorrect || showWrong) && styles.optionTextStrong]}>{option.label}</Text>
-                  <View style={[styles.radioOuter, isSelected && styles.radioOuterSelected, showCorrect && styles.radioCorrect, showWrong && styles.radioWrong]}>
-                    {isSelected ? <View style={styles.radioCenter} /> : null}
-                  </View>
-                </Pressable>
-              );
+              return <QuizOption
+                key={option.key}
+                index={index}
+                label={option.label}
+                color={optionColor}
+                selected={isSelected}
+                correct={showCorrect}
+                wrong={showWrong}
+                finished={Boolean(data.answered_today)}
+                submitting={submitting}
+                animate={animate}
+                fresh={Boolean(freshResult?.cardId === data.card.id && showAnswerFeedback)}
+                onChoose={() => {
+                  if (data.answered_today || submitting) return;
+                  setSelectedOptionKey(option.key);
+                  if (focused && !reduceMotion) void Haptics.selectionAsync().catch(() => {});
+                }}
+              />;
             })}
           </View>
 
           {error ? <Text style={styles.inlineError}>{error}</Text> : null}
 
           {answer && showAnswerFeedback ? (
-            <View accessibilityRole="alert" style={[styles.answerCard, answer.is_correct ? styles.answerCorrect : styles.answerLearn]}>
+            <MotionEnter animate={animate} delay={0} style={[styles.answerCard, answer.is_correct ? styles.answerCorrect : styles.answerLearn]} accessibilityRole="alert">
               <View style={styles.answerToggle}>
                 <View style={styles.answerArtwork}>
                   <Image source={answer.is_correct ? PartnerAssets.status.verified : PartnerAssets.actions.policyChecklist} style={styles.answerArtworkImage} resizeMode="contain" />
@@ -172,7 +172,7 @@ export default function LearnScreen() {
                 <Text style={styles.answerTitle}>{answer.is_correct ? 'That’s right.' : 'Here’s the stronger answer.'}</Text>
                 <Ionicons name={answer.is_correct ? 'checkmark-circle' : 'information-circle'} size={21} color={answer.is_correct ? '#079D82' : '#6951C7'} />
               </View>
-            </View>
+            </MotionEnter>
           ) : null}
 
           {!data.answered_today ? (
@@ -184,14 +184,7 @@ export default function LearnScreen() {
                 style={({ pressed }) => [styles.cancelButton, submitting && styles.submitButtonDisabled, pressed && styles.submitButtonPressed]}>
                 <Text style={styles.cancelText}>Cancel</Text>
               </Pressable>
-              <Pressable accessibilityRole="button" accessibilityLabel="Submit Answer"
-                accessibilityState={{ disabled: !selectedOptionKey || submitting }}
-                disabled={!selectedOptionKey || submitting}
-                onPress={() => void submitAnswer()}
-                style={({ pressed }) => [styles.submitButton, (!selectedOptionKey || submitting) && styles.submitButtonDisabled, pressed && styles.submitButtonPressed]}>
-                {submitting ? <ActivityIndicator color="#FFFFFF" /> : <Ionicons name="paper-plane-outline" size={20} color="#FFFFFF" />}
-                <Text style={styles.submitText}>{submitting ? "Submitting..." : "Submit Answer"}</Text>
-              </Pressable>
+              <AnimatedSubmitButton enabled={Boolean(selectedOptionKey && !submitting)} submitting={submitting} animate={animate} onSubmit={() => void submitAnswer()} />
             </View>
           ) : null}
 
