@@ -66,6 +66,12 @@ const conflicting=source.replace("Receipt Date 17/11/2026",
 const refused=parser({all:()=>[{json:{text:conflicting}}]})[0].json;
 assert.equal(refused.ok,false);
 assert.equal(refused.printed_issue_date_ambiguous,true);
+const mixedOrder=source.replace("Receipt Date 17/11/2026",
+  "Policy Issue Date 18/11/2026\n19/11/2026 Date of Issue\nReceipt Date 17/11/2026");
+const mixedRefused=parser({all:()=>[{json:{text:mixedOrder}}]})[0].json;
+assert.equal(mixedRefused.ok,false,"Opposite PDF reading orders must not hide conflicts");
+assert.equal(mixedRefused.printed_issue_date_ambiguous,true);
+
 
 // SAOD policies have no newly issued TP coverage. The canonical queue must
 // not label a fully verified OD-only schedule "Mandatory field missing".
