@@ -166,7 +166,7 @@ function unitedIndiaGcvFlexible(t) {
  let rto=null, printedAuthority=null;
  for(const m of t.matchAll(/\bRegistration\s+Authority\b/gi)){
   const ctx=t.slice(m.index, m.index+900).split(/Amount in words/i)[0];
-  const found=ctx.match(/\b(?:[A-Z]{2}\s*\d{2}\s+)?([A-Z]{3,}(?:\s+[A-Z]{3,}){0,3})\s+INDIA\b/i);
+  const found=ctx.match(/(?:^|\n)[ \t]*(?:[A-Z]{2}[ \t]*\d{2}[ \t]+)?([A-Z]{3,}(?:[ \t]+[A-Z]{3,}){0,3})[ \t]+INDIA(?=\s|$)/im);
   if(found){rto=found[1].trim().replace(/\s+ARTO$/i,'').toUpperCase();printedAuthority=found[0].trim().replace(/\s+/g,' ').toUpperCase();break;}
  }
  const od=amountAfter(t,/\bGross OD\(A\)\s*([\d,.]+)/i);
