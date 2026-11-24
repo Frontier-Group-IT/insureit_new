@@ -147,9 +147,9 @@ export default function PolicyDetailScreen() {
             </Card>
           </View>
 
-          <View style={styles.externalSection}>
+          <View style={styles.unifiedDetails}>
+          <View style={styles.unifiedSection}>
             <CardHeader iconKind="policy-overview" title="Policy Overview" actionLabel="View All" onAction={() => setShowOverviewDetails((value) => !value)} />
-            <Card>
             <View style={styles.overviewGrid}>
               <OverviewItem iconKind="category" label="Category" value={category} />
               <OverviewItem iconKind="product" label="Product" value={data.policy.policy_product || data.policy.policy_type || data.policy.business_line || 'Not recorded'} />
@@ -167,16 +167,14 @@ export default function PolicyDetailScreen() {
                 <MiniInfo label="End date" value={formatDate(data.policy.end_date)} threeColumn />
               </View>
             ) : null}
-            </Card>
           </View>
-          <View style={styles.externalSection}>
+          <View style={styles.unifiedSection}>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }} onPress={() => setShowPremiumDetails((value) => !value)} style={({ pressed }) => [styles.premiumDisclosure, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="premium-breakup" size={22} showBadge={false} />
               <View style={styles.disclosureText}><Text style={styles.cardTitle}>Premium breakup</Text><Text style={styles.disclosureSummary}>{formatIndianCurrency(data.premium.gross_premium)}</Text></View>
 
             </Pressable>
             {showPremiumDetails ? (
-              <Card>
                 <View style={styles.premiumDetailGrid}>
                 <MiniInfo compact label="Net premium" value={nullableMoney(data.premium.net_premium)} />
                 <MiniInfo compact label="OD premium" value={nullableMoney(data.premium.od_premium)} />
@@ -184,25 +182,23 @@ export default function PolicyDetailScreen() {
                 <MiniInfo compact label="GST" value={nullableMoney(data.premium.gst_amount)} />
                 <MiniInfo compact label="CPA" value={data.premium.cpa_opted ? nullableMoney(data.premium.cpa_amount) : 'Not opted / not recorded'} />
                 </View>
-              </Card>
             ) : null}
           </View>
-          <View style={styles.externalSection}>
+          <View style={styles.unifiedSection}>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="sales-ownership" size={22} showBadge={false} />
               <View style={styles.disclosureText}><Text style={styles.cardTitle}>Sales ownership</Text><Text numberOfLines={1} style={styles.disclosureSummary}>{[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}</Text></View>
 
             </Pressable>
             {showCommercialDetails ? (
-              <Card>
                 <View style={styles.detailGrid}>
                 <MiniInfo label="Intermediary" value={intermediaryName || "Not recorded"} />
                 <MiniInfo label="RM" value={data.commercial.rm_name || 'Not recorded'} />
                 <MiniInfo label="Group" value={[data.commercial.group_name, data.commercial.group_code].filter(Boolean).join(' · ') || 'No policy snapshot'} />
                 <MiniInfo label="Policy lifecycle" value={humanize(data.policy.lifecycle_status)} />
                 </View>
-              </Card>
             ) : null}
+          </View>
           </View>
 
         </View>
@@ -218,11 +214,12 @@ function Card({ children, onPress, accessibilityLabel, highlighted = false }: { 
 
 function CardHeader({ iconKind, title, actionLabel, onAction }: { iconKind?: PartnerPolicyDetailIconKind; title: string; actionLabel?: string; onAction?: () => void }) {
   return (
-    <View style={[styles.cardHeader, !iconKind && !actionLabel ? styles.cardHeaderCompact : null]}>
+    <View style={[styles.cardHeader, !iconKind && !actionLabel ? styles.cardHeaderCompact : styles.sectionHeaderFill]}>
       <View style={styles.cardHeaderLeft}>{iconKind ? <PartnerPolicyDetailIcon kind={iconKind} size={22} showBadge={false} /> : null}<Text style={styles.cardTitle}>{title}</Text></View>
       {actionLabel ? (
         <Pressable accessibilityRole="button" disabled={!onAction} onPress={onAction} hitSlop={8} style={({ pressed }) => [styles.cardHeaderAction, pressed && onAction ? styles.pressed : null]}>
           <Text style={styles.cardHeaderActionText}>{actionLabel}</Text>
+          <Ionicons name="chevron-forward" size={13} color="#0969CF" />
         </Pressable>
       ) : null}
     </View>
@@ -257,10 +254,7 @@ function QuickAction({ iconKind, label, onPress }: {
 }
 
 function OverviewItem({ iconKind, label, value, insurerName }: { iconKind: PartnerPolicyDetailIconKind; label: string; value: string; insurerName?: string | null }) {
-  const colorStyle = label === 'Category' || label === 'IDV' ? styles.toneBlue
-    : label === 'Product' || label === 'Total Premium' ? styles.tonePurple
-    : label === 'Issuance Date' ? styles.toneMint : styles.toneAmber;
-  return <View style={[styles.overviewItem, colorStyle]}>{insurerName ? <View style={styles.overviewLogoWrap}><PartnerInsurerLogo name={insurerName} fallback={PartnerAssets.products.motorInsurance} style={styles.overviewLogo} /></View> : <PartnerPolicyDetailIcon kind={iconKind} size={17} tone="neutral" />}<View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text numberOfLines={2} style={styles.overviewValue}>{value}</Text></View></View>;
+  return <View style={styles.overviewItem}>{insurerName ? <View style={styles.overviewLogoWrap}><PartnerInsurerLogo name={insurerName} fallback={PartnerAssets.products.motorInsurance} style={styles.overviewLogo} /></View> : <PartnerPolicyDetailIcon kind={iconKind} size={17} tone="neutral" />}<View style={styles.overviewCopy}><Text style={styles.overviewLabel}>{label}</Text><Text numberOfLines={2} style={styles.overviewValue}>{value}</Text></View></View>;
 }
 
 function EntityRow({ image, icon, title, subtitle, onPress }: { image?: ImageSourcePropType; icon?: keyof typeof Ionicons.glyphMap; title: string; subtitle: string; onPress?: () => void }) {
@@ -329,16 +323,7 @@ function InsurerMiniInfo({ name }: { name: string | null | undefined }) {
   );
 }
 function MiniInfo({ label, value, compact = false, threeColumn = false }: { label: string; value: string; compact?: boolean; threeColumn?: boolean }) {
-  const premiumTone = label === 'Net premium' ? styles.toneMint
-    : label === 'OD premium' ? styles.toneBlue
-    : label === 'TP premium' ? styles.tonePurple
-    : label === 'GST' ? styles.toneAmber
-    : label === 'CPA' ? styles.toneRose : null;
-  const salesTone = label === 'RM' ? styles.toneAmber
-    : label === 'Intermediary' ? styles.toneMint
-    : label === 'Group' ? styles.tonePurple
-    : label === 'Policy lifecycle' ? styles.toneRose : null;
-  return <View style={[styles.miniInfo, compact && styles.miniInfoCompact, threeColumn && styles.miniInfoThreeColumn, compact ? premiumTone : salesTone]}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>;
+  return <View style={[styles.miniInfo, compact && styles.miniInfoCompact, threeColumn && styles.miniInfoThreeColumn]}><Text style={styles.miniLabel}>{label}</Text><Text style={styles.miniValue}>{value}</Text></View>;
 }
 function policyArtwork(category: string): ImageSourcePropType { if (category === 'Motor') return PartnerAssets.products.motorInsurance; if (category === 'Health') return PartnerAssets.products.healthInsurance; if (category === 'Life') return PartnerAssets.products.familyInsurance; return PartnerAssets.products.commercialInsurance; }
 function displayParts(...values: Array<string | number | null | undefined>) { return values.map((value) => value == null ? '' : String(value).trim()).filter((value) => value && value.toLowerCase() !== 'null' && value.toLowerCase() !== 'undefined').join(' · '); }
@@ -353,7 +338,7 @@ const styles = StyleSheet.create({
   headerBackButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: '#FFFFFF', fontSize: 16, lineHeight: 22, fontWeight: '700', letterSpacing: -0.12 },
   stateWrap: { marginTop: 14 },
-  contentWrap: { marginTop: 0, gap: 12, paddingBottom: 15 },
+  contentWrap: { marginTop: 0, gap: 7, paddingBottom: 15 },
   summaryCard: {
     paddingHorizontal: 14, paddingTop: 10, paddingBottom: 9,
     marginHorizontal: -partnerTheme.spacing.lg,
@@ -382,19 +367,22 @@ const styles = StyleSheet.create({
   periodLabel: { color: '#718096', fontSize: 9, lineHeight: 11 },
   periodValue: { color: '#53677F', fontSize: 10, lineHeight: 14, fontWeight: '700', textAlign: 'right' },
   externalSection: { gap: 5 },
+  unifiedDetails: { borderRadius: 14, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E5EAF1' },
+  unifiedSection: { backgroundColor: '#FFFFFF' },
+  sectionHeaderFill: { backgroundColor: '#E6EFF9' },
   externalSectionHeading: { marginLeft: -6, paddingLeft: 0, paddingRight: 2 },
   card: { overflow: 'hidden', borderRadius: 15, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DEDFF1', backgroundColor: '#FFFFFF' },
-  customerVehicleBorder: { borderColor: '#3993F5', borderWidth: 1, backgroundColor: '#F3F8FF' },
+  customerVehicleBorder: { borderColor: '#3993F5', borderWidth: 1, backgroundColor: '#FFFFFF' },
   cardHeader: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   cardHeaderCompact: { minHeight: 30 },
-  cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 12.5, lineHeight: 16, fontWeight: '800' },
+  cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 }, cardTitle: { color: '#102A51', fontSize: 14, lineHeight: 18, fontWeight: '700' },
   cardHeaderAction: { flexDirection: 'row', alignItems: 'center', gap: 1, minHeight: 32, paddingLeft: 8 }, cardHeaderActionText: { color: '#0969CF', fontSize: 9, lineHeight: 12, fontWeight: '700' },
   quickSection: { marginHorizontal: 0, paddingVertical: 8 },
   quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 9, color: '#17365D', fontSize: 13, lineHeight: 18, fontWeight: '800' },
   quickGrid: { flexDirection: 'row', alignItems: 'stretch', gap: 6 },
   quickAction: {
-    flex: 1, minWidth: 0, minHeight: 94, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 3, paddingVertical: 9, gap: 5, borderRadius: 13,
+    flex: 1, minWidth: 0, minHeight: 82, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 3, paddingVertical: 5, gap: 5, borderRadius: 13,
     backgroundColor: 'transparent',
   },
   quickActionIcon: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
@@ -404,20 +392,15 @@ const styles = StyleSheet.create({
     color: '#102D55', textAlign: 'center', fontSize: 9.25, lineHeight: 12,
     fontWeight: '800', width: '100%', includeFontPadding: false,
   },
-  overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, paddingHorizontal: 9, paddingBottom: 9 },
-  overviewItem: { width: '31%', flexGrow: 1, minWidth: 0, minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 6, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE7F3', borderRadius: 11 },
-  toneBlue: { backgroundColor: '#E7F2FF', borderColor: '#D1E5FF' },
-  tonePurple: { backgroundColor: '#F1E8FF', borderColor: '#E8D8FF' },
-  toneMint: { backgroundColor: '#E1F8EE', borderColor: '#C7EEDF' },
-  toneAmber: { backgroundColor: '#FFF2E3', borderColor: '#F7DFC3' },
-  toneRose: { backgroundColor: '#FCEAF4', borderColor: '#F6D6E9' },
-  overviewLogoWrap: { width: 23, height: 23, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 20, height: 20 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#59677D', fontSize: 8.5, lineHeight: 10 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 10, lineHeight: 13, fontWeight: '700' },
+  overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, paddingHorizontal: 9, paddingTop: 1, paddingBottom: 10 },
+  overviewItem: { width: '31%', flexGrow: 1, minWidth: 0, minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 6, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E4E8EE', backgroundColor: '#FFFFFF', borderRadius: 9 },
+  overviewLogoWrap: { width: 23, height: 23, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 20, height: 20 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { color: '#778397', fontSize: 10, lineHeight: 13 }, overviewValue: { marginTop: 2, color: '#192B46', fontSize: 11, lineHeight: 14, fontWeight: '700' },
   unifiedSectionDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E3E9F1', marginHorizontal: 10, marginVertical: 2 },
-  premiumDisclosure: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  commercialRow: { minHeight: 37, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  premiumDisclosure: { minHeight: 46, paddingHorizontal: 11, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#E6EFF9' },
+  commercialRow: { minHeight: 46, paddingHorizontal: 11, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#E6EFF9' },
   disclosureText: { flex: 1, minWidth: 0 }, disclosureTitle: { color: '#152945', fontSize: 10.5, lineHeight: 13, fontWeight: '700' }, disclosureSummary: { marginTop: 2, color: '#6F7F94', fontSize: 8.5, lineHeight: 11 },
-  premiumDetailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 10, paddingBottom: 10 },
-  detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 10, paddingBottom: 10 }, miniInfo: { width: '47%', minHeight: 44, padding: 8, borderRadius: 10, backgroundColor: '#F7F9FC' }, miniLabel: { color: '#64738A', fontSize: 8, lineHeight: 10, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
+  premiumDetailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 10 },
+  detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 10 }, miniInfo: { width: '47%', minHeight: 44, padding: 8, borderRadius: 10, backgroundColor: '#F5F7FA' }, miniLabel: { color: '#778397', fontSize: 9, lineHeight: 12, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 11, lineHeight: 14, fontWeight: '700' },
   miniInfoCompact: { width: '31%', flexGrow: 1, minWidth: 0, paddingHorizontal: 5 },
   miniInfoThreeColumn: { width: '31%', flexGrow: 1, minWidth: 0 },
   insurerMiniInfo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
