@@ -736,7 +736,7 @@ assert.ok(!unified.includes("CPA amount is mandatory for GCV policies")
   && !unified.includes('...(form.vehicleClass==="GCV"?[form.cpa]:[])'),
   "Form must allow zero CPA while preserving opted-in amount check");
 assert.ok(!handoff.includes('const niaMissingCpa=')
-  && handoff.includes('niaHoldCode=niaMissingAuthority?"nia_missing_registration_authority":null'),
+  && handoff.includes('const niaHoldCode=null'),
   "NIA reparse queue must not hold verified zero-CPA commercial policies as missing CPA");
 assert.ok(component.includes("Historical NIA CPA hold"),
   "The UI must clarify older CPA-only exceptions are obsolete");
