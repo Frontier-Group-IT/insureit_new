@@ -169,7 +169,7 @@ for (const [source, fragment, label] of [
 // Customer and vehicle identity now share one compact row and separate heading.
 requireText(policyDetail, '<CardHeader title="Customer & Vehicle Details" />', 'Combined customer and vehicle heading is present');
 requireText(policyDetail, '<CardHeader title="Customer & Vehicle Details" /></View>\n            <Card highlighted>'.replace('\\n','\n'), 'Only the Customer & Vehicle section requests the blue border');
-requireText(policyDetail, "customerVehicleBorder: { borderColor: '#3993F5', borderWidth: 1, backgroundColor: '#F3F8FF' }", 'Customer & Vehicle card has a visible 1px blue border');
+requireText(policyDetail, "customerVehicleBorder: { borderColor: '#3993F5', borderWidth: 1, backgroundColor: '#FFFFFF' }", 'Customer & Vehicle card has a visible 1px blue border');
 requireText(policyDetail, 'highlighted && styles.customerVehicleBorder', 'Blue border is applied only when highlighted is set');
 if ((policyDetail.match(/<Card highlighted>/g) || []).length !== 1) throw new Error('Only Customer & Vehicle Details may have a highlighted card border');
 
@@ -189,18 +189,18 @@ const overviewStart = policyDetail.indexOf('<CardHeader iconKind="policy-overvie
 if (!(quickActionsStart >= 0 && customerStart > quickActionsStart && overviewStart > customerStart)) {
   throw new Error('Expected Quick Actions → Customer & Vehicle Details → Policy Overview');
 }
-const overviewCard = policyDetail.slice(overviewStart, policyDetail.indexOf('</Card>', overviewStart) + '</Card>'.length);
+const overviewCard = policyDetail.slice(overviewStart, policyDetail.indexOf('styles.premiumDisclosure', overviewStart));
 const premiumStart = policyDetail.indexOf('styles.premiumDisclosure', overviewStart);
 const commercialStart = policyDetail.indexOf('styles.commercialRow', premiumStart);
 requireText(overviewCard, 'styles.overviewGrid', 'Existing overview fields remain visible');
 if (!(premiumStart > overviewStart && commercialStart > premiumStart)) throw new Error('Premium and Sales must follow Policy Overview');
-if (overviewCard.includes('styles.premiumDisclosure') || overviewCard.includes('styles.commercialRow')) throw new Error('Premium and Sales require independent sections');
-requireText(policyDetail, "premiumDisclosure: { minHeight: 37", 'Premium section retains its pressable disclosure');
-requireText(policyDetail, "commercialRow: { minHeight: 37", 'Sales section retains its pressable disclosure');
+requireText(policyDetail, '<View style={styles.unifiedDetails}>', 'Overview, Premium and Sales share one continuous white container');
+requireText(policyDetail, "premiumDisclosure: { minHeight: 46", 'Premium section retains its pressable disclosure');
+requireText(policyDetail, "commercialRow: { minHeight: 46", 'Sales section retains its pressable disclosure');
 requireText(policyDetail, "backgroundColor: 'transparent'", 'Quick Actions use a transparent background');
-requireText(policyDetail, '<View style={styles.externalSection}>\n            <CardHeader iconKind="policy-overview"', 'Policy Overview heading sits outside its content card');
-requireText(policyDetail, '<View style={styles.externalSection}>\n            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }}', 'Premium disclosure sits outside its content card');
-requireText(policyDetail, '<View style={styles.externalSection}>\n            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }}', 'Sales disclosure sits outside its content card');
+requireText(policyDetail, '<View style={styles.unifiedSection}>\n            <CardHeader iconKind="policy-overview"', 'Policy Overview heading sits within unified details');
+requireText(policyDetail, '<View style={styles.unifiedSection}>\n            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }}', 'Premium disclosure sits within unified details');
+requireText(policyDetail, '<View style={styles.unifiedSection}>\n            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }}', 'Sales disclosure sits within unified details');
 for (const removedTone of ['styles.quickDocument', 'styles.quickRenewal', 'styles.quickClaim', 'styles.quickCustomer', 'styles.policySectionHeaderTint']) {
   if (policyDetail.includes(removedTone)) throw new Error('Removed colored header/action style unexpectedly returned: ' + removedTone);
 }
@@ -212,13 +212,13 @@ requireText(policyDetail, 'onPress={() => setShowPremiumDetails((value) => !valu
 requireText(policyDetail, 'onPress={() => setShowCommercialDetails((value) => !value)}', 'Sales ownership is still collapsible');
 requireText(policyDetail, 'quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 9', 'Quick Actions heading remains aligned with transparent tiles');
 requireText(policyDetail, 'externalSectionHeading: { marginLeft: -6, paddingLeft: 0, paddingRight: 2 }', 'Customer & Vehicle heading moves slightly left without moving its card');
-requireText(policyDetail, 'contentWrap: { marginTop: 0, gap: 12, paddingBottom: 15 }', 'Section cards use 12px breathing room');
+requireText(policyDetail, 'contentWrap: { marginTop: 0, gap: 7, paddingBottom: 15 }', 'Section cards use 7px breathing room');
 requireText(policyDetail, 'paddingHorizontal: 14, paddingTop: 10, paddingBottom: 9', 'Policy summary vertical padding is compact');
 requireText(policyDetail, 'quickSection: { marginHorizontal: 0, paddingVertical: 8 }', 'Quick Actions tiles align with full-width content');
 requireText(policyDetail, 'quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 9', 'Quick Actions heading keeps its clear spacing');
-requireText(policyDetail, "minHeight: 94, alignItems: 'center', justifyContent: 'center'", 'Quick Action rows retain full tap targets');
+requireText(policyDetail, "minHeight: 82, alignItems: 'center', justifyContent: 'center'", 'Quick Action rows retain full tap targets');
 requireText(policyDetail, 'cardHeaderCompact: { minHeight: 30 }', 'Customer & Vehicle heading becomes 30px tall');
-requireText(policyDetail, '!iconKind && !actionLabel ? styles.cardHeaderCompact : null', 'Only plain section headings compact; Policy Overview header retains its original layout');
+requireText(policyDetail, '!iconKind && !actionLabel ? styles.cardHeaderCompact : styles.sectionHeaderFill', 'Only plain section headings compact; Policy Overview header retains its original layout');
 
 
 const policyDetailIcon = read('components/ui/partner-policy-detail-icon.tsx');
@@ -1091,8 +1091,8 @@ requireText(policyDetail, 'quickActionArtwork: { width: 54, height: 54 }', 'Docu
 for (const kind of ['premium-breakup', 'sales-ownership']) {
   requireText(policyDetail, `<PartnerPolicyDetailIcon kind="${kind}" size={22} showBadge={false} />`, `Disclosure icon ${kind} matches overview heading size.`);
 }
-requireText(policyDetail, "premiumDisclosure: { minHeight: 37, paddingHorizontal: 11", 'Premium header sits outside the card and aligns with other headings.');
-requireText(policyDetail, "commercialRow: { minHeight: 37, paddingHorizontal: 11", 'Sales header sits outside the card and aligns with other headings.');
+requireText(policyDetail, "premiumDisclosure: { minHeight: 46, paddingHorizontal: 11", 'Premium header sits inside the unified card and aligns with other headings.');
+requireText(policyDetail, "commercialRow: { minHeight: 46, paddingHorizontal: 11", 'Sales header sits inside the unified card and aligns with other headings.');
 requireText(policyDetail, '<Text style={styles.cardTitle}>Premium breakup</Text>', 'Premium title uses exact Overview heading typography.');
 requireText(policyDetail, '<Text style={styles.cardTitle}>Sales ownership</Text>', 'Sales ownership title uses exact Overview heading typography.');
 requireText(policyDetail, '<CardHeader iconKind="policy-overview" title="Policy Overview" actionLabel="View All"', 'Policy Overview retains its external heading and View All action.');
@@ -1703,3 +1703,7 @@ if (/rotateY\s*:|perspective\s*:|opacity:\s*transition\.interpolate/.test(storie
 
 for (const marker of ['useActivityMotion()', 'ringSegments.map', 'pickerBusy.current', 'setPhotoSuccess(true)', 'animation.stop()', 'Haptics.ImpactFeedbackStyle.Light', 'entrance(avatarEntrance', 'entrance(iconAppear', 'onPressIn={logoutPress.onPressIn}']) requireText(profile, marker, 'Profile motion contract: ' + marker);
 if (profile.indexOf('setPhotoSuccess(true)') < profile.indexOf('if (!refreshedAvatar) throw')) throw new Error('Photo success must follow confirmed upload and refresh');
+
+requireText(policyDetail, "sectionHeaderFill: { backgroundColor: '#E6EFF9' }", 'Reference light blue section header');
+requireText(policyDetail, 'return <View style={styles.overviewItem}>', 'Overview tiles use neutral white surfaces');
+if (policyDetail.includes('premiumTone') || policyDetail.includes('salesTone') || policyDetail.includes('styles.tonePurple')) throw new Error('Reference design must not restore multicolour data tiles');
