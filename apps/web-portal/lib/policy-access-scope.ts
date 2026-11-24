@@ -171,7 +171,8 @@ export const getLifeTeamPortfolioScope = cache(async (profileId: string, role: s
   // Only the read portfolio traverses inactive employees; login and write scopes stay unchanged.
   const employees = await fetchAllPages<{ id: string; reporting_manager_id: string | null }, unknown>((from, to) => admin.from("employees").select("id,reporting_manager_id").order("id").range(from,to).returns<Array<{ id: string; reporting_manager_id: string | null }>>());
   if (employees.error || !employees.data) throw new Error("Historical reporting hierarchy could not be verified.");
-  return { employeeIds: lifeTeamOwnerIds("ac167429-0ce0-4ffe-90ea-4040cb4fea95", employees.data, direct.id), directEmployeeId: direct.id };
+  const employeeIds = lifeTeamOwnerIds("ac167429-0ce0-4ffe-90ea-4040cb4fea95", employees.data, direct.id);
+  return employeeIds.includes("ac167429-0ce0-4ffe-90ea-4040cb4fea95") ? { employeeIds, directEmployeeId: direct.id } : deny;
 });
 
 export async function getLifeTeamPortfolioReadFilter(profileId: string, role: string | null | undefined) {
@@ -210,7 +211,7 @@ export async function canAccessPolicy(
   policyId: string,
   capability: Capability = "view_policies",
   write = false,
-) {
+): Promise<boolean> {
   if (write && capability === "view_policies" && usesLifeTeamPortfolio(profileId, role) && !(await canAccessPolicy(profileId, role, policyId, capability, false))) return false;
   if (!write && capability === "view_policies" && usesLifeTeamPortfolio(profileId, role)) {
     const filter = await getLifeTeamPortfolioReadFilter(profileId, role);
