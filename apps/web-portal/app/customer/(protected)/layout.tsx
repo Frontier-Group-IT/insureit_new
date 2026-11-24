@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import "./customer-compact.css";
+import "./customer-theme.css";
+import { CustomerThemeScope } from "@/components/customer-portal/customer-theme";
 import "./customer-full-height.css";
 import "./customer-workflow-motion.css";
 import { CustomerSidebarShell } from "@/components/customer-portal/customer-sidebar-shell";
@@ -11,7 +13,7 @@ export default async function CustomerProtectedLayout({ children }: { children: 
   const { profile, user } = await getCustomerWebSession();
 
   return (
-    <div className="customer-compact min-h-screen bg-[#F6F8FB] text-[#10213D]">
+    <CustomerThemeScope>
       <CustomerSidebarShell
         breadcrumbs={<CustomerRouteBreadcrumbs />}
         headerActions={<CustomerHeaderActions name={profile.full_name || "Customer"} userId={user.id} />}
@@ -20,6 +22,6 @@ export default async function CustomerProtectedLayout({ children }: { children: 
           <div className="customer-content-container customer-viewport-content mx-auto w-full max-w-[1480px]">{children}</div>
         </main>
       </CustomerSidebarShell>
-    </div>
+    </CustomerThemeScope>
   );
 }
