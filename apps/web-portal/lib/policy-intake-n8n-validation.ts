@@ -358,7 +358,7 @@ export function validateTataAigN8nResponse(
   const approvedReceiptIssue=issueField?.evidence==="Tata AIG printed Receipt Date (approved issuance rule)"
     &&issueField.label==="Issue Date (from printed receipt)"
     &&Boolean(receiptDate && issueField.value===receiptDate
-      &&object(checks) && checks.receipt_date_document_consistent===true);
+      &&object(checks) && checks[receiptProofKey]===true);
   if(issueField && (!date(issueField.value)||(!printedIssue&&!approvedReceiptIssue)))
     fail("n8n_tata_aig_printed_issue_invalid");
   const get = (key: string) => fields.find(field => field.key === key)?.value ?? "";
