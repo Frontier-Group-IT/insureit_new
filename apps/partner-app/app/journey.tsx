@@ -117,7 +117,7 @@ export default function JourneyScreen() {
                   <CircularMilestoneProgress progress={progress} current={data.next_milestone.current} target={data.next_milestone.target} reducedMotion={reducedMotion} />
                 </View>
                 <View style={styles.milestoneBottomRow}>
-                  <MotionEntrance reducedMotion={reducedMotion} delay={160} style={styles.milestoneSubtitle}><Text style={styles.milestoneSubtitleText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>{"Keep going, you're on track!"}</Text></MotionEntrance>
+                  <MotionEntrance reducedMotion={reducedMotion} delay={160} baseY={-6} style={styles.milestoneSubtitle}><Text style={styles.milestoneSubtitleText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78}>{"Keep going, you're on track!"}</Text></MotionEntrance>
                   <Text style={styles.heroProgressLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>Milestone progress</Text>
                 </View>
               </View>
@@ -240,7 +240,7 @@ function milestoneCategory(kind: string, title: string): JourneyFilter {
 
 function Summary({ value, label, artwork, onPress, reducedMotion, delay }: { value: number; label: string; artwork: ImageSourcePropType; onPress: () => void; reducedMotion: boolean; delay: number }) {
   return (
-    <MotionEntrance reducedMotion={reducedMotion} delay={delay} style={styles.summaryItem}>
+    <MotionEntrance reducedMotion={reducedMotion} delay={delay} style={styles.summaryColumn}>
       <Pressable accessibilityRole="button" accessibilityLabel={`Open ${label}: ${value.toLocaleString('en-IN')}`} onPress={onPress} style={({ pressed }) => [styles.summaryItem, styles.summaryPressable, pressed && styles.summaryItemPressed]}>
         <MotionEntrance reducedMotion={reducedMotion} delay={delay + 60} icon>
           <Image source={artwork} style={styles.summaryArtwork} resizeMode="contain" accessible={false} />
@@ -254,7 +254,7 @@ function Summary({ value, label, artwork, onPress, reducedMotion, delay }: { val
   );
 }
 
-function MotionEntrance({ children, style, delay = 0, icon = false, reducedMotion }: { children?: ReactNode; style?: object; delay?: number; icon?: boolean; reducedMotion: boolean }) {
+function MotionEntrance({ children, style, delay = 0, icon = false, baseY = 0, reducedMotion }: { children?: ReactNode; style?: object; delay?: number; icon?: boolean; baseY?: number; reducedMotion: boolean }) {
   const opacity = useRef(new Animated.Value(reducedMotion ? 1 : 0)).current;
   const displacement = useRef(new Animated.Value(reducedMotion ? 0 : 8)).current;
   const scale = useRef(new Animated.Value(reducedMotion ? 1 : 0.94)).current;
@@ -276,7 +276,7 @@ function MotionEntrance({ children, style, delay = 0, icon = false, reducedMotio
     animation.start();
     return () => animation.stop();
   }, [opacity, displacement, scale, delay, icon, reducedMotion]);
-  return <Animated.View style={[style, { opacity, transform: icon ? [{ scale }] : [{ translateY: displacement }] }]}>{children}</Animated.View>;
+  return <Animated.View style={[style, { opacity, transform: icon ? [{ scale }] : [{ translateY: baseY ? Animated.add(displacement, baseY) : displacement }] }]}>{children}</Animated.View>;
 }
 
 function PressScale({ children, style, contentStyle, reducedMotion, accessibilityLabel }: { children: ReactNode; style?: object; contentStyle?: object; reducedMotion: boolean; accessibilityLabel: string }) {
@@ -400,6 +400,7 @@ const styles = StyleSheet.create({
   progressCircleText: { color: '#6954D6', fontSize: 10, fontWeight: '800' },
   heroProgressLabel: { width: 86, flexShrink: 0, color: '#6856D5', fontSize: 9, lineHeight: 13, fontWeight: '700', textAlign: 'center' },
   summary: { marginTop: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#E1E5ED', flexDirection: 'row', alignItems: 'stretch', width: '100%' },
+  summaryColumn: { flex: 1, minWidth: 0 },
   summaryItem: { flex: 1, minWidth: 0, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 5, paddingVertical: 4, gap: 16 },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
   summaryPressable: { flex: 1, paddingHorizontal: 0, paddingVertical: 0 },
