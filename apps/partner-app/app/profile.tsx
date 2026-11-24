@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import * as Haptics from 'expo-haptics';
+import { useActivityMotion } from '@/components/activity-motion';
+import { ActivityIndicator, Animated, Easing, Image, Platform, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
@@ -14,6 +16,49 @@ import { supabase } from '@/lib/supabase';
 import { signedInOrganizationName, signedInPersonName, signedInPersonRole } from '@/lib/signed-in-person';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
+const native = Platform.OS !== 'web';
+const spring = { stiffness: 205, damping: 23, mass: 0.8, overshootClamping: true, useNativeDriver: native, isInteraction: false } as const;
+function useProfileEntrance(motion: boolean, delay = 0) {
+  const value = useRef(new Animated.Value(1)).current;
+  const played = useRef(false);
+  useEffect(() => {
+    if (!motion) { value.setValue(1); return; }
+    if (played.current) return;
+    played.current = true;
+    value.setValue(0);
+    const animation = Animated.sequence([Animated.delay(delay), Animated.spring(value, { ...spring, toValue: 1 })]);
+    animation.start();
+    return () => { animation.stop(); value.setValue(1); };
+  }, [motion, delay, value]);
+  return value;
+}
+function entrance(value: Animated.Value, distance = 5, scale = 0.98) {
+  return { opacity: value, transform: [{ translateY: value.interpolate({ inputRange: [0, 1], outputRange: [distance, 0] }) }, { scale: value.interpolate({ inputRange: [0, 1], outputRange: [scale, 1] }) }] };
+}
+function useProfileAmbient(motion: boolean) {
+  const value = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!motion) { value.setValue(0); return; }
+    const animation = Animated.loop(Animated.sequence([
+      Animated.timing(value, { toValue: 1, duration: 3200, easing: Easing.inOut(Easing.sin), useNativeDriver: native, isInteraction: false }),
+      Animated.timing(value, { toValue: 0, duration: 3200, easing: Easing.inOut(Easing.sin), useNativeDriver: native, isInteraction: false }),
+      Animated.delay(2200),
+    ]));
+    animation.start();
+    return () => { animation.stop(); value.setValue(0); };
+  }, [motion, value]);
+  return value;
+}
+function useProfilePress(motion: boolean) {
+  const value = useRef(new Animated.Value(0)).current;
+  useEffect(() => { if (!motion) value.setValue(0); return () => value.stopAnimation(); }, [motion, value]);
+  const move = (toValue: number) => { if (motion) Animated.spring(value, { ...spring, toValue }).start(); };
+  return { value, onPressIn: () => move(1), onPressOut: () => move(0) };
+}
+const ringSegments = Array.from({ length: 48 }, (_, index) => {
+  const angle = index * Math.PI * 2 / 48;
+  return { left: 37 - 35 * Math.sin(angle), top: 37 - 35 * Math.cos(angle), backgroundColor: index < 12 ? '#6CA9F0' : index < 24 ? '#A5C9FC' : index < 36 ? '#D1E3FF' : '#BDD4FB' };
+});
 export default function ProfileScreen() {
   const router = useRouter();
   const { context, avatarUri, refreshAvatar, signOut } = usePartnerSession();
@@ -22,6 +67,27 @@ export default function ProfileScreen() {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [logoutError, setLogoutError] = useState('');
+  const { motion, visible } = useActivityMotion();
+  const enabled = motion && !!context;
+  const ambient = useProfileAmbient(enabled);
+  const avatarEntrance = useProfileEntrance(enabled);
+  const nameEntrance = useProfileEntrance(enabled, 100);
+  const roleEntrance = useProfileEntrance(enabled, 210);
+  const designationEntrance = useProfileEntrance(enabled, 320);
+  const cameraPress = useProfilePress(enabled);
+  const logoutPress = useProfilePress(enabled);
+  const pickerBusy = useRef(false);
+  const [selecting, setSelecting] = useState(false);
+  const [photoSuccess, setPhotoSuccess] = useState(false);
+  const success = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!photoSuccess) return;
+    success.setValue(enabled ? 0.75 : 1);
+    const animation = Animated.spring(success, { ...spring, toValue: 1 });
+    if (enabled) animation.start();
+    const timer = setTimeout(() => setPhotoSuccess(false), 1500);
+    return () => { clearTimeout(timer); animation.stop(); success.setValue(1); };
+  }, [photoSuccess, enabled, success]);
   if (!context) return null;
 
   const { identity } = context;
@@ -43,9 +109,13 @@ export default function ProfileScreen() {
   }
 
   async function changeProfilePhoto() {
-    if (avatarUploading) return;
-
+    if (pickerBusy.current || avatarUploading) return;
+    pickerBusy.current = true;
+    setSelecting(true);
+    setPhotoSuccess(false);
     setAvatarMessage(null);
+    if (Platform.OS !== 'web') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    try {
     const result = await DocumentPicker.getDocumentAsync({
       type: ['image/jpeg', 'image/png', 'image/webp'],
       copyToCacheDirectory: true,
@@ -79,11 +149,15 @@ export default function ProfileScreen() {
       if (!refreshedAvatar) throw new Error('Profile photo signed URL unavailable.');
 
       setAvatarMessage({ tone: 'success', text: 'Profile photo updated everywhere.' });
+      setPhotoSuccess(true);
     } catch {
       setAvatarMessage({ tone: 'danger', text: 'Profile photo upload failed. Please try again.' });
     } finally {
       setAvatarUploading(false);
     }
+    } catch {
+      setAvatarMessage({ tone: 'danger', text: 'Profile photo upload failed. Please try again.' });
+    } finally { pickerBusy.current = false; setSelecting(false); }
   }
 
   return (
@@ -97,7 +171,7 @@ export default function ProfileScreen() {
 
       <View style={styles.hero}>
         <View style={styles.heroTopRow}>
-          <View style={styles.avatarStage}>
+          <Animated.View style={[styles.avatarStage, entrance(avatarEntrance, 3, 0.94)]}>
             <View style={styles.avatarShell}>
               {avatarUri ? (
                 <Image source={{ uri: avatarUri }} style={styles.avatarImage} resizeMode="cover" />
@@ -105,43 +179,50 @@ export default function ProfileScreen() {
                 <Text style={styles.avatarText}>{initials(signedInPersonName(identity))}</Text>
               )}
             </View>
+            {enabled ? <Animated.View pointerEvents="none" accessible={false} style={[StyleSheet.absoluteFillObject, { transform: [{ rotate: ambient.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }] }]}>{ringSegments.map((segment, index) => <View key={index} style={[styles.ringSegment, segment]} />)}</Animated.View> : null}
+            <Animated.View style={[styles.cameraMotion, { transform: [{ scale: cameraPress.value.interpolate({ inputRange: [0, 1], outputRange: [1, 0.92] }) }] }]}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Change profile photo"
-              disabled={avatarUploading}
+              disabled={avatarUploading || selecting}
+              onPressIn={cameraPress.onPressIn} onPressOut={cameraPress.onPressOut}
               onPress={() => void changeProfilePhoto()}
               style={({ pressed }) => [
                 styles.avatarCamera,
+                styles.cameraInner,
                 (pressed || avatarUploading) && styles.avatarCameraDisabled,
               ]}
             >
-              <Ionicons name={avatarUploading ? 'cloud-upload-outline' : 'camera'} size={15} color="#FFFFFF" />
-            </Pressable>
-          </View>
+              {avatarUploading ? <ActivityIndicator size="small" color="#FFFFFF" animating={visible && enabled} /> : <Animated.View style={{ transform: [{ scale: photoSuccess ? success : 1 }] }}><Ionicons name={photoSuccess ? 'checkmark' : 'camera'} size={15} color="#FFFFFF" /></Animated.View>}
+              <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 13, backgroundColor: '#B5D9FF', opacity: cameraPress.value.interpolate({ inputRange: [0, 1], outputRange: [0, 0.22] }) }]} />
+            </Pressable></Animated.View>
+          </Animated.View>
 
           <View style={styles.heroBody}>
-            <Text style={styles.name} numberOfLines={2}>{signedInPersonName(identity)}</Text>
-            <View style={styles.rolePill}>
+            <Animated.Text style={[styles.name, entrance(nameEntrance)]} numberOfLines={2}>{signedInPersonName(identity)}</Animated.Text>
+            <Animated.View style={[styles.rolePill, entrance(roleEntrance), { overflow: 'hidden' }]}>
+              {enabled ? <Animated.View pointerEvents="none" style={[styles.roleShimmer, { opacity: ambient.interpolate({ inputRange: [0, 0.4, 0.7, 1], outputRange: [0, 0.25, 0.25, 0] }), transform: [{ translateX: ambient.interpolate({ inputRange: [0, 1], outputRange: [-35, 160] }) }, { rotate: '20deg' }] }]} /> : null}
               <Text style={styles.roleText}>{roleLabel}</Text>
-            </View>
-            {identity.actor_kind === 'employee' && identity.designation ? <Text style={styles.heroDesignation} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>{identity.designation}</Text> : null}
+            </Animated.View>
+            {identity.actor_kind === 'employee' && identity.designation ? <Animated.Text style={[styles.heroDesignation, entrance(designationEntrance)]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>{identity.designation}</Animated.Text> : null}
           </View>
 
-          <Image
+          <Animated.Image
             source={require('../assets/partner/profile/profile-team-3d.png')}
             resizeMode="contain"
-            style={styles.heroArtwork}
+            style={[styles.heroArtwork, { transform: [{ translateY: ambient.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }) }, { scale: ambient.interpolate({ inputRange: [0, 1], outputRange: [1, 1.02] }) }] }]}
             accessible={false}
           />
         </View>
       </View>
 
-      <SectionTitle title="Registration" />
+      <SectionTitle title="Registration" motion={enabled} />
 
       <View style={styles.details}>
         {identity.actor_kind === 'employee' ? (
           <>
             <Detail
+              motion={enabled} delay={330}
               icon="card-outline"
               iconBackground="#EEF5FF"
               iconColor="#0C6FE8"
@@ -149,6 +230,7 @@ export default function ProfileScreen() {
               value={identity.employee_code}
             />
             <Detail
+              motion={enabled} delay={440}
               icon="briefcase-outline"
               iconBackground="#F4EEFF"
               iconColor="#7C46E8"
@@ -156,6 +238,7 @@ export default function ProfileScreen() {
               value={identity.designation || 'Not recorded'}
             />
             <Detail
+              motion={enabled} delay={550}
               icon="people-outline"
               iconBackground="#EAF9F0"
               iconColor="#11A86B"
@@ -167,6 +250,7 @@ export default function ProfileScreen() {
         ) : (
           <>
             <Detail
+              motion={enabled} delay={330}
               icon="card-outline"
               iconBackground="#EEF5FF"
               iconColor="#0C6FE8"
@@ -174,6 +258,7 @@ export default function ProfileScreen() {
               value={identity.intermediary_code || 'Not recorded'}
             />
             <Detail
+              motion={enabled} delay={440}
               icon="people-outline"
               iconBackground="#EAF9F0"
               iconColor="#11A86B"
@@ -181,6 +266,7 @@ export default function ProfileScreen() {
               value={roleLabel}
             />
             <Detail
+              motion={enabled} delay={550}
               icon="business-outline"
               iconBackground="#EEF5FF"
               iconColor="#0C6FE8"
@@ -188,6 +274,7 @@ export default function ProfileScreen() {
               value={organizationName || 'Not recorded'}
             />
             <Detail
+              motion={enabled} delay={330}
               icon="pricetag-outline"
               iconBackground="#F4EEFF"
               iconColor="#7C46E8"
@@ -195,6 +282,7 @@ export default function ProfileScreen() {
               value={identity.partner_code}
             />
             <Detail
+              motion={enabled} delay={440}
               icon="checkmark-circle-outline"
               iconBackground="#EAF9F0"
               iconColor="#11A86B"
@@ -212,9 +300,10 @@ export default function ProfileScreen() {
         </View>
       ) : null}
 
-      <Pressable
+      <Animated.View style={{ transform: [{ scale: logoutPress.value.interpolate({ inputRange: [0, 1], outputRange: [1, 0.985] }) }] }}><Pressable
         accessibilityRole="button"
         accessibilityLabel="Sign out"
+        onPressIn={logoutPress.onPressIn} onPressOut={logoutPress.onPressOut}
         disabled={signingOut}
         onPress={() => setLogoutOpen(true)}
         style={({ pressed }) => [
@@ -222,9 +311,10 @@ export default function ProfileScreen() {
           (pressed || signingOut) && styles.logoutButtonPressed,
         ]}
       >
-        <Ionicons name="log-out-outline" size={20} color="#C43D4B" />
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 16, backgroundColor: '#F4CDD4', opacity: logoutPress.value.interpolate({ inputRange: [0, 1], outputRange: [0, 0.2] }) }]} />
+        <Animated.View style={{ transform: [{ translateX: logoutPress.value.interpolate({ inputRange: [0, 1], outputRange: [0, 3] }) }] }}><Ionicons name="log-out-outline" size={20} color="#C43D4B" /></Animated.View>
         <Text style={styles.logoutButtonText}>Logout</Text>
-      </Pressable>
+      </Pressable></Animated.View>
 
       <PartnerConfirmDialog
         visible={logoutOpen}
@@ -250,12 +340,13 @@ const registrationIcons: Record<string, ImageSourcePropType> = {
   'Portal status': require('../assets/partner/profile/role-team-3d.png'),
 };
 
-function SectionTitle({ title }: { title: string }) {
+function SectionTitle({ title, motion }: { title: string; motion: boolean }) {
+  const appear = useProfileEntrance(motion, 220);
   return (
     <View style={styles.sectionTitleRow}>
-      <View style={styles.sectionTitleIcon}><Image source={require('../assets/partner/profile/registration-3d.png')} style={styles.registrationTitleArtwork} resizeMode="contain" accessible={false} /></View>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.sectionTitleRule} />
+      <Animated.View style={[styles.sectionTitleIcon, entrance(appear, 3, 0.9)]}><Image source={require('../assets/partner/profile/registration-3d.png')} style={styles.registrationTitleArtwork} resizeMode="contain" accessible={false} /></Animated.View>
+      <Animated.Text style={[styles.sectionTitle, { opacity: appear }]}>{title}</Animated.Text>
+      <View style={[styles.sectionTitleRule, { backgroundColor: 'transparent', overflow: 'hidden' }]}><Animated.View style={{ flex: 1, backgroundColor: '#8D50D9', transformOrigin: 'left center', transform: [{ scaleX: appear }] }} /></View>
     </View>
   );
 }
@@ -267,7 +358,9 @@ function Detail({
   label,
   value,
   isLast = false,
+  motion, delay,
 }: {
+  motion: boolean; delay: number;
   icon: React.ComponentProps<typeof Ionicons>['name'];
   iconBackground: string;
   iconColor: string;
@@ -276,17 +369,20 @@ function Detail({
   isLast?: boolean;
 }) {
   const artwork = registrationIcons[label];
+  const appear = useProfileEntrance(motion, delay);
+  const iconAppear = useProfileEntrance(motion, delay + 70);
   return (
-    <View style={[styles.detailRow, isLast && styles.detailRowLast, { borderColor: iconBackground }]}>
-      <View style={[styles.detailIcon, { backgroundColor: iconBackground }]}>
+    <Animated.View style={[styles.detailRow, isLast && styles.detailRowLast, { borderColor: iconBackground, shadowColor: iconColor }, entrance(appear)]}>
+      <Animated.View style={[styles.detailIcon, { backgroundColor: iconBackground }, entrance(iconAppear, 3, 0.9)]}>
         {artwork ? <Image source={artwork} style={styles.detailArtworkLeft} resizeMode="contain" accessible={false} /> : <Ionicons name={icon} size={24} color={iconColor} />}
-      </View>
+        {motion ? <Animated.View pointerEvents="none" style={[styles.iconReflection, { opacity: iconAppear.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.24, 0] }) }]} /> : null}
+      </Animated.View>
       <View style={[styles.detailVerticalRule, { backgroundColor: iconColor }]} />
       <View style={styles.detailCopy}>
         <Text style={styles.detailLabel}>{label}</Text>
         <Text style={styles.detailValue}>{value || 'Not recorded'}</Text>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -304,6 +400,11 @@ function humanize(value: string) {
 }
 
 const styles = StyleSheet.create({
+  ringSegment: { position: 'absolute', width: 2, height: 2, borderRadius: 1 },
+  cameraMotion: { position: 'absolute', right: -1, bottom: -1, width: 26, height: 26, zIndex: 8 },
+  cameraInner: { right: 0, bottom: 0 },
+  roleShimmer: { position: 'absolute', top: -8, bottom: -8, width: 15, backgroundColor: '#FFFFFF' },
+  iconReflection: { position: 'absolute', top: 3, left: 6, right: 6, height: 12, borderRadius: 8, backgroundColor: '#FFFFFF' },
   header: {
     minHeight: 52,
     flexDirection: 'row',
