@@ -127,6 +127,17 @@ assert(workspace.includes('continueVerifiedN8nIntakeToOnboarding('));
 const backend=read("../app/policy-intakes/handoff-actions.ts");
 assert(backend.includes('const blockingWarnings = parsed.preview.warnings.filter('));
 assert(backend.includes('informationalTataWarnings.has(warning)'));
+// A successful Tata AIG 18-check reparse must not be reset to the generic
+// bulk_conversion_review_required hold solely because it is not TP-only.
+// Date, canonical premium, and source evidence remain mandatory.
+assert(backend.includes("const tata18Ready=[")
+  &&backend.includes("hasVerifiedN8nParserEvidence(verified.parserId,verified.checksPassed,verified.warnings)")
+  &&backend.includes("verified.autoAcceptedIssuanceDate?.date")
+  &&backend.includes('policyDateDecision(verified.autoAcceptedIssuanceDate?.date??"")==="allowed"')
+  &&backend.includes("const eligibleForVerifiedConversion=tata18Ready||verifiedTataTp"),
+  "Tata 18-check Package/SAOD/Bundled must reach verified Convert when date and premium are certified");
+assert(!backend.includes('policyDateDecision(verified.autoAcceptedIssuanceDate?.date??"")==="valid"'),
+  "Do not invent a policy-date decision; use the canonical allowed/OTP gate");
 assert(backend.includes('trainedN8nParserProfile(parsed.preview.parserId)?.checks'),
  "handoff must use insurer-specific 16/18/13 check profiles");
 assert.equal(trainedN8nParserProfile("tata_aig_private_car_liability_only_n8n_native_pdf")?.checks,16);
