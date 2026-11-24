@@ -133,7 +133,7 @@ assert(backend.includes('informationalTataWarnings.has(warning)'));
 assert(backend.includes("const tata18Ready=[")
   &&backend.includes("hasVerifiedN8nParserEvidence(verified.parserId,verified.checksPassed,verified.warnings)")
   &&backend.includes("verified.autoAcceptedIssuanceDate?.date")
-  &&backend.includes('policyDateDecision(verified.autoAcceptedIssuanceDate?.date??"")==="allowed"')
+  &&backend.includes('verified.fields.find(field=>field.key==="policy_issuance_date")?.value')
   &&backend.includes("const eligibleForVerifiedConversion=tata18Ready||verifiedTataTp"),
   "Tata 18-check Package/SAOD/Bundled must reach verified Convert when date and premium are certified");
 assert(!backend.includes('policyDateDecision(verified.autoAcceptedIssuanceDate?.date??"")==="valid"'),
@@ -145,6 +145,20 @@ assert.equal(trainedN8nParserProfile("tata_aig_private_car_three_year_tp_n8n_nat
 assert(hasVerifiedN8nParserEvidence("tata_aig_private_car_three_year_tp_n8n_native_pdf",16,
  ["tata_aig_issuance_date_requires_verified_pdf_signature","tata_aig_human_review_required"]));
 
+const tataParser=read("../../../infra/n8n-local/workflows/tata-aig-real-pdf-parser-v2.js");
+const tataReturn=read("../../../infra/n8n-local/workflows/tata-aig-real-pdf-return-v2.js");
+assert(tataParser.includes("printedPolicyIssueDate(text)")
+  &&tataParser.includes("printed_receipt_business_rule")
+  &&tataParser.includes("printed_issue_date_ambiguous:printedIssue.ambiguous"),
+ "Explicit issue date wins, with source-labelled receipt fallback and conflict hold");
+assert(tataReturn.includes("Tata AIG printed Receipt Date (approved issuance rule)")
+  &&tataReturn.includes("tata_aig_receipt_date_as_issuance"),
+ "Receipt-derived issue date must retain transparent source evidence");
+const sourceValidation=read("../lib/policy-intake-n8n-validation.ts");
+assert(sourceValidation.includes("approvedReceiptIssue")
+  &&sourceValidation.includes("issueField.value===receiptDate")
+  &&sourceValidation.includes("checks.receipt_date_document_consistent===true"),
+ "Tata receipt issue date must be PDF-labelled, 18-check verified and consistent");
 const conversion=read("../app/development/ai-policy-onboarding/actions.ts");
 assert(conversion.includes("!hasVerifiedN8nParserEvidence(extracted.preview.parserId,"),
  "Bulk conversion must accept only the trained insurer's exact strict check profile");
@@ -152,6 +166,9 @@ assert(conversion.includes("extracted.preview.acceptedIssuanceDate"),
  "Tata conversion must use PDF-verified signature/receipt date, not inferred cover start");
 assert(conversion.includes("mapVerifiedN8nMotorPremium(extracted.preview.premium)"),
  "Tata canonical premium mapping must remain independently reconciled");
+assert(conversion.includes("reverifiedTataFailedSource")
+  &&conversion.includes("reverifiedTataPrintedDateHold"),
+  "Old failed Tata source and stale fingerprint need explicit exact-PDF recovery");
 assert(conversion.includes("const booked=await onboardPolicy(payload)"),
  "Tata conversion must use canonical booking transaction and its conflict gates");
 assert(conversion.includes("if(confirmed!==true)"),
