@@ -11,7 +11,7 @@ const LIFE_HEALTH_TYPES = new Set(["life", "health"]);
 type LifeHealthPolicyType = "life" | "health";
 
 type SubmitWithoutProposalResult =
-  | { ok: true; id: string; number: string; status: "ready_for_review" }
+  | { ok: true; id: string; number: string; status: "needs_attention" }
   | { ok: false; error: string };
 
 function cleanMobile(value: string) {
@@ -76,7 +76,9 @@ export async function submitLifeHealthIntakeWithoutProposal(input: {
   const { error: insertError } = await admin.from("policy_intake_requests").insert({
     id,
     intake_number: number,
-    status: "ready_for_review",
+    status: "needs_attention",
+    processing_lane: "automation",
+    attention_reason: "A source proposal document is required for AI extraction.",
     policy_type: input.policyType,
     submitted_by_profile_id: profile.id,
     lead_source_id: source.id,
@@ -90,7 +92,7 @@ export async function submitLifeHealthIntakeWithoutProposal(input: {
     file_name: "",
     mime_type: null,
     file_size: null,
-    ocr_status: "completed",
+    ocr_status: "failed",
     ocr_fields: [],
     ocr_warnings: [],
   });
@@ -101,7 +103,7 @@ export async function submitLifeHealthIntakeWithoutProposal(input: {
 
   revalidatePath("/policy-intakes");
   revalidatePath(`/policy-intakes/${id}`);
-  return { ok: true, id, number, status: "ready_for_review" };
+  return { ok: true, id, number, status: "needs_attention" };
 }
 
 export async function getPolicyIntakeDocumentAvailability(id: string) {
