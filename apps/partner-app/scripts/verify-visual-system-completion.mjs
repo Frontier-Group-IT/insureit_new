@@ -728,10 +728,18 @@ const learnActions = learn.slice(learnActionsAt, learnTipAt);
 for (const required of [
   'accessibilityLabel="Cancel learning answer"',
   'onPress={() => router.back()}',
-  'accessibilityLabel="Submit Answer"',
-  'styles.cancelButton', 'styles.submitButton',
+  'styles.cancelButton',
+  '<AnimatedSubmitButton enabled={Boolean(selectedOptionKey && !submitting)}',
+  'onSubmit={() => void submitAnswer()}',
 ]) requireText(learnActions, required, 'Learn actions must preserve Cancel-left and Submit-right behaviors.');
-if (!(learnActions.indexOf('styles.cancelButton') < learnActions.indexOf('styles.submitButton'))) {
+for (const buttonRequirement of [
+  'function AnimatedSubmitButton(',
+  'accessibilityLabel="Submit Answer"',
+  'styles.submitButton',
+  'disabled={!enabled || submitting}',
+  'onPress={onSubmit}',
+]) requireText(learn, buttonRequirement, 'Animated submit must preserve its existing role, behavior and disabled state.');
+if (!(learnActions.indexOf('styles.cancelButton') < learnActions.indexOf('<AnimatedSubmitButton'))) {
   throw new Error('Cancel must appear to the left of Submit Answer.');
 }
 requireText(learn, "answerActions: { flexDirection: 'row'", 'Learn actions must share one horizontal row.');
