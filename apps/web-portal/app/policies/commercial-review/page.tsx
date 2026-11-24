@@ -6,6 +6,7 @@ import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { classifyCommercialRegistration } from "./registration-filter";
 import type { CommercialStatus } from "./actions";
 
 type PolicyRow = { id: string; policy_no: string; insurance_company_id: string; issuance_date: string | null; start_date: string; intermediary_type: string | null; intermediary_code: string | null; vehicle_id: string | null; business_line: string | null };
@@ -15,7 +16,7 @@ type PayoutRow = { policy_id: string; intermediary_type: string | null; intermed
 type InsurerRow = { id: string; name: string };
 type IntermediaryRow = { intermediary_code: string; intermediary_type: string | null; display_name: string | null; legal_name: string | null };
 type EventRow = { policy_id: string; commercial_side: "insurer" | "partner"; action: string; note: string | null; created_at: string };
-type VehicleRow = { id: string; vehicle_type: string | null };
+type VehicleRow = { id: string; vehicle_type: string | null; registration_status: string | null; vehicle_no: string | null };
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -33,7 +34,7 @@ export default async function PolicyCommercialReviewPage() {
     fetchAllPages<InsurerRow, unknown>((from, to) => admin.from("insurance_companies").select("id,name").order("id", { ascending: true }).range(from, to).returns<InsurerRow[]>()),
     fetchAllPages<IntermediaryRow, unknown>((from, to) => admin.from("intermediaries").select("intermediary_code,intermediary_type,display_name,legal_name").order("intermediary_code", { ascending: true }).range(from, to).returns<IntermediaryRow[]>()),
     fetchAllPages<EventRow, unknown>((from, to) => admin.from("commercial_control_events").select("policy_id,commercial_side,action,note,created_at").order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to).returns<EventRow[]>()),
-    fetchAllPages<VehicleRow, unknown>((from, to) => admin.from("vehicles").select("id,vehicle_type").order("id", { ascending: true }).range(from, to).returns<VehicleRow[]>()),
+    fetchAllPages<VehicleRow, unknown>((from, to) => admin.from("vehicles").select("id,vehicle_type,registration_status,vehicle_no").order("id", { ascending: true }).range(from, to).returns<VehicleRow[]>()),
   ]);
 
   const error = policiesResult.error ?? premiumResult.error ?? payinResult.error ?? payoutResult.error ?? insurersResult.error ?? intermediariesResult.error ?? eventsResult.error ?? vehiclesResult.error;
@@ -44,6 +45,7 @@ export default async function PolicyCommercialReviewPage() {
   const payoutByPolicy = new Map<string, PayoutRow>();
   for (const row of payoutResult.data ?? []) if (!payoutByPolicy.has(row.policy_id)) payoutByPolicy.set(row.policy_id, row);
   const insurerById = new Map((insurersResult.data ?? []).map((row) => [row.id, row.name]));
+  const vehicleRegistrationById = new Map((vehiclesResult.data ?? []).map((row) => [row.id, classifyCommercialRegistration(row)]));
   const vehicleClassById = new Map((vehiclesResult.data ?? []).map((row) => [row.id, row.vehicle_type?.trim().toUpperCase() || null]));
   const intermediaryByCode = new Map((intermediariesResult.data ?? []).map((row) => [row.intermediary_code.trim().toUpperCase(), row]));
   const lastEventByKey = new Map<string, EventRow>();
@@ -93,6 +95,7 @@ export default async function PolicyCommercialReviewPage() {
       partnerUpdatedAt: payout?.updated_at ?? null,
       partnerLastAction: lastEventByKey.get(`${policy.id}:partner`)?.action ?? null,
       partnerLastActionAt: lastEventByKey.get(`${policy.id}:partner`)?.created_at ?? null,
+      registrationType: policy.vehicle_id ? vehicleRegistrationById.get(policy.vehicle_id) ?? null : null,
       vehicleClass: policy.vehicle_id
         ? vehicleClassById.get(policy.vehicle_id) ?? null
         : policy.business_line?.trim().toLowerCase() === "non motor"
