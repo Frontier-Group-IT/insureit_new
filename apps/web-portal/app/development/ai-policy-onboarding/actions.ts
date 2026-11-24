@@ -9,10 +9,10 @@ import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { buildPolicyOcrOnboardingUpdate, normalizeVerifiedMotorPowerKw } from "@/lib/policy-ocr-onboarding-apply";
 import { policyDateDecision } from "@/lib/policy-date-rule";
-import { mapVerifiedGoDigitCommercialPremium, mapVerifiedIffcoCommercialPremium, mapVerifiedNiaCommercialPremium, mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "@/lib/policy-n8n-onboarding-premium";
+import { mapVerifiedGoDigitCommercialPremium, mapVerifiedIffcoCommercialPremium, mapVerifiedNiaCommercialPremium, mapVerifiedUiicGcvCommercialPremium, mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "@/lib/policy-n8n-onboarding-premium";
 import { assessProductVariantDirectConversion, mapVerifiedProductVariantPremium, PRODUCT_VARIANT_PARSERS } from "@/lib/policy-product-variant-direct-eligibility";
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
-import { assessNiaNamedAuthorityUnregisteredConversion, assessStandardCommercialDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
+import { assessNiaNamedAuthorityUnregisteredConversion, assessStandardCommercialDirectConversion, assessUiicGcvDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
 import { resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
 import { checkSemiAutoReadiness, type SemiAutoIssue } from "@/lib/policy-intake-semi-auto";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction, applySemiAutoN8nExtraction, type SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
@@ -307,12 +307,27 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     &&(queued.exception_codes[0]==="booking_review_required"
       ||(queued.parser_id==="iffco_tokio_cv_native_pdf"
          &&queued.exception_codes[0]==="registration_pending_review"));
-  if(queueError||!queued||(!heldReview
+  // Prior UIIC extraction_failed rows stored no fingerprint or parser result.
+  // Only an explicitly confirmed one-intake action can recover those original
+  // errors, after freshly rereading the exact queued document and passing the
+  // new source-labelled GCV product, CPA and authority assessor.
+  const uiicFailedSource=queued?.state==="exception"
+    &&queued.parser_id===null&&queued.checks_passed===0
+    &&queued.exception_codes.length===1&&queued.exception_codes[0]==="extraction_failed"
+    &&/^n8n_(?:failed_checks_|nontata_verification_failed$)/.test(queued.last_error_code??"");
+  if(queueError||!queued||(!heldReview&&!uiicFailedSource
       &&(queued.state!=="verified"||queued.exception_codes.length>0))
-      ||!queued.extraction_fingerprint)
+      ||(!queued.extraction_fingerprint&&!uiicFailedSource))
     return fail("Extraction","The current Intake has other extraction or booking exceptions requiring review.");
   const extracted=await previewSemiAutoN8nExtraction(id);
   if(!extracted.ok)return fail("Extraction",extracted.error);
+  const reverifiedUiicExtraction=uiicFailedSource
+    &&extracted.preview.documentId===queued.document_id
+    &&assessUiicGcvDirectConversion({
+      parserId:extracted.preview.parserId,checksPassed:extracted.preview.checksPassed,
+      warnings:extracted.preview.warnings,fields:extracted.preview.fields,
+      commercialPremium:extracted.preview.commercialPremium,
+    }).eligible;
   // Backward-compatible once for old IFFCO MP/NEW queue rows. The old
   // fingerprint excluded the printed *internal* registration reference.
   // Re-verified live source fields and document ID remain authoritative.
@@ -377,7 +392,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
       &&/\bRTO\b/i.test(rtoFresh.evidence);
   }
   if(extracted.preview.documentId!==queued.document_id||
-     !(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold)||
+     !(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction)||
      (heldReview&&extracted.preview.parserId!==queued.parser_id)||
      !hasVerifiedN8nParserEvidence(extracted.preview.parserId,
        extracted.preview.checksPassed,extracted.preview.warnings))
@@ -412,6 +427,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   const commercial=extracted.preview.commercialPremium;
   const iffco=extracted.preview.parserId==="iffco_tokio_cv_native_pdf";
   const nia=extracted.preview.parserId==="new_india_cv_native_pdf";
+  const uiic=extracted.preview.parserId==="united_india_gcv_native_pdf";
   const productVariant=PRODUCT_VARIANT_PARSERS.has(extracted.preview.parserId);
   if (commercial) {
     if(iffco){
@@ -443,6 +459,18 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
         return fail("New India CPA","Owner-driver CPA must be independently printed and verified.");
       try{verifiedMoney=mapVerifiedNiaCommercialPremium(commercial,Number(cpaFields[0].value));}
       catch{return fail("New India premium","Printed basic TP, CPA, paid-driver LL, mixed GST, net or gross is inconsistent.");}
+    }else if(uiic){
+      const assessment=assessUiicGcvDirectConversion({
+        parserId:extracted.preview.parserId,checksPassed:extracted.preview.checksPassed,
+        warnings:extracted.preview.warnings,fields:extracted.preview.fields,
+        commercialPremium:commercial,
+      });
+      if(!assessment.eligible)return fail("United India GCV evidence",
+        "The original UIIC vehicle schedule is not source-verified: "+assessment.reason);
+      const uiicCpa=extracted.preview.fields.filter(f=>f.key==="cpa_premium");
+      if(uiicCpa.length!==1)return fail("United India GCV CPA","Ambiguous or absent printed owner-driver CPA evidence.");
+      try{verifiedMoney=mapVerifiedUiicGcvCommercialPremium(commercial,Number(uiicCpa[0].value));}
+      catch{return fail("United India GCV premium","Printed CPA, OD/TP, mixed GST or gross does not reconcile.");}
     }else if(productVariant){
       const assessment=assessProductVariantDirectConversion({
         parserId:extracted.preview.parserId,checksPassed:extracted.preview.checksPassed,
