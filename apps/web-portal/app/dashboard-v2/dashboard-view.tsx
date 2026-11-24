@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { CompactPartnerAppPromo } from "@/components/partner-app-promo";
 import Link from "next/link";
 import { ArrowUpRight, Check, ChevronRight, Plus, TrendingUp } from "lucide-react";
 import { DASHBOARD_ICON_ASSETS } from "@/lib/dashboard-icon-assets";
@@ -64,7 +65,8 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
   return (
     <div className="mx-auto max-w-[1580px] pb-10">
       <header className="flex flex-col gap-4 border-b border-[#D5DEE9] pb-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="flex min-w-0 flex-1 items-end gap-3">
+        <div className="min-w-0 xl:shrink-0">
           <div className="flex items-center gap-2 text-[8px] font-black uppercase tracking-[.15em] text-[#7B8799]">
             <span>Operations</span>
             <span className="h-1 w-1 bg-[#18BFC2]" />
@@ -74,8 +76,12 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
             Operations Overview
           </h1>
         </div>
+        <div className="@container hidden min-w-0 max-w-[370px] flex-1 self-end xl:flex">
+          <CompactPartnerAppPromo />
+        </div>
+        </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 xl:shrink-0">
           <span className="mr-1 text-[8.5px] font-semibold text-[#7A879A]">
             Updated {formatHeaderTime(data.generatedAt)}
           </span>
