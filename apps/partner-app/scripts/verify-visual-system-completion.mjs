@@ -616,7 +616,7 @@ for (const fragment of [
   '<PartnerCaseBottomNavigation activeTab="More" />',
   '<PartnerCasePageHeader title="My Achievements" icon="ribbon-outline" onBack={() => router.back()} />',
   'getPartnerRecognition()', 'accessibilityRole="progressbar"', 'accessibilityValue={{ min: 0',
-  '(progress * 100).toFixed(1)', 'next.current.toLocaleString', 'formatDate(item.date)',
+  '(progress * 100).toFixed(1)', 'value={next.current}', 'formatDate(item.date)',
   'Unlocked achievements', 'name="star"', 'styles.headingRule',
   'styles.artworkTile', 'styles.achievementArtwork', 'styles.verticalRule',
   '{item.title}', 'A great start!', 'ACHIEVED', 'name="checkmark-circle"',
@@ -630,8 +630,8 @@ for (const fragment of [
 for (const unwanted of ['{item.body}', 'styles.remaining', 'styles.track', 'styles.fill', 'progressCaption']) {
   if (recognition.includes(unwanted)) throw new Error('My Achievements contains obsolete layout: ' + unwanted);
 }
-const recognitionAchievement = recognition.slice(recognition.indexOf('{data.items.map'), recognition.indexOf('{next ? ('));
-if (!recognitionAchievement.includes('styles.earnedPill') || !recognitionAchievement.includes('styles.date')) {
+const recognitionAchievement = recognition.slice(recognition.indexOf('function AchievementCard('), recognition.indexOf('function Trophy('));
+if (!recognition.includes('<AchievementCard key={item.code}') || !recognitionAchievement.includes('styles.earnedPill') || !recognitionAchievement.includes('styles.date')) {
   throw new Error('Each achievement must show its achieved badge and date.');
 }
 
