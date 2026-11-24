@@ -49,9 +49,9 @@ for(const fixture of fixtures){
 // issue dates must never silently choose either value.
 const source=fixtures[4].text;
 const issueForward=source.replace("Receipt Date 17/11/2026",
-  "Policy Issue Date 18/11/2026\\nReceipt Date 17/11/2026");
+  "Policy Issue Date 18/11/2026\nReceipt Date 17/11/2026");
 const issueReverse=source.replace("Receipt Date 17/11/2026",
-  "18/11/2026 Date of Issue\\nReceipt Date 17/11/2026");
+  "18/11/2026 Date of Issue\nReceipt Date 17/11/2026");
 for(const sample of [issueForward,issueReverse]){
  const extracted=parser({all:()=>[{json:{text:sample}}]})[0].json;
  const response=normalizer({first:()=>({json:extracted})},
@@ -62,7 +62,7 @@ for(const sample of [issueForward,issueReverse]){
  assert(!response.warnings.includes("tata_aig_receipt_date_as_issuance"));
 }
 const conflicting=source.replace("Receipt Date 17/11/2026",
-  "Policy Issue Date 18/11/2026\\nDate of Issue 19/11/2026\\nReceipt Date 17/11/2026");
+  "Policy Issue Date 18/11/2026\nDate of Issue 19/11/2026\nReceipt Date 17/11/2026");
 const refused=parser({all:()=>[{json:{text:conflicting}}]})[0].json;
 assert.equal(refused.ok,false);
 assert.equal(refused.printed_issue_date_ambiguous,true);
