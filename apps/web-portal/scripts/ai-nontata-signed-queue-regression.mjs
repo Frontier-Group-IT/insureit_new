@@ -91,7 +91,7 @@ assert.equal(parseVariant("../../../infra/n8n-local/extensions/hdfc-ergo-two-whe
   "HDFC TP IGST tamper must fail");
 const sbiPath="../../../infra/n8n-local/extensions/sbi-general-private-car-package.js";
 const sbiMeta={CreationDate:"D:20261119190641+05'30'",IsSignaturesPresent:true};
-const sbiSample=\`SBI General Insurance Company Limited | Private Car Insurance Policy - Package
+const sbiSample=`SBI General Insurance Company Limited | Private Car Insurance Policy - Package
 Policy / Certificate No : POPMCAR00103248565
 Period of Insurance OD : From:20/11/2026 00:00:00 To:19/11/2027 23:59:59
 Period of Insurance TP : From:20/11/2026 00:00:00 To:19/11/2027 23:59:59
@@ -122,7 +122,7 @@ Premium Receipt
 Policy Number POPMCAR00103248565
 Policy Holder Name Mr. Sample Owner Intermediary Name SAMPLE BROKER
 Receipt Date 19/11/2026
-Consolidated Stamp Duty ₹ 0.5 paid towards Insurance Policy Stamps\`;
+Consolidated Stamp Duty ₹ 0.5 paid towards Insurance Policy Stamps`;
 const sbi=parseVariant(sbiPath,sbiSample,sbiMeta);
 assert.deepEqual(sbi.failed_checks,[],"SBI Tata 0% NCB Package must pass all 20");
 assert.equal(sbi.premium_components.odBasicAfterNcb,3829.2);
@@ -130,7 +130,7 @@ assert.equal(sbi.premium_components.addOn,3922);
 const mahindraSample=sbiSample
  .replaceAll("POPMCAR00103248565","POPMCAR00103251697")
  .replaceAll("19/11/2026","20/11/2026")
- .replaceAll("20/11/2026 00:00:00 To:20/11/2027","21/11/2026 00:00:00 To:20/11/2027")
+ .replaceAll("20/11/2026 00:00:00 To:19/11/2027","21/11/2026 00:00:00 To:20/11/2027")
  .replace("UK17V4864","UK07FH9086")
  .replace("Tata Motors,Punch & Adventure","Vehicle Make Mahindra & Mahindra Vehicle Model XUV 300 - Petrol Vehicle Variant W8 (O)")
  .replace("REVTRN20HWXMG0907","NMNZH28977")
