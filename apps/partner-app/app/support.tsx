@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, Animated, AppState, Easing, Linking, Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
@@ -14,6 +16,17 @@ type StatTone = 'warning' | 'info' | 'purple';
 
 export default function SupportScreen() {
   const router = useRouter();
+  const focused = useIsFocused();
+  const [foreground, setForeground] = useState(AppState.currentState == null || AppState.currentState === 'active');
+  const [reducedMotion, setReducedMotion] = useState(true);
+  const animate = focused && foreground && !reducedMotion;
+  useEffect(() => {
+    let mounted = true;
+    const app = AppState.addEventListener('change', next => setForeground(next === 'active'));
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion);
+    void AccessibilityInfo.isReduceMotionEnabled().then(value => { if (mounted) setReducedMotion(value); }).catch(() => {});
+    return () => { mounted = false; app.remove(); sub.remove(); };
+  }, []);
   const [data, setData] = useState<PartnerSupport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,7 +37,6 @@ export default function SupportScreen() {
     try {
       setData(await getPartnerSupport());
     } catch {
-      setData(null);
       setError('Support information could not be loaded right now.');
     } finally {
       setLoading(false);
@@ -39,19 +51,17 @@ export default function SupportScreen() {
       <View style={styles.contentInset}>
         <PartnerCasePageHeader title="Support" icon="headset-outline" onBack={() => router.back()} />
       </View>
-      {loading ? (
-        <PartnerStateView state="loading" title="Loading support" />
-      ) : error || !data ? (
+      {loading && !data ? (
+        <SupportSkeleton animate={animate} />
+      ) : error && !data ? (
         <PartnerStateView state="error" title="Support is temporarily unavailable"
           message={error || 'Support information could not be loaded.'}
           actionLabel="Try again" onAction={() => void load()} />
-      ) : (
+      ) : data ? (
         <View style={styles.page}>
           <View style={styles.hero}>
-            <View style={styles.heroIconShell}>
-              <PartnerProfileMenuIcon kind="support" size={60} />
-            </View>
-            <View style={styles.heroContent}>
+            <FloatingHeadphones animate={animate} />
+            <MotionEntrance animate={animate} delay={40} style={styles.heroContent}>
               <View style={styles.heroTopRow}>
                 <View style={styles.heroInformation}>
                   <Text style={[styles.heroTitle, Platform.OS === 'ios' && styles.heroTitleIos]}
@@ -62,7 +72,7 @@ export default function SupportScreen() {
                 </View>
                 <View style={styles.heroRight}>
                   <View style={styles.updatedLine}>
-                    <Text style={styles.updatedText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{formatUpdatedAt(data.generated_at)}</Text>
+                    <TimestampReveal timestamp={data.generated_at} animate={animate} />
                   </View>
                   <View style={styles.heroActions}>
                     <View style={styles.heroActionBubble}>
@@ -74,7 +84,7 @@ export default function SupportScreen() {
                   </View>
                 </View>
               </View>
-            </View>
+            </MotionEntrance>
           </View>
 
           <View style={styles.contentInset}>
@@ -99,30 +109,26 @@ export default function SupportScreen() {
             </View>
           ) : null}
 
-          <View style={styles.sectionTitleWrap}>
+          <MotionEntrance animate={animate} delay={120} style={styles.sectionTitleWrap}>
             <Text style={styles.sectionTitle}>Operations Desk</Text>
-            <View style={styles.sectionUnderline} />
-          </View>
+            <UnderlineMotion animate={animate} />
+          </MotionEntrance>
 
           <View style={styles.statList}>
             <OpsStat value={data.operations.intakes_need_attention}
               label="Need your attention" helper="Items that require your action"
-              tone="warning" onPress={() => router.push('/policy-intakes')} />
+              tone="warning" animate={animate} delay={220} onPress={() => router.push('/policy-intakes')} />
             <OpsStat value={data.operations.intakes_in_progress}
               label="Policy Intakes in progress" helper="Policies currently being processed"
-              tone="info" onPress={() => router.push('/policy-intakes')} />
+              tone="info" animate={animate} delay={330} onPress={() => router.push('/policy-intakes')} />
             <OpsStat value={data.operations.active_claims}
               label="Active claims" helper="Claims currently in progress"
-              tone="purple" onPress={() => router.push('/(tabs)/claims')} />
+              tone="purple" animate={animate} delay={440} onPress={() => router.push('/(tabs)/claims')} />
           </View>
-          <View pointerEvents="none" style={styles.bottomWaveArea}>
-            <View style={styles.bottomWavePale} />
-            <View style={styles.bottomWaveBlue} />
-            <View style={styles.bottomWaveLight} />
-          </View>
+          <BottomWaveMotion animate={animate} />
           </View>
         </View>
-      )}
+      ) : null}
     </PartnerScreen>
   );
 }
