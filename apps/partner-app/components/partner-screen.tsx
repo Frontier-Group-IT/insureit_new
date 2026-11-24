@@ -57,6 +57,7 @@ export function PartnerScreen({
   bottomNavigationNavy = false,
   topBarIcon,
   stickyStartY = 100,
+  stickyFirstChild = false,
 }: PropsWithChildren<{
   title: string;
   eyebrow?: string;
@@ -89,6 +90,8 @@ export function PartnerScreen({
   /** Optional plain icon in place of header artwork, with no icon tile background. */
   topBarIcon?: ComponentProps<typeof Ionicons>['name'];
   stickyStartY?: number;
+  /** Opt-in native sticky header for screens whose first child is their header. */
+  stickyFirstChild?: boolean;
   heroSearch?: {
     value: string;
     onChangeText: (value: string) => void;
@@ -247,7 +250,7 @@ export function PartnerScreen({
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         automaticallyAdjustsScrollIndicatorInsets={false}
-        stickyHeaderIndices={undefined}
+        stickyHeaderIndices={stickyFirstChild ? [isOffline ? 1 : 0] : undefined}
         contentContainerStyle={[styles.content, fullWidth && styles.fullWidthContent]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps={scrollProps?.keyboardShouldPersistTaps ?? 'handled'}
