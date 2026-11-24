@@ -194,9 +194,8 @@ assert.equal(parseVariant(sbiPath,sbiSample,sbiMeta,{...trustedImage,date:"18/11
 assert.ok(signed.includes("hdfc_ergo_two_wheeler_tp_native_pdf")
   &&signed.includes("sbi_general_private_car_package_native_pdf")
   &&eligibility.includes("checks:20")
-  &&actions.includes('"PIR-261120-5BB199":"sbi_general_private_car_package_native_pdf"')
-  &&actions.includes('"PIR-261124-FC9324":"hdfc_ergo_two_wheeler_tp_native_pdf"'),
-  "Both new parsers must be strict and manual-lane recovery restricted to approved records");
+  &&!actions.includes("APPROVED_VARIANT_LEGACY_INTAKES"),
+  "Both insurer parsers retain strict checks without a per-intake manual-lane bypass");
 
 // An NIA RTO prefix is an unregistered vehicle, never a blocking incomplete
 // registered plate. The source prefix must not fill registrationNo.
@@ -354,23 +353,12 @@ for(const [parserId,evidence,name] of [
   assert.equal(selectVerifiedN8nInsuredDraftIdentity([],null,parserId).name,"",
     "Missing PDF identity must never fall back to a guessed customer");
 }
-for(const [intake,parser] of [
-  ["PIR-261120-12F51A","united_india_tractor_tp_native_pdf"],
-  ["PIR-261120-74CC09","go_digit_two_wheeler_od_native_pdf"],
-  ["PIR-261120-32D619","zurich_kotak_private_car_tp_native_pdf"],
-  ["PIR-261120-370952","zurich_kotak_private_car_tp_native_pdf"],
-]){
-  assert.ok(actions.includes(`"${intake}":"${parser}"`),
-    "Explicit recovery must permit only the approved legacy cohort "+intake);
-}
-assert.ok(actions.includes("&&APPROVED_VARIANT_LEGACY_INTAKES[lane.intake_number]===queued.parser_id")
-  &&actions.includes("&&PRODUCT_VARIANT_PARSERS.has(queued.parser_id")
-  &&actions.includes("&&hasVerifiedN8nParserEvidence(queued.parser_id")
-  &&actions.includes("{allowManualLane:approvedManualRecovery}")
-  &&actions.includes("if(lane.processing_lane!==\"automation\"&&!approvedManualRecovery)"),
-  "Manual-lane recovery requires exact approved intake/parser pairing and complete verified queue, not a global bypass");
-assert.ok(actions.includes("sameReviewedFingerprint") && actions.includes("await onboardPolicy(payload)"),
-  "Legacy manual recovery must still verify source fingerprint and use canonical booking");
+assert.ok(!actions.includes("APPROVED_VARIANT_LEGACY_INTAKES")
+  &&!actions.includes("allowManualLane")
+  &&actions.includes("sameReviewedFingerprint")
+  &&actions.includes("hasVerifiedN8nParserEvidence(")
+  &&actions.includes("await onboardPolicy(payload)"),
+  "All intakes use one verified source-fingerprint and canonical booking path, with no manual exemptions");
 
 const digitFields=[{key:"policy_product",label:"Policy product",value:"Digit Commercial Vehicle Insurance"},
 {key:"vehicle_class",label:"Class",value:"Commercial Vehicle - Miscellaneous Class D"},
