@@ -248,7 +248,7 @@ jobs:
       - name: Build Expo web review export
         run: npm run build:partner:web
 
-      - name: Verify Recognition, Activity and Impact story Android and iOS JavaScript bundles (no native build)
+      - name: Verify Recognition, Activity, Stories and Profile Android and iOS JavaScript bundles (no native build)
         if: github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -256,7 +256,7 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --no-tags --depth=1 origin "$BASE_SHA"
-          if git diff --quiet "$BASE_SHA" HEAD -- apps/partner-app/app/recognition.tsx apps/partner-app/lib/recognition-motion.ts apps/partner-app/app/activity.tsx apps/partner-app/components/activity-motion.tsx apps/partner-app/app/stories.tsx apps/partner-app/components/impact-story-motion.tsx; then
+          if git diff --quiet "$BASE_SHA" HEAD -- apps/partner-app/app/recognition.tsx apps/partner-app/lib/recognition-motion.ts apps/partner-app/app/activity.tsx apps/partner-app/components/activity-motion.tsx apps/partner-app/app/stories.tsx apps/partner-app/components/impact-story-motion.tsx apps/partner-app/app/profile.tsx; then
             echo "No Recognition implementation changes; native bundle export not required."
             exit 0
           fi
