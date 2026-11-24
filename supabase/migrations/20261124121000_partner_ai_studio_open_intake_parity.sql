@@ -30,11 +30,11 @@ begin
 
   with history as (
     select h.id, h.created_at,
-      upper(regexp_replace(trim(coalesce((
+      regexp_replace(upper(trim(coalesce((
         select f->>'value'
         from jsonb_array_elements(coalesce(h.ocr_fields,'[]'::jsonb)) f
         where f->>'key'='policy_number' limit 1
-      ),'')), '[^A-Z0-9]','','g')) as policy_no
+      ),''))), '[^A-Z0-9]','','g') as policy_no
     from public.policy_intake_requests h
     -- Same chronological first-intake candidate window as the website detector.
     order by h.created_at asc,h.id asc
@@ -51,10 +51,10 @@ begin
       coalesce(q.checks_passed,0) as checks_passed,
       coalesce(q.exception_codes,array[]::text[]) as exception_codes,
       q.last_error_code,
-      upper(regexp_replace(trim(coalesce((
+      regexp_replace(upper(trim(coalesce((
         select f->>'value' from jsonb_array_elements(coalesce(i.ocr_fields,'[]'::jsonb)) f
         where f->>'key'='policy_number' limit 1
-      ),'')), '[^A-Z0-9]','','g')) as policy_no
+      ),''))), '[^A-Z0-9]','','g') as policy_no
     from public.policy_intake_requests i
     left join public.policy_intake_ai_processing_queue q on q.intake_id=i.id
     where i.status in ('processing','ready_for_review','in_review','needs_attention')
