@@ -127,16 +127,14 @@ function extract(raw){
  const reg=match(text,/\bRegistration No\.\s*([A-Z0-9][A-Z0-9\s-]{0,18})(?=\n|\s{3,}|\bMake\s*\/\s*Model|\bDate of Registration)/i);
  const rawPlate=reg?.replace(/[\s-]/g,'').toUpperCase()??'';
  const unregistered=/^(?:NEW|NA|N\/A|NOTREGISTERED)$/.test(rawPlate);
- // Haryana schedules can print the older district+four-digit format,
- // e.g. HR 98 4481 (no alphabetic series). Require a separately printed
- // historic Date of Registration to avoid mistaking an incomplete prefix for
- // a registered vehicle. Do not infer any missing characters.
+ // Older Haryana district+four-digit registrations require a printed
+ // historic registration date; do not interpret RTO-only prefixes as plates.
  const historicRegistration=match(text,/\bDate of Registration\s+(\d{2}\/\d{2}\/\d{4})/i);
  const validHistoricRegistration=iso(historicRegistration);
  const legacyHaryana=/^HR\d{6}$/.test(rawPlate)
    && Boolean(validHistoricRegistration
      && validHistoricRegistration <= new Date().toISOString().slice(0,10));
- const registered=/^(?:HR|DL|MP)[A-Z0-9]{7,13}$/.test(rawPlate)||legacyHaryana;
+ const registered=/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4}$/.test(rawPlate)||legacyHaryana; // Any complete Indian RTO plate, not a state allowlist.
  const status=unregistered?'unregistered':registered?'registered':'unknown';
  checks.vehicle_registration_status_verified=status!=='unknown';
  // PDF.js omits the literal Certificate of prefix in actual Tata AIG PDFs.
@@ -157,13 +155,25 @@ function extract(raw){
  const year=match(vehicleSection,/\bMfg\. Year\s*((?:19|20)\d{2})/i);
  const cckw=match(vehicleSection,/\bCC\s*\/\s*KW\s*(\d+(?:\.\d{1,2})?)/i);
  const seats=match(vehicleSection,/\bSeating Capacity\s*\(Including\s*Driver\)\s*(\d{1,2})/i) || seating(vehicleSection);
- const rto=match(vehicleSection,/\bRTO Location\s+([A-Z]{3,30})\b/i)?.toUpperCase()??null;
- const stateByRto={JABALPUR:'MADHYA PRADESH',SATNA:'MADHYA PRADESH',BADSHAPUR:'HARYANA',REWARI:'HARYANA',GURGAON:'HARYANA',FARIDABAD:'HARYANA',DELHI:'DELHI'};
- const state=stateByRto[rto]??null;
- const stateByPlate={MP:'MADHYA PRADESH',HR:'HARYANA',DL:'DELHI'};
- checks.vehicle_identity_verified=Boolean(engine&&chassis&&engine!==chassis&&engine.length>=7&&chassis.length>=14);
+ const rto=match(vehicleSection,/\bRTO Location[ \t]+([A-Za-z][A-Za-z \t]{2,55})(?:\r?\n|$)/i)?.trim().toUpperCase()??null;
+ const stateByRto={JABALPUR:'MADHYA PRADESH',SATNA:'MADHYA PRADESH',BADSHAPUR:'HARYANA',REWARI:'HARYANA',GURGAON:'HARYANA',FARIDABAD:'HARYANA',PANCHKULA:'HARYANA',KOLKATA:'WEST BENGAL',DELHI:'DELHI'};
+ const stateByPlate={MP:'MADHYA PRADESH',HR:'HARYANA',DL:'DELHI',WB:'WEST BENGAL'};
+ const printedRtoState=match(vehicleSection,/\bRTO State\s+([A-Za-z][A-Za-z ]{2,45})(?:\n| {2,}|$)/i)?.toUpperCase()??null;
+ const state=printedRtoState??stateByRto[rto]??stateByPlate[rawPlate.slice(0,2)]??null;
+ // When a state appears in the PDF, prefer it to directory-derived geography.
+ // When only a valid registration prefix exists, retain that state independently.
+ // Six-digit numeric engine is accepted ONLY from the exact printed Engine Number label,
+ // with a separate full-length chassis. A shorter ID without source label fails closed.
+ const explicitlyPrintedShortEngine=Boolean(engine&&/^\d{6}$/.test(engine)
+   && new RegExp('\\bEngine Number\\s*\\/\\s*Motor No\\.\\s*\\(for EV\\)\\s*'+engine+'\\b','i').test(vehicleSection));
+ checks.vehicle_identity_verified=Boolean(engine&&chassis&&engine!==chassis
+   &&(engine.length>=7||explicitlyPrintedShortEngine)&&chassis.length>=14);
  checks.vehicle_specs_verified=Boolean(make&&model&&fuel&&year&&cckw&&seats&&Number(seats)>=1);
- checks.rto_resolved=Boolean(rto&&state&&(!registered||stateByPlate[rawPlate.slice(0,2)]===state));
+ // City and state are OPTIONAL enrichment. Retain either printed RTO city or
+ // validated prefix-derived state independently; unresolved RTO never blocks
+ // otherwise complete policy extraction. Contradictory *verified* geography
+ // remains a separate data-integrity conflict, not a missing-field failure.
+ checks.rto_resolved=!rto||!state||!registered||!stateByPlate[rawPlate.slice(0,2)]||stateByPlate[rawPlate.slice(0,2)]===state;
  const idvMatch=vehicleRaw.match(/Insured Declared Value \(IDV\)[\s\S]{0,1500}?\n\s*1\s+([\d,]+)\s+0\s+0\s+0\s+0\s+([\d,.]+)/i);
  const idv=idvMatch?amount(idvMatch[2]):null;
  checks.idv_verified=Boolean(idv&&idv>0&&near(idv,amount(idvMatch[1]),0.01));
@@ -180,11 +190,14 @@ function extract(raw){
  const prem=formatted?premiumColumns.left+'\n'+premiumColumns.right:premOriginal;
  const basicOd=isTw?cash(prem,/Premium on Vehicle\s*₹\s*([\d,.]+)/i):firstCurrencyAfter(prem,/Premium on Vehicle and Non-/i,130);
  const odPrinted=cash(prem,/Total Own Damage Premium\s*\(A\)\s*₹\s*([\d,.]+)/i);
+ const cngOd=cash(prem,/Add:\s*CNG\s*\/\s*LPG Kit\s*\(IMT 25\)\s*₹\s*([\d,.]+)/i)??0;
+ const cngTp=cash(prem,/Add:\s*CNG\s*\/\s*LPG kit TP\s*\(IMT 25\)\s*₹\s*([\d,.]+)/i)??0;
+ const cngKitComplete=!['CNG','LPG'].includes(fuel??'')||(cngOd>0&&cngTp>0);
  const printedNcb=cash(prem,/Less\s*:\s*No claim bonus[^₹\n]*₹\s*([\d,.]+)/i);
  // A policy with no printed NCB deduction may have zero NCB. Only accept zero
  // when the independently printed basic OD and total OD match exactly.
  const ncb=isTw?0:printedNcb??(basicOd!==null&&odPrinted!==null&&near(basicOd,odPrinted,0.03)?0:null);
- checks.basic_od_ncb_reconciled=near((basicOd??NaN)-(ncb??NaN),odPrinted??NaN,0.03);
+ checks.basic_od_ncb_reconciled=cngKitComplete&&near((basicOd??NaN)+cngOd-(ncb??NaN),odPrinted??NaN,0.03);
  const addons=addonsFor(prem,layout);
  const addonTotal=cash(prem,layout===LAYOUTS.private_saod
    ? /Total Add[ -]on Premium\s*\(B\)\s*₹\s*([\d,.]+)/i
@@ -201,13 +214,13 @@ function extract(raw){
  const rsa=isTw?0:(cash(prem,saodNoLiability
    ? /Total Others\s*\(C\)\s*₹\s*([\d,.]+)/i
    : /Total Others\s*\(D\)\s*₹\s*([\d,.]+)/i)??0);
- checks.liability_components_reconciled=near((basicTp??NaN)+ownerDriverCpa+passenger+legal,liability??NaN,0.03);
+ checks.liability_components_reconciled=cngKitComplete&&near((basicTp??NaN)+cngTp+ownerDriverCpa+passenger+legal,liability??NaN,0.03);
  const printedNet=cash(prem,/Net Premium\s*\(A\+B\+C(?:\+D)?\)\s*₹\s*([\d,.]+)/i);
  const net=cent((odPrinted??NaN)+(addonTotal??NaN)+(liability??NaN)+rsa);
  checks.net_premium_reconciled=near(net,printedNet??NaN,1.01);
  const igst=cash(prem,/IGST\s*@\s*18%\s*₹\s*([\d,.]+)/i);
- const sgst=cash(prem,/SGST\s*9%\s*₹\s*([\d,.]+)/i);
- const cgst=cash(prem,/CGST\s*9%\s*₹\s*([\d,.]+)/i);
+ const sgst=cash(prem,/\b(?:SGST(?:\s*\/\s*UGST)?|UGST)\s*@?\s*9%\s*₹\s*([\d,.]+)/i);
+ const cgst=cash(prem,/\bCGST\s*@?\s*9%\s*₹\s*([\d,.]+)/i);
  const tax=igst!==null?igst:(sgst!==null&&cgst!==null?cent(sgst+cgst):null);
  const gross=cash(prem,/Total Policy Premium\s*₹\s*([\d,.]+)/i);
  const headerGross=cash(text,/Premium Amount\s*\(Including GST\)\s*₹\s*([\d,.]+)/i);
@@ -255,12 +268,12 @@ function extract(raw){
   cpa_start_date:pa?.from??null,cpa_end_date:pa?.to??null,
   policy_issuance_date:chosenIssueDate,issue_date_source:issueDateSource,od_premium:odPrinted,addon_premium:addonTotal,tp_premium:basicTp,cpa_amount:ownerDriverCpa,
  };
- const rawPremium={basic_od:basicOd,ncb_discount:ncb,od_after_ncb:odPrinted,addons,addon_total:addonTotal,
+ const rawPremium={basic_od:basicOd,ncb_discount:ncb,od_after_ncb:odPrinted,cng_kit_od:cngOd,cng_kit_tp:cngTp,addons,addon_total:addonTotal,
   basic_tp:basicTp,owner_driver_cpa:ownerDriverCpa,paid_driver_liability:legal,
   unnamed_passenger_pa:passenger,total_liability:liability,roadside_assistance:rsa,
   printed_net:printedNet,component_net:net,tax,printed_gross:gross,
   receipt_date:receipt?iso(receipt):null,digital_signature_date:signed?iso(signed):null};
- const form={od_premium:odPrinted,addon_premium:addonTotal,tp_premium:cent((basicTp??NaN)+legal+passenger+rsa),cpa_amount:ownerDriverCpa};
+ const form={od_premium:odPrinted,addon_premium:addonTotal,tp_premium:cent((basicTp??NaN)+cngTp+legal+passenger+rsa),cpa_amount:ownerDriverCpa};
  const formNet=cent((form.od_premium??NaN)+(form.addon_premium??NaN)+(form.tp_premium??NaN)+form.cpa_amount);
  return {
   contract_version:'tata_aig_candidate_v2',review_required:true,auto_finalize_allowed:false,
