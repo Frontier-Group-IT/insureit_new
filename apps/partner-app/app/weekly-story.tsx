@@ -245,46 +245,216 @@ export default function WeeklyStoryScreen() {
   );
 }
 
-function HeroStat({ icon, iconBackground, value, label }: { icon: 'document-text' | 'people' | 'shield-checkmark'; iconBackground: string; value: number; label: string }) {
+
+/** Only existing native/OTA-safe React Native animation primitives are used here. */
+function useEntrance(animate: boolean, delay: number, duration = 410) {
+  const fade = useRef(new Animated.Value(animate ? 0 : 1)).current;
+  const rise = useRef(new Animated.Value(animate ? 9 : 0)).current;
+  useEffect(() => {
+    if (!animate) {
+      fade.setValue(1); rise.setValue(0);
+      return;
+    }
+    const motion = Animated.parallel([
+      Animated.timing(fade, { toValue: 1, duration, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(rise, { toValue: 0, duration, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]);
+    motion.start();
+    return () => motion.stop();
+  }, [animate, delay, duration, fade, rise]);
+  return { opacity: fade, transform: [{ translateY: rise }] };
+}
+
+function Entrance({ children, style, animate, delay = 0 }: { children: ReactNode; style?: ViewStyle; animate: boolean; delay?: number }) {
+  const motion = useEntrance(animate, delay);
+  return <Animated.View style={[style, motion]}>{children}</Animated.View>;
+}
+
+function AnimatedNumber({ value, animate, duration = 900, delay = 0, money = false, percent = false }: {
+  value: number; animate: boolean; duration?: number; delay?: number; money?: boolean; percent?: boolean;
+}) {
+  const motion = useRef(new Animated.Value(0)).current;
+  const [number, setNumber] = useState(animate ? 0 : value);
+  useEffect(() => {
+    if (!animate || !Number.isFinite(value) || value === 0) {
+      motion.stopAnimation();
+      motion.setValue(Number.isFinite(value) ? value : 0);
+      setNumber(Number.isFinite(value) ? value : 0);
+      return;
+    }
+    motion.setValue(0);
+    setNumber(0);
+    let displayed = Number.NaN;
+    const listener = motion.addListener(({ value: next }) => {
+      // Avoid more React work than necessary while displaying the count-up.
+      const rounded = money ? Math.round(next * 100) / 100 : percent ? Math.round(next * 10) / 10 : Math.round(next);
+      if (rounded !== displayed) { displayed = rounded; setNumber(rounded); }
+    });
+    const animation = Animated.timing(motion, { toValue: value, duration, delay, easing: Easing.out(Easing.cubic), useNativeDriver: false });
+    animation.start(({ finished }) => { if (finished) setNumber(value); });
+    return () => { animation.stop(); motion.removeListener(listener); };
+  }, [motion, value, animate, duration, delay, money, percent]);
+  return <>{money ? formatIndianCurrency(number) : percent ? Math.abs(number).toFixed(1) + '%' : Math.round(number).toLocaleString('en-IN')}</>;
+}
+
+function AnimatedCurrency({ value, style, animate }: { value: number; style: TextStyle; animate: boolean }) {
+  return <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={style}>
+    <AnimatedNumber value={value} money animate={animate} duration={1400} />
+  </Text>;
+}
+function AnimatedCurrencyText({ value, animate }: { value: number; animate: boolean }) {
+  return <AnimatedNumber value={value} money animate={animate} duration={1000} />;
+}
+
+function HeroStat({ icon, iconBackground, value, label, animate, delay }: {
+  icon: 'document-text' | 'people' | 'shield-checkmark'; iconBackground: string; value: number; label: string; animate: boolean; delay: number;
+}) {
+  const motion = useEntrance(animate, delay);
+  const scale = useRef(new Animated.Value(animate ? 0.9 : 1)).current;
+  useEffect(() => {
+    if (!animate) { scale.setValue(1); return; }
+    const spring = Animated.spring(scale, { toValue: 1, friction: 10, tension: 75, delay, useNativeDriver: true });
+    spring.start();
+    return () => spring.stop();
+  }, [animate, delay, scale]);
   return (
-    <View style={styles.stat}>
-      <View style={[styles.statIcon, { backgroundColor: iconBackground }]}><Ionicons name={icon} size={20} color="#FFFFFF" /></View>
-      <View style={styles.statCopy}><Text style={styles.statValue}>{value}</Text><Text numberOfLines={1} style={styles.statLabel}>{label}</Text></View>
-    </View>
+    <Animated.View style={[styles.stat, motion]}>
+      <Animated.View style={[styles.statIcon, { backgroundColor: iconBackground, transform: [{ scale }] }]}>
+        <Ionicons name={icon} size={20} color="#FFFFFF" />
+      </Animated.View>
+      <View style={styles.statCopy}>
+        <Text style={styles.statValue}><AnimatedNumber value={value} animate={animate} duration={900} delay={delay} /></Text>
+        <Text numberOfLines={1} style={styles.statLabel}>{label}</Text>
+      </View>
+    </Animated.View>
   );
 }
 
-function Trend({ value, caption }: { value: number; caption?: string }) {
-  const positive = value >= 0;
-  const color = positive ? '#14845F' : '#D52234';
-  const backgroundColor = positive ? '#EAF8F2' : '#FFF0F2';
+function Trend({ value, caption, animate }: { value: number; caption?: string; animate: boolean }) {
+  const positive = value > 0;
+  const negative = value < 0;
+  const color = positive ? '#14845F' : negative ? '#D52234' : '#667085';
+  const backgroundColor = positive ? '#EAF8F2' : negative ? '#FFF0F2' : '#F2F4F7';
+  const trendMotion = useEntrance(animate, 90, 300);
   return (
     <View style={[styles.trend, { backgroundColor }]}>
-      <Ionicons name={positive ? 'trending-up' : 'trending-down'} size={24} color={color} />
+      <Animated.View style={trendMotion}>
+        <Ionicons name={positive ? 'trending-up' : negative ? 'trending-down' : 'remove-outline'} size={24} color={color} />
+      </Animated.View>
       <View style={styles.trendCopy}>
-        <Text numberOfLines={1} style={[styles.trendValue, { color }]}>{Math.abs(value).toFixed(1)}%</Text>
-        <Text numberOfLines={2} style={[styles.trendCaption, { color }]}>{caption ?? (positive ? 'Higher than last week' : 'Lower than last week')}</Text>
+        <Text numberOfLines={1} style={[styles.trendValue, { color }]}>
+          <AnimatedNumber value={value} animate={animate} duration={850} percent />
+        </Text>
+        <Text numberOfLines={2} style={[styles.trendCaption, { color }]}>
+          {caption ?? (positive ? 'Higher than last week' : negative ? 'Lower than last week' : 'Unchanged from last week')}
+        </Text>
       </View>
     </View>
   );
 }
 
-function GrowthBars() {
+/** Heights are the existing decorative artwork, NOT real daily premium analytics. */
+function AnimatedBar({ height, index, animate, reflection = false }: { height: number; index: number; animate: boolean; reflection?: boolean }) {
+  const growth = useRef(new Animated.Value(animate ? 0 : 1)).current;
+  useEffect(() => {
+    if (!animate) { growth.setValue(1); return; }
+    const animation = Animated.timing(growth, {
+      toValue: 1, duration: 580, delay: (reflection ? 220 : 110) + index * 90,
+      easing: Easing.out(Easing.cubic), useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [animate, index, growth, reflection]);
+  const transform = [
+    { translateY: growth.interpolate({ inputRange: [0, 1], outputRange: [height / 2, 0] }) },
+    { scaleY: growth },
+  ];
+  const originalOpacity = reflection ? 0.28 + index * 0.14 : 0.7 + index * 0.05;
+  return <Animated.View style={[reflection ? styles.reflectionBar : styles.growthBar, { height, opacity: originalOpacity, transform }]} />;
+}
+function GrowthBars({ animate }: { animate: boolean }) {
   const heights = [22, 34, 48, 38, 50, 68];
-  return <View pointerEvents="none" style={styles.growthBars}>{heights.map((height, index) => <View key={`${height}-${index}`} style={[styles.growthBar, { height, opacity: 0.7 + index * 0.05 }]} />)}</View>;
+  return <View pointerEvents="none" style={styles.growthBars}>
+    {heights.map((height, index) => <AnimatedBar key={index} height={height} index={index} animate={animate} />)}
+  </View>;
 }
 
 function MiniBars() {
   return <View style={styles.miniBars}><View style={[styles.miniBar, { height: 10 }]} /><View style={[styles.miniBar, { height: 16 }]} /><View style={[styles.miniBar, { height: 23 }]} /></View>;
 }
 
-function ReflectionGrowth() {
+function ReflectionGrowth({ animate }: { animate: boolean }) {
+  const motion = useEntrance(animate, 400);
   return (
     <View pointerEvents="none" style={styles.reflectionGrowth}>
-      <Ionicons name="arrow-up-outline" size={28} color="#69CFC2" style={styles.reflectionArrow} />
-      <View style={styles.reflectionBars}><View style={[styles.reflectionBar, { height: 18, opacity: 0.28 }]} /><View style={[styles.reflectionBar, { height: 31, opacity: 0.42 }]} /><View style={[styles.reflectionBar, { height: 48, opacity: 0.58 }]} /></View>
+      <Animated.View style={[styles.reflectionArrow, motion]}><Ionicons name="arrow-up-outline" size={28} color="#69CFC2" /></Animated.View>
+      <View style={styles.reflectionBars}>
+        {[18, 31, 48].map((height, index) => <AnimatedBar key={index} height={height} index={index} animate={animate} reflection />)}
+      </View>
     </View>
   );
+}
+
+function IconTurn({ children, animate }: { children: ReactNode; animate: boolean }) {
+  const turn = useRef(new Animated.Value(animate ? 0 : 1)).current;
+  useEffect(() => {
+    if (!animate) { turn.setValue(1); return; }
+    const animation = Animated.timing(turn, { toValue: 1, duration: 420, delay: 390, easing: Easing.out(Easing.cubic), useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [animate, turn]);
+  return <Animated.View style={{ transform: [{ rotate: turn.interpolate({ inputRange: [0, 1], outputRange: ['-10deg', '0deg'] }) }] }}>{children}</Animated.View>;
+}
+
+function DividerReveal({ animate }: { animate: boolean }) {
+  const growth = useRef(new Animated.Value(animate ? 0 : 1)).current;
+  useEffect(() => {
+    if (!animate) { growth.setValue(1); return; }
+    const animation = Animated.timing(growth, { toValue: 1, duration: 450, delay: 320, useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [animate, growth]);
+  return <View style={styles.headingRule}><Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#36AA97', transform: [{ scaleX: growth }] }]} /></View>;
+}
+
+function AmbientGlow({ animate, style, delay }: { animate: boolean; style: ViewStyle; delay: number }) {
+  const motion = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!animate) { motion.setValue(0); return; }
+    const animation = Animated.sequence([
+      Animated.delay(delay),
+      Animated.timing(motion, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]);
+    animation.start();
+    return () => animation.stop();
+  }, [animate, delay, motion]);
+  return <Animated.View pointerEvents="none" style={[style, {
+    transform: [{ translateX: motion.interpolate({ inputRange: [0, 1], outputRange: [-7, 7] }) }],
+  }]} />;
+}
+function WeeklySkeleton({ animate }: { animate: boolean }) {
+  const pulse = useRef(new Animated.Value(0.45)).current;
+  useEffect(() => {
+    if (!animate) { pulse.setValue(0.7); return; }
+    const shimmer = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 0.9, duration: 700, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0.45, duration: 700, useNativeDriver: true }),
+    ]));
+    shimmer.start();
+    return () => shimmer.stop();
+  }, [animate, pulse]);
+  return <View style={styles.weeklySkeleton} accessibilityRole="progressbar" accessibilityLabel="Loading your week">
+    <Animated.View style={[styles.skeletonHero, { opacity: pulse }]}>
+      <View style={[styles.skeletonLine, { width: '48%' }]} />
+      <View style={[styles.skeletonLine, { height: 34, width: '72%' }]} />
+      <View style={[styles.skeletonLine, { width: '63%' }]} />
+      <View style={[styles.skeletonLine, { width: '88%' }]} />
+    </Animated.View>
+    {[0, 1, 2].map((i) => <Animated.View key={i} style={[styles.skeletonCard, { opacity: pulse }]}>
+      <View style={[styles.skeletonLine, { width: i === 2 ? '40%' : '60%' }]} />
+      <View style={[styles.skeletonLine, { width: '82%' }]} />
+    </Animated.View>)}
+  </View>;
 }
 
 function comparisonDateRange(days: number) {
