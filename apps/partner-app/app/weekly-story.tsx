@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, Animated, AppState, Easing, Image, Pressable, StyleSheet, Text, View, type TextStyle, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerCasePageHeader } from '@/components/partner-case-page-header';
@@ -16,6 +18,10 @@ import { partnerTheme } from '@/lib/theme';
 
 export default function WeeklyStoryScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
+  const [foreground, setForeground] = useState(AppState.currentState === 'active');
+  const [reduceMotion, setReduceMotion] = useState(true);
+  const animate = isFocused && foreground && !reduceMotion;
   const [data, setData] = useState<PartnerWeeklyStory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,6 +30,27 @@ export default function WeeklyStoryScreen() {
   const [comparisonData, setComparisonData] = useState<PartnerBusinessRangeSummary | null>(null);
   const [comparisonLoading, setComparisonLoading] = useState(false);
   const [comparisonError, setComparisonError] = useState('');
+  const rangeRotation = useRef(new Animated.Value(0)).current;
+  const renewalPressScale = useRef(new Animated.Value(1)).current;
+  const pressRenewal = (pressed: boolean) => {
+    const animation = Animated.spring(renewalPressScale, { toValue: animate && pressed ? 0.985 : 1, speed: 22, bounciness: 0, useNativeDriver: true });
+    animation.start();
+  };
+  useEffect(() => () => renewalPressScale.stopAnimation(), [renewalPressScale]);
+
+  useEffect(() => {
+    let live = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((value) => { if (live) setReduceMotion(value); }).catch(() => {});
+    const motion = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    const app = AppState.addEventListener('change', (state) => setForeground(state === 'active'));
+    return () => { live = false; motion.remove(); app.remove(); };
+  }, []);
+
+  useEffect(() => {
+    const motion = Animated.timing(rangeRotation, { toValue: comparisonOpen ? 1 : 0, duration: animate ? 260 : 0, useNativeDriver: true });
+    motion.start();
+    return () => motion.stop();
+  }, [comparisonOpen, animate, rangeRotation]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -31,7 +58,6 @@ export default function WeeklyStoryScreen() {
     try {
       setData(await getPartnerWeeklyStory());
     } catch {
-      setData(null);
       setError('Your weekly summary could not be loaded.');
     } finally {
       setLoading(false);
@@ -74,9 +100,9 @@ export default function WeeklyStoryScreen() {
   return (
     <PartnerScreen title="A week with INSUREIT" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerCaseBottomNavigation activeTab="More" />}>
       <PartnerCasePageHeader title="A week with INSUREIT" icon="bar-chart-outline" onBack={() => router.back()} />
-      {loading ? (
-        <PartnerStateView state="loading" title="Loading your week" />
-      ) : error || !data ? (
+      {loading && !data ? (
+        <WeeklySkeleton animate={animate} />
+      ) : error && !data ? (
         <PartnerStateView
           state="error"
           title="Your week is temporarily unavailable"
@@ -84,11 +110,11 @@ export default function WeeklyStoryScreen() {
           actionLabel="Try again"
           onAction={() => void load()}
         />
-      ) : (
+      ) : data ? (
         <View style={styles.pageBody}>
-          <View style={styles.hero}>
-            <View pointerEvents="none" style={styles.heroGlowLarge} />
-            <View pointerEvents="none" style={styles.heroGlowSmall} />
+          <Entrance style={styles.hero} animate={animate} delay={0}>
+            <AmbientGlow animate={animate} style={styles.heroGlowLarge} delay={0} />
+            <AmbientGlow animate={animate} style={styles.heroGlowSmall} delay={220} />
 
             <View style={styles.heroTopRow}>
               <Text style={styles.dates}>{formatDate(data.week_start)} – {formatDate(data.week_end)}</Text>
@@ -100,25 +126,23 @@ export default function WeeklyStoryScreen() {
 
             <View style={styles.heroMainRow}>
               <View style={styles.heroCopy}>
-                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.heroValue}>
-                  {formatIndianCurrency(data.premium_this_week)}
-                </Text>
+                <AnimatedCurrency value={Number(data.premium_this_week ?? 0)} style={styles.heroValue} animate={animate} />
                 <Text style={styles.heroLabel}>Gross premium recorded this week</Text>
               </View>
-              <GrowthBars />
+              <GrowthBars animate={animate} />
             </View>
 
             <View style={styles.heroDivider} />
             <View style={styles.heroStats}>
-              <HeroStat icon="document-text" iconBackground="#6267E9" value={data.policies_this_week} label="Policies" />
+              <HeroStat icon="document-text" iconBackground="#6267E9" value={data.policies_this_week} label="Policies" animate={animate} delay={100} />
               <View style={styles.statDivider} />
-              <HeroStat icon="people" iconBackground="#28A790" value={data.customers_this_week} label="Customers added" />
+              <HeroStat icon="people" iconBackground="#28A790" value={data.customers_this_week} label="Customers added" animate={animate} delay={200} />
               <View style={styles.statDivider} />
-              <HeroStat icon="shield-checkmark" iconBackground="#D96C47" value={data.claims_progressed_this_week} label="Claims progressed" />
+              <HeroStat icon="shield-checkmark" iconBackground="#D96C47" value={data.claims_progressed_this_week} label="Claims progressed" animate={animate} delay={300} />
             </View>
-          </View>
+          </Entrance>
 
-          <View style={styles.comparisonSectionHeading}>
+          <Entrance style={styles.comparisonSectionHeading} animate={animate} delay={130}>
             <Text style={styles.sectionTitle}>{comparisonDays === 7 ? 'Compared with last week' : `Compared with previous ${comparisonDays} days`}</Text>
           <View style={styles.compareHeader}>
             <View style={styles.rangeWrap}>
@@ -128,7 +152,7 @@ export default function WeeklyStoryScreen() {
                 align="right"
                 menuWidth={142}
                 menu={(
-                  <View style={styles.rangeMenu}>
+                  <Entrance animate={animate && comparisonOpen} delay={0} style={styles.rangeMenu}>
                     {[7, 14, 30].map((days) => (
                       <Pressable
                         key={days}
@@ -137,6 +161,7 @@ export default function WeeklyStoryScreen() {
                         onPress={() => {
                           setComparisonDays(days as 7 | 14 | 30);
                           setComparisonOpen(false);
+                          void Haptics.selectionAsync().catch(() => {});
                         }}
                         style={({ pressed }) => [
                           styles.rangeOption,
@@ -148,7 +173,7 @@ export default function WeeklyStoryScreen() {
                         {comparisonDays === days ? <Ionicons name="checkmark" size={14} color="#1765C1" /> : null}
                       </Pressable>
                     ))}
-                  </View>
+                  </Entrance>
                 )}
               >
                 <Pressable
@@ -160,13 +185,13 @@ export default function WeeklyStoryScreen() {
                 >
                   <Ionicons name="calendar-outline" size={14} color="#33415F" />
                   <Text style={styles.rangePillText}>{`Last ${comparisonDays} days`}</Text>
-                  <Ionicons name={comparisonOpen ? 'chevron-up' : 'chevron-down'} size={14} color="#33415F" />
+                  <Animated.View style={{ transform: [{ rotate: rangeRotation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }] }}><Ionicons name="chevron-down" size={14} color="#33415F" /></Animated.View>
                 </Pressable>
               </PartnerAnchoredDropdown>
             </View>
           </View>
-          </View>
-          <View style={styles.compareCard}>
+          </Entrance>
+          <Entrance style={styles.compareCard} animate={animate} delay={180}>
 
             {comparisonLoading ? (
               <View style={styles.compareMessage}><Text style={styles.compareMessageText}>Updating comparison…</Text></View>
@@ -178,30 +203,34 @@ export default function WeeklyStoryScreen() {
                   <View style={styles.compareIcon}><MiniBars /></View>
                   <View style={styles.previousCopy}>
                     <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={styles.compareValue}>
-                      {formatIndianCurrency(comparisonDays === 7 ? data.premium_last_week : comparisonData?.premium_previous_period ?? 0)}
+                      <AnimatedCurrencyText value={Number(comparisonDays === 7 ? data.premium_last_week : comparisonData?.premium_previous_period ?? 0)} animate={animate} />
                     </Text>
                     <Text style={styles.compareLabel}>{comparisonDays === 7 ? 'Last week premium' : `Previous ${comparisonDays} days premium`}</Text>
                   </View>
                 </View>
                 <View style={styles.compareDivider} />
-                <Trend value={Number(comparisonDays === 7 ? data.premium_change_percent || 0 : comparisonData?.premium_change_percent ?? 0)} caption={comparisonDays === 7 ? undefined : `vs previous ${comparisonDays} days`} />
+                <Trend value={Number(comparisonDays === 7 ? data.premium_change_percent || 0 : comparisonData?.premium_change_percent ?? 0)} caption={comparisonDays === 7 ? undefined : `vs previous ${comparisonDays} days`} animate={animate} />
               </View>
             )}
-          </View>
+          </Entrance>
 
           <View style={styles.sectionHeader}>
             <Ionicons name="calendar-outline" size={23} color="#168C7B" />
             <Text style={styles.sectionTitle}>Coming next</Text>
-            <View style={styles.headingRule} />
+            <DividerReveal animate={animate} />
           </View>
+          <Entrance animate={animate} delay={350}>
+          <Animated.View style={{ transform: [{ scale: renewalPressScale }] }}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Open renewals"
             onPress={() => router.push('/renewals')}
+            onPressIn={() => pressRenewal(true)}
+            onPressOut={() => pressRenewal(false)}
             style={({ pressed }) => [styles.nextCard, pressed && styles.cardPressed]}
           >
             <View style={styles.nextIcon}>
-              <Image source={PartnerAssets.actions.quickRenewals} style={styles.nextArtwork} resizeMode="contain" />
+              <IconTurn animate={animate}><Image source={PartnerAssets.actions.quickRenewals} style={styles.nextArtwork} resizeMode="contain" /></IconTurn>
             </View>
             <View style={styles.nextBody}>
               <Text style={styles.nextTitle}>{data.renewals_next_week} renewal{data.renewals_next_week === 1 ? '' : 's'} next week</Text>
@@ -209,63 +238,246 @@ export default function WeeklyStoryScreen() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#0F3D8A" />
           </Pressable>
+          </Animated.View>
+          </Entrance>
 
-          <View style={styles.endCard}>
-            <View pointerEvents="none" style={styles.reflectionGlow} />
+          <Entrance style={styles.endCard} animate={animate} delay={450}>
+            <AmbientGlow animate={animate} style={styles.reflectionGlow} delay={200} />
             <View style={styles.reflectionIcon}><Ionicons name="document-text-outline" size={22} color="#079A87" /></View>
-            <View style={styles.reflectionCopy}>
+            <Entrance style={styles.reflectionCopy} animate={animate} delay={560}>
               <Text style={styles.endEyebrow}>WEEKLY REFLECTION</Text>
               <Text style={styles.endTitle}>{data.policies_this_week > 0 ? 'Real progress, recorded.' : 'A quiet week is still useful data.'}</Text>
               <Text style={styles.endText}>{data.policies_this_week > 0 ? 'Keep up the good work and continue building momentum this week.' : 'Use the signals from this week to focus the next conversation and opportunity.'}</Text>
-            </View>
-            <ReflectionGrowth />
-          </View>
+            </Entrance>
+            <ReflectionGrowth animate={animate} />
+          </Entrance>
         </View>
-      )}
+      ) : null}
     </PartnerScreen>
   );
 }
 
-function HeroStat({ icon, iconBackground, value, label }: { icon: 'document-text' | 'people' | 'shield-checkmark'; iconBackground: string; value: number; label: string }) {
+
+/** Only existing native/OTA-safe React Native animation primitives are used here. */
+function useEntrance(animate: boolean, delay: number, duration = 410) {
+  const fade = useRef(new Animated.Value(animate ? 0 : 1)).current;
+  const rise = useRef(new Animated.Value(animate ? 9 : 0)).current;
+  useEffect(() => {
+    if (!animate) {
+      fade.setValue(1); rise.setValue(0);
+      return;
+    }
+    fade.setValue(0); rise.setValue(9);
+    const motion = Animated.parallel([
+      Animated.timing(fade, { toValue: 1, duration, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(rise, { toValue: 0, duration, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]);
+    motion.start();
+    return () => motion.stop();
+  }, [animate, delay, duration, fade, rise]);
+  return { opacity: fade, transform: [{ translateY: rise }] };
+}
+
+function Entrance({ children, style, animate, delay = 0 }: { children: ReactNode; style?: ViewStyle; animate: boolean; delay?: number }) {
+  const motion = useEntrance(animate, delay);
+  return <Animated.View style={[style, motion]}>{children}</Animated.View>;
+}
+
+function AnimatedNumber({ value, animate, duration = 900, delay = 0, money = false, percent = false }: {
+  value: number; animate: boolean; duration?: number; delay?: number; money?: boolean; percent?: boolean;
+}) {
+  const motion = useRef(new Animated.Value(0)).current;
+  const previous = useRef<number | null>(null);
+  const played = useRef(false);
+  const [number, setNumber] = useState(animate ? 0 : value);
+  useEffect(() => {
+    if (!animate || !Number.isFinite(value) || value === 0) {
+      motion.stopAnimation();
+      motion.setValue(Number.isFinite(value) ? value : 0);
+      setNumber(Number.isFinite(value) ? value : 0);
+      previous.current = value;
+      return;
+    }
+    const start = played.current ? (previous.current ?? 0) : 0;
+    played.current = true;
+    previous.current = value;
+    motion.setValue(start);
+    setNumber(start);
+    let displayed = Number.NaN;
+    const listener = motion.addListener(({ value: next }) => {
+      // Avoid more React work than necessary while displaying the count-up.
+      const rounded = money ? Math.round(next * 100) / 100 : percent ? Math.round(next * 10) / 10 : Math.round(next);
+      if (rounded !== displayed) { displayed = rounded; setNumber(rounded); }
+    });
+    const animation = Animated.timing(motion, { toValue: value, duration, delay, easing: Easing.out(Easing.cubic), useNativeDriver: false });
+    animation.start(({ finished }) => { if (finished) setNumber(value); });
+    return () => { animation.stop(); motion.removeListener(listener); };
+  }, [motion, value, animate, duration, delay, money, percent]);
+  return <>{money ? formatIndianCurrency(number) : percent ? Math.abs(number).toFixed(1) + '%' : Math.round(number).toLocaleString('en-IN')}</>;
+}
+
+function AnimatedCurrency({ value, style, animate }: { value: number; style: TextStyle; animate: boolean }) {
+  return <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={style}>
+    <AnimatedNumber value={value} money animate={animate} duration={1400} />
+  </Text>;
+}
+function AnimatedCurrencyText({ value, animate }: { value: number; animate: boolean }) {
+  return <AnimatedNumber value={value} money animate={animate} duration={1000} />;
+}
+
+function HeroStat({ icon, iconBackground, value, label, animate, delay }: {
+  icon: 'document-text' | 'people' | 'shield-checkmark'; iconBackground: string; value: number; label: string; animate: boolean; delay: number;
+}) {
+  const motion = useEntrance(animate, delay);
+  const scale = useRef(new Animated.Value(animate ? 0.9 : 1)).current;
+  useEffect(() => {
+    if (!animate) { scale.setValue(1); return; }
+    scale.setValue(0.9);
+    const spring = Animated.spring(scale, { toValue: 1, friction: 10, tension: 75, delay, useNativeDriver: true });
+    spring.start();
+    return () => spring.stop();
+  }, [animate, delay, scale]);
   return (
-    <View style={styles.stat}>
-      <View style={[styles.statIcon, { backgroundColor: iconBackground }]}><Ionicons name={icon} size={20} color="#FFFFFF" /></View>
-      <View style={styles.statCopy}><Text style={styles.statValue}>{value}</Text><Text numberOfLines={1} style={styles.statLabel}>{label}</Text></View>
-    </View>
+    <Animated.View style={[styles.stat, motion]}>
+      <Animated.View style={[styles.statIcon, { backgroundColor: iconBackground, transform: [{ scale }] }]}>
+        <Ionicons name={icon} size={20} color="#FFFFFF" />
+      </Animated.View>
+      <View style={styles.statCopy}>
+        <Text style={styles.statValue}><AnimatedNumber value={value} animate={animate} duration={900} delay={delay} /></Text>
+        <Text numberOfLines={1} style={styles.statLabel}>{label}</Text>
+      </View>
+    </Animated.View>
   );
 }
 
-function Trend({ value, caption }: { value: number; caption?: string }) {
-  const positive = value >= 0;
-  const color = positive ? '#14845F' : '#D52234';
-  const backgroundColor = positive ? '#EAF8F2' : '#FFF0F2';
+function Trend({ value, caption, animate }: { value: number; caption?: string; animate: boolean }) {
+  const positive = value > 0;
+  const negative = value < 0;
+  const color = positive ? '#14845F' : negative ? '#D52234' : '#667085';
+  const backgroundColor = positive ? '#EAF8F2' : negative ? '#FFF0F2' : '#F2F4F7';
+  const trendMotion = useEntrance(animate, 90, 300);
   return (
     <View style={[styles.trend, { backgroundColor }]}>
-      <Ionicons name={positive ? 'trending-up' : 'trending-down'} size={24} color={color} />
+      <Animated.View style={trendMotion}>
+        <Ionicons name={positive ? 'trending-up' : negative ? 'trending-down' : 'remove-outline'} size={24} color={color} />
+      </Animated.View>
       <View style={styles.trendCopy}>
-        <Text numberOfLines={1} style={[styles.trendValue, { color }]}>{Math.abs(value).toFixed(1)}%</Text>
-        <Text numberOfLines={2} style={[styles.trendCaption, { color }]}>{caption ?? (positive ? 'Higher than last week' : 'Lower than last week')}</Text>
+        <Text numberOfLines={1} style={[styles.trendValue, { color }]}>
+          <AnimatedNumber value={value} animate={animate} duration={850} percent />
+        </Text>
+        <Text numberOfLines={2} style={[styles.trendCaption, { color }]}>
+          {caption ?? (positive ? 'Higher than last week' : negative ? 'Lower than last week' : 'Unchanged from last week')}
+        </Text>
       </View>
     </View>
   );
 }
 
-function GrowthBars() {
+/** Heights are the existing decorative artwork, NOT real daily premium analytics. */
+function AnimatedBar({ height, index, animate, reflection = false }: { height: number; index: number; animate: boolean; reflection?: boolean }) {
+  const growth = useRef(new Animated.Value(animate ? 0 : 1)).current;
+  useEffect(() => {
+    if (!animate) { growth.setValue(1); return; }
+    growth.setValue(0);
+    const animation = Animated.timing(growth, {
+      toValue: 1, duration: 580, delay: (reflection ? 220 : 110) + index * 90,
+      easing: Easing.out(Easing.cubic), useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [animate, index, growth, reflection]);
+  const transform = [
+    { translateY: growth.interpolate({ inputRange: [0, 1], outputRange: [height / 2, 0] }) },
+    { scaleY: growth },
+  ];
+  const originalOpacity = reflection ? 0.28 + index * 0.14 : 0.7 + index * 0.05;
+  return <Animated.View style={[reflection ? styles.reflectionBar : styles.growthBar, { height, opacity: originalOpacity, transform }]} />;
+}
+function GrowthBars({ animate }: { animate: boolean }) {
   const heights = [22, 34, 48, 38, 50, 68];
-  return <View pointerEvents="none" style={styles.growthBars}>{heights.map((height, index) => <View key={`${height}-${index}`} style={[styles.growthBar, { height, opacity: 0.7 + index * 0.05 }]} />)}</View>;
+  return <View pointerEvents="none" style={styles.growthBars}>
+    {heights.map((height, index) => <AnimatedBar key={index} height={height} index={index} animate={animate} />)}
+  </View>;
 }
 
 function MiniBars() {
   return <View style={styles.miniBars}><View style={[styles.miniBar, { height: 10 }]} /><View style={[styles.miniBar, { height: 16 }]} /><View style={[styles.miniBar, { height: 23 }]} /></View>;
 }
 
-function ReflectionGrowth() {
+function ReflectionGrowth({ animate }: { animate: boolean }) {
+  const motion = useEntrance(animate, 400);
   return (
     <View pointerEvents="none" style={styles.reflectionGrowth}>
-      <Ionicons name="arrow-up-outline" size={28} color="#69CFC2" style={styles.reflectionArrow} />
-      <View style={styles.reflectionBars}><View style={[styles.reflectionBar, { height: 18, opacity: 0.28 }]} /><View style={[styles.reflectionBar, { height: 31, opacity: 0.42 }]} /><View style={[styles.reflectionBar, { height: 48, opacity: 0.58 }]} /></View>
+      <Animated.View style={[{ position: 'absolute', right: 2, top: 0 }, motion]}><Ionicons name="arrow-up-outline" size={28} color="#69CFC2" style={{ transform: [{ rotate: '36deg' }] }} /></Animated.View>
+      <View style={styles.reflectionBars}>
+        {[18, 31, 48].map((height, index) => <AnimatedBar key={index} height={height} index={index} animate={animate} reflection />)}
+      </View>
     </View>
   );
+}
+
+function IconTurn({ children, animate }: { children: ReactNode; animate: boolean }) {
+  const turn = useRef(new Animated.Value(animate ? 0 : 1)).current;
+  useEffect(() => {
+    if (!animate) { turn.setValue(1); return; }
+    turn.setValue(0);
+    const animation = Animated.timing(turn, { toValue: 1, duration: 420, delay: 390, easing: Easing.out(Easing.cubic), useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [animate, turn]);
+  return <Animated.View style={{ transform: [{ rotate: turn.interpolate({ inputRange: [0, 1], outputRange: ['-10deg', '0deg'] }) }] }}>{children}</Animated.View>;
+}
+
+function DividerReveal({ animate }: { animate: boolean }) {
+  const growth = useRef(new Animated.Value(animate ? 0 : 1)).current;
+  useEffect(() => {
+    if (!animate) { growth.setValue(1); return; }
+    growth.setValue(0);
+    const animation = Animated.timing(growth, { toValue: 1, duration: 450, delay: 320, useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [animate, growth]);
+  return <View style={styles.headingRule}><Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#36AA97', transform: [{ scaleX: growth }] }]} /></View>;
+}
+
+function AmbientGlow({ animate, style, delay }: { animate: boolean; style: ViewStyle; delay: number }) {
+  const motion = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!animate) { motion.setValue(0); return; }
+    const animation = Animated.sequence([
+      Animated.delay(delay),
+      Animated.timing(motion, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]);
+    animation.start();
+    return () => animation.stop();
+  }, [animate, delay, motion]);
+  return <Animated.View pointerEvents="none" style={[style, {
+    transform: [{ translateX: motion.interpolate({ inputRange: [0, 1], outputRange: [-7, 7] }) }],
+  }]} />;
+}
+function WeeklySkeleton({ animate }: { animate: boolean }) {
+  const pulse = useRef(new Animated.Value(0.45)).current;
+  useEffect(() => {
+    if (!animate) { pulse.setValue(0.7); return; }
+    const shimmer = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 0.9, duration: 700, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0.45, duration: 700, useNativeDriver: true }),
+    ]));
+    shimmer.start();
+    return () => shimmer.stop();
+  }, [animate, pulse]);
+  return <View style={styles.weeklySkeleton} accessibilityRole="progressbar" accessibilityLabel="Loading your week">
+    <Animated.View style={[styles.skeletonHero, { opacity: pulse }]}>
+      <View style={[styles.skeletonLine, { width: '48%' }]} />
+      <View style={[styles.skeletonLine, { height: 34, width: '72%' }]} />
+      <View style={[styles.skeletonLine, { width: '63%' }]} />
+      <View style={[styles.skeletonLine, { width: '88%' }]} />
+    </Animated.View>
+    {[0, 1, 2].map((i) => <Animated.View key={i} style={[styles.skeletonCard, { opacity: pulse }]}>
+      <View style={[styles.skeletonLine, { width: i === 2 ? '40%' : '60%' }]} />
+      <View style={[styles.skeletonLine, { width: '82%' }]} />
+    </Animated.View>)}
+  </View>;
 }
 
 function comparisonDateRange(days: number) {
@@ -314,7 +526,7 @@ const styles = StyleSheet.create({
   compareCard: { borderRadius: 16, paddingHorizontal: 15, paddingTop: 13, paddingBottom: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5EAF2', shadowColor: '#163565', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   compareHeader: { position: 'relative', zIndex: 5, flexShrink: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
   sectionHeader: { marginTop: 19, marginBottom: 9, paddingHorizontal: 3, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 29 },
-  headingRule: { flex: 1, height: 2, marginLeft: 3, backgroundColor: '#36AA97' },
+  headingRule: { flex: 1, height: 2, marginLeft: 3, backgroundColor: 'transparent', overflow: 'hidden' },
   sectionTitle: { flexShrink: 1, color: '#07142F', fontSize: 15, lineHeight: 20, fontWeight: '800', letterSpacing: -0.2 },
   rangeWrap: { position: 'relative', zIndex: 10 },
   rangePill: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: '#E1E6EF', backgroundColor: '#FFFFFF' },
@@ -358,4 +570,8 @@ const styles = StyleSheet.create({
   reflectionArrow: { position: 'absolute', right: 2, top: 0, transform: [{ rotate: '36deg' }] },
   reflectionBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
   reflectionBar: { width: 12, borderTopLeftRadius: 6, borderTopRightRadius: 6, backgroundColor: '#64CFC1' },
+  weeklySkeleton: { gap: 18, paddingTop: 8, paddingBottom: 22 },
+  skeletonHero: { height: 192, borderRadius: 18, backgroundColor: '#CEE0F7', padding: 18, gap: 17 },
+  skeletonCard: { height: 86, borderRadius: 16, backgroundColor: '#E1EAF7', padding: 16, gap: 15 },
+  skeletonLine: { height: 13, borderRadius: 7, backgroundColor: '#F6FAFF' },
 });
