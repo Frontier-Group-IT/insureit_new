@@ -202,16 +202,276 @@ export default function LearnScreen() {
   );
 }
 
-function Stat({ value, label, icon, iconColor }: { value: number; label: string; icon: 'school' | 'checkbox'; iconColor: string }) {
+
+function useEntrance(animate: boolean, delay = 0) {
+  const fade = useRef(new Animated.Value(1)).current;
+  const rise = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!animate) { fade.setValue(1); rise.setValue(0); return; }
+    fade.setValue(0); rise.setValue(8);
+    const motion = Animated.parallel([
+      Animated.timing(fade, { toValue: 1, duration: 390, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(rise, { toValue: 0, duration: 390, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]);
+    motion.start();
+    return () => motion.stop();
+  }, [animate, delay, fade, rise]);
+  return { opacity: fade, transform: [{ translateY: rise }] };
+}
+
+function MotionEnter({ animate, delay = 0, children, style, accessibilityRole }: {
+  animate: boolean; delay?: number; children: ReactNode; style?: ViewStyle; accessibilityRole?: 'alert';
+}) {
+  const entrance = useEntrance(animate, delay);
+  return <Animated.View accessibilityRole={accessibilityRole} style={[style, entrance]}>{children}</Animated.View>;
+}
+
+function PulseIcon({ animate, children, delay = 0, pulse = false }: {
+  animate: boolean; children: ReactNode; delay?: number; pulse?: boolean;
+}) {
+  const scale = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!animate) { scale.setValue(1); return; }
+    scale.setValue(0.87);
+    const spring = Animated.spring(scale, { toValue: 1, friction: 9, tension: 82, delay, useNativeDriver: true });
+    spring.start();
+    return () => spring.stop();
+  }, [animate, delay, scale]);
+  useEffect(() => {
+    if (!animate || !pulse) return;
+    const bounce = Animated.sequence([
+      Animated.spring(scale, { toValue: 1.12, friction: 8, tension: 105, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, friction: 9, tension: 80, useNativeDriver: true }),
+    ]);
+    bounce.start();
+    return () => bounce.stop();
+  }, [pulse, animate, scale]);
+  return <Animated.View style={{ transform: [{ scale }] }}>{children}</Animated.View>;
+}
+
+function CountUp({ value, animate, delay = 0, style }: { value: number; animate: boolean; delay?: number; style: TextStyle }) {
+  const number = useRef(new Animated.Value(0)).current;
+  const [current, setCurrent] = useState(animate ? 0 : value);
+  useEffect(() => {
+    if (!animate || value === 0) { number.stopAnimation(); number.setValue(value); setCurrent(value); return; }
+    number.setValue(0); setCurrent(0);
+    let last = -1;
+    const listener = number.addListener(({ value: next }) => {
+      const rounded = Math.round(next);
+      if (last !== rounded) { last = rounded; setCurrent(rounded); }
+    });
+    const count = Animated.timing(number, { toValue: value, duration: 900, delay, easing: Easing.out(Easing.cubic), useNativeDriver: false });
+    count.start(({ finished }) => { if (finished) setCurrent(value); });
+    return () => { count.stop(); number.removeListener(listener); };
+  }, [number, value, animate, delay]);
+  return <Text style={style}>{current.toLocaleString('en-IN')}</Text>;
+}
+
+function Stat({ value, label, icon, iconColor, animate, delay, completedPulse = false }: {
+  value: number; label: string; icon: 'school' | 'checkbox'; iconColor: string; animate: boolean; delay: number; completedPulse?: boolean;
+}) {
+  const entrance = useEntrance(animate, delay);
   return (
-    <View style={styles.stat}>
-      <Ionicons name={icon} size={31} color={iconColor} />
+    <Animated.View style={[styles.stat, entrance]}>
+      <PulseIcon animate={animate} delay={delay} pulse={completedPulse}>
+        <Ionicons name={icon} size={31} color={iconColor} />
+      </PulseIcon>
       <View style={styles.statCopy}>
-        <Text style={styles.statValue}>{value}</Text>
+        <CountUp value={value} style={styles.statValue} animate={animate} delay={delay} />
         <Text style={styles.statLabel}>{label}</Text>
       </View>
-    </View>
+    </Animated.View>
   );
+}
+
+function StopwatchArtwork({ animate }: { animate: boolean }) {
+  const rotation = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!animate) { rotation.setValue(0); return; }
+    // A single subtle tick, not an ongoing countdown.
+    rotation.setValue(0);
+    const motion = Animated.sequence([
+      Animated.delay(190),
+      Animated.timing(rotation, { toValue: 1, duration: 160, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(rotation, { toValue: 0, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]);
+    motion.start();
+    return () => motion.stop();
+  }, [animate, rotation]);
+  return <Animated.View style={{ transform: [{ rotate: rotation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '7deg'] }) }] }}>
+    <Image source={require('../assets/partner/learn-stopwatch-reference.png')} style={styles.headerArtwork} resizeMode="contain" />
+  </Animated.View>;
+}
+
+function BulbArtwork({ animate }: { animate: boolean }) {
+  const glow = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!animate) { glow.setValue(0); return; }
+    const sequence = Animated.sequence([
+      Animated.timing(glow, { toValue: 1, duration: 550, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      Animated.timing(glow, { toValue: 0, duration: 550, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+    ]);
+    sequence.start();
+    return () => sequence.stop();
+  }, [animate, glow]);
+  return <View style={styles.lightbulbCircle}>
+    <Animated.View pointerEvents="none" style={[styles.bulbGlow, { opacity: glow }]} />
+    <Ionicons name="bulb" size={27} color="#0876E9" />
+  </View>;
+}
+
+function UnderlineReveal({ animate }: { animate: boolean }) {
+  const reveal = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!animate) { reveal.setValue(1); return; }
+    reveal.setValue(0);
+    const transition = Animated.timing(reveal, { toValue: 1, duration: 410, delay: 230, easing: Easing.out(Easing.cubic), useNativeDriver: true });
+    transition.start();
+    return () => transition.stop();
+  }, [animate, reveal]);
+  return <View style={styles.headingUnderline}><Animated.View style={[styles.underlineFill, { transform: [{ scaleX: reveal }] }]} /></View>;
+}
+
+function QuestionBorderGlow({ animate }: { animate: boolean }) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!animate) { opacity.setValue(0); return; }
+    const effect = Animated.sequence([
+      Animated.timing(opacity, { toValue: 0.55, duration: 500, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0, duration: 620, useNativeDriver: true }),
+    ]);
+    effect.start();
+    return () => effect.stop();
+  }, [animate, opacity]);
+  return <Animated.View pointerEvents="none" style={[styles.questionBorderHighlight, { opacity }]} />;
+}
+
+function QuizOption({ index, label, color, selected, correct, wrong, finished, submitting, animate, fresh, onChoose }: {
+  index: number; label: string; color: string; selected: boolean; correct: boolean; wrong: boolean;
+  finished: boolean; submitting: boolean; animate: boolean; fresh: boolean; onChoose: () => void;
+}) {
+  const entrance = useEntrance(animate, 245 + index * 80);
+  const scale = useRef(new Animated.Value(1)).current;
+  const selection = useRef(new Animated.Value(selected ? 1 : 0)).current;
+  const shake = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const effect = Animated.timing(selection, { toValue: selected ? 1 : 0, duration: animate ? 180 : 0, useNativeDriver: false });
+    effect.start();
+    return () => effect.stop();
+  }, [selected, animate, selection]);
+  useEffect(() => {
+    if (!(animate && fresh && wrong)) return;
+    const effect = Animated.sequence([6, -6, 4, -4, 0].map((toValue) =>
+      Animated.timing(shake, { toValue, duration: 45, useNativeDriver: true })));
+    effect.start();
+    return () => effect.stop();
+  }, [animate, fresh, wrong, shake]);
+  const press = (active: boolean) => {
+    if (!animate) return;
+    Animated.spring(scale, { toValue: active ? 0.985 : 1, friction: 9, tension: 100, useNativeDriver: true }).start();
+  };
+  useEffect(() => () => scale.stopAnimation(), [scale]);
+  const backgroundColor = selection.interpolate({ inputRange: [0, 1], outputRange: ['#FFFFFF', '#EFF6FF'] });
+  return (
+    <Animated.View style={[entrance, { transform: [...entrance.transform, { translateX: shake }, { scale }] }]}>
+      <Pressable
+        accessibilityRole="radio"
+        accessibilityLabel={'Answer ' + String.fromCharCode(65 + index) + ': ' + label}
+        accessibilityState={{ disabled: Boolean(finished || submitting), checked: Boolean(selected) }}
+        disabled={Boolean(finished || submitting)}
+        onPress={onChoose}
+        onPressIn={() => press(true)}
+        onPressOut={() => press(false)}
+        style={({ pressed }) => [styles.option, selected && styles.optionSelected, correct && fresh && styles.optionCorrect, wrong && fresh && styles.optionWrong, pressed && !finished && styles.optionPressed]}
+      >
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.optionFill, {
+          backgroundColor: correct && fresh ? '#ECF9F0' : wrong && fresh ? '#FFF0F0' : backgroundColor,
+        }]} />
+        <View style={[styles.optionIndexHalo, { backgroundColor: color + '12' }]}>
+          <PulseIcon animate={animate} delay={270 + index * 80}>
+            <View style={[styles.optionIndex, { backgroundColor: color }]}>
+              <Text style={styles.optionIndexText}>{String.fromCharCode(65 + index)}</Text>
+            </View>
+          </PulseIcon>
+        </View>
+        <Text style={[styles.optionText, (correct || wrong) && styles.optionTextStrong]}>{label}</Text>
+        <View style={[styles.radioOuter, selected && styles.radioOuterSelected, correct && styles.radioCorrect, wrong && styles.radioWrong]}>
+          {fresh && correct ? <Ionicons name="checkmark" size={15} color="#FFFFFF" /> :
+            fresh && wrong ? <Ionicons name="close" size={15} color="#FFFFFF" /> :
+            selected ? <View style={styles.radioCenter} /> : null}
+        </View>
+        {fresh && correct ? <ConfettiBurst animate={animate} /> : null}
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+function ConfettiBurst({ animate }: { animate: boolean }) {
+  const progress = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!animate) return;
+    progress.setValue(0);
+    const effect = Animated.timing(progress, { toValue: 1, duration: 780, easing: Easing.out(Easing.cubic), useNativeDriver: true });
+    effect.start();
+    return () => effect.stop();
+  }, [animate, progress]);
+  if (!animate) return null;
+  return <View style={styles.confettiAnchor} pointerEvents="none">
+    {['#F7BC39', '#28A790', '#6864E9', '#F57A55', '#58ADF5', '#F5C45E'].map((color, index) => {
+      const radians = index * Math.PI / 3;
+      return <Animated.View key={index} style={[styles.confettiDot, { backgroundColor: color,
+        opacity: progress.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 1, 0] }),
+        transform: [
+          { translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [0, Math.cos(radians) * 38] }) },
+          { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [0, Math.sin(radians) * 25] }) },
+        ],
+      }]} />;
+    })}
+  </View>;
+}
+
+function AnimatedSubmitButton({ enabled, submitting, animate, onSubmit }: {
+  enabled: boolean; submitting: boolean; animate: boolean; onSubmit: () => void;
+}) {
+  const activation = useRef(new Animated.Value(enabled ? 1 : 0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    const motion = Animated.timing(activation, { toValue: enabled ? 1 : 0, duration: animate ? 230 : 0, useNativeDriver: false });
+    motion.start();
+    return () => motion.stop();
+  }, [activation, enabled, animate]);
+  useEffect(() => () => scale.stopAnimation(), [scale]);
+  const backgroundColor = activation.interpolate({ inputRange: [0, 1], outputRange: ['#75A4E2', '#0756C5'] });
+  return <Animated.View style={[styles.submitButton, { backgroundColor, transform: [{ scale }] }]}>
+    <Pressable accessibilityRole="button" accessibilityLabel="Submit Answer"
+      accessibilityState={{ disabled: !enabled || submitting }}
+      disabled={!enabled || submitting}
+      onPress={onSubmit}
+      onPressIn={() => { if (animate) Animated.spring(scale, { toValue: 0.985, friction: 9, useNativeDriver: true }).start(); }}
+      onPressOut={() => { if (animate) Animated.spring(scale, { toValue: 1, friction: 9, useNativeDriver: true }).start(); }}
+      style={styles.submitButtonInner}>
+      {submitting ? <ActivityIndicator color="#FFFFFF" /> : <Ionicons name="paper-plane-outline" size={20} color="#FFFFFF" />}
+      <Text style={styles.submitText}>{submitting ? 'Submitting...' : 'Submit Answer'}</Text>
+    </Pressable>
+  </Animated.View>;
+}
+
+function LearnSkeleton({ animate }: { animate: boolean }) {
+  const opacity = useRef(new Animated.Value(0.6)).current;
+  useEffect(() => {
+    if (!animate) { opacity.setValue(0.75); return; }
+    const shimmer = Animated.loop(Animated.sequence([
+      Animated.timing(opacity, { toValue: 1, duration: 650, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0.6, duration: 650, useNativeDriver: true }),
+    ]));
+    shimmer.start();
+    return () => shimmer.stop();
+  }, [animate, opacity]);
+  return <View style={styles.loadingSkeleton} accessibilityRole="progressbar" accessibilityLabel="Loading today’s learning card">
+    <Animated.View style={[styles.skeletonStats, { opacity }]} />
+    <Animated.View style={[styles.skeletonQuestion, { opacity }]} />
+    {[0, 1, 2, 3].map((i) => <Animated.View key={i} style={[styles.skeletonOption, { opacity }]} />)}
+  </View>;
 }
 
 const styles = StyleSheet.create({
