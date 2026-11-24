@@ -7,6 +7,7 @@ import { loadLifeHealthCaseSummary } from "@/lib/life-health-case-summary";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { requireCapability } from "@/lib/master-data-server";
 import { getLifeTeamPortfolioReadFilter, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -30,14 +31,13 @@ export default async function LifeHealthCasesPage({ searchParams }: { searchPara
   const lineFilter: BusinessLineFilter = params?.line === "life" || params?.line === "health" ? params.line : "all";
   const admin = createSupabaseAdminClient();
   const [{ data: rows, error }, caseSummary] = await Promise.all([
-    downlineCaseFilter !== null
-      ? downlineCaseFilter.length
-        ? admin.from("life_health_cases").select("id,case_number,business_line,status,sourcing_date,product_name,proposal_number,premium_amount,customer_id,insurance_company_id,rm_name,lead_source,remarks,final_policy_id,created_at")
-            .or(downlineCaseFilter)
-            .order("created_at", { ascending: false }).limit(500).returns<CaseRow[]>()
-        : Promise.resolve({ data: [] as CaseRow[], error: null })
-      : admin.from("life_health_cases").select("id,case_number,business_line,status,sourcing_date,product_name,proposal_number,premium_amount,customer_id,insurance_company_id,rm_name,lead_source,remarks,final_policy_id,created_at").order("created_at", { ascending: false }).limit(500).returns<CaseRow[]>(),
-    downlineCaseFilter !== null ? Promise.resolve(null) : loadLifeHealthCaseSummary(admin),
+    fetchAllPages<CaseRow, unknown>((from, to) => {
+      let query = admin.from("life_health_cases").select("id,case_number,business_line,status,sourcing_date,product_name,proposal_number,premium_amount,customer_id,insurance_company_id,rm_name,lead_source,remarks,final_policy_id,created_at")
+        .order("created_at", { ascending: false }).order("id").range(from, to);
+      if (downlineCaseFilter !== null) query = query.or(downlineCaseFilter || "id.eq.00000000-0000-0000-0000-000000000000");
+      return query.returns<CaseRow[]>();
+    }),
+    loadLifeHealthCaseSummary(admin, downlineCaseFilter),
   ]);
   if (error) return <AppShell title="Life / Health Cases"><div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-[10px] text-red-700">Life / Health cases could not be loaded.</div></AppShell>;
   const allRows = rows ?? [];
