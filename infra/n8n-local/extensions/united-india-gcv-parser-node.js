@@ -166,9 +166,8 @@ function unitedIndiaGcvFlexible(t) {
  let rto=null, printedAuthority=null;
  for(const m of t.matchAll(/\bRegistration\s+Authority\b/gi)){
   const ctx=t.slice(m.index, m.index+900).split(/Amount in words/i)[0];
-  const found=ctx.match(/\bMP\s*\d{2}\s+([A-Z][A-Z ]{2,35}?)\s+INDIA\b/i)
-   ||ctx.match(/\b(KATNI)\s+ARTO\s+INDIA\b/i);
-  if(found){rto=found[1].trim().toUpperCase();printedAuthority=found[0].trim().replace(/\s+/g,' ').toUpperCase();break;}
+  const found=ctx.match(/\b(?:[A-Z]{2}\s*\d{2}\s+)?([A-Z]{3,}(?:\s+[A-Z]{3,}){0,3})\s+INDIA\b/i);
+  if(found){rto=found[1].trim().replace(/\s+ARTO$/i,'').toUpperCase();printedAuthority=found[0].trim().replace(/\s+/g,' ').toUpperCase();break;}
  }
  const od=amountAfter(t,/\bGross OD\(A\)\s*([\d,.]+)/i);
  const tp=amountAfter(t,/\bGross TP\(B\)\s*([\d,.]+)/i);
@@ -197,7 +196,7 @@ function unitedIndiaGcvFlexible(t) {
   vehicle_make:isTata?'Tata Motors':null,vehicle_model:model,vehicle_class:'Goods Carrying Vehicle',
   vehicle_fuel_type:fuel||null,vehicle_manufacturing_year:year,vehicle_capacity:capacity,
   vehicle_chassis_number:chassis,vehicle_engine_number:engine,
-  vehicle_rto_name:rto,vehicle_rto_state:rto?'Madhya Pradesh':null,
+  vehicle_rto_name:rto,vehicle_rto_state:(/(?:^|\s)MP\s*\d{2}\b/.test(printedAuthority??'')||registration?.startsWith('MP'))?'Madhya Pradesh':null,
   idv,cpa_premium:cpa!==null?cpa:cpaExcluded?0:null,
   _rtoRegistrationAuthorityVerified:!!rto,
  };
