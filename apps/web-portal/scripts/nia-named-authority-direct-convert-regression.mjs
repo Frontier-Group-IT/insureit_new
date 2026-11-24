@@ -122,7 +122,7 @@ assert.match(queue,/recognizedNiaTata/);
 assert.match(queue,/niaReview\.eligible/);
 assert.match(queue,/codes\.push\("booking_review_required"\)/);
 assert.match(signed,/isNewIndiaUnregistered/);
-assert.match(signed,/isNewIndiaUnregistered \|\| isUnitedNewVehicle/);
+assert.match(signed,/isNewIndiaUnregistered\s*\? fields\.filter/);
 assert.match(client,/canRetryReviewHeldPolicy/);
 assert.match(client,/Verify & Convert/);
 assert.match(client,/Active policy already exists for this chassis/);
