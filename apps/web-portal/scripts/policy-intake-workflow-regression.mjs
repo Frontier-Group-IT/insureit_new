@@ -116,8 +116,7 @@ assert(queue.includes('status: "Duplicate"'),"Detected duplicates must be remove
 assert(queue.includes("policy_type"),"Policy Intake queue payload must include the stored policy type");
 const retryActions=read("app/policy-intakes/retry-actions.ts");
 assert(retryActions.includes("requirePolicyIntakeViewer(id)"),"Retry-state lookup must verify ownership of the requested intake, including RM submitters");
-assert(retryActions.includes('hasEffectiveCapability(profile, "review_policy_intakes", "edit")'),"Retry-state lookup must only expose retryability to actual reviewers");
-assert(retryActions.includes("retryable: canReview && isPolicyIntakeOcrRetryable"),"Non-reviewers must never receive a retryable OCR action");
+assert(retryActions.includes("retryable:false"),"No user can initiate legacy OCR retry once n8n is authoritative");
 assert(retryActions.includes("await requirePolicyIntakeReviewer(id);"),"Actual OCR retry execution must remain reviewer-only");
 assert(retryActions.includes("old manual OCR retry is retired"),"Legacy manual retry must fail closed in favour of AI workbench");
 
