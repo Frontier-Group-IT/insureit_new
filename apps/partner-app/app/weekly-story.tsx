@@ -287,16 +287,22 @@ function AnimatedNumber({ value, animate, duration = 900, delay = 0, money = fal
   value: number; animate: boolean; duration?: number; delay?: number; money?: boolean; percent?: boolean;
 }) {
   const motion = useRef(new Animated.Value(0)).current;
+  const previous = useRef<number | null>(null);
+  const played = useRef(false);
   const [number, setNumber] = useState(animate ? 0 : value);
   useEffect(() => {
     if (!animate || !Number.isFinite(value) || value === 0) {
       motion.stopAnimation();
       motion.setValue(Number.isFinite(value) ? value : 0);
       setNumber(Number.isFinite(value) ? value : 0);
+      previous.current = value;
       return;
     }
-    motion.setValue(0);
-    setNumber(0);
+    const start = played.current ? (previous.current ?? 0) : 0;
+    played.current = true;
+    previous.current = value;
+    motion.setValue(start);
+    setNumber(start);
     let displayed = Number.NaN;
     const listener = motion.addListener(({ value: next }) => {
       // Avoid more React work than necessary while displaying the count-up.
