@@ -27,6 +27,7 @@ assert.match(editor, /h-10 w-full items-center justify-center gap-2 rounded-xl/,
 assert.match(editor, /aria-label="Add Remark"/, "Button is accessible");
 assert.match(editor, /onChange\(previous \?/, "New draft remarks append rather than replace history");
 assert.match(action, /remarks:remarks\|\|null/, "Create Case still persists submitted remarks");
-assert.match(caseDetail, /savedRemarks\.trim\(\)\|\|"No remarks added yet\."/,"Case Details Remarks tab continues reading saved history");
+assert.match(detail, /savedRemarks\.trim\(\)\?splitCaseRemarkHistory\(savedRemarks\)/, "Case Details Remarks tab continues reading saved history");
+assert.match(detail, /No remarks added yet\./, "Case Details retains the empty remarks state");
 assert.match(registerPage, /remarks: row\.remarks \|\| ""/, "Case Register retains persisted remarks mapping");
 console.log("Life/Health Create Case premium/payment/remarks row and saved remarks history regression passed.");
