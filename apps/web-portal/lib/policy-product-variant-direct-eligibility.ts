@@ -154,7 +154,7 @@ export function mapVerifiedProductVariantPremium(
    if(![p.cpa,p.addOn,p.odBasic,p.ncbPercent,p.ncbDiscount,p.odBasicAfterNcb].every(v=>v!==undefined&&Number.isFinite(v)&&v>=0)
      ||Math.abs(Math.round(((p.odBasicAfterNcb??0)+(p.addOn??0)-p.od)*100))>1
      ||Math.abs(Math.round(((p.odBasic??0)-(p.ncbDiscount??0)-(p.odBasicAfterNcb??0))*100))>1
-     ||Math.abs(Math.round(((p.odBasic??0)*(p.ncbPercent??0)/100)-(p.ncbDiscount??0))*100))>2
+      ||Math.abs(Math.round(((((p.odBasic??0)*(p.ncbPercent??0))/100)-(p.ncbDiscount??0))*100))>2
      ||(p.cpa??0)<=0)
      throw new Error("sbi_package_cpa_addon_split_invalid");
    return {od:cash(p.odBasicAfterNcb!),tp:cash(p.tp),addOnPremium:cash(p.addOn!),
