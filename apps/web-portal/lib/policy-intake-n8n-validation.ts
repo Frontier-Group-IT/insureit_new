@@ -347,8 +347,7 @@ export function validateTataAigN8nResponse(
   });
   // SAOD provides only new own-damage coverage. The policy may reference
   // a previous insurer's TP period, but that is not a new TP cover here.
-  if (REQUIRED_FIELDS.some(key => !(saod && (key === "third_party_start_date" || key === "third_party_end_date")) && !seen.has(key))
-)
+  if (REQUIRED_FIELDS.some(key => !(saod && (key === "third_party_start_date" || key === "third_party_end_date")) && !seen.has(key)))
     fail("n8n_required_field_missing");
   const issueField=fields.find(item=>item.key==="policy_issuance_date");
   // Explicit printed issuance is authoritative, not receipt or coverage start.
