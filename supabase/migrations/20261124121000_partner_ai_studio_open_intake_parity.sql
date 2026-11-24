@@ -24,7 +24,7 @@ begin
     or coalesce(v_access->'capabilities'->>'view_policy_intakes','none') not in ('view','edit','approve')
     or coalesce(v_access->'capabilities'->>'review_policy_intakes','none') not in ('edit','approve')
   then raise exception 'ai_studio_access_denied' using errcode='42501'; end if;
-  if p_filter not in ('open','action','in_review','processing') or p_filter is null
+  if p_filter not in ('open','action','in_review','processing','review','done') or p_filter is null
     or p_offset not between 0 and 2000 or p_limit not between 1 and 40
   then raise exception 'invalid_studio_filter' using errcode='22023'; end if;
 
@@ -75,12 +75,15 @@ begin
     select * from classified where bucket in ('action','in_review','processing')
   ), selected as (
     select * from open_items
-    where p_filter='open' or bucket=p_filter
+    where p_filter in ('open','review') or bucket=p_filter
     order by created_at desc,id desc limit p_limit offset p_offset
   )
   select jsonb_build_object(
     'counts',jsonb_build_object(
       'open',(select count(*) from open_items),
+      -- Compatibility during mobile OTA rollout: older apps use review/done.
+      'review',(select count(*) from open_items),
+      'done',0,
       'action',(select count(*) from open_items where bucket='action'),
       'in_review',(select count(*) from open_items where bucket='in_review'),
       'processing',(select count(*) from open_items where bucket='processing')
