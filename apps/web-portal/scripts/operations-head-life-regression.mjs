@@ -31,9 +31,9 @@ const policyDocuments=read("app/policies/policy-document-actions.ts");
 assert.match(policyDocuments,/profile.role === "operations_head_life"/);
 assert.match(policyDocuments,/canAccessPolicy\(profile.id, profile.role, documentRow.policy_id, "view_policies"\)/);
 const caseList=read("app/policies/life-health-cases/page.tsx");
-assert.ok(caseList.includes(".or(downlineCaseFilter)"));
+assert.ok(caseList.includes(".or(downlineCaseFilter ||"));
 assert.ok(caseList.includes("operationsHeadVisiblePolicyFilter"));
-assert.ok(caseList.includes("downlineCaseFilter !== null ? Promise.resolve(null)"));
+assert.ok(caseList.includes("loadLifeHealthCaseSummary(admin, downlineCaseFilter)"));
 const caseDetail=read("app/policies/life-health-cases/[id]/page.tsx");
 assert.ok(caseDetail.includes("request = request.or(downlineFilter)"));
 assert.ok(caseDetail.includes("LifeHealthCaseDetail"));
@@ -112,4 +112,4 @@ assert.ok(lifeCaseDetail.includes('onClick={()=>convert()}') && lifeCaseDetail.i
 const issuedCustomerSave = read("app/policies/life-health-issued-customer-edit-actions.ts");
 assert.match(issuedCustomerSave, /const policyId = clean\(formData\.get\("policyId"\)\);[\s\S]*?await requirePolicyEditor\(policyId\);/, "Issued Life/Health customer edit must authorize its exact policy record");
 assert.doesNotMatch(issuedCustomerSave, /requirePolicyEditor\(\)/, "Never call scoped Life/Health editor authorization without policy ID");
-console.log("Operations Head Life all-Life/Health visibility and downline-only writes regression passed.");
+console.log("Operations Head Life role restrictions and shared portfolio visibility regression passed.");
