@@ -196,63 +196,116 @@ export default function AiPolicyStudioScreen() {
           </Pressable>
         </View>
       </View>
-      <ScrollView style={s.scroll} contentContainerStyle={{paddingHorizontal:22,paddingTop:13,paddingBottom:36}}
+
+      <ScrollView style={s.scroll} contentContainerStyle={s.screenContent}
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={C.blue} onRefresh={refresh}/>}>
-        <View style={s.titleRow}>
-          <View style={{flex:1}}><Text style={s.eyebrow}>POLICY OPERATIONS</Text><Text style={s.subtitle}>Review PDFs, repair drafts and securely register policies.</Text></View>
-        </View>
-        <View style={s.hero}>
-          <View style={s.heroMain}>
-            <Text style={s.heroOverline}>ALL OPEN INTAKES</Text>
-            <Text style={s.heroNumber}>{count('open')}</Text>
-            <Text style={s.heroHint}>●  Live policy queue</Text>
+        <View style={s.summarySurface}>
+          <View style={s.summaryTop}>
+            <Image source={PartnerAssets.actions.quickPolicyIntake} style={s.summaryArtwork} resizeMode="contain" accessible={false}/>
+            <View style={s.summaryText}>
+              <Text style={s.summaryOverline}>POLICY WORK QUEUE</Text>
+              <Text style={s.summaryMain}>{count('open')} Open Intakes</Text>
+              <Text style={s.summaryDescription}>Review, verify & convert policies</Text>
+            </View>
+            <View style={s.ringHolder} accessibilityLabel={reviewPercent+' percent of open intakes are in review'}>
+              {Array.from({length:24},(_,i)=>{
+                const angle=i*15;
+                return <Animated.View key={i} style={[s.ringTick,{
+                  backgroundColor: '#7757E5',
+                  opacity:ringProgress.interpolate({inputRange:[Math.max(0,i/24),(i+1)/24],outputRange:[0.14,1],extrapolate:'clamp'}),
+                  transform:[{rotate:angle+'deg'},{translateY:-18}],
+                }]}/>;
+              })}
+              <Text style={s.ringText}>{reviewPercent}%</Text>
+            </View>
           </View>
-          <View style={s.heroAside}>
-            <Text style={s.heroMini}>{count('processing')}</Text><Text style={s.heroAsideLabel}>Processing</Text>
-            <View style={s.heroDivider}/>
-            <Text style={s.heroMini}>{count('in_review')}</Text><Text style={s.heroAsideLabel}>In Review</Text>
+          <View style={s.summaryDivider}/>
+          <View style={s.summaryMetrics}>
+            {([
+              {key:'processing',title:'Processing',image:PartnerAssets.status.policyPending},
+              {key:'in_review',title:'In Review',image:PartnerAssets.status.pendingReview},
+              {key:'action',title:'Action',image:PartnerAssets.status.policyAttention},
+            ] as const).map(metric=>(
+              <View style={s.metric} key={metric.key}>
+                <Image source={metric.image} style={s.metricArtwork} resizeMode="contain" accessible={false}/>
+                <View style={s.metricCopy}>
+                  <Text style={s.metricLabel}>{metric.title}</Text>
+                  <Text style={s.metricValue}>{count(metric.key)}</Text>
+                </View>
+              </View>
+            ))}
           </View>
-          <View style={s.heroRing}/>
         </View>
-        <View style={s.quickGuide}><View style={s.guideIcon}><Ionicons name="flash-outline" size={18} color={C.blue}/></View><View style={{flex:1}}><Text style={s.guideTitle}>Your workflow</Text><Text style={s.guideText}>Open an intake → Reparse if needed → Verify & Convert</Text></View><Ionicons name="shield-checkmark-outline" size={20} color="#2D8065"/></View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabScroller} contentContainerStyle={s.segment}>
-          {TABS.map(tab=><Pressable key={tab.key} accessibilityRole="tab" accessibilityState={{selected:filter===tab.key}}
-            style={[s.segmentItem,filter===tab.key&&s.segmentActive]}
-            onPress={()=>{setFilter(tab.key);setPage(p=>({...p,rows:[]}));}}>
-            <Text style={[s.segmentLabel,filter===tab.key&&s.activeLabel]}>{tab.label}</Text>
-            <Text style={[s.segmentCount,filter===tab.key&&s.activeLabel]}>{count(tab.key)}</Text>
-          </Pressable>)}
-        </ScrollView>
-        <View style={s.sectionHead}><Text style={s.sectionTitle}>{filter==='open'?'All open policy intakes':filter==='action'?'Action required':filter==='in_review'?'In review':'Processing'}</Text>
-          <Text style={s.meta}>{count(filter)} records</Text></View>
-        {loading&&page.rows.length===0?<View style={s.center}><ActivityIndicator color={C.blue}/></View>:null}
-        {error?<Pressable style={s.error} onPress={()=>void reload()} accessibilityRole="button">
-          <Text style={s.errorText}>{error}</Text><Ionicons name="refresh" color="#A44935" size={18}/>
-        </Pressable>:null}
-        {!loading&&!error&&!page.rows.length?<View style={s.center}>
-          <Ionicons name="checkmark-circle-outline" color="#7DAB96" size={28}/>
-          <Text style={s.emptyHead}>All clear here</Text><Text style={s.emptyText}>No intakes in this view.</Text>
-        </View>:null}
-        {page.rows.length>0?<View style={s.list}>
-          {page.rows.map(row=>{
-            const done=!!row.final_policy_id,flag=row.exception_codes.length>0;
-            const status=done?'Completed':row.status==='in_review'?'In review':row.status==='processing'&&row.ocr_status!=='failed'?'Fetching details':'Action required';
-            return <Pressable key={row.id} accessibilityRole="button" accessibilityLabel={'Open '+row.intake_number}
-              style={({pressed})=>[s.row,pressed&&{backgroundColor:'#F2F6F4'}]} onPress={()=>openDetail(row)}>
-              <View style={[s.mark,{backgroundColor:done?'#54A983':flag?'#D7A662':'#8B9EDB'}]}/>
-              <View style={s.rowMain}><Text numberOfLines={1} style={s.rowTitle}>{row.intake_number.replace('PIR-','')}</Text>
-                <Text numberOfLines={1} style={s.rowSub}>{row.lead_source_name||row.policy_type||'Policy intake'}</Text></View>
-              <View style={s.rowRight}><Text style={[s.rowStatus,{color:done?'#398562':flag?'#A5773A':'#5C78A8'}]}>{status}</Text>
-                <Text style={s.rowChecks}>{row.checks_passed?String(row.checks_passed)+' checks':'Pending'}</Text></View>
-              <Ionicons name="chevron-forward" size={16} color="#9DADAF"/>
-            </Pressable>;
-          })}
-        </View>:null}
-        {!loading&&page.rows.length<count(filter)?<Pressable style={s.showMore} disabled={moreLoading}
-          onPress={()=>void reload(page.rows.length)} accessibilityRole="button">
-          {moreLoading?<ActivityIndicator color={C.ink} size="small"/>:<Text style={s.showMoreText}>Show more</Text>}
-        </Pressable>:null}
-        <Text style={s.footer}>SECURED BY INSUREIT · SUPABASE</Text>
+        <View style={s.listSection}>
+          <View style={s.listHeading}>
+            <Text style={s.listHeadingText}>Policy intakes</Text>
+            <Text style={s.recordPill}>{count(filter)} Records</Text>
+          </View>
+          <View style={s.intakePanel}>
+            <View style={s.searchBar}>
+              <Ionicons name="search-outline" size={16} color="#2274CF"/>
+              <TextInput value={search} onChangeText={setSearch} placeholder="Search customer or intake..."
+                placeholderTextColor="#8899B2" style={s.searchInput} autoCapitalize="none"
+                accessibilityLabel="Search intake or source across authorized records"
+                returnKeyType="search"/>
+              {search?<Pressable onPress={()=>setSearch('')} accessibilityRole="button" accessibilityLabel="Clear search">
+                <Ionicons name="close-circle" size={16} color="#91A1B3"/>
+              </Pressable>:<Ionicons name="options-outline" size={17} color="#6F88AA"/>}
+            </View>
+            <View style={s.tabsRow}>
+              {TABS.map(tab=><Pressable key={tab.key} style={s.tabItem}
+                accessibilityRole="tab" accessibilityState={{selected:filter===tab.key}}
+                onPress={()=>{setFilter(tab.key);setPage(p=>({...p,rows:[]}));}}>
+                <Text style={[s.tabText,filter===tab.key&&s.tabTextActive]}>{tab.label==='All Open'?'All':tab.label}</Text>
+              </Pressable>)}
+              <Animated.View pointerEvents="none" style={[s.tabUnderline,{
+                transform:[{translateX:Animated.multiply(tabProgress,1)}],
+                // The four equal-width tabs share the panel width; translate after onLayout below.
+              }]}/>
+            </View>
+            {loading&&page.rows.length===0||searchLoading?
+              <View accessibilityRole="progressbar" accessibilityLabel="Loading policy intakes" style={s.rowsLoading}>
+                {Array.from({length:4},(_,i)=><View key={i} style={s.skeletonRow}>
+                  <View style={s.skeletonIcon}/><View style={s.skeletonCopy}><View style={s.skeletonLineWide}/><View style={s.skeletonLineShort}/></View>
+                </View>)}
+              </View>:null}
+            {error?<Pressable style={s.error} onPress={()=>void reload()} accessibilityRole="button">
+              <Text style={s.errorText}>{error}</Text><Ionicons name="refresh" color="#A44935" size={18}/>
+            </Pressable>:null}
+            {searchError?<Text style={s.errorText}>{searchError}</Text>:null}
+            {!loading&&!searchLoading&&!error&&!searchError&&displayedRows.length===0?
+              <View style={s.compactEmpty}><Text style={s.emptyHead}>{debouncedSearch?'No matching intakes':'All clear here'}</Text>
+                <Text style={s.emptyText}>{debouncedSearch?'Try another intake number or source.':'No intakes in this view.'}</Text>
+              </View>:null}
+            {!loading&&!searchLoading&&displayedRows.map((row,index)=>{
+              const done=!!row.final_policy_id,flag=row.exception_codes.length>0;
+              const status=done?'Completed':row.status==='in_review'?'In review':row.status==='processing'&&row.ocr_status!=='failed'?'Fetching details':'Action required';
+              return <StudioRowEnter key={row.id} index={index} reduceMotion={reduceMotion}>
+                <Pressable accessibilityRole="button" accessibilityLabel={'Open '+row.intake_number}
+                  style={({pressed})=>[s.compactRow,pressed&&s.compactRowPressed]} onPress={()=>openDetail(row)}>
+                  <View style={s.rowArtworkShell}>
+                    <Image source={flag?PartnerAssets.status.policyAttention:PartnerAssets.actions.impactPolicyDocument}
+                      style={s.rowArtwork} resizeMode="contain" accessible={false}/>
+                  </View>
+                  <View style={s.rowMain}>
+                    <Text numberOfLines={1} style={s.rowTitle}>{row.intake_number.replace('PIR-','')}</Text>
+                    <Text numberOfLines={1} style={s.rowSub}>{row.lead_source_name||row.policy_type||'Policy intake'}</Text>
+                  </View>
+                  <View style={s.rowRight}>
+                    <Text numberOfLines={1} style={[s.rowStatus,{color:done?'#398562':flag?'#A5773A':'#5C78A8'}]}>{status}</Text>
+                    <Text numberOfLines={1} style={s.rowChecks}>{row.checks_passed?String(row.checks_passed)+' checks':'Pending'}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={15} color="#91A4B6"/>
+                </Pressable>
+              </StudioRowEnter>;
+            })}
+            {!debouncedSearch&&!loading&&page.rows.length<count(filter)?<Pressable style={s.showMore} disabled={moreLoading}
+              onPress={()=>void reload(page.rows.length)} accessibilityRole="button">
+              {moreLoading?<ActivityIndicator color={C.ink} size="small"/>:<Text style={s.showMoreText}>Show more</Text>}
+            </Pressable>:null}
+          </View>
+        </View>
       </ScrollView>
       <View style={[s.bottomNavigationShell,{paddingBottom:insets.bottom}]}>
         <PartnerCaseBottomNavigation activeTab="More" />
