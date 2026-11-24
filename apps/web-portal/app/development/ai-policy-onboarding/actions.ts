@@ -16,7 +16,6 @@ import { assessNiaNamedAuthorityUnregisteredConversion, assessStandardCommercial
 import { resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
 import { checkSemiAutoReadiness, type SemiAutoIssue } from "@/lib/policy-intake-semi-auto";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction, applySemiAutoN8nExtraction, type SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
-import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
 export type { SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
@@ -267,17 +266,6 @@ async function holdFailedAiConversion(id:string,issues:readonly SemiAutoIssue[]=
 // parser exemption: each record must still match its exact validated parser,
 // queue fingerprint, current signed PDF, and every canonical booking guard.
 // Other manual-lane Intakes retain their existing prohibition.
-const APPROVED_VARIANT_LEGACY_INTAKES:Readonly<Record<string,string>>={
-  "PIR-261120-12F51A":"united_india_tractor_tp_native_pdf",
-  "PIR-261120-74CC09":"go_digit_two_wheeler_od_native_pdf",
-  "PIR-261120-32D619":"zurich_kotak_private_car_tp_native_pdf",
-  "PIR-261120-370952":"zurich_kotak_private_car_tp_native_pdf",
-  "PIR-261120-6DE226":"zurich_kotak_private_car_tp_native_pdf",
-  "PIR-261120-A93337":"zurich_kotak_private_car_tp_native_pdf",
-  "PIR-261120-5BB199":"sbi_general_private_car_package_native_pdf",
-  "PIR-261124-FC9324":"hdfc_ergo_two_wheeler_tp_native_pdf",
-};
-
 export async function convertVerifiedAiIntake(id:string,confirmed:boolean):Promise<SemiAutoActionResult>{
   await requireDevelopmentPolicyOperator(id);
   // Invalid or unconfirmed requests do not mutate the queue.
@@ -323,28 +311,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
       &&(queued.state!=="verified"||queued.exception_codes.length>0))
       ||!queued.extraction_fingerprint)
     return fail("Extraction","The current Intake has other extraction or booking exceptions requiring review.");
-  // Manual-lane bypass is allowed solely for the four already-verified,
-  // user-approved 2026-11-20 intakes. No update to processing_lane is needed.
-  // Validate the persisted intake/queue relationship before allowing even a
-  // manual-lane PDF preview; all strict checks below remain mandatory.
-  let approvedManualRecovery=false;
-  if(segregatePolicyIntakeLanes()){
-    const {data:lane,error:laneError}=await admin.from("policy_intake_requests")
-      .select("intake_number,processing_lane,policy_type,final_policy_id")
-      .eq("id",id).maybeSingle<{
-        intake_number:string;processing_lane:string;policy_type:string|null;final_policy_id:string|null;
-      }>();
-    if(laneError||!lane)return fail("Processing lane","The current Intake processing lane could not be verified.");
-    approvedManualRecovery=lane.processing_lane==="manual"
-      &&lane.policy_type==="motor"&&!lane.final_policy_id
-      &&APPROVED_VARIANT_LEGACY_INTAKES[lane.intake_number]===queued.parser_id
-      &&PRODUCT_VARIANT_PARSERS.has(queued.parser_id??"")
-      &&hasVerifiedN8nParserEvidence(queued.parser_id??"",queued.checks_passed,[]);
-    if(lane.processing_lane!=="automation"&&!approvedManualRecovery)
-      return fail("Processing lane","Manual Intakes cannot be converted through the AI queue.");
-  }
-  const extracted=await previewSemiAutoN8nExtraction(id,
-    {allowManualLane:approvedManualRecovery});
+  const extracted=await previewSemiAutoN8nExtraction(id);
   if(!extracted.ok)return fail("Extraction",extracted.error);
   // Backward-compatible once for old IFFCO MP/NEW queue rows. The old
   // fingerprint excluded the printed *internal* registration reference.
@@ -967,10 +934,9 @@ export async function reprocessAiPolicyIntake(id: string): Promise<{ok:boolean;e
   // A reprocess request cannot reopen a registered/completed policy or
   // override the canonical Policy Intake duplicate exclusion.
   const {data:intake,error:intakeError}=await admin.from("policy_intake_requests")
-    .select("id,intake_number,status,policy_type,final_policy_id,created_at,ocr_fields,processing_lane")
+    .select("id,intake_number,status,policy_type,final_policy_id,created_at,ocr_fields")
     .eq("id",id).maybeSingle();
   if(intakeError||!intake||intake.policy_type!=="motor"
-    ||(segregatePolicyIntakeLanes() && intake.processing_lane!=="automation")
     ||!["processing","ready_for_review","in_review","needs_attention"].includes(intake.status)
     ||intake.final_policy_id){
     return{ok:false,error:"Only an open, unregistered Motor Intake can be reprocessed."};
@@ -1016,7 +982,7 @@ export async function reparseAndReplaceAiPolicyIntakeDraft(
   if(!isN8nWorkbenchPrimary())return{ok:false,error:"The n8n review workbench is not enabled."};
   const admin=createSupabaseAdminClient();
   const {data:intake,error}=await admin.from("policy_intake_requests")
-    .select("id,intake_number,status,policy_type,final_policy_id,created_at,processing_lane,ocr_fields")
+    .select("id,intake_number,status,policy_type,final_policy_id,created_at,ocr_fields")
     .eq("id",id).maybeSingle();
   if(error||!intake||intake.policy_type!=="motor"
       ||!(["processing","ready_for_review","in_review","needs_attention"].includes(intake.status))
@@ -1038,8 +1004,7 @@ export async function reparseAndReplaceAiPolicyIntakeDraft(
     return{ok:false,error:"This PDF is already being processed. Wait for that run to finish, then reparse."};
   }
 
-  // This is the explicit operator path for either lane. It does not change
-  // processing_lane; unsupported layouts remain manual and cannot be booked.
+  // Unsupported layouts remain in the same AI queue for parser training; no booking.
   const handoff=await prepareVerifiedN8nIntakeHandoff(
     id,null,null,false,false,undefined,undefined,true,
   );
@@ -1067,31 +1032,3 @@ export async function applySemiAutoN8nIntake(
 }
 
 
-/**
- * IT-only escape hatch for an untrained/failed automation Intake.
- * The service-role RPC atomically locks Intake + queue, requires a terminal
- * failure, and writes the exact actor/reason into audit_logs. It neither
- * re-extracts the PDF nor changes booking, ownership or reviewer assignment.
- */
-export async function transferFailedAiIntakeToManual(
-  id: string, reason: string,
-): Promise<{ok: true} | {ok: false; error: string}> {
-  if (!segregatePolicyIntakeLanes() || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(id)) {
-    return {ok:false,error:"The Intake lane transfer is not available."};
-  }
-  const why=reason.trim();
-  if(why.length<12 || why.length>500) {
-    return {ok:false,error:"Enter a specific reason between 12 and 500 characters."};
-  }
-  const actor=await requireDevelopmentPolicyOperator(id);
-  const admin=createSupabaseAdminClient();
-  const {data,error}=await admin.rpc("move_policy_intake_automation_to_manual_v1",{
-    p_intake_id:id,p_actor_id:actor.id,p_reason:why
-  });
-  if(error) return {ok:false,error:"The transfer could not be saved. Check the approved database migration."};
-  if(data!==true) return {ok:false,error:"Only unbooked, terminal failed/untrained Intakes can move to Manual Onboarding. Refresh and verify the current queue state."};
-  revalidatePath("/policy-intakes");
-  revalidatePath(`/policy-intakes/${id}`);
-  revalidatePath("/development/ai-policy-onboarding");
-  return {ok:true};
-}

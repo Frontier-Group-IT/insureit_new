@@ -49,7 +49,7 @@ export function PolicyIntakeForm({sources}:{sources:PolicyIntakeSource[]}){
       </div>
       {error?<div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-[10px] font-semibold text-red-700">{error}</div>:null}
       <button disabled={pending||!sources.length} className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#17365D] text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.20)] disabled:opacity-50">{pending?<><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"/>Saving policy intake…</>:<><FileText className="h-4 w-4"/>Submit Policy Intake</>}</button>
-      <div className="flex items-start gap-2 rounded-xl bg-[#F4F8FC] px-3 py-2.5 text-[9px] leading-4 text-[#667085]"><CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#159566]"/>{proposalForm?"Proposal form is optional for Life/Health. If provided, it is stored securely for review without OCR or detail extraction.":"Your policy copy and sales details are saved first. The request is accepted immediately while policy and vehicle details are fetched in the background."}</div>
+      <div className="flex items-start gap-2 rounded-xl bg-[#F4F8FC] px-3 py-2.5 text-[9px] leading-4 text-[#667085]"><CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#159566]"/>{proposalForm?"Life/Health proposals also enter AI automation. A supported parser will extract them; untrained formats remain Action Required. Without a document, the Intake needs a source upload.":"Your policy copy and sales details are saved first. The request is accepted immediately while policy and vehicle details are fetched in the background."}</div>
     </div>
   </section></form>;
 }

@@ -3,14 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { aiQueueEnabled, processAiQueueBatch } from "@/lib/ai-policy-onboarding-queue-server";
-import { extractPolicyIntakeDocument, type PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
-import { extractPolicyIntakeWithN8nFallback, extractPolicyIntakeWithN8nOnly, requiresN8nForIntake } from "@/lib/policy-intake-n8n-router";
-import { isN8nPolicyReadEnabled, incomingPolicyIntakeLane, segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
-import { isTrainedLocalN8nMotorPdf } from "@/lib/policy-intake-n8n-layout-eligibility";
+import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { canAccessIntermediary } from "@/lib/employee-access-scope";
 import { canAccessPolicy, getOperationsHeadDownlinePolicyScope } from "@/lib/policy-access-scope";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
-import { selectPolicyIntakeCustomerMatch, type PolicyIntakeCustomerIdentityCandidate } from "@/lib/policy-intake-customer-match";
 import { requirePolicyIntakeCreator, requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer, requirePolicyIntakeViewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { recordDailyWorkflowActivity } from "@/lib/daily-workflow-audit";
@@ -23,17 +19,6 @@ function isPolicyType(value:string):value is PolicyIntakePolicyType{return POLIC
 function isProposalType(value:string|null|undefined){return value==="life"||value==="health";}
 function cleanMobile(value:string){return value.replace(/\D/g,"").slice(-10);}
 function safeName(value:string){return value.trim().replace(/[^A-Za-z0-9._-]+/g,"-").replace(/-+/g,"-").replace(/^[-.]+|[-.]+$/g,"")||"policy-copy";}
-async function resolveMatchedCustomerIdByIdentity(admin:ReturnType<typeof createSupabaseAdminClient>,phone:string,insuredName:string){
-  const cleanPhone=cleanMobile(phone);
-  if(cleanPhone.length!==10||!insuredName.trim())return null;
-  const{data,error}=await admin.from("customers")
-    .select("id,contact_name,company_name")
-    .eq("phone",cleanPhone)
-    .limit(20)
-    .returns<PolicyIntakeCustomerIdentityCandidate[]>();
-  if(error)return null;
-  return selectPolicyIntakeCustomerMatch(data??[],insuredName);
-}
 function intakeNumber(){return `PIR-${new Date().toISOString().slice(2,10).replace(/-/g,"")}-${crypto.randomUUID().slice(0,6).toUpperCase()}`;}
 type UploadMeta={name:string;type:string;size:number};
 type PreparedUpload={ok:true;id:string;number:string;storagePath:string;signedUrl:string}|{ok:false;error:string};
@@ -111,15 +96,13 @@ export async function completePolicyIntakeUpload(input:{id:string;number:string;
   const{data:blob,error:downloadError}=await admin.storage.from(BUCKET).download(input.storagePath);
   if(downloadError||!blob)return{ok:false,error:`The ${proposal?"proposal form":"policy copy"} upload did not complete. Please try again.`};
   if(blob.size>MAX_FILE_SIZE)return{ok:false,error:`${proposal?"Proposal form":"Policy copy"} must be 15 MB or smaller.`};
-  const trainedLayout=segregatePolicyIntakeLanes() && isN8nPolicyReadEnabled() && aiQueueEnabled() && input.policyType==="motor"
-    ? await isTrainedLocalN8nMotorPdf(blob,input.file.type) : false;
-  const lane=incomingPolicyIntakeLane(input.policyType,aiQueueEnabled(),trainedLayout);
-  const manualSplit=segregatePolicyIntakeLanes() && lane==="manual";
-  const source=sourceResult.source,status=proposal||manualSplit?"ready_for_review":"processing",
-    ocrStatus=proposal?"completed":manualSplit?"failed":"pending";
+  // All formats enter automation, whether or not a parser is trained yet.
+  // Untrained PDFs remain in the same queue as actionable exceptions.
+  const source=sourceResult.source,status="processing" as const,
+    ocrStatus="pending" as const;
   const{error:insertError}=await admin.from("policy_intake_requests").insert({
     id:input.id,intake_number:input.number,status,policy_type:input.policyType,
-    ...(segregatePolicyIntakeLanes()?{processing_lane:lane}:{}),
+    processing_lane:"automation",
     submitted_by_profile_id:profile.id,lead_source_id:source.id,lead_source_type:source.intermediary_type,
     lead_source_name:source.display_name,lead_source_code:source.intermediary_code,
     customer_mobile:customerMobile,matched_customer_id:null,storage_bucket:BUCKET,
@@ -147,52 +130,34 @@ export async function completePolicyIntakeUpload(input:{id:string;number:string;
     return{ok:false,error:"The policy intake was saved, but document linking needs attention. Your uploaded file was preserved."};
   }
   revalidatePath("/policy-intakes");revalidatePath(`/policy-intakes/${input.id}`);
-  if(aiQueueEnabled() && (!segregatePolicyIntakeLanes() || lane==="automation")){
+  if(aiQueueEnabled()){
     // Run n8n as soon as the CURRENT document is saved, not on the next cron.
     // On request shutdown/error the one-minute durable queue drain retries it.
     after(async()=>{
       try { await processAiQueueBatch({preferredIntakeId:input.id}); }
       catch { console.error("[policy-intake] immediate n8n queue unavailable",{intakeId:input.id}); }
     });
-  } else if(!proposal && !manualSplit) after(async()=>{await processStoredOcr(input.id);});
-  // Manual lane has a saved PDF but no automatic OCR claim. Operations
-  // completes its separate workflow, or invokes n8n-only Read explicitly.
+  }
   return{ok:true,id:input.id,number:input.number,status};
 }
-
-async function processStoredOcr(id:string){const admin=createSupabaseAdminClient();const{data:intake}=await admin.from("policy_intake_requests").select("id,status,policy_type,storage_bucket,storage_path,file_name,mime_type,customer_mobile").eq("id",id).maybeSingle<{id:string;status:string;policy_type:string|null;storage_bucket:string;storage_path:string;file_name:string;mime_type:string|null;customer_mobile:string}>();if(!intake)return;if(isProposalType(intake.policy_type)){await admin.from("policy_intake_requests").update({status:"ready_for_review",ocr_status:"completed",ocr_fields:[],ocr_warnings:[],ocr_parser_id:null,ocr_parser_version:null}).eq("id",id).neq("status","completed");return;}if(intake.status!=="processing")return;await admin.from("policy_intake_requests").update({ocr_status:"processing"}).eq("id",id).eq("storage_path",intake.storage_path);// In opt-in required mode n8n downloads directly from private Storage;
- // do not download the PDF through the web server or invoke Google OCR.
- const ocr = intake.policy_type === "motor" && (requiresN8nForIntake(id) || isN8nPolicyReadEnabled())
-   ? await extractPolicyIntakeWithN8nOnly(id, intake.storage_path, isN8nPolicyReadEnabled())
-   : await (async () => {
-       const { data: blob, error } = await admin.storage.from(intake.storage_bucket).download(intake.storage_path);
-       if (error || !blob) return { ok: false as const, error: "The stored policy copy could not be read automatically." };
-       const file = new File([await blob.arrayBuffer()], intake.file_name, {
-         type: intake.mime_type || blob.type || "application/pdf",
-       });
-       const ocrForm = new FormData();
-       ocrForm.set("policy_document", file);
-       return extractPolicyIntakeWithN8nFallback(id, intake.storage_path, file, () => extractPolicyIntakeDocument(ocrForm));
-     })();if(!ocr.ok){await markOcrFailure(id,intake.storage_path,ocr.error);return;}const insuredName=ocr.fields.find(field=>field.key==="insured_name")?.value??"";const matchedCustomerId=await resolveMatchedCustomerIdByIdentity(admin,intake.customer_mobile,insuredName);await admin.from("policy_intake_requests").update({status:"ready_for_review",ocr_status:"completed",ocr_fields:ocr.fields,ocr_parser_id:ocr.parserId,ocr_parser_version:ocr.parserVersion,ocr_warnings:ocr.warnings,attention_reason:null,matched_customer_id:matchedCustomerId}).eq("id",id).eq("storage_path",intake.storage_path).eq("status","processing");}
-async function markOcrFailure(id:string,storagePath:string,message:string){const admin=createSupabaseAdminClient();await admin.from("policy_intake_requests").update({ocr_status:"failed",ocr_warnings:[message]}).eq("id",id).eq("storage_path",storagePath).eq("status","processing");}
 
 export async function preparePolicyIntakeResponseUpload(id:string,file:UploadMeta):Promise<PreparedUpload>{const profile=await requirePolicyIntakeCreator(),admin=createSupabaseAdminClient();const{data}=await admin.from("policy_intake_requests").select("id,intake_number,status,policy_type,submitted_by_profile_id").eq("id",id).maybeSingle<{id:string;intake_number:string;status:string;policy_type:string|null;submitted_by_profile_id:string}>();if(!data||data.submitted_by_profile_id!==profile.id)return{ok:false,error:"You do not have access to respond to this intake."};const metaError=validateMeta(file,isProposalType(data.policy_type));if(metaError)return{ok:false,error:metaError};if(data.status!=="needs_attention")return{ok:false,error:"Operations has not requested a replacement document for this intake."};const storagePath=`intakes/${id}/responses/${crypto.randomUUID()}-${safeName(file.name)}`,{data:signed,error}=await admin.storage.from(BUCKET).createSignedUploadUrl(storagePath,{upsert:false});if(error||!signed?.signedUrl)return{ok:false,error:"Could not prepare the replacement upload. Please try again."};return{ok:true,id,number:data.intake_number,storagePath,signedUrl:signed.signedUrl};}
 
 export async function completePolicyIntakeResponseUpload(input:{id:string;storagePath:string;file:UploadMeta}):Promise<SubmitPolicyIntakeResult>{
-  const profile=await requirePolicyIntakeCreator(),admin=createSupabaseAdminClient();const{data:intake}=await admin.from("policy_intake_requests").select("intake_number,status,policy_type,submitted_by_profile_id,processing_lane").eq("id",input.id).maybeSingle<{intake_number:string;status:string;policy_type:string|null;submitted_by_profile_id:string}>();if(!intake||intake.submitted_by_profile_id!==profile.id)return{ok:false,error:"You do not have access to respond to this intake."};if(segregatePolicyIntakeLanes() && (intake as typeof intake & {processing_lane?:string}).processing_lane==="automation")return{ok:false,error:"AI Automation owns this Intake; Operations cannot replace its verified document."};const proposal=isProposalType(intake.policy_type),metaError=validateMeta(input.file,proposal);if(metaError)return{ok:false,error:metaError};if(!input.storagePath.startsWith(`intakes/${input.id}/responses/`)||input.storagePath.includes(".."))return{ok:false,error:"The replacement upload reference is invalid."};if(intake.status!=="needs_attention")return{ok:false,error:"This intake no longer needs a response."};
+  const profile=await requirePolicyIntakeCreator(),admin=createSupabaseAdminClient();const{data:intake}=await admin.from("policy_intake_requests").select("intake_number,status,policy_type,submitted_by_profile_id").eq("id",input.id).maybeSingle<{intake_number:string;status:string;policy_type:string|null;submitted_by_profile_id:string}>();if(!intake||intake.submitted_by_profile_id!==profile.id)return{ok:false,error:"You do not have access to respond to this intake."};const proposal=isProposalType(intake.policy_type),metaError=validateMeta(input.file,proposal);if(metaError)return{ok:false,error:metaError};if(!input.storagePath.startsWith(`intakes/${input.id}/responses/`)||input.storagePath.includes(".."))return{ok:false,error:"The replacement upload reference is invalid."};if(intake.status!=="needs_attention")return{ok:false,error:"This intake no longer needs a response."};
   const{data:blob,error}=await admin.storage.from(BUCKET).download(input.storagePath);if(error||!blob)return{ok:false,error:"The replacement upload did not complete. Please try again."};if(blob.size>MAX_FILE_SIZE){await admin.storage.from(BUCKET).remove([input.storagePath]);return{ok:false,error:`${proposal?"Proposal form":"Policy copy"} must be 15 MB or smaller.`};}
   const{data:newDocument,error:documentError}=await admin.from("policy_intake_documents").insert({intake_id:input.id,source_kind:"replacement",storage_bucket:BUCKET,storage_path:input.storagePath,file_name:input.file.name,mime_type:input.file.type,file_size:blob.size,uploaded_by_profile_id:profile.id,is_current:false}).select("id").single<{id:string}>();if(documentError||!newDocument){await admin.storage.from(BUCKET).remove([input.storagePath]);return{ok:false,error:`Could not attach the replacement ${proposal?"proposal form":"policy copy"}.`};}
   await admin.from("policy_intake_documents").update({is_current:false}).eq("intake_id",input.id).eq("is_current",true);const{error:currentError}=await admin.from("policy_intake_documents").update({is_current:true}).eq("id",newDocument.id);if(currentError)return{ok:false,error:`Could not activate the replacement ${proposal?"proposal form":"policy copy"}.`};
-  const nextStatus=proposal||segregatePolicyIntakeLanes()?"ready_for_review":"processing",nextOcr=proposal?"completed":segregatePolicyIntakeLanes()?"failed":"pending";const{data:savedResponse,error:updateError}=await admin.from("policy_intake_requests").update({status:nextStatus,storage_path:input.storagePath,file_name:input.file.name,mime_type:input.file.type,file_size:blob.size,ocr_status:nextOcr,ocr_fields:[],ocr_warnings:[],ocr_parser_id:null,ocr_parser_version:null,attention_reason:null,assigned_to_profile_id:null}).eq("id",input.id).eq("status","needs_attention").eq("submitted_by_profile_id",profile.id).select("id").maybeSingle<{id:string}>();if(updateError||!savedResponse)return{ok:false,error:"Could not attach the replacement document."};
+  const nextStatus="processing" as const,nextOcr="pending" as const;const{data:savedResponse,error:updateError}=await admin.from("policy_intake_requests").update({status:nextStatus,storage_path:input.storagePath,file_name:input.file.name,mime_type:input.file.type,file_size:blob.size,ocr_status:nextOcr,ocr_fields:[],ocr_warnings:[],ocr_parser_id:null,ocr_parser_version:null,attention_reason:null,assigned_to_profile_id:null}).eq("id",input.id).eq("status","needs_attention").eq("submitted_by_profile_id",profile.id).select("id").maybeSingle<{id:string}>();if(updateError||!savedResponse)return{ok:false,error:"Could not attach the replacement document."};
   await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"policy_intake_requests",recordId:input.id,action:"policy_intake_response_uploaded"});
-  revalidatePath("/policy-intakes");revalidatePath(`/policy-intakes/${input.id}`);if(aiQueueEnabled() && !segregatePolicyIntakeLanes()){
+  revalidatePath("/policy-intakes");revalidatePath(`/policy-intakes/${input.id}`);if(aiQueueEnabled()){
     // Run n8n as soon as the CURRENT document is saved, not on the next cron.
     // On request shutdown/error the one-minute durable queue drain retries it.
     after(async()=>{
       try { await processAiQueueBatch({preferredIntakeId:input.id}); }
       catch { console.error("[policy-intake] immediate n8n queue unavailable",{intakeId:input.id}); }
     });
-  } else if(!proposal && !segregatePolicyIntakeLanes())after(async()=>{await processStoredOcr(input.id);});return{ok:true,id:input.id,number:intake.intake_number,status:nextStatus};
+  }return{ok:true,id:input.id,number:intake.intake_number,status:nextStatus};
 }
 
 export async function openPolicyIntakeDocument(id:string){const profile=await requirePolicyIntakeViewer(id),admin=createSupabaseAdminClient();const{data}=await admin.from("policy_intake_requests").select("submitted_by_profile_id,storage_bucket,storage_path").eq("id",id).maybeSingle<{submitted_by_profile_id:string;storage_bucket:string;storage_path:string}>();if(!data)return{ok:false as const,error:"Policy document is unavailable."};const[canReview,canFinalize]=await Promise.all([reviewerAccess(profile.id,profile.role),finalizerAccess(profile.id,profile.role)]);if(profile.role!=="operations_head_life"&&!canReview&&!canFinalize&&data.submitted_by_profile_id!==profile.id)return{ok:false as const,error:"You do not have access to this intake."};const{data:signed,error:storageError}=await admin.storage.from(data.storage_bucket).createSignedUrl(data.storage_path,300);
@@ -202,25 +167,14 @@ export async function openPolicyIntakeDocument(id:string){const profile=await re
   }
   return{ok:true as const,url:signed.signedUrl};}
 
-export async function loadPolicyIntakeOnboardingContext(id:string):Promise<{ok:true;context:PolicyIntakeOnboardingContext}|{ok:false;error:string}>{const profile=await requirePolicyIntakeFinalizer(id),admin=createSupabaseAdminClient();const{data}=await admin.from("policy_intake_requests").select("id,intake_number,submitted_by_profile_id,submitted_by_portal_account_id,lead_source_name,lead_source_type,customer_mobile,processing_lane").eq("id",id).maybeSingle<{id:string;intake_number:string;submitted_by_profile_id:string|null;submitted_by_portal_account_id:string|null;lead_source_name:string;lead_source_type:string;customer_mobile:string}>();if(!data)return{ok:false,error:"Policy Intake context is unavailable."};if(segregatePolicyIntakeLanes() && (data as typeof data & {processing_lane?:string}).processing_lane==="automation" && !["it_super_user","super_admin"].includes(profile.role??""))return{ok:false,error:"AI Automation owns this Intake; only an authorized AI reviewer may prepare onboarding."};const submittedBy=await resolvePolicyIntakeSubmitterName(admin,data.submitted_by_profile_id,data.submitted_by_portal_account_id);return{ok:true,context:{id:data.id,number:data.intake_number,submittedBy,leadSource:data.lead_source_name,leadSourceType:data.lead_source_type.toUpperCase(),customerMobile:data.customer_mobile}};}
+export async function loadPolicyIntakeOnboardingContext(id:string):Promise<{ok:true;context:PolicyIntakeOnboardingContext}|{ok:false;error:string}>{const profile=await requirePolicyIntakeFinalizer(id),admin=createSupabaseAdminClient();const{data}=await admin.from("policy_intake_requests").select("id,intake_number,submitted_by_profile_id,submitted_by_portal_account_id,lead_source_name,lead_source_type,customer_mobile,processing_lane").eq("id",id).maybeSingle<{id:string;intake_number:string;submitted_by_profile_id:string|null;submitted_by_portal_account_id:string|null;lead_source_name:string;lead_source_type:string;customer_mobile:string}>();if(!data)return{ok:false,error:"Policy Intake context is unavailable."};if(!["it_super_user","super_admin"].includes(profile.role??""))return{ok:false,error:"Only authorized IT/Admin may prepare automated Intake onboarding."};const submittedBy=await resolvePolicyIntakeSubmitterName(admin,data.submitted_by_profile_id,data.submitted_by_portal_account_id);return{ok:true,context:{id:data.id,number:data.intake_number,submittedBy,leadSource:data.lead_source_name,leadSourceType:data.lead_source_type.toUpperCase(),customerMobile:data.customer_mobile}};}
 
 export async function claimPolicyIntakeForReview(id:string){
-  const profile=await requirePolicyIntakeReviewer(id),admin=createSupabaseAdminClient();
-  const{data:intake,error:intakeError}=await admin.from("policy_intake_requests").select("id,intake_number,status,created_at,ocr_fields,processing_lane").eq("id",id).maybeSingle<{id:string;intake_number:string;status:string;created_at:string;ocr_fields:PolicyIntakeOcrField[]}>();
-  if(intakeError||!intake)return{ok:false as const,error:"This policy intake is unavailable. Refresh and try again."};
-  if(segregatePolicyIntakeLanes() && (intake as typeof intake & {processing_lane?:string}).processing_lane==="automation")return{ok:false as const,error:"This Intake belongs to AI Automation. Use its dedicated workbench."};
-  const duplicateCheck=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
-  if(!duplicateCheck.ok)return{ok:false as const,error:duplicateCheck.error};
-  if(duplicateCheck.matches.has(id))return{ok:false as const,error:"This policy intake is a duplicate and cannot be claimed for review."};
-  let claim=admin.from("policy_intake_requests").update({status:"in_review",assigned_to_profile_id:profile.id,attention_reason:null}).eq("id",id).in("status",["ready_for_review","in_review","processing"]).or(`assigned_to_profile_id.is.null,assigned_to_profile_id.eq.${profile.id}`);
-  if(segregatePolicyIntakeLanes())claim=claim.eq("processing_lane","manual");
-  const{data,error}=await claim.select("id").maybeSingle<{id:string}>();if(error||!data)return{ok:false as const,error:"This intake is already assigned or belongs to AI Automation."};
-  if(intake.status!=="in_review") await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"policy_intake_requests",recordId:id,action:"policy_intake_review_started"});
-  revalidatePath(`/policy-intakes/${id}`);revalidatePath("/policy-intakes");return{ok:true as const};
+  await requirePolicyIntakeReviewer(id);
+  return {ok:false as const,error:"Manual Intake review is retired. Use AI Policy Studio."};
 }
 export async function updatePolicyIntakeStatus(id:string,status:"needs_attention"|"rejected",reason:string){const profile=await requirePolicyIntakeReviewer(id),clean=reason.trim();if(!clean)return{ok:false as const,error:"Add a short reason."};const admin=createSupabaseAdminClient();
-  let manualStatus=admin.from("policy_intake_requests").update({status,attention_reason:clean,assigned_to_profile_id:profile.id}).eq("id",id).in("status",["processing","ready_for_review","in_review","needs_attention"]);
-  if(segregatePolicyIntakeLanes())manualStatus=manualStatus.eq("processing_lane","manual");
+  const manualStatus=admin.from("policy_intake_requests").update({status,attention_reason:clean,assigned_to_profile_id:profile.id}).eq("id",id).in("status",["processing","ready_for_review","in_review","needs_attention"]);
   const{data:saved,error}=await manualStatus.select("id").maybeSingle<{id:string}>();if(error||!saved)return{ok:false as const,error:"Could not update this intake."};
   await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"policy_intake_requests",recordId:id,action:status==="rejected"?"policy_intake_rejected":"policy_intake_attention_requested"});
   revalidatePath(`/policy-intakes/${id}`);revalidatePath("/policy-intakes");return{ok:true as const};}
@@ -228,7 +182,7 @@ export async function updatePolicyIntakeStatus(id:string,status:"needs_attention
 export async function completePolicyIntakeByPolicyCode(id:string,policyCode:string){
   const profile=await requirePolicyIntakeFinalizer(id),admin=createSupabaseAdminClient();const{data:policy}=await admin.from("policies").select("id").eq("policy_code",policyCode).maybeSingle<{id:string}>();if(!policy)return{ok:false as const,error:"Final policy could not be linked to the intake."};
   if(profile.role==="operations_head_life" && !(await canAccessPolicy(profile.id,profile.role,policy.id)))return{ok:false as const,error:"This booked policy is outside the authorized reporting hierarchy."};
-  const{data:intake}=await admin.from("policy_intake_requests").select("id,status,policy_type,assigned_to_profile_id,storage_bucket,storage_path,file_name,mime_type,file_size,processing_lane").eq("id",id).maybeSingle<{id:string;status:string;policy_type:string|null;assigned_to_profile_id:string|null;storage_bucket:string;storage_path:string;file_name:string;mime_type:string|null;file_size:number|null}>();if(!intake||intake.status!=="in_review"||intake.assigned_to_profile_id!==profile.id)return{ok:false as const,error:"Policy was booked but this intake is not assigned to you for finalization."};if(segregatePolicyIntakeLanes() && (intake as typeof intake & {processing_lane?:string}).processing_lane==="automation" && !["it_super_user","super_admin"].includes(profile.role??""))return{ok:false as const,error:"Only the authorized AI team may complete automated Intakes."};
+  const{data:intake}=await admin.from("policy_intake_requests").select("id,status,policy_type,assigned_to_profile_id,storage_bucket,storage_path,file_name,mime_type,file_size,processing_lane").eq("id",id).maybeSingle<{id:string;status:string;policy_type:string|null;assigned_to_profile_id:string|null;storage_bucket:string;storage_path:string;file_name:string;mime_type:string|null;file_size:number|null}>();if(!intake||intake.status!=="in_review"||intake.assigned_to_profile_id!==profile.id)return{ok:false as const,error:"Policy was booked but this intake is not assigned to you for finalization."};if(!["it_super_user","super_admin"].includes(profile.role??""))return{ok:false as const,error:"Only authorized IT/Admin may complete automated Intakes."};
   if(!isProposalType(intake.policy_type)){const{data:intakeDocument,error:intakeDocumentError}=await admin.from("policy_intake_documents").select("id,storage_bucket,storage_path").eq("intake_id",id).eq("is_current",true).maybeSingle<{id:string;storage_bucket:string;storage_path:string}>();if(intakeDocumentError||!intakeDocument||!intakeDocument.storage_bucket?.trim()||!intakeDocument.storage_path?.trim())return{ok:false as const,error:"Policy copy is required to complete registration. Upload or restore the current Policy Intake copy and try again."};if(intakeDocument.storage_bucket!==intake.storage_bucket||intakeDocument.storage_path!==intake.storage_path)return{ok:false as const,error:"The Policy Intake copy changed. Reload the intake before completing registration."};const{data:existing}=await admin.from("policy_documents").select("id").eq("storage_bucket",intake.storage_bucket).eq("storage_path",intake.storage_path).maybeSingle<{id:string}>();const documentPayload={policy_id:policy.id,document_type:"policy_copy",source_intake_id:id,source_intake_document_id:intakeDocument.id,storage_bucket:intake.storage_bucket,storage_path:intake.storage_path,file_name:intake.file_name,mime_type:intake.mime_type,file_size:intake.file_size,uploaded_by:profile.id};const documentResult=existing?await admin.from("policy_documents").update(documentPayload).eq("id",existing.id):await admin.from("policy_documents").insert(documentPayload);if(documentResult.error)return{ok:false as const,error:"Policy was booked, but its official policy copy could not be attached."};const{data:linkedCopy,error:linkedCopyError}=await admin.from("policy_documents").select("id").eq("policy_id",policy.id).eq("document_type","policy_copy").eq("source_intake_id",id).maybeSingle<{id:string}>();if(linkedCopyError||!linkedCopy)return{ok:false as const,error:"Policy was booked, but registration cannot be completed until the policy copy is attached."};}
   const{data:completed,error}=await admin.from("policy_intake_requests").update({status:"completed",final_policy_id:policy.id,finalized_by_profile_id:profile.id,finalized_at:new Date().toISOString(),attention_reason:null}).eq("id",id).eq("status","in_review").eq("assigned_to_profile_id",profile.id).select("id").maybeSingle<{id:string}>();if(error||!completed)return{ok:false as const,error:"Policy was booked, but the intake could not be closed automatically."};revalidatePath("/policy-intakes");revalidatePath(`/policies/${policy.id}`);return{ok:true as const};
 }

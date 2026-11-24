@@ -39,7 +39,7 @@ assert(aiUi.includes("const total = intakeCounts.action_required + intakeCounts.
 const actions=read("app/policy-intakes/actions.ts");
 
 assert(actions.includes("existingOriginalIntakeResult"),"Original intake completions must be idempotent");
-const originalCompletion = actions.slice(actions.indexOf("export async function completePolicyIntakeUpload("),actions.indexOf("async function processStoredOcr("));
+const originalCompletion = actions.slice(actions.indexOf("export async function completePolicyIntakeUpload("),actions.indexOf("export async function preparePolicyIntakeResponseUpload("));
 assert(!originalCompletion.includes(".remove("),"Original completion must never delete an uploaded file on database conflicts");
 assert(!originalCompletion.includes('.delete().eq("id",input.id)'),"Original completion must never delete an intake on a concurrent document conflict");
 assert(originalCompletion.includes("if(retry)return retry"),"Duplicate database inserts must resolve against the already-saved intake");
@@ -52,15 +52,15 @@ assert(actions.includes('profile.role === "claims_head" || await canAccessInterm
 assert(read("lib/policy-intake-server.ts").includes('profile.role === "claims_head"'),"Claims Head source list must include all active sources");
 assert(actions.includes('createSignedUploadUrl(storagePath,{upsert:false})'),"Large policy files must use direct signed storage upload instead of a Server Action request body");
 assert(actions.includes('.from("policy_intake_requests").insert('),"Submission must persist the intake before automatic extraction");
-assert(actions.includes('ocrStatus=proposal?"completed":manualSplit?"failed":"pending"')
-  && actions.includes('const lane=incomingPolicyIntakeLane(input.policyType,aiQueueEnabled(),trainedLayout)')
-  && actions.includes('await isTrainedLocalN8nMotorPdf(blob,input.file.type)')
-  && actions.includes('status=proposal||manualSplit?"ready_for_review":"processing"'),
-  "Default non-proposal Intake uses pending OCR, while manual lane skips automatic OCR and Life/Health proposals bypass it");
-assert(actions.includes('else if(!proposal && !manualSplit) after(async()=>{await processStoredOcr(input.id);})')
-  && actions.includes('if(aiQueueEnabled() && (!segregatePolicyIntakeLanes() || lane==="automation"))'),
-  "Automatic OCR may run only after non-proposal Intake submission and must never drain a manual-lane Intake");
-assert(actions.includes('if(isProposalType(intake.policy_type))'),"Background OCR must refuse Life/Health proposal forms server-side");
+assert(actions.includes('ocrStatus="pending" as const')
+  && actions.includes('processing_lane:"automation"')
+  && actions.includes('status="processing" as const')
+  && !actions.includes("manualSplit"),
+  "Every original Intake, including Life/Health, starts in one automation queue");
+assert(actions.includes('if(aiQueueEnabled())')
+  && actions.includes("processAiQueueBatch({preferredIntakeId:input.id})")
+  && !actions.includes("processStoredOcr("),
+  "All Policy Intakes use the n8n queue, not a silent legacy Google OCR fallback");
 assert(actions.includes('policy_type:input.policyType'),"New intake must persist the selected policy type");
 assert(!/from\(["']policies["']\)\s*\.insert\(/.test(actions),"Sales intake submission must never insert a real policy");
 assert(actions.includes('input.storagePath.startsWith(`intakes/${input.id}/original/`)'),"Original upload must use the isolated intake source-document prefix");
@@ -71,10 +71,14 @@ assert(actions.includes('.from("policy_intake_documents")'),"Original and replac
 assert(!actions.includes('remove([intake.storage_path])'),"Replacement uploads must not delete the previous policy copy");
 assert(actions.includes('.from("policy_documents")'),"Finalization must attach the accepted intake copy to the final policy");
 assert(actions.includes('if(!isProposalType(intake.policy_type))'),"Life/Health proposal forms must never be promoted as an official final policy copy");
-assert(actions.includes("loadPolicyIntakeDuplicateMatches(admin,[intake])"),"Claiming an intake for review must re-check duplicate status server-side");
-assert(actions.includes("duplicate and cannot be claimed for review"),"Duplicate intakes must be blocked from entering Operations review");
+assert(actions.includes("Manual Intake review is retired. Use AI Policy Studio."),"Direct manual intake claiming must be denied for all reviewers");
 assert(actions.includes("matched_customer_id:null"),"Policy Intake submission must not preselect a customer from mobile alone");
-assert(actions.includes("resolveMatchedCustomerIdByIdentity"),"Policy Intake OCR completion must resolve customer identity from mobile plus insured name");
+const aiWorker=read("lib/ai-policy-onboarding-queue-server.ts");
+assert(aiWorker.includes("const customerName=normalizedName(")
+  && aiWorker.includes("const phone=normalizedPhone(")
+  && aiWorker.includes("const exact=phoneMatches.filter(")
+  && aiWorker.includes("sharedPhoneHasDistinctNames:sharedDifferentNames"),
+  "AI assessment must compare normalized insured name AND mobile and never treat shared mobile as exact identity");
 assert.equal(selectPolicyIntakeCustomerMatch([
   {id:"cust-rajesh",contact_name:"Rajesh Kumar",company_name:null},
   {id:"cust-abc",contact_name:"Accounts Contact",company_name:"ABC Transport Pvt Ltd"},
@@ -88,7 +92,7 @@ assert(intakeForm.includes('fetch(signedUrl,{method:"PUT"'),"Browser must upload
 assert(intakeForm.includes("Saving policy intake"),"Sales submission must communicate immediate save instead of blocking on OCR");
 assert(intakeForm.includes("fetched in the background"),"Sales must be told policy and vehicle details are fetched in the background for Motor/Non-Motor");
 assert(intakeForm.includes("Proposal form"),"Life/Health intake must present the upload as a Proposal Form");
-assert(intakeForm.includes("without OCR or detail extraction"),"Life/Health helper messaging must state that proposal forms are stored without OCR/detail extraction");
+assert(intakeForm.includes("Life/Health proposals also enter AI automation"),"Proposal uploads must explain the unified automation and untrained review state");
 assert(intakeForm.includes("Upload couldn't be completed"),"Upload failures must stay on the form with a recoverable error");
 const reviewSummary=read("lib/policy-intake-review-summary.ts");
 const portfolioPage=read("app/policies/page.tsx");
@@ -111,19 +115,18 @@ assert(queue.includes('status: "Duplicate"'),"Detected duplicates must be remove
 assert(queue.includes("policy_type"),"Policy Intake queue payload must include the stored policy type");
 const retryActions=read("app/policy-intakes/retry-actions.ts");
 assert(retryActions.includes("requirePolicyIntakeViewer(id)"),"Retry-state lookup must verify ownership of the requested intake, including RM submitters");
-assert(retryActions.includes('hasEffectiveCapability(profile, "review_policy_intakes", "edit")'),"Retry-state lookup must only expose retryability to actual reviewers");
-assert(retryActions.includes("retryable: canReview && isPolicyIntakeOcrRetryable"),"Non-reviewers must never receive a retryable OCR action");
+assert(retryActions.includes("retryable:false"),"No user can initiate legacy OCR retry once n8n is authoritative");
 assert(retryActions.includes("await requirePolicyIntakeReviewer(id);"),"Actual OCR retry execution must remain reviewer-only");
-assert(retryActions.includes("proposal forms do not use policy OCR")||retryActions.includes("Proposal forms do not use policy OCR"),"OCR retry execution must reject Life/Health proposal forms server-side");
+assert(retryActions.includes("old manual OCR retry is retired"),"Legacy manual retry must fail closed in favour of AI workbench");
 
 const detail=read("app/policy-intakes/[id]/page.tsx");
 assert(detail.includes("PolicyIntakeResponseUpload"),"Needs-attention intake must expose the response uploader to its initiator");
 assert(/hasEffectiveCapability\(profile,\s*["']finalize_policy_intakes["'],\s*["']approve["']\)/.test(detail),"Detail page must distinguish Review from Finalize authority");
-assert(detail.includes("Manual review required"),"OCR technical failure must remain reviewable instead of blaming Sales");
+assert(detail.includes("Automated extraction needs attention"),"OCR technical failures must remain actionable in AI Studio");
 assert(detail.includes("Policy Intake Review")&&detail.includes("Vehicle details")&&detail.includes("Policy & premium"),"Intake detail must retain the compact pre-onboarding review structure");
 assert(detail.includes('source="Sales"')&&detail.includes('source="OCR"'),"Review page must distinguish Sales-supplied values from OCR proposals");
 assert(detail.includes("Duplicate policy intake")&&detail.includes("View Existing Policy"),"Duplicate detail must explain the match and link Operations to the existing policy");
-assert(detail.includes("duplicateBlocked")&&detail.includes("!duplicateBlocked && reviewer")&&detail.includes("!duplicateBlocked && finalizer"),"Duplicate detail must hide review and onboarding actions");
+assert(detail.includes("duplicateBlocked")&&!detail.includes("PolicyIntakeHandoffButton")&&!detail.includes("PolicyIntakeReviewActions"),"All intakes prohibit legacy direct manual review/booking");
 const workspace=read("components/policy-intake-workspace.tsx");
 assert(workspace.includes("Policy Intake Queue"),"Operations intake queue must use the register workspace");
 assert(workspace.includes("Action Required")&&workspace.includes("RegisterPagination"),"Operations intake queue must expose status views and pagination");
@@ -134,7 +137,7 @@ assert(workspace.includes('myActiveWork: baseFiltered.filter((row) => policyInta
 assert(workspace.includes('{ value: "in_review", label: "In Review", count: stats.inReview }'),"Reviewer queue must expose global In Review as a primary status bucket");
 assert(workspace.includes('My Active Work <span className="ml-1.5 opacity-80">{stats.myActiveWork}</span>'),"Reviewer queue must keep My Active Work as a separate personal shortcut");
 assert(workspace.includes("Policy Type"),"Policy Intake Queue must show Policy Type beside Lead Source");
-assert(workspace.includes('return "Stored"'),"Life/Health proposal-form detail status must render as Stored instead of Fetched");
+assert(workspace.includes('return "Action required"') && !workspace.includes('return "Stored"'),"Life/Health proposals must not masquerade as extracted or stored-only records");
 
 const contextCard=read("components/policy-intake-onboarding-context.tsx");
 assert(contextCard.includes("View Policy Copy"),"Policy Onboarding footer must keep the intake policy copy available to Operations");
