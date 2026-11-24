@@ -182,10 +182,8 @@ export default function ImpactScreen() {
       navyStatusBar
       bottomNavigationNavy
       bottomNavigation={<PartnerCaseBottomNavigation activeTab="Home" animateSelection />}
-      stickyFirstChild
-      scrollProps={{ onLayout: event => { viewport.current.height = event.nativeEvent.layout.height; checkVisible(); }, onScroll: event => { viewport.current = { y: event.nativeEvent.contentOffset.y, height: event.nativeEvent.layoutMeasurement.height }; checkVisible(); } }}
-    >
-      <View style={styles.pageHeader}>
+      fixedHeader={(
+        <View style={styles.pageHeader}>
         <Pressable accessibilityRole="button" accessibilityLabel="Back" hitSlop={8} onPress={() => router.back()} style={styles.headerBack}>
           <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
         </Pressable>
@@ -194,6 +192,10 @@ export default function ImpactScreen() {
           <Text style={styles.headerTitle} numberOfLines={1}>Protection delivered</Text>
         </View>
       </View>
+      )}
+      scrollProps={{ onLayout: event => { viewport.current.height = event.nativeEvent.layout.height; checkVisible(); }, onScroll: event => { viewport.current = { y: event.nativeEvent.contentOffset.y, height: event.nativeEvent.layoutMeasurement.height }; checkVisible(); } }}
+    >
+
 
       {loading ? (
         <PartnerStateView state="loading" title="Loading your impact" />
@@ -412,7 +414,7 @@ function ImpactIcon({ art, size, plain = false, footprint = false }: {
 
 const styles = StyleSheet.create({
   pageHeader: {
-    height: 52, marginHorizontal: -partnerTheme.spacing.lg, paddingHorizontal: 16,
+    height: 52, paddingHorizontal: 16,
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#0A234A',
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#244269',
   },
