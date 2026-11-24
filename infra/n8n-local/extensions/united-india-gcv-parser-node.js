@@ -248,7 +248,8 @@ function unitedIndiaPrivateCar(t){
  const fuel=grab(schedule,/\bCAR\s*\/\s*(Diesel|Petrol)\b/i);
  const specs=grab(schedule,/\b(20\d{2}\s+\d{3,5}\s+\d{1,2})\s*$/i);
  const year=grab(specs??'',/^(20\d{2})/),capacity=grab(specs??'',/^20\d{2}\s+(\d{3,5})/);
- const authority=grab(t.slice(i,i+4000),/\bRegistration Authority[^\n]*\n(MP20 JABALPUR INDIA)\b/i);
+ const authority=grab(t.slice(i,i+4000),/\bRegistration Authority[^\n]*\n((?:[A-Z]{2}\d{2}\s+)?[A-Z][A-Z ]{2,45}\s+INDIA)\b/i);
+ const authorityCity=authority?.replace(/^[A-Z]{2}\d{2}\s+/,'').replace(/\s+INDIA$/,'').trim()||null;
  const idv=amountAfter(t,/\b(\d{5,9})\s+0\s+0\s+0\s+0\s+0\s+\1\b/i);
  const od=amountAfter(t,/\bGross OD\(A\)\s*([\d,.]+)/i);
  const tp=amountAfter(t,/\bGross TP\(B\)\s*([\d,.]+)/i);
@@ -269,7 +270,7 @@ function unitedIndiaPrivateCar(t){
   vehicle_class:'Private Car',vehicle_make:model?'MARUTI SUZUKI':null,vehicle_model:model,
   vehicle_fuel_type:fuel,vehicle_manufacturing_year:year,vehicle_capacity:capacity,
   vehicle_chassis_number:pair?.[1]??null,vehicle_engine_number:pair?.[2]??null,
-  vehicle_rto_name:authority?'JABALPUR':null,vehicle_rto_state:authority?'Madhya Pradesh':null,
+  vehicle_rto_name:authorityCity,vehicle_rto_state:(authority?.startsWith('MP')||reg?.startsWith('MP'))?'Madhya Pradesh':null,
   idv,cpa_premium:cpaWaived?0:null};
  const premium={od,tp,net,gst,gross,stampDuty:stamp,odBasic:basicOd,
   ncbPercent,ncbDiscount};
