@@ -1,6 +1,7 @@
 // Standalone, anonymized n8n Code-node regression. Real PDFs are never committed.
 // Run: node infra/n8n-local/tests/united-india-gcv-layout-regression.mjs
 import assert from 'node:assert/strict';
+import {assessUiicGcvDirectConversion} from '../../../apps/web-portal/lib/policy-commercial-direct-eligibility.ts';
 import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {resolve, dirname} from 'node:path';
@@ -96,4 +97,33 @@ for(const [name,text] of [
  const r=parse(text);
  assert.equal(r.ok,false,name+' must fail closed');
 }
-console.log('United India GCV layout variants: 3 positive + Private Car guard + 6 hard negatives passed');
+
+const eligibility=r=>assessUiicGcvDirectConversion({
+ parserId:r.parser_id, checksPassed:Object.values(r.checks).filter(x=>x===true).length,
+ warnings:r.warnings,fields:r.fields,commercialPremium:r.premium_components,
+});
+for(const [label,r] of [['new petrol',goodsPetrol],['new diesel',goodsDiesel],['Katni registered',katni]]){
+ assert.equal(eligibility(r).eligible,true,label+': '+eligibility(r).reason);
+}
+const fakeAuthority=structuredClone(goodsPetrol);
+fakeAuthority.fields.find(f=>f.key==='vehicle_rto_name').evidence='Native PDF policy schedule';
+assert.equal(eligibility(fakeAuthority).eligible,false,'RTO name without authority label is not eligible');
+const fakeCpa=structuredClone(goodsDiesel);
+fakeCpa.fields.find(f=>f.key==='cpa_premium').evidence='Unverified CPA';
+assert.equal(eligibility(fakeCpa).eligible,false,'CPA amount without source evidence is not eligible');
+const wrongClass=structuredClone(goodsPetrol);
+wrongClass.fields.find(f=>f.key==='vehicle_class').value='Private Car';
+assert.equal(eligibility(wrongClass).eligible,false,'Wrong vehicle class not eligible');
+const inventedPlate=structuredClone(goodsPetrol);
+inventedPlate.fields.find(f=>f.key==='vehicle_registration_number').value='MP511234';
+assert.equal(eligibility(inventedPlate).eligible,false,'invented plate not eligible');
+const doubleCounted=structuredClone(goodsDiesel);
+doubleCounted.premium_components.tp+=325;
+assert.equal(eligibility(doubleCounted).eligible,false,'double-counted owner driver CPA not eligible');
+const action=readFileSync(resolve(here,'../../../apps/web-portal/app/development/ai-policy-onboarding/actions.ts'),'utf8');
+assert.match(action,/reverifiedUiicExtraction=uiicFailedSource/);
+assert.match(action,/assessUiicGcvDirectConversion/);
+assert.match(action,/mapVerifiedUiicGcvCommercialPremium/);
+assert.match(action,/extracted\.preview\.documentId===queued\.document_id/);
+
+console.log('United India GCV: 3 parser positives, 1 wrong-product block, 6 parser negatives, 3 direct-convert positives and 5 eligibility negatives passed');
