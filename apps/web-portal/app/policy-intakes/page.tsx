@@ -74,7 +74,7 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
   let zeroListMismatch = false;
   let zeroListCheckFailed = false;
   if (!error && organizationViewer && rows.length === 0) {
-    let counting = admin.from("policy_intake_requests").select("id", { count:"exact",head:true });
+    const counting = admin.from("policy_intake_requests").select("id", { count:"exact",head:true });
     const {count,error:countError}=await counting;
     zeroListCheckFailed = Boolean(countError);
     zeroListMismatch = !countError && (count ?? 0) > 0;
