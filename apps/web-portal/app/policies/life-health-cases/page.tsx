@@ -6,7 +6,7 @@ import { LifeHealthCaseRegister, type LifeHealthCaseRegisterRow } from "@/compon
 import { loadLifeHealthCaseSummary } from "@/lib/life-health-case-summary";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { requireCapability } from "@/lib/master-data-server";
-import { getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
+import { getLifeTeamPortfolioReadFilter, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -21,9 +21,10 @@ type BusinessLineFilter = "all" | "life" | "health";
 export default async function LifeHealthCasesPage({ searchParams }: { searchParams?: Promise<{ status?: string; line?: string }> }) {
   const profile = await requireCapability("view_policies");
   if (profile.role !== "operations_head_life") await requirePolicyCreator();
-  const downlineCaseFilter = profile.role === "operations_head_life"
+  const portfolioFilter = await getLifeTeamPortfolioReadFilter(profile.id, profile.role);
+  const downlineCaseFilter = portfolioFilter ?? (profile.role === "operations_head_life"
     ? operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
-    : null;
+    : null);
   const params = searchParams ? await searchParams : undefined;
   const filter: CaseFilter = params?.status === "issued" || params?.status === "rejected" || params?.status === "all" ? params.status : "pending";
   const lineFilter: BusinessLineFilter = params?.line === "life" || params?.line === "health" ? params.line : "all";
