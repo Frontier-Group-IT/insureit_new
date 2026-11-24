@@ -98,8 +98,8 @@ export async function completePolicyIntakeUpload(input:{id:string;number:string;
   if(blob.size>MAX_FILE_SIZE)return{ok:false,error:`${proposal?"Proposal form":"Policy copy"} must be 15 MB or smaller.`};
   // All formats enter automation, whether or not a parser is trained yet.
   // Untrained PDFs remain in the same queue as actionable exceptions.
-  const source=sourceResult.source,status=proposal?"ready_for_review":"processing",
-    ocrStatus=proposal?"completed":"pending";
+  const source=sourceResult.source,status="processing" as const,
+    ocrStatus="pending" as const;
   const{error:insertError}=await admin.from("policy_intake_requests").insert({
     id:input.id,intake_number:input.number,status,policy_type:input.policyType,
     processing_lane:"automation",
@@ -130,7 +130,7 @@ export async function completePolicyIntakeUpload(input:{id:string;number:string;
     return{ok:false,error:"The policy intake was saved, but document linking needs attention. Your uploaded file was preserved."};
   }
   revalidatePath("/policy-intakes");revalidatePath(`/policy-intakes/${input.id}`);
-  if(!proposal && aiQueueEnabled()){
+  if(aiQueueEnabled()){
     // Run n8n as soon as the CURRENT document is saved, not on the next cron.
     // On request shutdown/error the one-minute durable queue drain retries it.
     after(async()=>{
@@ -148,9 +148,9 @@ export async function completePolicyIntakeResponseUpload(input:{id:string;storag
   const{data:blob,error}=await admin.storage.from(BUCKET).download(input.storagePath);if(error||!blob)return{ok:false,error:"The replacement upload did not complete. Please try again."};if(blob.size>MAX_FILE_SIZE){await admin.storage.from(BUCKET).remove([input.storagePath]);return{ok:false,error:`${proposal?"Proposal form":"Policy copy"} must be 15 MB or smaller.`};}
   const{data:newDocument,error:documentError}=await admin.from("policy_intake_documents").insert({intake_id:input.id,source_kind:"replacement",storage_bucket:BUCKET,storage_path:input.storagePath,file_name:input.file.name,mime_type:input.file.type,file_size:blob.size,uploaded_by_profile_id:profile.id,is_current:false}).select("id").single<{id:string}>();if(documentError||!newDocument){await admin.storage.from(BUCKET).remove([input.storagePath]);return{ok:false,error:`Could not attach the replacement ${proposal?"proposal form":"policy copy"}.`};}
   await admin.from("policy_intake_documents").update({is_current:false}).eq("intake_id",input.id).eq("is_current",true);const{error:currentError}=await admin.from("policy_intake_documents").update({is_current:true}).eq("id",newDocument.id);if(currentError)return{ok:false,error:`Could not activate the replacement ${proposal?"proposal form":"policy copy"}.`};
-  const nextStatus=proposal?"ready_for_review":"processing",nextOcr=proposal?"completed":"pending";const{data:savedResponse,error:updateError}=await admin.from("policy_intake_requests").update({status:nextStatus,storage_path:input.storagePath,file_name:input.file.name,mime_type:input.file.type,file_size:blob.size,ocr_status:nextOcr,ocr_fields:[],ocr_warnings:[],ocr_parser_id:null,ocr_parser_version:null,attention_reason:null,assigned_to_profile_id:null}).eq("id",input.id).eq("status","needs_attention").eq("submitted_by_profile_id",profile.id).select("id").maybeSingle<{id:string}>();if(updateError||!savedResponse)return{ok:false,error:"Could not attach the replacement document."};
+  const nextStatus="processing" as const,nextOcr="pending" as const;const{data:savedResponse,error:updateError}=await admin.from("policy_intake_requests").update({status:nextStatus,storage_path:input.storagePath,file_name:input.file.name,mime_type:input.file.type,file_size:blob.size,ocr_status:nextOcr,ocr_fields:[],ocr_warnings:[],ocr_parser_id:null,ocr_parser_version:null,attention_reason:null,assigned_to_profile_id:null}).eq("id",input.id).eq("status","needs_attention").eq("submitted_by_profile_id",profile.id).select("id").maybeSingle<{id:string}>();if(updateError||!savedResponse)return{ok:false,error:"Could not attach the replacement document."};
   await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"policy_intake_requests",recordId:input.id,action:"policy_intake_response_uploaded"});
-  revalidatePath("/policy-intakes");revalidatePath(`/policy-intakes/${input.id}`);if(!proposal && aiQueueEnabled()){
+  revalidatePath("/policy-intakes");revalidatePath(`/policy-intakes/${input.id}`);if(aiQueueEnabled()){
     // Run n8n as soon as the CURRENT document is saved, not on the next cron.
     // On request shutdown/error the one-minute durable queue drain retries it.
     after(async()=>{
