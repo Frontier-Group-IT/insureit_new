@@ -86,15 +86,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const intakeReviewPredicates = profile?.id && profile.role && hierarchyIntakeRoles.has(profile.role) && viewPolicyIntakes && reviewPolicyIntakes
     ? await getRmPolicyIntakePredicates(profile.id, profile.role)
     : null;
+  const portfolioFilter = profile?.id && viewPolicies ? await getLifeTeamPortfolioReadFilter(profile.id, profile.role) : null;
   const intakeAttentionRequest = viewPolicyIntakes && reviewPolicyIntakes && !isDownlineHead
     ? loadPolicyIntakeReviewSummary(createSupabaseAdminClient(), {
         intakeOrFilter: intakeReviewPredicates?.join(","),
         denyAll: intakeReviewPredicates !== null && !intakeReviewPredicates.length,
         includeNeedsAttention: true,
+        proposalScopeFilter: portfolioFilter,
       })
     : Promise.resolve(null);
 
-  const portfolioFilter = profile?.id && viewPolicies ? await getLifeTeamPortfolioReadFilter(profile.id, profile.role) : null;
   const proposalSummaryRequest = viewPolicies && (!isDownlineHead || portfolioFilter !== null)
     ? loadLifeHealthCaseSummary(createSupabaseAdminClient(), portfolioFilter)
     : Promise.resolve(null);
