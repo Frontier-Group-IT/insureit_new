@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, ActivityIndicator, Animated, AppState, Easing, Image, Pressable, StyleSheet, Text, View, type ViewStyle, type TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 
 import { PartnerScreen } from '@/components/partner-screen';
 
@@ -17,6 +19,12 @@ import { partnerTheme } from '@/lib/theme';
 
 export default function LearnScreen() {
   const router = useRouter();
+  const focused = useIsFocused();
+  const [foreground, setForeground] = useState(AppState.currentState === 'active');
+  const [reduceMotion, setReduceMotion] = useState(true);
+  const animate = focused && foreground && !reduceMotion;
+  const submitLock = useRef(false);
+  const [freshResult, setFreshResult] = useState<{key:string;correct:boolean;cardId:string}|null>(null);
   const [data, setData] = useState<PartnerLearningToday | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -24,11 +32,20 @@ export default function LearnScreen() {
   const [showAnswerFeedback, setShowAnswerFeedback] = useState(false);
   const [selectedOptionKey, setSelectedOptionKey] = useState<string | null>(null);
 
+  useEffect(() => {
+    let live = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((reduced) => { if (live) setReduceMotion(reduced); }).catch(() => {});
+    const motion = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    const app = AppState.addEventListener('change', (state) => setForeground(state === 'active');
+    return () => { live = false; motion.remove(); app.remove(); };
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     setShowAnswerFeedback(false);
     setSelectedOptionKey(null);
+    setFreshResult(null);
     try {
       setData(await getPartnerLearningToday());
     } catch {
@@ -50,17 +67,21 @@ export default function LearnScreen() {
 
   const answer = data?.answer || null;
   async function submitAnswer() {
-    if (!data?.card || !selectedOptionKey || data.answered_today || submitting) return;
+    if (!data?.card || !selectedOptionKey || data.answered_today || submitting || submitLock.current) return;
+    submitLock.current = true;
     setSubmitting(true);
     setError('');
     try {
       const result = await submitPartnerLearningAnswer(data.card.id, selectedOptionKey);
+      setFreshResult({ key: selectedOptionKey, correct: result.is_correct, cardId: data.card.id });
       setData(result.today);
       setSelectedOptionKey(null);
       setShowAnswerFeedback(true);
+      if (focused && !reduceMotion) void (result.is_correct ? Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success) : Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)).catch(() => {});
     } catch {
       setError('Your answer could not be saved. Please try again.');
     } finally {
+      submitLock.current = false;
       setSubmitting(false);
     }
   }
