@@ -1,5 +1,5 @@
 import "server-only";
-import { getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
+import { getLifeTeamPortfolioReadFilter, getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ProfileLike = { id: string; role?: string | null };
@@ -41,11 +41,12 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
   const empty = emptyBusiness(filters);
   if (!profile?.id) return empty;
 
-  const downlineFilter = profile.role === "operations_head_life"
+  const portfolioFilter = await getLifeTeamPortfolioReadFilter(profile.id, profile.role);
+  const downlineFilter = portfolioFilter ?? (profile.role === "operations_head_life"
     ? operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
-    : null;
+    : null);
   if (profile.role === "operations_head_life" && !downlineFilter) return empty;
-  const rmEmployeeIds = profile.role === "operations_head_life" ? null : await getAccessiblePolicyRmEmployeeIds(profile.id, profile.role, "view_policies");
+  const rmEmployeeIds = downlineFilter !== null ? null : await getAccessiblePolicyRmEmployeeIds(profile.id, profile.role, "view_policies");
   if (rmEmployeeIds !== null && rmEmployeeIds.length === 0) return empty;
 
   const admin = createSupabaseAdminClient();
