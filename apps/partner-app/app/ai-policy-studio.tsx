@@ -204,7 +204,7 @@ export default function AiPolicyStudioScreen() {
           <Pressable onPress={()=>router.back()} accessibilityRole="button" accessibilityLabel="Back to More" style={s.headerAction}>
             <Ionicons name="arrow-back" size={22} color="#FFFFFF"/>
           </Pressable>
-          <Image source={PartnerAssets.actions.policyChecklist} style={s.headerArtwork} resizeMode="contain" accessible={false}/>
+          <Image source={PartnerAssets.actions.aiStudioVerified} style={s.headerArtwork} resizeMode="contain" accessible={false}/>
           <Text style={s.topWord} numberOfLines={1}>AI Onboarding Studio</Text>
           <Pressable onPress={refresh} accessibilityRole="button" accessibilityLabel="Refresh" style={s.headerAction}>
             <Animated.View style={{transform:[{rotate:refreshRotation.interpolate({inputRange:[0,1],outputRange:['0deg','360deg']})}]}}><Ionicons name="refresh-outline" size={22} color="#FFFFFF"/></Animated.View>
@@ -217,7 +217,7 @@ export default function AiPolicyStudioScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={C.blue} onRefresh={refresh}/>}>
         <View style={s.summarySurface}>
           <View style={s.summaryTop}>
-            <Image source={PartnerAssets.actions.policyChecklist} style={s.summaryArtwork} resizeMode="contain" accessible={false}/>
+            <Image source={PartnerAssets.actions.aiStudioVerified} style={s.summaryArtwork} resizeMode="contain" accessible={false}/>
             <View style={s.summaryText}>
               <Text style={s.summaryOverline}>POLICY WORK QUEUE</Text>
               <Text style={s.summaryMain}>{count('open')} Open Intakes</Text>
@@ -227,7 +227,7 @@ export default function AiPolicyStudioScreen() {
               {Array.from({length:24},(_,i)=>{
                 const angle=i*15;
                 return <Animated.View key={i} style={[s.ringTick,{
-                  backgroundColor: '#7757E5',
+                  backgroundColor: '#2768C9',
                   opacity:ringProgress.interpolate({inputRange:[Math.max(0,i/24),(i+1)/24],outputRange:[0.14,1],extrapolate:'clamp'}),
                   transform:[{rotate:angle+'deg'},{translateY:-18}],
                 }]}/>;
@@ -238,16 +238,19 @@ export default function AiPolicyStudioScreen() {
           <View style={s.summaryDivider}/>
           <View style={s.summaryMetrics}>
             {([
-              {key:'processing',title:'Processing',image:PartnerAssets.status.policyPending},
-              {key:'in_review',title:'In Review',image:PartnerAssets.actions.documentSearch},
-              {key:'action',title:'Action',image:PartnerAssets.status.policyAttention},
-            ] as const).map(metric=>(
-              <View style={s.metric} key={metric.key}>
-                <Image source={metric.image} style={s.metricArtwork} resizeMode="contain" accessible={false}/>
-                <View style={s.metricCopy}>
-                  <Text style={s.metricLabel}>{metric.title}</Text>
-                  <Text style={s.metricValue}>{count(metric.key)}</Text>
+              {key:'processing',title:'Processing',image:PartnerAssets.actions.aiStudioProcessing},
+              {key:'in_review',title:'In Review',image:PartnerAssets.actions.aiStudioReview},
+              {key:'action',title:'Action',image:PartnerAssets.actions.aiStudioAction},
+            ] as const).map((metric,index)=>(
+              <View style={s.metricGroup} key={metric.key}>
+                <View style={s.metric}>
+                  <Image source={metric.image} style={s.metricArtwork} resizeMode="contain" accessible={false}/>
+                  <View style={s.metricCopy}>
+                    <Text style={s.metricLabel}>{metric.title}</Text>
+                    <Text style={s.metricValue}>{count(metric.key)}</Text>
+                  </View>
                 </View>
+                {index<2?<View style={s.metricDivider} accessible={false}/>:null}
               </View>
             ))}
           </View>
@@ -291,7 +294,7 @@ export default function AiPolicyStudioScreen() {
             {searchError?<Text style={s.errorText}>{searchError}</Text>:null}
             {!loading&&!searchLoading&&!error&&!searchError&&displayedRows.length===0?
               <View style={s.compactEmpty}>
-                <Image source={debouncedSearch?PartnerAssets.emptyStates.noSearchResults:PartnerAssets.emptyStates.noDocuments}
+                <Image source={debouncedSearch?PartnerAssets.emptyStates.noSearchResults:PartnerAssets.actions.aiStudioEmpty}
                   style={s.emptyArtwork} resizeMode="contain" accessible={false}/>
                 <Text style={s.emptyHead}>{debouncedSearch?'No matching intakes':'No intakes found'}</Text>
                 <Text style={s.emptyText}>{debouncedSearch?'Try another intake number or source.':'There are no intakes in this view.'}</Text>
@@ -303,7 +306,7 @@ export default function AiPolicyStudioScreen() {
                 <Pressable accessibilityRole="button" accessibilityLabel={'Open '+row.intake_number}
                   style={({pressed})=>[s.compactRow,pressed&&s.compactRowPressed]} onPress={()=>openDetail(row)}>
                   <View style={s.rowArtworkShell}>
-                    <Image source={flag?PartnerAssets.status.policyAttention:done?PartnerAssets.status.verified:row.status==='in_review'?PartnerAssets.actions.documentSearch:row.status==='processing'?PartnerAssets.status.policyPending:PartnerAssets.actions.policyChecklist}
+                    <Image source={flag?PartnerAssets.actions.aiStudioAction:done?PartnerAssets.actions.aiStudioVerified:row.status==='in_review'?PartnerAssets.actions.aiStudioReview:row.status==='processing'?PartnerAssets.actions.aiStudioProcessing:PartnerAssets.actions.aiStudioVerified}
                       style={s.rowArtwork} resizeMode="contain" accessible={false}/>
                   </View>
                   <View style={s.rowMain}>
@@ -437,25 +440,27 @@ const s=StyleSheet.create({
   screenContent:{flexGrow:1,paddingBottom:0},
   summarySurface:{backgroundColor:'#FFFFFF',paddingHorizontal:11,paddingTop:10,paddingBottom:8},
   summaryTop:{flexDirection:'row',alignItems:'center',minHeight:76,gap:8},
-  summaryArtwork:{width:43,height:45},
+  summaryArtwork:{width:49,height:49},
   summaryText:{flex:1,minWidth:0},
-  summaryOverline:{fontSize:8,color:'#6245D2',fontWeight:'700',letterSpacing:0.6},
+  summaryOverline:{fontSize:8,color:'#2467CC',fontWeight:'700',letterSpacing:0.6},
   summaryMain:{fontSize:19,color:'#10294D',fontWeight:'800',marginTop:2},
   summaryDescription:{fontSize:10,color:'#68798F',marginTop:3},
   summaryDivider:{height:1,backgroundColor:'#CFD9E6',marginTop:5,marginBottom:8},
   ringHolder:{width:44,height:44,alignItems:'center',justifyContent:'center',marginLeft:4},
   ringTick:{position:'absolute',left:20,top:20,width:4,height:7,borderRadius:3},
-  ringText:{fontSize:9,fontWeight:'800',color:'#6844D9'},
+  ringText:{fontSize:9,fontWeight:'800',color:'#2467CC'},
   summaryMetrics:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',minHeight:47},
+  metricGroup:{flex:1,minWidth:0,flexDirection:'row',alignItems:'center'},
+  metricDivider:{width:1,height:39,backgroundColor:'#D5DFEC',marginHorizontal:3},
   metric:{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:3,minWidth:0},
-  metricArtwork:{width:33,height:33},
+  metricArtwork:{width:37,height:37},
   metricCopy:{minWidth:0},
   metricLabel:{color:'#627089',fontSize:10},
   metricValue:{color:'#071D38',fontSize:16,fontWeight:'800'},
   listSection:{backgroundColor:'#F4F6FB',paddingHorizontal:10,paddingTop:10,paddingBottom:12,flexGrow:1},
   listHeading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:8},
   listHeadingText:{fontSize:14,fontWeight:'800',color:'#0C2342'},
-  recordPill:{fontSize:9,color:'#6048C9',backgroundColor:'#EFE8FF',borderRadius:14,overflow:'hidden',paddingVertical:5,paddingHorizontal:10},
+  recordPill:{fontSize:9,color:'#2467CC',backgroundColor:'#E8F1FD',borderRadius:14,overflow:'hidden',paddingVertical:5,paddingHorizontal:10},
   intakePanel:{backgroundColor:'#FFFFFF',borderRadius:15,borderWidth:1,borderColor:'#DEE5EF',paddingHorizontal:10,paddingTop:10,paddingBottom:2,overflow:'hidden',flexGrow:1},
   searchBar:{height:36,borderRadius:10,borderWidth:1,borderColor:'#DCE4ED',flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:9,marginBottom:7},
   searchInput:{flex:1,fontSize:10.5,color:'#1A365B',paddingVertical:0,minHeight:34},
