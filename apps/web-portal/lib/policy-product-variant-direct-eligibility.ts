@@ -29,16 +29,13 @@ export function assessProductVariantDirectConversion(input:Input):{eligible:bool
    "policy_issuance_date","policy_start_date","policy_end_date",
    "vehicle_registration_number","vehicle_registration_status","vehicle_class",
    "vehicle_make","vehicle_model","vehicle_fuel_type","vehicle_capacity",
-   "vehicle_chassis_number","vehicle_engine_number","vehicle_rto_name","vehicle_rto_state",
+   "vehicle_chassis_number","vehicle_engine_number",
    "idv","od_premium","tp_premium","cpa_premium"]){
    if(!field(key))return no("missing_"+key);
  }
- if(!/^UK\d{2}[A-Z]{1,3}\d{4}$/.test(field("vehicle_registration_number"))
-   ||field("vehicle_registration_status")!=="registered"
-   ||field("vehicle_rto_state")!=="Uttarakhand"
-   ||!map.get("vehicle_rto_name")?.evidence?.includes("RTO")
-     &&!map.get("vehicle_rto_name")?.evidence?.includes("Registration Authority"))
-   return no("rto_or_plate_not_verified");
+ if(!/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4}$/.test(field("vehicle_registration_number"))
+   ||field("vehicle_registration_status")!=="registered")
+   return no("registration_plate_not_verified");
  const day=(v:string)=>/^\d{4}-\d{2}-\d{2}$/.test(v)
     &&!Number.isNaN(Date.parse(v+"T00:00:00Z"))
     &&new Date(v+"T00:00:00Z").toISOString().slice(0,10)===v;
@@ -113,7 +110,7 @@ export function assessProductVariantDirectConversion(input:Input):{eligible:bool
      ||field("vehicle_model")!=="575 DI XP PLUS"
      ||field("vehicle_fuel_type")!=="Diesel"
      ||!map.get("cpa_premium")?.evidence?.includes("removed")
-     ||!map.get("vehicle_rto_name")?.evidence?.includes("Registration Authority")
+
      ||Math.abs(cents(printed.gst)-cents(Math.round(printed.net*.18)))>100)
      return no("united_tractor_tp_variant_unverified");
  }else if(input.parserId==="hdfc_ergo_two_wheeler_tp_native_pdf"){
