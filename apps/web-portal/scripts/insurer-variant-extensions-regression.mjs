@@ -66,7 +66,7 @@ const hdfc=fixture("hdfc_ergo_two_wheeler_tp_native_pdf",{
  tp_premium:"714",cpa_premium:"0",
 }, {od:0,tp:714,net:714,gst:129,gross:843});
 hdfc.fields.find(f=>f.key==="cpa_premium").evidence="Native PDF: Compulsory PA waiver declaration";
-assert.equal(assessProductVariantDirectConversion(hdfc).eligible,true);
+assert.deepEqual(assessProductVariantDirectConversion(hdfc),{eligible:true,reason:""});
 const sbi=fixture("sbi_general_private_car_package_native_pdf",{
  insurer_name:"SBI General Insurance Company Limited",policy_product:"Package",
  vehicle_class:"Private Car",vehicle_make:"TATA",vehicle_model:"PUNCH ADVENTURE",
@@ -74,7 +74,7 @@ const sbi=fixture("sbi_general_private_car_package_native_pdf",{
  idv:"480000",od_premium:"7751.2",tp_premium:"3416",cpa_premium:"325",
 }, {od:7751.2,tp:3416,net:11492.2,gst:2068.6,gross:13561,cpa:325,addOn:3922,odBasic:3829.2});
 sbi.checksPassed=20;
-assert.equal(assessProductVariantDirectConversion(sbi).eligible,true);
+assert.deepEqual(assessProductVariantDirectConversion(sbi),{eligible:true,reason:""});
 assert.deepEqual(mapVerifiedProductVariantPremium(sbi.commercialPremium,sbi.parserId),
  {od:"3829.2",tp:"3416",addOnPremium:"3922",cpa:"325",cpaOpted:"Yes"});
 assert.deepEqual(mapVerifiedProductVariantPremium(hdfc.commercialPremium,hdfc.parserId),
