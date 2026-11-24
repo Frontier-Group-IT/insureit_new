@@ -237,16 +237,76 @@ function milestoneCategory(kind: string, title: string): JourneyFilter {
   return 'all';
 }
 
-function Summary({ value, label, artwork, onPress }: { value: number; label: string; artwork: ImageSourcePropType; onPress: () => void }) {
+function Summary({ value, label, artwork, onPress, reducedMotion, delay }: { value: number; label: string; artwork: ImageSourcePropType; onPress: () => void; reducedMotion: boolean; delay: number }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Open ${label}: ${value.toLocaleString('en-IN')}`} onPress={onPress} style={({ pressed }) => [styles.summaryItem, pressed && styles.summaryItemPressed]}>
-      <Image source={artwork} style={styles.summaryArtwork} resizeMode="contain" accessible={false} />
-      <View style={styles.summaryDetails}>
-        <Text style={styles.summaryLabel} adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.8}>{label}</Text>
-        <Text style={styles.summaryValue} adjustsFontSizeToFit numberOfLines={1}>{value.toLocaleString('en-IN')}</Text>
-      </View>
-    </Pressable>
+    <MotionEntrance reducedMotion={reducedMotion} delay={delay} style={styles.summaryItem}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Open ${label}: ${value.toLocaleString('en-IN')}`} onPress={onPress} style={({ pressed }) => [styles.summaryItem, styles.summaryPressable, pressed && styles.summaryItemPressed]}>
+        <MotionEntrance reducedMotion={reducedMotion} delay={delay + 60} icon>
+          <Image source={artwork} style={styles.summaryArtwork} resizeMode="contain" accessible={false} />
+        </MotionEntrance>
+        <View style={styles.summaryDetails}>
+          <Text style={styles.summaryLabel} adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.8}>{label}</Text>
+          <AnimatedCount value={value} reducedMotion={reducedMotion} delay={delay} style={styles.summaryValue} />
+        </View>
+      </Pressable>
+    </MotionEntrance>
   );
+}
+
+function MotionEntrance({ children, style, delay = 0, icon = false, reducedMotion }: { children?: ReactNode; style?: object; delay?: number; icon?: boolean; reducedMotion: boolean }) {
+  const opacity = useRef(new Animated.Value(reducedMotion ? 1 : 0)).current;
+  const displacement = useRef(new Animated.Value(reducedMotion ? 0 : 8)).current;
+  const scale = useRef(new Animated.Value(reducedMotion ? 1 : 0.94)).current;
+  useEffect(() => {
+    if (reducedMotion) {
+      opacity.stopAnimation(); displacement.stopAnimation(); scale.stopAnimation();
+      opacity.setValue(1); displacement.setValue(0); scale.setValue(1);
+      return;
+    }
+    opacity.setValue(0);
+    displacement.setValue(icon ? 0 : 8);
+    scale.setValue(icon ? 0.94 : 1);
+    const animation = Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 400, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      icon
+        ? Animated.spring(scale, { toValue: 1, delay, friction: 9, tension: 85, useNativeDriver: true })
+        : Animated.timing(displacement, { toValue: 0, duration: 400, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]);
+    animation.start();
+    return () => animation.stop();
+  }, [opacity, displacement, scale, delay, icon, reducedMotion]);
+  return <Animated.View style={[style, { opacity, transform: icon ? [{ scale }] : [{ translateY: displacement }] }]}>{children}</Animated.View>;
+}
+
+function PressScale({ children, style, reducedMotion, accessibilityLabel }: { children: ReactNode; style?: object; reducedMotion: boolean; accessibilityLabel: string }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const animate = (toValue: number) => {
+    if (reducedMotion) { scale.setValue(1); return; }
+    Animated.timing(scale, { toValue, duration: 140, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+  };
+  useEffect(() => () => scale.stopAnimation(), [scale]);
+  return (
+    <Animated.View style={[style, { transform: [{ scale }] }]}>
+      <Pressable accessible accessibilityLabel={accessibilityLabel} onPressIn={() => animate(0.975)} onPressOut={() => animate(1)} style={styles.pressScaleContent}>
+        {children}
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+function AnimatedCount({ value, reducedMotion, delay, style }: { value: number; reducedMotion: boolean; delay: number; style?: object }) {
+  const animated = useRef(new Animated.Value(0)).current;
+  const [display, setDisplay] = useState(reducedMotion ? value : 0);
+  useEffect(() => {
+    if (reducedMotion) { animated.stopAnimation(); animated.setValue(value); setDisplay(value); return; }
+    animated.setValue(0);
+    setDisplay(0);
+    const listener = animated.addListener(({ value: next }) => setDisplay(Math.round(next)));
+    const animation = Animated.timing(animated, { toValue: value, duration: 900, delay, easing: Easing.out(Easing.cubic), useNativeDriver: false });
+    animation.start(({ finished }) => { if (finished) setDisplay(value); });
+    return () => { animation.stop(); animated.removeListener(listener); };
+  }, [animated, value, reducedMotion, delay]);
+  return <Text style={style} adjustsFontSizeToFit numberOfLines={1}>{display.toLocaleString('en-IN')}</Text>;
 }
 
 const CIRCLE_SEGMENT_COUNT = 96;
@@ -255,9 +315,24 @@ const CIRCLE_SEGMENTS = Array.from({ length: CIRCLE_SEGMENT_COUNT }, (_, index) 
   return { left: 20 + Math.sin(angle) * 15.5 - 0.8, top: 20 - Math.cos(angle) * 15.5 - 1.5, rotate: `${index * 360 / CIRCLE_SEGMENT_COUNT}deg` };
 });
 
-function CircularMilestoneProgress({ progress, current, target }: { progress: number; current: number; target: number }) {
-  const percentage = Math.round(progress * 100);
-  const activeSegments = Math.round(progress * CIRCLE_SEGMENT_COUNT);
+function CircularMilestoneProgress({ progress, current, target, reducedMotion }: { progress: number; current: number; target: number; reducedMotion: boolean }) {
+  const animated = useRef(new Animated.Value(0)).current;
+  const [displayProgress, setDisplayProgress] = useState(reducedMotion ? progress : 0);
+  useEffect(() => {
+    if (reducedMotion) { animated.stopAnimation(); animated.setValue(progress); setDisplayProgress(progress); return; }
+    animated.setValue(0);
+    setDisplayProgress(0);
+    let lastPercent = -1;
+    const listener = animated.addListener(({ value }) => {
+      const percent = Math.round(value * 100);
+      if (percent !== lastPercent) { lastPercent = percent; setDisplayProgress(value); }
+    });
+    const animation = Animated.timing(animated, { toValue: progress, duration: 1100, easing: Easing.out(Easing.cubic), useNativeDriver: false });
+    animation.start(({ finished }) => { if (finished) setDisplayProgress(progress); });
+    return () => { animation.stop(); animated.removeListener(listener); };
+  }, [animated, progress, reducedMotion]);
+  const percentage = Math.round(displayProgress * 100);
+  const activeSegments = Math.round(displayProgress * CIRCLE_SEGMENT_COUNT);
   return (
     <View style={styles.progressColumn}>
       <View style={styles.progressCircle} accessible accessibilityRole="progressbar" accessibilityLabel="Milestone progress"
@@ -307,6 +382,8 @@ const styles = StyleSheet.create({
   summary: { marginTop: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#E1E5ED', flexDirection: 'row', alignItems: 'stretch', width: '100%' },
   summaryItem: { flex: 1, minWidth: 0, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 5, paddingVertical: 4, gap: 16 },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
+  summaryPressable: { flex: 1, paddingHorizontal: 0, paddingVertical: 0 },
+  pressScaleContent: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   summaryDivider: { width: 1, alignSelf: 'stretch', backgroundColor: '#A6B3C6', marginVertical: 5 },
   summaryArtwork: { width: 27, height: 29, flexShrink: 0 },
   summaryDetails: { flexShrink: 1, minWidth: 0, alignItems: 'flex-start', justifyContent: 'center', gap: 1 },
