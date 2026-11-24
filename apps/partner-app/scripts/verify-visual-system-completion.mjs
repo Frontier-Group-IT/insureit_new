@@ -1171,7 +1171,7 @@ requireText(support, '<PartnerProfileMenuIcon kind="support" size={60} />', 'Sup
 for (const fragment of [
   'styles.heroTopRow',
   'styles.heroRight',
-  'formatUpdatedAt(data.generated_at)',
+  '<TimestampReveal timestamp={data.generated_at} animate={animate} />',
   'styles.updatedLine',
   'styles.heroActions',
   'name="chatbubble-ellipses"',
@@ -1184,6 +1184,32 @@ if (!(supportRightIndex > 0 && supportUpdatedIndex > supportRightIndex && suppor
   throw new Error('Support right column must show updated-at above the two icon shortcuts.');
 }
 requireText(support, "textAlign: 'right', transform: [{ translateY: 0 }]", 'Support updated-at label should align with the left title without moving the icon row.');
+for (const fragment of [
+  'AccessibilityInfo.isReduceMotionEnabled()',
+  "AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion)",
+  "AppState.addEventListener('change'",
+  'const animate = focused && foreground && !reducedMotion;',
+  'function FloatingHeadphones(',
+  'function TimestampReveal(',
+  'function UnderlineMotion(',
+  'function ActualCount(',
+  'function BottomWaveMotion(',
+  'function SupportSkeleton(',
+  'useNativeDriver: true',
+  'setData(await getPartnerSupport())',
+  'value={data.operations.intakes_need_attention}',
+  'value={data.operations.intakes_in_progress}',
+  'value={data.operations.active_claims}',
+  "tone === 'warning' && value > 0",
+  "tone !== 'info' || value <= 0",
+  "toValue: pressed ? 0.98 : 1",
+  'formatUpdatedAt(timestamp)',
+]) requireText(support, fragment, 'Support motion and actual-data contract missing: ' + fragment);
+for (const dep of ['react-native-reanimated', 'react-native-svg', 'expo-linear-gradient', 'lottie-react-native']) {
+  if (support.includes('from ' + String.fromCharCode(39) + dep + String.fromCharCode(39))) throw new Error('Unapproved native dependency: ' + dep);
+}
+// Existing chat/document header visuals have no action handlers; preserve them as displays.
+if (support.includes("router.push('/support/chat')")) throw new Error('No invented chat route.');
 for (const fragment of [
   "Platform.OS === 'ios' ? 1 : 2",
   "adjustsFontSizeToFit={Platform.OS === 'ios'}",
