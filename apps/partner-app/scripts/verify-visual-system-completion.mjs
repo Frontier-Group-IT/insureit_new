@@ -1243,7 +1243,7 @@ for (const forbidden of [
 ]) {
   if (profile.includes(forbidden)) throw new Error('Profile must not restore duplicate icons, a blue card, or header logout: ' + forbidden);
 }
-requireText(profile, 'style={styles.heroArtwork}', '3D team hero must stay visible.');
+requireText(profile, 'style={[styles.heroArtwork,', '3D team hero must stay visible.');
 if (!/<View style=\{styles\.heroTopRow\}>[\s\S]*?profile-team-3d\.png[\s\S]*?<\/View>/.test(profile)) {
   throw new Error('Profile avatar, details and 3D art must share the top row');
 }
@@ -1652,3 +1652,6 @@ if (policies.includes("SortPurpleGradient") || policies.includes("sortPurpleGrad
 const impactMotion = read('components/impact-story-motion.tsx');
 for (const marker of ['IMPACT_REVEAL_MS = 2800', 'reduceMotionChanged', 'AppState.addEventListener', 'time.stopAnimation', 'ambient.stopAnimation', 'clock.time.removeListener']) requireText(impactMotion, marker, 'Impact timeline lifecycle: ' + marker);
 for (const marker of ['start={200} duration={1400}', 'reveal(clock, 500, 800)', 'reveal(clock, 800, 1100)', 'reveal(clock, 1200, 1600', 'inputRange:[2000,2250,2500]', 'tabular-nums']) requireText(stories, marker, 'Impact cinematic timing: ' + marker);
+
+for (const marker of ['useActivityMotion()', 'ringSegments.map', 'pickerBusy.current', 'setPhotoSuccess(true)', 'animation.stop()', 'Haptics.ImpactFeedbackStyle.Light', 'entrance(avatarEntrance', 'entrance(iconAppear', 'onPressIn={logoutPress.onPressIn}']) requireText(profile, marker, 'Profile motion contract: ' + marker);
+if (profile.indexOf('setPhotoSuccess(true)') < profile.indexOf('if (!refreshedAvatar) throw')) throw new Error('Photo success must follow confirmed upload and refresh');
