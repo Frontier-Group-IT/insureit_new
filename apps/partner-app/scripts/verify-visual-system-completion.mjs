@@ -484,19 +484,19 @@ if (stories.includes('₹939') || stories.includes('1 renewal is due in 7 days')
 // Monthly (Business) Story alone uses the new premium and policies snapshot.
 for (const [needle, rationale] of [
   ["story.kind === 'business' ? (", 'Only Business Story receives the specialized layout'],
-  ['<BusinessMonthStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />', 'Live business story data powers its own full-screen snapshot'],
+  ['<BusinessMonthStory story={story} onOpen={openStory} artworkHeight={artworkHeight} clock={monthClock} onPause={setImpactPaused} />', 'Live business story data powers its own full-screen snapshot'],
   ["const policyMatch = story.title.match(/^([0-9,]+) +(polic(?:y|ies)) *(.*)$/i)", 'Policy count and title stay data-driven'],
   ["const premium = story.metric !== undefined ? formatMetric(story) : null", 'Gross premium is formatted from live data'],
   ['<StoryHeading icon="stats-chart-outline" title={story.eyebrow} />', 'This Month uses the unified rounded heading'],
-  ['style={styles.businessPremiumAmount}', 'Premium is the main headline'],
-  ['style={styles.businessPoliciesCard}', 'Policies are summarized separately'],
+  ["styles.businessPremiumAmount, { fontVariant: ['tabular-nums'] }", 'Premium is the main headline'],
+  ['styles.businessPoliciesCard, reveal(clock, 400, 720', 'Policies are summarized separately'],
   ['style={styles.businessPremiumCaption}', 'Business metric label is available beneath the summary'],
   ['style={[styles.businessIllustrationWrap, { minHeight: artworkHeight }]}', 'Monthly growth artwork sits directly below figures'],
   ["if (kind === 'business')", 'Dedicated native business artwork is used'],
   ["require('../assets/partner/stories/this-month.png')", 'New 3D financial artwork replaces flat bars and coin mockups'],
   ['style={[styles.businessGrowth3dArtwork, { height: artworkHeight }]}', '3D business artwork scales responsively'],
-  ['onTouchStart={(event) => event.stopPropagation()}', 'Business story summary link preserves route navigation without changing slides'],
-  ['onTouchEnd={(event) => event.stopPropagation()}', 'Business story link tap does not advance the slide'],
+  ['onTouchStart={(event) => { onPause(true); event.stopPropagation(); }}', 'Business story summary link preserves route navigation without changing slides'],
+  ['onTouchEnd={(event) => { onPause(false); event.stopPropagation(); }}', 'Business story link tap does not advance the slide'],
 ]) requireText(stories, needle, 'Business Stories snapshot regression: ' + rationale);
 for (const unexpected of [
   '₹1,11,71,203.76',
@@ -522,7 +522,7 @@ for (const marker of [
   "require('../assets/partner/stories/your-impact.png')",
   'style={[styles.storyHeroArtwork, { height: artworkHeight }]}',
   'style={styles.journeyProgressTrack}',
-  'style={styles.businessPremiumAmount}',
+  "styles.businessPremiumAmount, { fontVariant: ['tabular-nums'] }",
   "style={styles.learnStoryQuestion}",
 ]) requireText(stories, marker, 'Five Stories unified mockup parity: ' + marker);
 for (const marker of [
@@ -1652,3 +1652,6 @@ if (policies.includes("SortPurpleGradient") || policies.includes("sortPurpleGrad
 const impactMotion = read('components/impact-story-motion.tsx');
 for (const marker of ['IMPACT_REVEAL_MS = 2800', 'reduceMotionChanged', 'AppState.addEventListener', 'time.stopAnimation', 'ambient.stopAnimation', 'clock.time.removeListener']) requireText(impactMotion, marker, 'Impact timeline lifecycle: ' + marker);
 for (const marker of ['start={200} duration={1400}', 'reveal(clock, 500, 800)', 'reveal(clock, 800, 1100)', 'reveal(clock, 1200, 1600', 'inputRange:[2000,2250,2500]', 'tabular-nums']) requireText(stories, marker, 'Impact cinematic timing: ' + marker);
+
+// Monthly Story motion stays scoped to the existing financial snapshot.
+for (const marker of ["useImpactTimeline(!loading && !error && story?.kind === 'business', impactPaused)", "start={200} duration={1600} format={formatMonthPremium}", "start={400} duration={1400} format={formatMonthCount}", "minimumFractionDigits: 2, maximumFractionDigits: 2", "outputRange: [0, -7]", "outputRange: [1, 1.02]", "require('../assets/partner/stories/this-month.png')"]) requireText(stories, marker, 'Monthly story motion contract: ' + marker);
