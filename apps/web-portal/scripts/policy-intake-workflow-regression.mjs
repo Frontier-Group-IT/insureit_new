@@ -71,8 +71,7 @@ assert(actions.includes('.from("policy_intake_documents")'),"Original and replac
 assert(!actions.includes('remove([intake.storage_path])'),"Replacement uploads must not delete the previous policy copy");
 assert(actions.includes('.from("policy_documents")'),"Finalization must attach the accepted intake copy to the final policy");
 assert(actions.includes('if(!isProposalType(intake.policy_type))'),"Life/Health proposal forms must never be promoted as an official final policy copy");
-assert(actions.includes("loadPolicyIntakeDuplicateMatches(admin,[intake])"),"Claiming an intake for review must re-check duplicate status server-side");
-assert(actions.includes("duplicate and cannot be claimed for review"),"Duplicate intakes must be blocked from entering Operations review");
+assert(actions.includes("Manual Intake review is retired. Use AI Policy Studio."),"Direct manual intake claiming must be denied for all reviewers");
 assert(actions.includes("matched_customer_id:null"),"Policy Intake submission must not preselect a customer from mobile alone");
 const aiWorker=read("lib/ai-policy-onboarding-queue-server.ts");
 assert(aiWorker.includes("const customerName=normalizedName(")
