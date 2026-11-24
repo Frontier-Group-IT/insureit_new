@@ -39,7 +39,7 @@ assert(aiUi.includes("const total = intakeCounts.action_required + intakeCounts.
 const actions=read("app/policy-intakes/actions.ts");
 
 assert(actions.includes("existingOriginalIntakeResult"),"Original intake completions must be idempotent");
-const originalCompletion = actions.slice(actions.indexOf("export async function completePolicyIntakeUpload("),actions.indexOf("async function processStoredOcr("));
+const originalCompletion = actions.slice(actions.indexOf("export async function completePolicyIntakeUpload("),actions.indexOf("export async function preparePolicyIntakeResponseUpload("));
 assert(!originalCompletion.includes(".remove("),"Original completion must never delete an uploaded file on database conflicts");
 assert(!originalCompletion.includes('.delete().eq("id",input.id)'),"Original completion must never delete an intake on a concurrent document conflict");
 assert(originalCompletion.includes("if(retry)return retry"),"Duplicate database inserts must resolve against the already-saved intake");
