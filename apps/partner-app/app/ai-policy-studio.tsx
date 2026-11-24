@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Animated, Easing, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -387,7 +387,7 @@ export default function AiPolicyStudioScreen() {
   );
 }
 
-function StudioRowEnter({children,index,reduceMotion}:{children:React.ReactNode;index:number;reduceMotion:boolean}){
+function StudioRowEnter({children,index,reduceMotion}:{children:ReactNode;index:number;reduceMotion:boolean}){
   const opacity=useRef(new Animated.Value(1)).current;
   const rise=useRef(new Animated.Value(0)).current;
   useEffect(()=>{
