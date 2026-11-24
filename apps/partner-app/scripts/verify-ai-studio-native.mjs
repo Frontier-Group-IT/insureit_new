@@ -48,3 +48,8 @@ assert(actionFile.includes("url.hostname==='studio.nishant.uk'"));
 assert(actionFile.includes("'authorization':'Bearer '+auth.session.access_token"));
 assert(actionFile.includes("body:JSON.stringify({intake_id:intakeId,action,confirm:true})"));
 console.log('Partner native AI Studio read-only, auth and Vercel-independence contracts passed');
+
+// My Progress-inspired queue presentation, without changing read/action contracts.
+for (const marker of ["<PartnerStackBottomNavigation activeTab=\"more\" includeBottomInset/>", "count('in_review')/count('open')", "In review share", "No matching loaded intakes", "page.rows.length<count(filter)", "AccessibilityInfo.isReduceMotionEnabled()", "AppState.addEventListener", "queueUnderline", "PartnerAssets.actions.quickPolicyIntake", "loadAiStudioPage(filter,offset)"]) assert(screen.includes(marker), 'AI Studio redesign contract missing: '+marker);
+assert(!screen.includes('<View style={s.quickGuide}>'), 'Remove standalone workflow card');
+assert(screen.includes('onPress={()=>openDetail(row)}'), 'Keep row detail action');
