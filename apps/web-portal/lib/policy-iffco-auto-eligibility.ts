@@ -55,6 +55,14 @@ export function assessIffcoAutoOnboarding(input:Input):{eligible:boolean;reason:
     if(!match
       ||!get("vehicle_chassis_number")||!get("vehicle_engine_number"))
       return fail("iffco_registered_plate_or_vehicle_identity_unverified");
+    // RTO fields are optional, but any independently recorded source-labelled
+    // registration plate must not contradict the actual selected plate.
+    const geographyProof=[fields.get("vehicle_rto_name")?.evidence,
+      fields.get("vehicle_rto_state")?.evidence].filter((v):v is string=>!!v);
+    if(geographyProof.some(v=>{
+      const printed=v.match(/^Registered plate (\S+)\s/i);
+      return printed&&printed[1].toUpperCase().replace(/[ -]/g,"")!==registration;
+    }))return fail("iffco_registered_plate_source_conflict");
   }
   const cpa=Number(get("cpa_premium"));
   if(!Number.isFinite(cpa)||cpa<0||!input.commercialPremium)
