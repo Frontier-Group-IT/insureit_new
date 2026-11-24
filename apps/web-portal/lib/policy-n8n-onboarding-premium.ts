@@ -170,3 +170,16 @@ export function mapVerifiedNiaCommercialPremium(
   return {od:asMoney(printed.od),addOnPremium:"0",tp:asMoney(tpWithoutCpa),
     cpa:asMoney(sourceVerifiedCpa),cpaOpted:"Yes"};
 }
+
+/** United India GCV source-certified CPA is already inside printed Gross TP(B).
+ * Called only AFTER assessUiicGcvDirectConversion verifies the source-labelled
+ * CPA, named authority, complete vehicle fields and mixed GST. Split CPA
+ * exactly once to preserve the canonical Motor form's OD+TP+CPA=NET rule.
+ * No inferred CPA and no review bypass.
+ */
+export function mapVerifiedUiicGcvCommercialPremium(
+  printed:{od:number;tp:number;net:number;gst:number;gross:number},
+  sourceVerifiedCpa:number,
+):ReturnType<typeof mapVerifiedN8nMotorPremium>{
+  return mapVerifiedIffcoCommercialPremium(printed,sourceVerifiedCpa);
+}
