@@ -546,9 +546,9 @@ for(const [parserId,checksPassed] of [
    parserId+" fully evidenced, zero-CPA registered package eligible");
  assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="vehicle_rto_name"?{...f,evidence:"Native PDF policy schedule"}:f)}).eligible,true,"Populated RTO must not require special evidence wording");
  assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="vehicle_rto_name"?{...f,evidence:undefined}:f)}).eligible,true,"Populated RTO must not require separate authority evidence");
- assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.filter(f=>f.key!=="vehicle_rto_state")}).eligible,false);
+ assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.filter(f=>f.key!=="vehicle_rto_state")}).eligible,true);
  assert.equal(assessStandardCommercialDirectConversion({...fixture,checksPassed:checksPassed-1}).eligible,false);
- assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.filter(f=>f.key!=="vehicle_rto_name")}).eligible,false);
+ assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.filter(f=>f.key!=="vehicle_rto_name")}).eligible,true);
  assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="vehicle_registration_number"?{...f,value:"NEW"}:f)}).eligible,false);
  assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="cpa_premium"?{...f,value:"330"}:f)}).eligible,false);
  assert.equal(assessStandardCommercialDirectConversion({...fixture,commercialPremium:{...standardPremium,net:2999}}).eligible,false);
@@ -667,8 +667,8 @@ const iffcoRegistered={
 assert.equal(assessIffcoAutoOnboarding(iffcoRegistered).eligible,true,
   "IFFCO registered MP20 JCB with 18/18 checks and reconciled premium is eligible");
 assert.equal(assessIffcoAutoOnboarding({...iffcoRegistered,fields:iffcoRegistered.fields.map(f=>
-  f.key==="vehicle_rto_name"?{...f,evidence:"IFFCO policyholder address city only;"}:f)}).eligible,false,
-  "Registered RTO must not come from the mailing address");
+  f.key==="vehicle_rto_name"?{...f,evidence:"IFFCO policyholder address city only;"}:f)}).eligible,true,
+  "RTO city is optional; address city source may not be used as RTO proof");
 assert.equal(assessIffcoAutoOnboarding({...iffcoRegistered,fields:iffcoRegistered.fields.map(f=>
   f.key==="vehicle_registration_number"?{...f,value:"MP21ZS7041"}:f)}).eligible,false,
   "RTO evidence must match the exact printed plate");
@@ -679,7 +679,7 @@ assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,parserId:"go_digit_cv_nativ
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,checksPassed:17}).eligible,false);
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,commercialPremium:{...iffcoAuto.commercialPremium,gross:14300}}).eligible,false);
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.filter(f=>f.key!=="vehicle_capacity")}).eligible,false);
-assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.map(f=>f.key==="vehicle_rto_name"?{...f,evidence:"Native PDF policy schedule"}:f)}).eligible,false);
+assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.map(f=>f.key==="vehicle_rto_name"?{...f,evidence:"Native PDF policy schedule"}:f)}).eligible,true);
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.map(f=>f.key==="vehicle_fuel_type"?{...f,evidence:"Native PDF policy schedule"}:f)}).eligible,false);
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:[...iffcoAuto.fields,iffcoAuto.fields[0]]}).eligible,false);
 assert.ok(handoff.includes("const iffcoReview=assessIffcoAutoOnboarding(")
