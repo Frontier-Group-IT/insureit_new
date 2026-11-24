@@ -6,7 +6,6 @@ import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
-import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
 import { policyIntakeBucket, policyIntakeStatusCounts, type IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
 import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-read-access";
 import { isN8nWorkbenchPrimary, semiAutoN8nEnabledForIntake } from "@/lib/policy-intake-semi-auto-n8n";
@@ -49,7 +48,6 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
     // policy type, even older rows without a classified policy_type; untrained
     // formats receive a review-needed response, not a fabricated extraction.
     let scoped = primaryN8n ? current : current.eq("policy_type", "motor");
-    if (segregatePolicyIntakeLanes()) scoped = scoped.eq("processing_lane","automation");
     if (intakeScope.mode === "or") scoped = scoped.or(intakeScope.predicates);
     else if (intakeScope.mode === "submitter") scoped = scoped.eq("submitted_by_profile_id", intakeScope.profileId);
     else if (intakeScope.mode === "none") scoped = scoped.eq("id","00000000-0000-0000-0000-000000000000");
