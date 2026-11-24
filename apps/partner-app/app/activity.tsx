@@ -36,6 +36,9 @@ export default function ActivityScreen() {
   const busy = useRef(false);
   const loaded = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
+  const pendingRead = useRef(new Set<string>());
   const { width: windowWidth } = useWindowDimensions();
   const periodTriggerRef = useRef<View>(null);
   const [periodMenuPosition, setPeriodMenuPosition] = useState({ top: 0, left: 0 });
@@ -46,6 +49,7 @@ export default function ActivityScreen() {
   const [activityFilter, setActivityFilter] = useState<'unread' | 'read' | 'all'>('all');
   const [period, setPeriod] = useState<PartnerActivityPeriod>('today');
   const [periodMenuOpen, setPeriodMenuOpen] = useState(false);
+  const closingMenu = useRef(false);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState('');
@@ -53,7 +57,7 @@ export default function ActivityScreen() {
   const [readKeys, setReadKeys] = useState<Set<string>>(new Set());
 
   const load = useCallback(async (background = false) => {
-    if (background && busy.current) return;
+    if (background && (busy.current || !visibleRef.current || pendingRead.current.size)) return;
     busy.current = true;
     if (background) setRefreshing(true);
     const version = ++requestVersion.current;
@@ -66,6 +70,7 @@ export default function ActivityScreen() {
     try {
       const nextData = await getPartnerActivityByPeriod(period);
       const nextReadKeys = await getPartnerActivityReadKeys(nextData.items);
+      if (background && (!visibleRef.current || pendingRead.current.size)) return;
       if (requestVersion.current !== version) return;
       const keys = new Set(nextData.items.map(partnerActivityEventKey));
       const attention = new Map(nextData.attention.map(item => [item.kind + ':' + item.route, item.count]));
@@ -99,10 +104,10 @@ export default function ActivityScreen() {
 
   // Refresh only on the visible screen; do not replace a paginated history with its first page.
   useEffect(() => {
-    if (!visible || !loaded.current || loading || loadingMore || (data?.items.length ?? 0) >= 100) return;
+    if (!visible || !loaded.current || loading || loadingMore || hasMore || (data?.items.length ?? 0) >= 100) return;
     const timer = setInterval(() => { void load(true); }, 60000);
     return () => clearInterval(timer);
-  }, [visible, loading, loadingMore, data?.items.length, load]);
+  }, [visible, loading, loadingMore, hasMore, data?.items.length, load]);
   useEffect(() => () => { if (newTimer.current) clearTimeout(newTimer.current); }, []);
   useEffect(() => {
     if (!motion || !newKeys.size) { bell.setValue(0); return; }
@@ -175,9 +180,17 @@ export default function ActivityScreen() {
     });
   }, [activityFilter, data, query, readKeys]);
 
+  function closePeriodMenu(nextPeriod?: PartnerActivityPeriod) {
+    if (closingMenu.current) return;
+    const finish = () => { closingMenu.current = false; setPeriodMenuOpen(false); if (nextPeriod && nextPeriod !== period) { setLoading(true); setNewKeys(new Set()); setUrgent(new Set()); setPeriod(nextPeriod); } };
+    if (!motion) { finish(); return; }
+    closingMenu.current = true;
+    Animated.timing(menu, { toValue: 0, duration: 140, useNativeDriver: Platform.OS !== 'web', isInteraction: false }).start(({ finished }) => { if (finished) finish(); else closingMenu.current = false; });
+  }
+
   function togglePeriodMenu() {
     if (periodMenuOpen) {
-      setPeriodMenuOpen(false);
+      closePeriodMenu();
       return;
     }
     periodTriggerRef.current?.measureInWindow((x, y, _width, height) => {
@@ -185,6 +198,7 @@ export default function ActivityScreen() {
         top: y + height + 3,
         left: Math.max(8, Math.min(x, windowWidth - 160)),
       });
+      closingMenu.current = false;
       setPeriodMenuOpen(true);
     });
   }
@@ -194,6 +208,8 @@ export default function ActivityScreen() {
     const wasRead = readKeys.has(key);
 
     if (!wasRead) {
+      pendingRead.current.add(key);
+      if (busy.current && refreshing) { requestVersion.current += 1; busy.current = false; setRefreshing(false); }
       setReadKeys((current) => {
         const next = new Set(current);
         next.add(key);
@@ -205,7 +221,7 @@ export default function ActivityScreen() {
           next.delete(key);
           return next;
         });
-      });
+      }).finally(() => pendingRead.current.delete(key));
     }
 
     router.push(item.route as never);
@@ -220,7 +236,6 @@ export default function ActivityScreen() {
       bottomNavigationNavy
       bottomNavigation={<PartnerCaseBottomNavigation activeTab="Home" />}
       resetScrollOnFocus={false}
-      scrollProps={{ maintainVisibleContentPosition: { minIndexForVisible: 0 } }}
     >
       <View style={styles.hero}>
         <Pressable
@@ -454,13 +469,13 @@ export default function ActivityScreen() {
         transparent
         statusBarTranslucent
         animationType="none"
-        onRequestClose={() => setPeriodMenuOpen(false)}
+        onRequestClose={() => closePeriodMenu()}
       >
         <View style={styles.periodModalLayer}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Close activity date filter"
-            onPress={() => setPeriodMenuOpen(false)}
+            onPress={() => closePeriodMenu()}
             style={StyleSheet.absoluteFillObject}
           />
           <Animated.View
@@ -477,7 +492,7 @@ export default function ActivityScreen() {
                 key={key}
                 accessibilityRole="button"
                 accessibilityState={{ selected: period === key }}
-                onPress={() => { setPeriodMenuOpen(false); setPeriod(key); }}
+                onPress={() => closePeriodMenu(key)}
                 style={[styles.periodOption, period === key && styles.periodOptionSelected]}
               >
                 <Text style={[styles.periodOptionText, period === key && styles.periodOptionTextSelected]}>{label}</Text>
