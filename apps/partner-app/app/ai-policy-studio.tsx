@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { canPartnerUseAiStudio } from '@/lib/partner-permissions';
 import { aiStudioActionsEnabled, performAiStudioAction, type StudioAction } from '@/lib/ai-studio-actions';
@@ -119,21 +122,24 @@ export default function AiPolicyStudioScreen() {
     </SafeAreaView>
   );
   return (
-    <SafeAreaView style={s.root} edges={['top']}>
-      <View style={s.top}>
-        <Pressable onPress={()=>router.back()} accessibilityRole="button" accessibilityLabel="Back to More" style={s.circle}>
-          <Ionicons name="arrow-back" size={20} color={C.ink}/>
-        </Pressable>
-        <Text style={s.topWord}>INSUREIT  /  OPERATIONS</Text>
-        <Pressable onPress={refresh} accessibilityRole="button" accessibilityLabel="Refresh" style={s.circle}>
-          <Ionicons name="refresh-outline" size={20} color={C.ink}/>
-        </Pressable>
+    <SafeAreaView style={s.root} edges={[]}>
+      <StatusBar style="light" backgroundColor="#071E49" />
+      <View style={[s.headerShell,{paddingTop:insets.top}]}>
+        <View style={s.top}>
+          <Pressable onPress={()=>router.back()} accessibilityRole="button" accessibilityLabel="Back to More" style={s.headerAction}>
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF"/>
+          </Pressable>
+          <Image source={PartnerAssets.actions.quickPolicyIntake} style={s.headerArtwork} resizeMode="contain" accessible={false}/>
+          <Text style={s.topWord} numberOfLines={1}>AI Onboarding Studio</Text>
+          <Pressable onPress={refresh} accessibilityRole="button" accessibilityLabel="Refresh" style={s.headerAction}>
+            <Ionicons name="refresh-outline" size={22} color="#FFFFFF"/>
+          </Pressable>
+        </View>
       </View>
-      <ScrollView style={s.scroll} contentContainerStyle={{paddingHorizontal:22,paddingTop:13,paddingBottom:insets.bottom+36}}
+      <ScrollView style={s.scroll} contentContainerStyle={{paddingHorizontal:22,paddingTop:13,paddingBottom:36}}
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={C.blue} onRefresh={refresh}/>}>
         <View style={s.titleRow}>
-          <View style={{flex:1}}><Text style={s.eyebrow}>POLICY OPERATIONS</Text><Text style={s.title}>AI Onboarding <Text style={{color:C.blue}}>Studio</Text></Text><Text style={s.subtitle}>Review PDFs, repair drafts and securely register policies.</Text></View>
-          <View style={s.sparkle}><Ionicons name="sparkles" color={C.blue} size={22}/></View>
+          <View style={{flex:1}}><Text style={s.eyebrow}>POLICY OPERATIONS</Text><Text style={s.subtitle}>Review PDFs, repair drafts and securely register policies.</Text></View>
         </View>
         <View style={s.hero}>
           <View style={s.heroMain}>
@@ -188,6 +194,9 @@ export default function AiPolicyStudioScreen() {
         </Pressable>:null}
         <Text style={s.footer}>SECURED BY INSUREIT · SUPABASE</Text>
       </ScrollView>
+      <View style={[s.bottomNavigationShell,{paddingBottom:insets.bottom}]}>
+        <PartnerCaseBottomNavigation activeTab="More" />
+      </View>
 
       <Modal visible={Boolean(selected)} presentationStyle="pageSheet" animationType="slide" onRequestClose={closeDetail}>
         <SafeAreaView style={s.sheet}>
@@ -266,14 +275,16 @@ export default function AiPolicyStudioScreen() {
 
 const s=StyleSheet.create({
   root:{flex:1,backgroundColor:C.paper},scroll:{flex:1},
-  top:{height:58,paddingHorizontal:20,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
+  headerShell:{backgroundColor:'#071E49'},
+  top:{minHeight:64,paddingHorizontal:14,backgroundColor:'#071E49',flexDirection:'row',alignItems:'center',gap:10},
+  headerAction:{width:34,minHeight:44,alignItems:'center',justifyContent:'center'},
+  headerArtwork:{width:36,height:36},
+  bottomNavigationShell:{backgroundColor:'#071E49'},
   circle:{width:43,height:43,borderRadius:23,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:C.line,alignItems:'center',justifyContent:'center'},
-  topWord:{fontSize:10,letterSpacing:1.4,color:C.faint,fontWeight:'700'},
+  topWord:{flex:1,flexShrink:1,color:'#FFFFFF',fontSize:18,fontWeight:'800'},
   eyebrow:{fontSize:10,color:'#87969C',fontWeight:'800',letterSpacing:1.5},
   titleRow:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:10,marginBottom:16},
   subtitle:{fontSize:11.5,lineHeight:17,color:C.faint,marginTop:7,maxWidth:270},
-  title:{fontSize:28,fontWeight:'800',letterSpacing:-1.1,color:C.ink,marginTop:5},
-  sparkle:{height:46,width:46,borderRadius:15,alignItems:'center',justifyContent:'center',backgroundColor:'#E7EEFF'},
   hero:{height:158,backgroundColor:C.navy,borderRadius:22,flexDirection:'row',overflow:'hidden',marginBottom:15},
   heroMain:{flex:1,paddingLeft:24,paddingTop:23,zIndex:1},
   heroOverline:{fontSize:10,fontWeight:'700',color:'#A7C6D1',letterSpacing:1.2},
