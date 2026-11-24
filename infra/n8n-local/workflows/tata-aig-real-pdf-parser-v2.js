@@ -218,6 +218,13 @@ function extract(raw){
  // the signature date IS present, its date must agree with the receipt.
  // Never infer issuance date from receipt, signing, or coverage dates.
  const receiptDate=receipt?iso(receipt):null;
+ // User-approved Tata AIG business rule: a clear printed Policy Issue Date
+ // wins. When absent, adopt the independently checked printed Receipt Date
+ // for these certified 18-check layouts, with explicit provenance. This is
+ // NOT a claim that the PDF separately prints a policy-issuance label.
+ const issueDateSource=printedIssue.date?'printed_policy_issue_date'
+   :!printedIssue.ambiguous&&receiptDate?'printed_receipt_business_rule':null;
+ const chosenIssueDate=printedIssue.date??(issueDateSource==='printed_receipt_business_rule'?receiptDate:null);
  const receiptEpoch=receiptDate?Date.parse(receiptDate+'T00:00:00Z'):NaN;
  const odStartEpoch=od?.from?Date.parse(od.from+'T00:00:00Z'):NaN;
  const odEndEpoch=od?.to?Date.parse(od.to+'T00:00:00Z'):NaN;
@@ -243,7 +250,7 @@ function extract(raw){
   policy_start_date:od?.from??null,policy_end_date:od?.to??null,
   third_party_start_date:tp?.from??null,third_party_end_date:tp?.to??null,
   cpa_start_date:pa?.from??null,cpa_end_date:pa?.to??null,
-  policy_issuance_date:printedIssue.date,od_premium:odPrinted,addon_premium:addonTotal,tp_premium:basicTp,cpa_amount:ownerDriverCpa,
+  policy_issuance_date:chosenIssueDate,issue_date_source:issueDateSource,od_premium:odPrinted,addon_premium:addonTotal,tp_premium:basicTp,cpa_amount:ownerDriverCpa,
  };
  const rawPremium={basic_od:basicOd,ncb_discount:ncb,od_after_ncb:odPrinted,addons,addon_total:addonTotal,
   basic_tp:basicTp,owner_driver_cpa:ownerDriverCpa,paid_driver_liability:legal,
@@ -260,7 +267,7 @@ function extract(raw){
   checks,checks_passed:KEYS.length-failed.length,failed_checks:failed,fields,
   premium_components:rawPremium,form_premium_projection:form,form_premium_reconciled:near(formNet,net,0.01),
   warnings:[...(printedIssue.ambiguous?['Conflicting printed Policy Issue Date labels require review']:[]),
-    ...(!printedIssue.date?['Policy Issue Date is not explicitly printed; receipt is not issuance evidence']:[])],booking_ready:false,
+    ...(!chosenIssueDate?['Neither a clear printed issue date nor verified printed receipt is available']:[])],booking_ready:false,
  };
 }
 return $input.all().map(item=>{
