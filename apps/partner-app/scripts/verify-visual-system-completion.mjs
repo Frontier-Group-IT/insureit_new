@@ -1372,7 +1372,7 @@ for (const required of [
   'styles.filterSlidingUnderline',
   'onPress={() => changeFilter(choice.key)}',
   'filterTransition.current?.stop()',
-  'style={styles.timelinePressContent}',
+  'contentStyle={styles.timelinePressContent}',
 ]) requireText(journey, required, 'My Progress subtle motion/reduced-motion contract missing: ' + required);
 requireText(journey, 'filterPosition.interpolate(', 'Active filter typography must transition with the selected underline.');
 requireText(journey, 'Animated.multiply(filterPosition, filterWidth / JOURNEY_FILTERS.length)', 'Timeline underline must slide between equal-size filters.');
