@@ -142,6 +142,15 @@ export default function CustomersScreen() {
     <CustomerCard row={item} index={index} motion={motion} initialRows={firstRows} playedRows={playedRows} onOpen={openCustomer} onContact={contact} />
   ), [motion, openCustomer, contact]);
 
+  const resultMotion = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    resultMotion.setValue(1);
+    if (!motion || collection.loading || refreshing) return;
+    resultMotion.setValue(0.85);
+    const animation = Animated.timing(resultMotion, { toValue: 1, duration: 180, useNativeDriver: true, isInteraction: false });
+    animation.start();
+    return () => { animation.stop(); resultMotion.setValue(1); };
+  }, [motion, collection.loading, collection.updatedAt, refreshing, resultMotion]);
   const listHeader = (
     <View>
       <View style={styles.hero}>
@@ -226,12 +235,12 @@ export default function CustomersScreen() {
   ) : collection.error ? (
     <PartnerStateView state="error" title="Customers could not be loaded" message={collection.error} actionLabel="Try again" onAction={() => void refreshAll()} />
   ) : (
-    <PartnerStateView
+    <Animated.View style={{ opacity: resultMotion }}><PartnerStateView
       state="empty"
       asset={PartnerAssets.emptyStates.noCustomers}
       title="No customers found"
       message={debouncedSearch ? 'Try a different name, code, phone, email or city.' : statusFilter === 'all' ? 'Customers in your authorized business scope will appear here.' : `No ${statusFilter} customers are available in your authorized business scope.`}
-    />
+    /></Animated.View>
   );
 
   const footer = collection.rows.length ? (
@@ -316,13 +325,13 @@ function KpiCell({
 const CustomerCard = memo(function CustomerCard({ row, index, motion, initialRows, playedRows, onOpen, onContact }: { row: PartnerCustomerRow; index: number; motion: boolean; initialRows: { current: Set<string> | null }; playedRows: { current: Set<string> }; onOpen: (id: string) => void; onContact: (url: string) => void }) {
   const eligible = useRef(index < 7 && (initialRows.current === null || initialRows.current.has(row.customer_id)) && !playedRows.current.has(row.customer_id)).current;
   const entrance = useEntrance(motion && eligible, index * 60);
-  useEffect(() => { if (eligible) playedRows.current.add(row.customer_id); }, [eligible, playedRows, row.customer_id]);
+  useEffect(() => { if (eligible && motion) playedRows.current.add(row.customer_id); }, [eligible, motion, playedRows, row.customer_id]);
   const press = useRef(new Animated.Value(1)).current;
   const animatePress = (value: number) => {
     if (!motion) return;
     Animated.spring(press, { toValue: value, useNativeDriver: true, speed: 28, bounciness: 3 }).start();
   };
-  useEffect(() => () => press.stopAnimation(), [press]);
+  useEffect(() => { if (!motion) { press.stopAnimation(); press.setValue(1); } return () => press.stopAnimation(); }, [press, motion]);
   const isActive = (row.customer_status || '').trim().toLowerCase() === 'active';
   const phone = normalizePhone(row.phone || '');
 
@@ -354,7 +363,7 @@ const CustomerCard = memo(function CustomerCard({ row, index, motion, initialRow
 function ContactIcon({ icon, label, disabled, tone, onPress, motion }: { icon: 'call-outline' | 'logo-whatsapp'; label: string; disabled: boolean; tone: 'phone' | 'whatsapp'; onPress: () => void; motion: boolean }) {
   const scale = useRef(new Animated.Value(1)).current;
   const ripple = useRef(new Animated.Value(0)).current;
-  useEffect(() => () => { scale.stopAnimation(); ripple.stopAnimation(); }, [scale, ripple]);
+  useEffect(() => { if (!motion) { scale.setValue(1); ripple.setValue(0); } return () => { scale.stopAnimation(); ripple.stopAnimation(); }; }, [scale, ripple, motion]);
   const press = (down: boolean) => { if (!motion) return; Animated.spring(scale, { toValue: down ? 0.92 : 1, speed: 25, bounciness: 4, useNativeDriver: true }).start(); if (down) { ripple.setValue(1); Animated.timing(ripple, { toValue: 0, duration: 350, useNativeDriver: true }).start(); } };
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} onPressIn={() => press(true)} onPressOut={() => press(false)} style={({ pressed }) => [styles.actionButton, tone === 'whatsapp' && styles.actionButtonWhatsapp, disabled && styles.actionDisabled, pressed && !disabled && styles.pressed]}>
