@@ -152,3 +152,83 @@ export function assessNiaNamedAuthorityUnregisteredConversion(input:Input):{elig
     return fail("nia_premium_or_cpa_not_reconciled");
   return {eligible:true,reason:""};
 }
+
+
+/**
+ * United India GCV printed vehicle schedule and tax/CPA layout.
+ * Both NEW and registered variants are permitted ONLY with matching named
+ * registration authority, source-labelled CPA and full premium itemization.
+ * This is an evidence preflight, not a policy booking authorization.
+ */
+export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;reason:string}{
+  const fail=(reason:string)=>({eligible:false,reason});
+  if(input.parserId!=="united_india_gcv_native_pdf"
+    ||input.checksPassed!==18||input.warnings.length)
+    return fail("uiic_pdf_parser_unverified");
+  const fields=new Map<string,Field>();
+  for(const field of input.fields){
+    if(fields.has(field.key))return fail("uiic_duplicate_pdf_field");
+    fields.set(field.key,field);
+  }
+  const get=(k:string)=>fields.get(k)?.value.trim()??"";
+  for(const key of ["insured_name","policy_number","insurer_name","policy_issuance_date",
+    "policy_start_date","policy_end_date","third_party_start_date","third_party_end_date",
+    "policy_product","vehicle_class","vehicle_make","vehicle_model","vehicle_fuel_type",
+    "vehicle_manufacturing_year","vehicle_capacity","vehicle_chassis_number",
+    "vehicle_engine_number","vehicle_rto_name","vehicle_rto_state",
+    "vehicle_registration_status","vehicle_registration_number","idv",
+    "od_premium","tp_premium","cpa_premium"]){
+    if(!get(key))return fail("uiic_missing_verified_"+key);
+  }
+  if(get("insurer_name")!=="United India Insurance Company Limited"
+    ||get("policy_product")!=="Goods Carrying Vehicle Package"
+    ||get("vehicle_class")!=="Goods Carrying Vehicle"
+    ||get("vehicle_make")!=="Tata Motors"
+    ||!["Petrol","Diesel"].includes(get("vehicle_fuel_type")))
+    return fail("uiic_insurer_product_vehicle_conflict");
+  const year=Number(get("vehicle_manufacturing_year"));
+  if(!/^20\d{2}$/.test(get("vehicle_manufacturing_year"))
+    ||year>new Date().getUTCFullYear()
+    ||! /^\d{3,5}$/.test(get("vehicle_capacity"))
+    ||Number(get("vehicle_capacity"))<=0
+    ||!Number.isFinite(Number(get("idv")))||Number(get("idv"))<=0)
+    return fail("uiic_vehicle_specifications_unverified");
+  const authority=fields.get("vehicle_rto_name")?.evidence??"";
+  const match=authority.match(/^UIIC PDF vehicle Registration Authority: (?:MP\d{2} ([A-Z ]{3,35})|(KATNI) ARTO) INDIA$/);
+  const city=match?.[1]?.trim()??match?.[2]??"";
+  if(!city||city!==get("vehicle_rto_name")
+    ||get("vehicle_rto_state")!=="Madhya Pradesh")
+    return fail("uiic_vehicle_registration_authority_unverified");
+  const reg=get("vehicle_registration_number").replace(/[ -]/g,"");
+  const status=get("vehicle_registration_status");
+  const newPrinted=reg==="NEW"&&status==="registration_pending"
+    &&fields.get("vehicle_registration_number")?.evidence==="UIIC PDF vehicle schedule: printed NEW registration reference"
+    &&fields.get("vehicle_registration_status")?.evidence==="UIIC PDF vehicle schedule: printed NEW registration reference";
+  const registered=/^MP\d{2}[A-Z]{1,3}\d{3,4}$/.test(reg)&&status==="registered";
+  if(!newPrinted&&!registered)return fail("uiic_registration_status_not_source_verified");
+  const dates=["policy_start_date","policy_end_date","policy_issuance_date","third_party_start_date","third_party_end_date"];
+  if(dates.some(key=>! /^\d{4}-\d\d-\d\d$/.test(get(key)))
+    ||get("policy_end_date")<get("policy_start_date")
+    ||get("third_party_start_date")!==get("policy_start_date")
+    ||get("third_party_end_date")!==get("policy_end_date"))
+    return fail("uiic_printed_coverage_dates_inconsistent");
+  const cpa=Number(get("cpa_premium"));
+  const cpaEvidence=fields.get("cpa_premium")?.evidence??"";
+  if(!Number.isFinite(cpa)||cpa<0
+    ||(cpa>0?cpaEvidence!=="UIIC PDF Compulsory PA for Owner Driver: "+cpa.toFixed(2)+" included in Gross TP(B)"
+      :cpaEvidence!=="UIIC PDF Compulsory Personal Accident (CPA) cover is removed"))
+    return fail("uiic_owner_driver_cpa_not_source_verified");
+  const p=input.commercialPremium;
+  if(!p)return fail("uiic_printed_premium_missing");
+  const cents=(v:number)=>Math.round(v*100);
+  const money=[p.od,p.tp,p.net,p.gst,p.gross,cpa,Number(get("od_premium")),Number(get("tp_premium"))];
+  if(!money.every(v=>Number.isFinite(v)&&v>=0&&v<=1_000_000_000
+      &&Math.abs(v*100-cents(v))<0.00001)
+    ||p.od<=0||p.tp<=0||p.gross<=0||cpa>=p.tp
+    ||Math.abs(cents(p.od)+cents(p.tp)-cents(p.net))>6
+    ||Math.abs(cents(p.net)+cents(p.gst)-cents(p.gross))>6
+    ||cents(Number(get("od_premium")))!==cents(p.od)
+    ||cents(Number(get("tp_premium")))!==cents(p.tp))
+    return fail("uiic_printed_od_tp_cpa_gst_unreconciled");
+  return {eligible:true,reason:""};
+}
