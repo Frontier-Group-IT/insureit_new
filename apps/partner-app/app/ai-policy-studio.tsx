@@ -15,6 +15,7 @@ const C = { ink:'#182C38', faint:'#71828C', paper:'#F4F7FD', line:'#E3EAF4', nav
 const TABS: Array<{key:AiStudioBucket;label:string}> = [
   {key:'open',label:'All Open'}, {key:'action',label:'Action'}, {key:'in_review',label:'In Review'}, {key:'processing',label:'Processing'},
 ];
+const PAGE_SIZE=10;
 const humanize = (value:string) => value.replace(/_/g,' ').replace(/\b\w/g,s=>s.toUpperCase());
 const fieldName = (key:string) => ({
   insured_name:'Insured',policy_number:'Policy',policy_issuance_date:'Issued',
@@ -31,10 +32,10 @@ export default function AiPolicyStudioScreen() {
   const {context}=usePartnerSession();
   const allowed=canPartnerUseAiStudio(context);
   const [filter,setFilter]=useState<AiStudioBucket>('open');
+  const [pageIndex,setPageIndex]=useState(0);
   const [page,setPage]=useState<AiStudioPage>({counts:{open:0,action:0,in_review:0,processing:0},rows:[]});
   const [loading,setLoading]=useState(true);
   const [refreshing,setRefreshing]=useState(false);
-  const [moreLoading,setMoreLoading]=useState(false);
   const [error,setError]=useState('');
   const [selected,setSelected]=useState<AiStudioRow|null>(null);
   const [detail,setDetail]=useState<AiStudioDetail|null>(null);
@@ -51,6 +52,7 @@ export default function AiPolicyStudioScreen() {
   const [debouncedSearch,setDebouncedSearch]=useState('');
   const [searchRows,setSearchRows]=useState<AiStudioRow[]|null>(null);
   const [searchLoading,setSearchLoading]=useState(false);
+  const [searchRevision,setSearchRevision]=useState(0);
   const [searchError,setSearchError]=useState('');
   const searchGeneration=useRef(0);
   const [reduceMotion,setReduceMotion]=useState(true);
@@ -66,24 +68,27 @@ export default function AiPolicyStudioScreen() {
   },[]);
   useEffect(()=>{const t=setTimeout(()=>setDebouncedSearch(search.trim().toLowerCase()),300);return ()=>clearTimeout(t);},[search]);
 
-  const reload=useCallback(async(offset=0)=>{
+  const reload=useCallback(async()=>{
     if(!allowed) return;
     const token=++sequence.current;
-    if(offset===0){setLoading(true);setError('');}else setMoreLoading(true);
+    setLoading(true);setError('');
     try {
-      const next=await loadAiStudioPage(filter,offset);
+      const next=await loadAiStudioPage(filter,pageIndex*PAGE_SIZE,PAGE_SIZE);
       if(token!==sequence.current)return;
-      setPage(old=>offset===0?next:{counts:next.counts,rows:[...old.rows,...next.rows.filter(row=>!old.rows.some(x=>x.id===row.id))]});
+      if(pageIndex>0 && next.counts[filter] <= pageIndex*PAGE_SIZE){
+        setPageIndex(Math.max(0,Math.ceil(next.counts[filter]/PAGE_SIZE)-1));return;
+      }
+      setPage(next);
     } catch(e) {
       if(token===sequence.current) setError(e instanceof Error?e.message:'Could not load the queue.');
     } finally {
-      if(token===sequence.current){setLoading(false);setRefreshing(false);setMoreLoading(false);}
+      if(token===sequence.current){setLoading(false);setRefreshing(false);}
     }
-  },[allowed,filter]);
+  },[allowed,filter,pageIndex]);
   useFocusEffect(useCallback(()=>{
-    void reload();
+    if(!debouncedSearch)void reload();
     return ()=>{sequence.current++;detailSequence.current++;};
-  },[reload]));
+  },[reload,debouncedSearch]));
   useEffect(()=>{
     if(!selected||!allowed){setDetail(null);return;}
     const token=++detailSequence.current;
@@ -118,15 +123,17 @@ export default function AiPolicyStudioScreen() {
   useEffect(()=>{
     const token=++searchGeneration.current;
     if(!debouncedSearch){setSearchRows(null);setSearchLoading(false);setSearchError('');return;}
-    if(!allowed||loading)return;
+    if(!allowed)return;
     setSearchRows(null);setSearchLoading(true);setSearchError('');
-    // The existing authorized RPC has no search argument. Only fetch all pages on an explicit search,
-    // and filter those authorized results locally; never search just the first 25 and imply completeness.
+    // The list RPC is permission-scoped and has no search argument. Read every
+    // authorized page before searching; never silently search the first 10 or 25.
     void (async()=>{
       try{
-        const all=[...page.rows];let offset=all.length;
-        while(offset<count(filter)){
-          const next=await loadAiStudioPage(filter,offset);
+        const first=await loadAiStudioPage(filter,0,25);
+        if(token!==searchGeneration.current)return;
+        const all=[...first.rows];let offset=all.length;
+        while(offset<first.counts[filter]){
+          const next=await loadAiStudioPage(filter,offset,25);
           if(token!==searchGeneration.current)return;
           if(!next.rows.length)throw new Error('Could not search every intake. Try again.');
           all.push(...next.rows);offset+=next.rows.length;
@@ -134,12 +141,19 @@ export default function AiPolicyStudioScreen() {
         if(token!==searchGeneration.current)return;
         setSearchRows(all.filter(row=>[row.intake_number,row.lead_source_name,row.policy_type,row.status,row.queue_state].some(value=>value?.toLowerCase().includes(debouncedSearch))));
       }catch(e){if(token===searchGeneration.current)setSearchError(e instanceof Error?e.message:'Intake search could not be completed.');}
-      finally{if(token===searchGeneration.current)setSearchLoading(false);}
+      finally{if(token===searchGeneration.current){setSearchLoading(false);setRefreshing(false);}}
     })();
     return ()=>{searchGeneration.current++;};
-  },[debouncedSearch,filter,allowed,loading]);
-  const displayedRows=debouncedSearch?(searchRows??[]):page.rows;
-  const refresh=()=>{setRefreshing(true);void reload();};
+  },[debouncedSearch,filter,allowed,searchRevision]);
+  const matchingCount=debouncedSearch?(searchRows?.length??0):count(filter);
+  const totalPages=Math.max(1,Math.ceil(matchingCount/PAGE_SIZE));
+  const displayedRows=debouncedSearch?(searchRows??[]).slice(pageIndex*PAGE_SIZE,(pageIndex+1)*PAGE_SIZE):page.rows;
+  const changePage=(next:number)=>{
+    if(next<0||next>=totalPages||next===pageIndex)return;
+    if(!debouncedSearch)setLoading(true);
+    setPageIndex(next);
+  };
+  const refresh=()=>{setRefreshing(true);if(debouncedSearch)setSearchRevision(v=>v+1);else void reload();};
   const closeDetail=()=>{if(actionBusy)return;setSelected(null);setPendingAction(null);setActionError('');setResultUncertain(false);setFieldExpanded(false);};
   const openDetail=(row:AiStudioRow)=>{setSelected(row);setFieldExpanded(false);setActionError('');setResultUncertain(false);};
   const reloadSelected=async()=>{
@@ -162,7 +176,7 @@ export default function AiPolicyStudioScreen() {
         return;
       }
       setPendingAction(null);setSelected(null);
-      if(result.policy_booked)setFilter('open');void reload();
+      if(result.policy_booked){setFilter('open');setPageIndex(0);}else void reload();
     }catch(e){
       const message=e instanceof Error?e.message:'The operation could not be confirmed.';
       setActionError(message);
@@ -190,7 +204,7 @@ export default function AiPolicyStudioScreen() {
           <Pressable onPress={()=>router.back()} accessibilityRole="button" accessibilityLabel="Back to More" style={s.headerAction}>
             <Ionicons name="arrow-back" size={22} color="#FFFFFF"/>
           </Pressable>
-          <Image source={PartnerAssets.actions.quickPolicyIntake} style={s.headerArtwork} resizeMode="contain" accessible={false}/>
+          <Image source={PartnerAssets.actions.policyChecklist} style={s.headerArtwork} resizeMode="contain" accessible={false}/>
           <Text style={s.topWord} numberOfLines={1}>AI Onboarding Studio</Text>
           <Pressable onPress={refresh} accessibilityRole="button" accessibilityLabel="Refresh" style={s.headerAction}>
             <Animated.View style={{transform:[{rotate:refreshRotation.interpolate({inputRange:[0,1],outputRange:['0deg','360deg']})}]}}><Ionicons name="refresh-outline" size={22} color="#FFFFFF"/></Animated.View>
@@ -203,7 +217,7 @@ export default function AiPolicyStudioScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={C.blue} onRefresh={refresh}/>}>
         <View style={s.summarySurface}>
           <View style={s.summaryTop}>
-            <Image source={PartnerAssets.actions.quickPolicyIntake} style={s.summaryArtwork} resizeMode="contain" accessible={false}/>
+            <Image source={PartnerAssets.actions.policyChecklist} style={s.summaryArtwork} resizeMode="contain" accessible={false}/>
             <View style={s.summaryText}>
               <Text style={s.summaryOverline}>POLICY WORK QUEUE</Text>
               <Text style={s.summaryMain}>{count('open')} Open Intakes</Text>
@@ -225,7 +239,7 @@ export default function AiPolicyStudioScreen() {
           <View style={s.summaryMetrics}>
             {([
               {key:'processing',title:'Processing',image:PartnerAssets.status.policyPending},
-              {key:'in_review',title:'In Review',image:PartnerAssets.status.pendingReview},
+              {key:'in_review',title:'In Review',image:PartnerAssets.actions.documentSearch},
               {key:'action',title:'Action',image:PartnerAssets.status.policyAttention},
             ] as const).map(metric=>(
               <View style={s.metric} key={metric.key}>
@@ -241,23 +255,23 @@ export default function AiPolicyStudioScreen() {
         <View style={s.listSection}>
           <View style={s.listHeading}>
             <Text style={s.listHeadingText}>Policy intakes</Text>
-            <Text style={s.recordPill}>{count(filter)} Records</Text>
+            <Text style={s.recordPill}>{searchLoading?'Searching…':`${matchingCount} ${matchingCount===1?"Record":"Records"}`}</Text>
           </View>
           <View style={s.intakePanel}>
             <View style={s.searchBar}>
               <Ionicons name="search-outline" size={16} color="#2274CF"/>
-              <TextInput value={search} onChangeText={setSearch} placeholder="Search customer or intake..."
+              <TextInput value={search} onChangeText={value=>{setSearch(value);setPageIndex(0);}} placeholder="Search customer or intake..."
                 placeholderTextColor="#8899B2" style={s.searchInput} autoCapitalize="none"
                 accessibilityLabel="Search intake or source across authorized records"
                 returnKeyType="search"/>
-              {search?<Pressable onPress={()=>setSearch('')} accessibilityRole="button" accessibilityLabel="Clear search">
+              {search?<Pressable onPress={()=>{setSearch('');setPageIndex(0);}} accessibilityRole="button" accessibilityLabel="Clear search">
                 <Ionicons name="close-circle" size={16} color="#91A1B3"/>
               </Pressable>:<Ionicons name="options-outline" size={17} color="#6F88AA"/>}
             </View>
             <View style={s.tabsRow} onLayout={event=>setTabsWidth(event.nativeEvent.layout.width)}>
               {TABS.map(tab=><Pressable key={tab.key} style={s.tabItem}
                 accessibilityRole="tab" accessibilityState={{selected:filter===tab.key}}
-                onPress={()=>{setFilter(tab.key);setPage(p=>({...p,rows:[]}));}}>
+                onPress={()=>{if(tab.key===filter)return;setFilter(tab.key);setPageIndex(0);setSearchRows(null);setLoading(true);}}>
                 <Text style={[s.tabText,filter===tab.key&&s.tabTextActive]}>{tab.label==='All Open'?'All':tab.label}</Text>
               </Pressable>)}
               {tabsWidth>0?<Animated.View pointerEvents="none" style={[s.tabUnderline,{
@@ -265,9 +279,9 @@ export default function AiPolicyStudioScreen() {
                 transform:[{translateX:Animated.multiply(tabProgress,tabsWidth/4)}],
               }]}/>:null}
             </View>
-            {loading&&page.rows.length===0||searchLoading?
+            {(loading&&!debouncedSearch||searchLoading)?
               <View accessibilityRole="progressbar" accessibilityLabel="Loading policy intakes" style={s.rowsLoading}>
-                {Array.from({length:4},(_,i)=><View key={i} style={s.skeletonRow}>
+                {Array.from({length:Math.min(4,Math.max(0,count(filter)))},(_,i)=><View key={i} style={s.skeletonRow}>
                   <View style={s.skeletonIcon}/><View style={s.skeletonCopy}><View style={s.skeletonLineWide}/><View style={s.skeletonLineShort}/></View>
                 </View>)}
               </View>:null}
@@ -276,17 +290,20 @@ export default function AiPolicyStudioScreen() {
             </Pressable>:null}
             {searchError?<Text style={s.errorText}>{searchError}</Text>:null}
             {!loading&&!searchLoading&&!error&&!searchError&&displayedRows.length===0?
-              <View style={s.compactEmpty}><Text style={s.emptyHead}>{debouncedSearch?'No matching intakes':'All clear here'}</Text>
-                <Text style={s.emptyText}>{debouncedSearch?'Try another intake number or source.':'No intakes in this view.'}</Text>
+              <View style={s.compactEmpty}>
+                <Image source={debouncedSearch?PartnerAssets.emptyStates.noSearchResults:PartnerAssets.emptyStates.noDocuments}
+                  style={s.emptyArtwork} resizeMode="contain" accessible={false}/>
+                <Text style={s.emptyHead}>{debouncedSearch?'No matching intakes':'No intakes found'}</Text>
+                <Text style={s.emptyText}>{debouncedSearch?'Try another intake number or source.':'There are no intakes in this view.'}</Text>
               </View>:null}
-            {!loading&&!searchLoading&&displayedRows.map((row,index)=>{
+            {!loading&&!searchLoading&&!error&&!searchError&&displayedRows.map((row,index)=>{
               const done=!!row.final_policy_id,flag=row.exception_codes.length>0;
               const status=done?'Completed':row.status==='in_review'?'In review':row.status==='processing'&&row.ocr_status!=='failed'?'Fetching details':'Action required';
               return <StudioRowEnter key={row.id} index={index} reduceMotion={reduceMotion}>
                 <Pressable accessibilityRole="button" accessibilityLabel={'Open '+row.intake_number}
                   style={({pressed})=>[s.compactRow,pressed&&s.compactRowPressed]} onPress={()=>openDetail(row)}>
                   <View style={s.rowArtworkShell}>
-                    <Image source={flag?PartnerAssets.status.policyAttention:PartnerAssets.actions.impactPolicyDocument}
+                    <Image source={flag?PartnerAssets.status.policyAttention:done?PartnerAssets.status.verified:row.status==='in_review'?PartnerAssets.actions.documentSearch:row.status==='processing'?PartnerAssets.status.policyPending:PartnerAssets.actions.policyChecklist}
                       style={s.rowArtwork} resizeMode="contain" accessible={false}/>
                   </View>
                   <View style={s.rowMain}>
@@ -297,14 +314,27 @@ export default function AiPolicyStudioScreen() {
                     <Text numberOfLines={1} style={[s.rowStatus,{color:done?'#398562':flag?'#A5773A':'#5C78A8'}]}>{status}</Text>
                     <Text numberOfLines={1} style={s.rowChecks}>{row.checks_passed?String(row.checks_passed)+' checks':'Pending'}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={15} color="#91A4B6"/>
                 </Pressable>
               </StudioRowEnter>;
             })}
-            {!debouncedSearch&&!loading&&page.rows.length<count(filter)?<Pressable style={s.showMore} disabled={moreLoading}
-              onPress={()=>void reload(page.rows.length)} accessibilityRole="button">
-              {moreLoading?<ActivityIndicator color={C.ink} size="small"/>:<Text style={s.showMoreText}>Show more</Text>}
-            </Pressable>:null}
+            {!loading&&!searchLoading&&!error&&!searchError?(
+              <View style={s.paginationRow}>
+                <Text style={s.paginationInfo}>{matchingCount===0?'0 records':`Showing ${pageIndex*PAGE_SIZE+1}–${Math.min((pageIndex+1)*PAGE_SIZE,matchingCount)} of ${matchingCount}`}</Text>
+                <View style={s.paginationActions}>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Previous page"
+                    disabled={pageIndex===0} style={[s.paginationButton,pageIndex===0&&s.paginationDisabled]}
+                    onPress={()=>changePage(pageIndex-1)}>
+                    <Ionicons name="chevron-back" size={17} color="#1D5CAA"/>
+                  </Pressable>
+                  <Text style={s.paginationPage}>Page {pageIndex+1} of {totalPages}</Text>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Next page"
+                    disabled={pageIndex>=totalPages-1} style={[s.paginationButton,pageIndex>=totalPages-1&&s.paginationDisabled]}
+                    onPress={()=>changePage(pageIndex+1)}>
+                    <Ionicons name="chevron-forward" size={17} color="#1D5CAA"/>
+                  </Pressable>
+                </View>
+              </View>
+            ):null}
           </View>
         </View>
       </ScrollView>
@@ -406,18 +436,18 @@ const s=StyleSheet.create({
   screenContent:{paddingBottom:24},
   summarySurface:{backgroundColor:'#FFFFFF',paddingHorizontal:11,paddingTop:10,paddingBottom:8},
   summaryTop:{flexDirection:'row',alignItems:'center',minHeight:76,gap:8},
-  summaryArtwork:{width:34,height:39},
+  summaryArtwork:{width:43,height:45},
   summaryText:{flex:1,minWidth:0},
   summaryOverline:{fontSize:8,color:'#6245D2',fontWeight:'700',letterSpacing:0.6},
   summaryMain:{fontSize:19,color:'#10294D',fontWeight:'800',marginTop:2},
   summaryDescription:{fontSize:10,color:'#68798F',marginTop:3},
-  summaryDivider:{height:StyleSheet.hairlineWidth,backgroundColor:'#DFE5EE',marginTop:5,marginBottom:8},
+  summaryDivider:{height:1,backgroundColor:'#CFD9E6',marginTop:5,marginBottom:8},
   ringHolder:{width:44,height:44,alignItems:'center',justifyContent:'center',marginLeft:4},
   ringTick:{position:'absolute',left:20,top:20,width:4,height:7,borderRadius:3},
   ringText:{fontSize:9,fontWeight:'800',color:'#6844D9'},
   summaryMetrics:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',minHeight:47},
-  metric:{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:4,minWidth:0},
-  metricArtwork:{width:22,height:25},
+  metric:{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:3,minWidth:0},
+  metricArtwork:{width:33,height:33},
   metricCopy:{minWidth:0},
   metricLabel:{color:'#627089',fontSize:10},
   metricValue:{color:'#071D38',fontSize:16,fontWeight:'800'},
@@ -435,15 +465,22 @@ const s=StyleSheet.create({
   tabUnderline:{position:'absolute',height:2,bottom:0,left:0,backgroundColor:'#2178EC'},
   compactRow:{minHeight:63,flexDirection:'row',alignItems:'center',gap:7,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#E7ECF2',paddingVertical:7},
   compactRowPressed:{backgroundColor:'#F4F8FE'},
-  rowArtworkShell:{width:28,height:32,borderRadius:7,backgroundColor:'#EAF3FF',alignItems:'center',justifyContent:'center'},
-  rowArtwork:{width:23,height:26},
+  rowArtworkShell:{width:33,height:35,borderRadius:7,alignItems:'center',justifyContent:'center'},
+  rowArtwork:{width:32,height:33},
   rowsLoading:{gap:0},
   skeletonRow:{height:63,flexDirection:'row',alignItems:'center',gap:9,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#E5EBF2'},
   skeletonIcon:{width:28,height:32,borderRadius:7,backgroundColor:'#EDF2FA'},
   skeletonCopy:{flex:1,gap:7},
   skeletonLineWide:{height:9,width:'58%',borderRadius:5,backgroundColor:'#EDF2FA'},
   skeletonLineShort:{height:7,width:'74%',borderRadius:4,backgroundColor:'#EDF2FA'},
-  compactEmpty:{minHeight:115,alignItems:'center',justifyContent:'center',gap:7,padding:20},
+  compactEmpty:{minHeight:115,alignItems:'center',justifyContent:'center',gap:5,padding:12},
+  emptyArtwork:{width:49,height:49},
+  paginationRow:{minHeight:44,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:6,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:'#E6ECF4',paddingTop:7,paddingBottom:5},
+  paginationInfo:{color:'#78889A',fontSize:10,flexShrink:1},
+  paginationActions:{flexDirection:'row',alignItems:'center',gap:7},
+  paginationButton:{width:29,height:29,alignItems:'center',justifyContent:'center',borderRadius:8,borderWidth:1,borderColor:'#DFE8F2'},
+  paginationDisabled:{opacity:0.35},
+  paginationPage:{fontSize:10,fontWeight:'700',color:'#195BBA'},
 
   root:{flex:1,backgroundColor:C.paper},scroll:{flex:1},
   headerShell:{backgroundColor:'#071E49'},
