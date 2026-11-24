@@ -58,7 +58,7 @@ function useScreenMotion() {
 }
 
 function useEntrance(motion: boolean, delay = 0) {
-  const value = useRef(new Animated.Value(1)).current;
+  const value = useRef(new Animated.Value(motion ? 0 : 1)).current;
   const played = useRef(false);
   useEffect(() => {
     if (!motion) { value.setValue(1); return; }
@@ -200,7 +200,7 @@ const RING_COLORS = RING_SEGMENTS.map((_, index) => {
   return t < 0.5 ? blendColor([99,37,215], [141,80,217], t * 2) : blendColor([141,80,217], [84,27,199], (t - 0.5) * 2);
 });
 const ProgressRing = memo(function ProgressRing({ progress, motion }: { progress: number; motion: boolean }) {
-  const value = useRef(new Animated.Value(progress)).current;
+  const value = useRef(new Animated.Value(motion ? 0 : progress)).current;
   const animated = useRef(false);
   useEffect(() => {
     if (!motion) { value.setValue(progress); return; }
@@ -221,8 +221,8 @@ const ProgressRing = memo(function ProgressRing({ progress, motion }: { progress
 });
 
 function AnimatedMetric({ value, format, style, motion }: { value: number; format: (value: number) => string; style: StyleProp<TextStyle>; motion: boolean }) {
-  const [shown, setShown] = useState(value);
-  const displayed = useRef(value);
+  const [shown, setShown] = useState(motion ? 0 : value);
+  const displayed = useRef(motion ? 0 : value);
   const animated = useRef(false);
   useEffect(() => {
     if (!motion || !Number.isFinite(value)) { displayed.current = value; setShown(value); return; }
