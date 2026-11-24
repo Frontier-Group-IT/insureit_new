@@ -163,12 +163,12 @@ function unitedIndiaGcvFlexible(t) {
  const capacity=ccText&&Number(ccText)>0?ccText:null;
  // The registration authority must be inside the vehicle schedule, not the
  // policyholder address or issuing office. The insurer has two printed layouts.
- let rto=null;
+ let rto=null, printedAuthority=null;
  for(const m of t.matchAll(/\bRegistration\s+Authority\b/gi)){
   const ctx=t.slice(m.index, m.index+900).split(/Amount in words/i)[0];
   const found=ctx.match(/\bMP\s*\d{2}\s+([A-Z][A-Z ]{2,35}?)\s+INDIA\b/i)
    ||ctx.match(/\b(KATNI)\s+ARTO\s+INDIA\b/i);
-  if(found){rto=found[1].trim().toUpperCase();break;}
+  if(found){rto=found[1].trim().toUpperCase();printedAuthority=found[0].trim().replace(/\s+/g,' ').toUpperCase();break;}
  }
  const od=amountAfter(t,/\bGross OD\(A\)\s*([\d,.]+)/i);
  const tp=amountAfter(t,/\bGross TP\(B\)\s*([\d,.]+)/i);
@@ -213,8 +213,21 @@ function unitedIndiaGcvFlexible(t) {
   cpa_disposition_evidenced:cpa!==null||cpaExcluded,
   printed_issue_unambiguous:!!issue,
  };
- return output('United India Insurance Company Limited','united_india_gcv_native_pdf',base,premium,extra,
+ const verified=output('United India Insurance Company Limited','united_india_gcv_native_pdf',base,premium,extra,
   Object.entries(supplemental).filter(([,v])=>v!==true).map(([k])=>'Review required: '+k));
+ // Provenance is required by the website's insurer-specific direct preflight.
+ verified.fields=verified.fields.map(field=>{
+  if(field.key==='vehicle_rto_name'&&printedAuthority)
+   return {...field,evidence:'UIIC PDF vehicle Registration Authority: '+printedAuthority};
+  if((field.key==='vehicle_registration_number'||field.key==='vehicle_registration_status')&&registration==='NEW')
+   return {...field,evidence:'UIIC PDF vehicle schedule: printed NEW registration reference'};
+  if(field.key==='cpa_premium'&&cpa!==null)
+   return {...field,evidence:'UIIC PDF Compulsory PA for Owner Driver: '+cpa.toFixed(2)+' included in Gross TP(B)'};
+  if(field.key==='cpa_premium'&&cpaExcluded)
+   return {...field,evidence:'UIIC PDF Compulsory Personal Accident (CPA) cover is removed'};
+  return field;
+ });
+ return verified;
 }
 
 function unitedIndia(t){
