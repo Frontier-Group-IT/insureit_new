@@ -126,7 +126,7 @@ export default function WeeklyStoryScreen() {
 
             <View style={styles.heroMainRow}>
               <View style={styles.heroCopy}>
-                <AnimatedCurrency value={data.premium_this_week} style={styles.heroValue} animate={animate} />
+                <AnimatedCurrency value={Number(data.premium_this_week ?? 0)} style={styles.heroValue} animate={animate} />
                 <Text style={styles.heroLabel}>Gross premium recorded this week</Text>
               </View>
               <GrowthBars animate={animate} />
@@ -203,7 +203,7 @@ export default function WeeklyStoryScreen() {
                   <View style={styles.compareIcon}><MiniBars /></View>
                   <View style={styles.previousCopy}>
                     <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={styles.compareValue}>
-                      <AnimatedCurrencyText value={comparisonDays === 7 ? data.premium_last_week : comparisonData?.premium_previous_period ?? 0} animate={animate} />
+                      <AnimatedCurrencyText value={Number(comparisonDays === 7 ? data.premium_last_week : comparisonData?.premium_previous_period ?? 0)} animate={animate} />
                     </Text>
                     <Text style={styles.compareLabel}>{comparisonDays === 7 ? 'Last week premium' : `Previous ${comparisonDays} days premium`}</Text>
                   </View>
