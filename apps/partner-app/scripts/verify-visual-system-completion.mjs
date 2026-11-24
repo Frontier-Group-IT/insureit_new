@@ -213,7 +213,7 @@ requireText(policyDetail, 'onPress={() => setShowCommercialDetails((value) => !v
 requireText(policyDetail, 'quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 9', 'Quick Actions heading remains aligned with transparent tiles');
 requireText(policyDetail, 'externalSectionHeading: { marginLeft: -6, paddingLeft: 0, paddingRight: 2 }', 'Customer & Vehicle heading moves slightly left without moving its card');
 requireText(policyDetail, 'contentWrap: { marginTop: 0, gap: 12, paddingBottom: 15 }', 'Section cards use 12px breathing room');
-requireText(policyDetail, 'paddingHorizontal: 14, paddingTop: 10, paddingBottom: 9', 'Policy summary vertical padding is compact');
+requireText(policyDetail, 'paddingHorizontal: 14, paddingTop: 5, paddingBottom: 5', 'Policy summary vertical padding is compact');
 requireText(policyDetail, 'quickSection: { marginHorizontal: 0, paddingVertical: 8 }', 'Quick Actions tiles align with full-width content');
 requireText(policyDetail, 'quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 9', 'Quick Actions heading keeps its clear spacing');
 requireText(policyDetail, "minHeight: 94, alignItems: 'center', justifyContent: 'center'", 'Quick Action rows retain full tap targets');
@@ -1093,8 +1093,8 @@ for (const kind of ['premium-breakup', 'sales-ownership']) {
 }
 requireText(policyDetail, "premiumDisclosure: { minHeight: 37, paddingHorizontal: 11", 'Premium header sits outside the card and aligns with other headings.');
 requireText(policyDetail, "commercialRow: { minHeight: 37, paddingHorizontal: 11", 'Sales header sits outside the card and aligns with other headings.');
-requireText(policyDetail, '<Text style={styles.cardTitle}>Premium breakup</Text>', 'Premium title uses exact Overview heading typography.');
-requireText(policyDetail, '<Text style={styles.cardTitle}>Sales ownership</Text>', 'Sales ownership title uses exact Overview heading typography.');
+requireText(policyDetail, '<Text style={[styles.cardTitle, styles.premiumHeadingTone]}>Premium breakup</Text>', 'Premium title uses exact Overview heading typography.');
+requireText(policyDetail, '<Text style={[styles.cardTitle, styles.salesHeadingTone]}>Sales ownership</Text>', 'Sales ownership title uses exact Overview heading typography.');
 requireText(policyDetail, '<CardHeader iconKind="policy-overview" title="Policy Overview" actionLabel="View All"', 'Policy Overview retains its external heading and View All action.');
 if (policyDetail.includes('policySectionHeaderTint')) throw Error('Policy Overview must not restore its tinted heading.');
 if (policyDetail.includes("backgroundColor: '#DCF6F0'")) throw Error('Premium breakup must not restore its mint heading fill.');
@@ -1703,3 +1703,5 @@ if (/rotateY\s*:|perspective\s*:|opacity:\s*transition\.interpolate/.test(storie
 
 for (const marker of ['useActivityMotion()', 'ringSegments.map', 'pickerBusy.current', 'setPhotoSuccess(true)', 'animation.stop()', 'Haptics.ImpactFeedbackStyle.Light', 'entrance(avatarEntrance', 'entrance(iconAppear', 'onPressIn={logoutPress.onPressIn}']) requireText(profile, marker, 'Profile motion contract: ' + marker);
 if (profile.indexOf('setPhotoSuccess(true)') < profile.indexOf('if (!refreshedAvatar) throw')) throw new Error('Photo success must follow confirmed upload and refresh');
+
+for (const marker of ["customerHeadingTone: { color: '#078878' }", "overviewHeadingTone: { color: '#7946CE' }", "premiumHeadingTone: { color: '#098956' }", "salesHeadingTone: { color: '#B66C16' }", "summaryArtworkWrap: { width: 40, height: 40", "summaryNetPremium: { marginTop: 2", "summaryBadges: { alignItems: 'flex-end', justifyContent: 'center', gap: 3", "quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 9, color: '#0969CF'"]) requireText(policyDetail, marker, 'Approved compact Policy Details: ' + marker);
