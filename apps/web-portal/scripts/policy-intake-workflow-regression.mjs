@@ -93,7 +93,7 @@ assert(intakeForm.includes('fetch(signedUrl,{method:"PUT"'),"Browser must upload
 assert(intakeForm.includes("Saving policy intake"),"Sales submission must communicate immediate save instead of blocking on OCR");
 assert(intakeForm.includes("fetched in the background"),"Sales must be told policy and vehicle details are fetched in the background for Motor/Non-Motor");
 assert(intakeForm.includes("Proposal form"),"Life/Health intake must present the upload as a Proposal Form");
-assert(intakeForm.includes("without OCR or detail extraction"),"Life/Health helper messaging must state that proposal forms are stored without OCR/detail extraction");
+assert(intakeForm.includes("Life/Health proposals also enter AI automation"),"Proposal uploads must explain the unified automation and untrained review state");
 assert(intakeForm.includes("Upload couldn't be completed"),"Upload failures must stay on the form with a recoverable error");
 const reviewSummary=read("lib/policy-intake-review-summary.ts");
 const portfolioPage=read("app/policies/page.tsx");
@@ -138,7 +138,7 @@ assert(workspace.includes('myActiveWork: baseFiltered.filter((row) => policyInta
 assert(workspace.includes('{ value: "in_review", label: "In Review", count: stats.inReview }'),"Reviewer queue must expose global In Review as a primary status bucket");
 assert(workspace.includes('My Active Work <span className="ml-1.5 opacity-80">{stats.myActiveWork}</span>'),"Reviewer queue must keep My Active Work as a separate personal shortcut");
 assert(workspace.includes("Policy Type"),"Policy Intake Queue must show Policy Type beside Lead Source");
-assert(workspace.includes('return "Stored"'),"Life/Health proposal-form detail status must render as Stored instead of Fetched");
+assert(workspace.includes('return "Action required"') && !workspace.includes('return "Stored"'),"Life/Health proposals must not masquerade as extracted or stored-only records");
 
 const contextCard=read("components/policy-intake-onboarding-context.tsx");
 assert(contextCard.includes("View Policy Copy"),"Policy Onboarding footer must keep the intake policy copy available to Operations");
