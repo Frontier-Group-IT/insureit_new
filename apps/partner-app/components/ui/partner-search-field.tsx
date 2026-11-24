@@ -90,6 +90,8 @@ export function PartnerSearchField({
   containerStyle,
   leadingIconSource,
   leadingIconVariant,
+  premiumMotion = false,
+  pausePlaceholder = false,
 }: {
   value: string;
   onChangeText: (value: string) => void;
@@ -104,9 +106,27 @@ export function PartnerSearchField({
   leadingIconSource?: ImageSourcePropType;
   /** Opt-in bright blue raised search artwork for compact feature screens. */
   leadingIconVariant?: 'blue3d';
+  premiumMotion?: boolean;
+  pausePlaceholder?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   const [chosen, setChosen] = useState("");
+  const focusMotion = useRef(new Animated.Value(0)).current;
+  const clearMotion = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!premiumMotion) { focusMotion.setValue(0); return; }
+    const animation = Animated.timing(focusMotion, { toValue: focused ? 1 : 0, duration: 180, useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [focused, premiumMotion, focusMotion]);
+  const hasValue = Boolean(value);
+  useEffect(() => {
+    clearMotion.setValue(premiumMotion && hasValue ? 0 : 1);
+    if (!premiumMotion || !hasValue) return;
+    const animation = Animated.timing(clearMotion, { toValue: 1, duration: 160, useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [hasValue, premiumMotion, clearMotion]);
   useEffect(() => { if (!value.trim()) setChosen(""); }, [value]);
   const searchTerm = value.trim().toLowerCase();
   const seen = new Set<string>();
@@ -122,20 +142,21 @@ export function PartnerSearchField({
 
   return (
     <View style={[styles.wrap, containerStyle, focused && styles.focused]}>
+      {premiumMotion ? <Animated.View pointerEvents="none" style={[styles.motionFocus, { opacity: focusMotion }]} /> : null}
       {leadingIconSource
         ? <Image source={leadingIconSource} style={styles.leadingArtwork} resizeMode="contain" accessibilityIgnoresInvertColors />
         : leadingIconVariant === 'blue3d'
           ? <View pointerEvents="none" style={styles.raisedSearchIcon}>
               <Ionicons name="search" size={19} color="#057CE9" />
             </View>
-          : <Ionicons
+          : <Animated.View style={premiumMotion ? { transform: [{ scale: focusMotion.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }] } : undefined}><Ionicons
               name="search-outline"
               size={21}
               color={focused ? partnerTheme.colors.brand : '#3156B8'}
-            />}
+            /></Animated.View>}
       <View style={styles.inputShell}>
         {rotating ? (
-          <PartnerRotatingSearchPlaceholder placeholders={rotatingItems} containerStyle={styles.placeholderOverlay} />
+          <PartnerRotatingSearchPlaceholder placeholders={rotatingItems} active={!pausePlaceholder} containerStyle={styles.placeholderOverlay} />
         ) : null}
         <TextInput
           accessibilityLabel={placeholder}
@@ -179,7 +200,7 @@ export function PartnerSearchField({
           }}
           style={({ pressed }) => [styles.clear, pressed && styles.clearPressed]}
         >
-          <Ionicons name="close" size={16} color={partnerTheme.colors.inkMuted} />
+          <Animated.View style={premiumMotion ? { opacity: clearMotion, transform: [{ scale: clearMotion.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] } : undefined}><Ionicons name="close" size={16} color={partnerTheme.colors.inkMuted} /></Animated.View>
         </Pressable>
       ) : null}
     </View>
@@ -187,6 +208,7 @@ export function PartnerSearchField({
 }
 
 const styles = StyleSheet.create({
+  motionFocus: { ...StyleSheet.absoluteFillObject, borderRadius: 10, borderWidth: 1, borderColor: '#3678D2', shadowColor: '#3678D2', shadowOpacity: 0.14, shadowRadius: 4, shadowOffset: { width: 0, height: 0 } },
   leadingArtwork: { width: 26, height: 26 },
   raisedSearchIcon: { width: 29, height: 29, borderRadius: 9, backgroundColor: '#E7F6FF', borderWidth: 1, borderColor: '#A1DDFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#076ACB', shadowOpacity: 0.26, shadowRadius: 3, shadowOffset: { width: 1, height: 2 }, elevation: 3 },
   suggestionList: { position: 'absolute', top: 46, left: 0, right: 0, zIndex: 300, backgroundColor: '#FFFFFF', borderColor: '#DCE5EF', borderWidth: 1, borderRadius: 11, overflow: 'hidden', elevation: 12 },

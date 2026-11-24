@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, AppState, Easing, FlatList, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,7 +19,6 @@ import {
   type PartnerCustomerSummary,
 } from '@/lib/customers';
 import { PartnerAssets } from '@/lib/partner-assets';
-import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { usePartnerPageQuery } from '@/lib/use-partner-page-query';
 import { usePartnerQuery } from '@/lib/use-partner-query';
@@ -29,6 +29,16 @@ let savedCustomerQuery = '';
 
 export default function CustomersScreen() {
   const router = useRouter();
+  const motion = useCustomerMotion();
+  const heroMotion = useEntrance(motion);
+  const firstRows = useRef<Set<string> | null>(null);
+  const playedRows = useRef(new Set<string>());
+  const contactLock = useRef(0);
+  const refreshLock = useRef(false);
+  const refreshFeedback = useRef(false);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  const [kpiWidth, setKpiWidth] = useState(0);
+  const selection = useRef(new Animated.Value(0)).current;
   const verticalListRef = useRef<FlatList>(null);
   useFocusEffect(useCallback(() => {
     const reset = () => verticalListRef.current?.scrollToOffset({ offset: 0, animated: false });
@@ -70,7 +80,11 @@ export default function CustomersScreen() {
   });
 
   const refreshAll = useCallback(async () => {
-    await Promise.all([summary.refresh(), collection.refresh()]);
+    if (refreshLock.current) return;
+    refreshLock.current = true;
+    setManualRefreshing(true);
+    try { await Promise.all([summary.refresh(), collection.refresh()]); }
+    finally { refreshLock.current = false; refreshFeedback.current = true; setManualRefreshing(false); }
   }, [collection, summary]);
 
   const totals = useMemo(() => {
@@ -79,17 +93,75 @@ export default function CustomersScreen() {
     return { customers, active, inactive: Math.max(customers - active, 0) };
   }, [summary.data]);
 
+  const refreshing = manualRefreshing || collection.refreshing || summary.refreshing;
+  const spin = useRef(new Animated.Value(0)).current;
+  const refreshScale = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (refreshing || !refreshFeedback.current) return;
+    refreshFeedback.current = false;
+    if (!motion || collection.error || summary.error || collection.stale || summary.stale) return;
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    const animation = Animated.sequence([Animated.timing(refreshScale, { toValue: 1.12, duration: 100, useNativeDriver: true }), Animated.spring(refreshScale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 4 })]);
+    animation.start();
+    return () => { animation.stop(); refreshScale.setValue(1); };
+  }, [refreshing, motion, collection.error, summary.error, collection.stale, summary.stale, refreshScale]);
+  useEffect(() => {
+    spin.setValue(0);
+    if (!motion || !refreshing) return;
+    const animation = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 850, easing: Easing.linear, useNativeDriver: true, isInteraction: false }));
+    animation.start();
+    return () => { animation.stop(); spin.setValue(0); };
+  }, [motion, refreshing, spin]);
+  useEffect(() => {
+    const target = statusFilter === 'all' ? 0 : statusFilter === 'active' ? 1 : 2;
+    if (!motion) { selection.setValue(target); return; }
+    const animation = Animated.spring(selection, { toValue: target, useNativeDriver: true, speed: 20, bounciness: 3 });
+    animation.start();
+    return () => animation.stop();
+  }, [statusFilter, motion, selection]);
+  const selectFilter = useCallback((next: PartnerCustomerStatusFilter) => {
+    if (next === statusFilter) return;
+    void Haptics.selectionAsync().catch(() => {});
+    setStatusFilter(next);
+  }, [statusFilter]);
+  // Freeze the first batch; never re-arm entrances for scrolling, search or page changes.
+  useEffect(() => {
+    if (!collection.loading && firstRows.current === null && collection.rows.length) {
+      firstRows.current = new Set(collection.rows.slice(0, 7).map(row => row.customer_id));
+    }
+  }, [collection.loading, collection.rows]);
+  const openCustomer = useCallback((id: string) => router.push(`/customer/${id}` as never), [router]);
+  const contact = useCallback((url: string) => {
+    const now = Date.now();
+    if (now < contactLock.current) return;
+    contactLock.current = now + 1000;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    void Linking.openURL(url).catch(() => { contactLock.current = 0; });
+  }, []);
+  const renderCustomer = useCallback(({ item, index }: { item: PartnerCustomerRow; index: number }) => (
+    <CustomerCard row={item} index={index} motion={motion} initialRows={firstRows} playedRows={playedRows} onOpen={openCustomer} onContact={contact} />
+  ), [motion, openCustomer, contact]);
+
+  const resultMotion = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    resultMotion.setValue(1);
+    if (!motion || collection.loading || refreshing) return;
+    resultMotion.setValue(0.85);
+    const animation = Animated.timing(resultMotion, { toValue: 1, duration: 180, useNativeDriver: true, isInteraction: false });
+    animation.start();
+    return () => { animation.stop(); resultMotion.setValue(1); };
+  }, [motion, collection.loading, collection.updatedAt, refreshing, resultMotion]);
   const listHeader = (
     <View>
       <View style={styles.hero}>
-        <View style={styles.heroOrbLarge} />
-        <View style={styles.heroOrbSmall} />
+        <Animated.View pointerEvents="none" style={[styles.heroOrbLarge, { transform: [{ translateX: heroMotion.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }] }]} />
+        <Animated.View pointerEvents="none" style={[styles.heroOrbSmall, { transform: [{ translateX: heroMotion.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }] }]} />
         <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={() => router.back()} hitSlop={8} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
           <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </Pressable>
-        <View style={styles.heroIcon}>
+        <Animated.View style={[styles.heroIcon, { transform: [{ scale: heroMotion.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1] }) }] }]}>
           <Ionicons name="people" size={19} color="#0A5CC7" />
-        </View>
+        </Animated.View>
         <View style={styles.heroCopy}>
           <Text style={styles.eyebrow}>BUSINESS</Text>
           <Text style={styles.title}>Customers</Text>
@@ -100,21 +172,22 @@ export default function CustomersScreen() {
         {summary.loading && !summary.data ? (
           <View style={styles.kpiLoading} accessibilityRole="progressbar" accessibilityLabel="Loading customer totals"><View style={styles.kpiSkeletonBlock} /><View style={styles.kpiSkeletonBlock} /><View style={styles.kpiSkeletonBlock} /></View>
         ) : (
-          <View style={styles.kpiStrip}>
+          <View style={styles.kpiStrip} onLayout={event => setKpiWidth(event.nativeEvent.layout.width)}>
+            {kpiWidth > 0 ? <Animated.View pointerEvents="none" style={[styles.selection, { width: kpiWidth / 3, transform: [{ translateX: Animated.multiply(selection, kpiWidth / 3) }] }]} /> : null}
             <KpiCell
               label="Customers"
               value={totals.customers}
               icon="people-outline"
               active={statusFilter === 'all'}
               first
-              onPress={() => setStatusFilter('all')}
+              motion={motion} onPress={() => selectFilter('all')}
             />
             <KpiCell
               label="Active"
               value={totals.active}
               icon="checkmark-circle-outline"
               active={statusFilter === 'active'}
-              onPress={() => setStatusFilter('active')}
+              motion={motion} onPress={() => selectFilter('active')}
             />
             <KpiCell
               label="Inactive"
@@ -122,7 +195,7 @@ export default function CustomersScreen() {
               icon="remove-circle-outline"
               active={statusFilter === 'inactive'}
               last
-              onPress={() => setStatusFilter('inactive')}
+              motion={motion} onPress={() => selectFilter('inactive')}
             />
           </View>
         )}
@@ -134,10 +207,10 @@ export default function CustomersScreen() {
           placeholder="Search name, code, phone, email or city"
           placeholders={["Search customer name…","Search mobile number…","Search customer code…","Search city…"]}
           suggestions={debouncedSearch.length >= 2 ? collection.rows.flatMap(row => [row.customer_name,row.customer_code || "",row.phone || "",row.email || "",row.city || ""]) : []}
-          containerStyle={styles.searchBox}
+          containerStyle={styles.searchBox} premiumMotion={motion} pausePlaceholder={!motion}
         />
-        <Pressable accessibilityRole="button" accessibilityLabel="Refresh customers" onPress={() => void refreshAll()} style={({ pressed }) => [styles.refreshButton, pressed && styles.pressed]}>
-          <Ionicons name="refresh" size={18} color="#173E73" />
+        <Pressable accessibilityRole="button" accessibilityLabel="Refresh customers" onPress={() => void refreshAll()} accessibilityState={{ busy: refreshing }} disabled={refreshing} style={({ pressed }) => [styles.refreshButton, pressed && styles.pressed]}>
+          <Animated.View style={{ transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }) }, { scale: refreshScale }] }}><Ionicons name="refresh" size={18} color="#173E73" /></Animated.View>
         </Pressable>
       </View>
 
@@ -158,16 +231,16 @@ export default function CustomersScreen() {
   );
 
   const empty = collection.loading ? (
-    <PartnerStateView state="loading" title="Finding customers" />
+    <CustomerSkeleton motion={motion} />
   ) : collection.error ? (
     <PartnerStateView state="error" title="Customers could not be loaded" message={collection.error} actionLabel="Try again" onAction={() => void refreshAll()} />
   ) : (
-    <PartnerStateView
+    <Animated.View style={{ opacity: resultMotion }}><PartnerStateView
       state="empty"
       asset={PartnerAssets.emptyStates.noCustomers}
       title="No customers found"
       message={debouncedSearch ? 'Try a different name, code, phone, email or city.' : statusFilter === 'all' ? 'Customers in your authorized business scope will appear here.' : `No ${statusFilter} customers are available in your authorized business scope.`}
-    />
+    /></Animated.View>
   );
 
   const footer = collection.rows.length ? (
@@ -191,14 +264,14 @@ export default function CustomersScreen() {
         key={`customers-page-${collection.page}`}
         data={collection.rows}
         keyExtractor={(row) => row.customer_id}
-        renderItem={({ item }) => <CustomerCard row={item} onOpen={() => router.push(`/customer/${item.customer_id}` as never)} />}
+        renderItem={renderCustomer}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={<View style={styles.emptyWrap}>{empty}</View>}
         ListFooterComponent={footer}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        refreshing={collection.refreshing || summary.refreshing}
+        refreshing={refreshing}
         onRefresh={() => void refreshAll()}
       />
 
@@ -215,6 +288,7 @@ function KpiCell({
   first = false,
   last = false,
   onPress,
+  motion,
 }: {
   label: string;
   value: number;
@@ -223,6 +297,7 @@ function KpiCell({
   first?: boolean;
   last?: boolean;
   onPress: () => void;
+  motion: boolean;
 }) {
   return (
     <Pressable
@@ -232,7 +307,7 @@ function KpiCell({
       onPress={onPress}
       style={({ pressed }) => [
         styles.kpiCell,
-        active && styles.kpiCellActive,
+        active && { borderLeftColor: '#0B2E63' },
         first && styles.kpiCellFirst,
         last && styles.kpiCellLast,
         pressed && styles.kpiCellPressed,
@@ -240,48 +315,122 @@ function KpiCell({
     >
       <Ionicons name={icon} size={15} color={active ? '#FFFFFF' : '#1E5A98'} />
       <View style={styles.kpiCopy}>
-        <Text style={[styles.kpiValue, active && styles.kpiTextActive]}>{value}</Text>
+        <Text style={[styles.kpiValue, active && styles.kpiTextActive]}><CountValue value={value} motion={motion} /></Text>
         <Text style={[styles.kpiLabel, active && styles.kpiTextActive]}>{label}</Text>
       </View>
     </Pressable>
   );
 }
 
-function CustomerCard({ row, onOpen }: { row: PartnerCustomerRow; onOpen: () => void }) {
+const CustomerCard = memo(function CustomerCard({ row, index, motion, initialRows, playedRows, onOpen, onContact }: { row: PartnerCustomerRow; index: number; motion: boolean; initialRows: { current: Set<string> | null }; playedRows: { current: Set<string> }; onOpen: (id: string) => void; onContact: (url: string) => void }) {
+  const eligible = useRef(index < 7 && (initialRows.current === null || initialRows.current.has(row.customer_id)) && !playedRows.current.has(row.customer_id)).current;
+  const entrance = useEntrance(motion && eligible, index * 60);
+  useEffect(() => { if (eligible && motion) playedRows.current.add(row.customer_id); }, [eligible, motion, playedRows, row.customer_id]);
+  const press = useRef(new Animated.Value(1)).current;
+  const animatePress = (value: number) => {
+    if (!motion) return;
+    Animated.spring(press, { toValue: value, useNativeDriver: true, speed: 28, bounciness: 3 }).start();
+  };
+  useEffect(() => { if (!motion) { press.stopAnimation(); press.setValue(1); } return () => press.stopAnimation(); }, [press, motion]);
   const isActive = (row.customer_status || '').trim().toLowerCase() === 'active';
   const phone = normalizePhone(row.phone || '');
 
   return (
-    <View style={styles.cardWrap}>
-      <View style={styles.card}>
-        <View style={styles.avatar}>
+    <Animated.View style={[styles.cardWrap, { opacity: entrance, transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] }]}>
+      <Animated.View style={[styles.card, { transform: [{ scale: press }] }]}>
+        <Animated.View style={[styles.avatar, { transform: [{ scale: entrance.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1] }) }] }]}><View pointerEvents="none" style={styles.avatarHighlight} />
           <Text style={styles.avatarText}>{initials(row.customer_name)}</Text>
-        </View>
+        </Animated.View>
 
-        <Pressable accessibilityRole="button" accessibilityLabel={`Open customer ${row.customer_name}`} onPress={onOpen} style={({ pressed }) => [styles.customerMain, pressed && styles.customerMainPressed]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Open customer ${row.customer_name}`} onPress={() => onOpen(row.customer_id)} onPressIn={() => animatePress(0.98)} onPressOut={() => animatePress(1)} style={({ pressed }) => [styles.customerMain, pressed && styles.customerMainPressed]}>
           <View style={styles.nameRow}>
             <Text numberOfLines={1} style={styles.customerName}>{row.customer_name}</Text>
-            <View accessibilityLabel={isActive ? 'Active customer' : 'Inactive customer'} style={[styles.statusDot, isActive ? styles.statusDotActive : styles.statusDotInactive]} />
+            <Animated.View accessibilityLabel={isActive ? 'Active customer' : 'Inactive customer'} style={[styles.statusDot, isActive ? styles.statusDotActive : styles.statusDotInactive, { transform: [{ scale: entrance }] }]} />
           </View>
           <Text numberOfLines={1} style={styles.meta}>{row.customer_code || 'Customer code pending'}{row.phone ? ` · ${row.phone}` : ''}</Text>
           <Text numberOfLines={1} style={styles.meta}>{row.intermediary_code || 'Direct / unassigned'}</Text>
         </Pressable>
 
         <View style={styles.actions}>
-          <ContactIcon icon="call-outline" label="Call" disabled={!phone} tone="phone" onPress={() => phone ? void Linking.openURL(`tel:+91${phone}`) : undefined} />
-          <ContactIcon icon="logo-whatsapp" label="WhatsApp" disabled={!phone} tone="whatsapp" onPress={() => phone ? void Linking.openURL(`https://wa.me/91${phone}`) : undefined} />
+          <ContactIcon icon="call-outline" label="Call" disabled={!phone} tone="phone" motion={motion} onPress={() => phone && onContact(`tel:+91${phone}`)} />
+          <ContactIcon icon="logo-whatsapp" label="WhatsApp" disabled={!phone} tone="whatsapp" motion={motion} onPress={() => phone && onContact(`https://wa.me/91${phone}`)} />
         </View>
-      </View>
-    </View>
+      </Animated.View>
+    </Animated.View>
+  );
+});
+
+function ContactIcon({ icon, label, disabled, tone, onPress, motion }: { icon: 'call-outline' | 'logo-whatsapp'; label: string; disabled: boolean; tone: 'phone' | 'whatsapp'; onPress: () => void; motion: boolean }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const ripple = useRef(new Animated.Value(0)).current;
+  useEffect(() => { if (!motion) { scale.setValue(1); ripple.setValue(0); } return () => { scale.stopAnimation(); ripple.stopAnimation(); }; }, [scale, ripple, motion]);
+  const press = (down: boolean) => { if (!motion) return; Animated.spring(scale, { toValue: down ? 0.92 : 1, speed: 25, bounciness: 4, useNativeDriver: true }).start(); if (down) { ripple.setValue(1); Animated.timing(ripple, { toValue: 0, duration: 350, useNativeDriver: true }).start(); } };
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} onPressIn={() => press(true)} onPressOut={() => press(false)} style={({ pressed }) => [styles.actionButton, tone === 'whatsapp' && styles.actionButtonWhatsapp, disabled && styles.actionDisabled, pressed && !disabled && styles.pressed]}>
+      <Animated.View pointerEvents="none" style={[styles.contactRipple, { backgroundColor: tone === 'whatsapp' ? '#12A64A' : '#5935E8', opacity: ripple.interpolate({ inputRange: [0, 1], outputRange: [0, 0.16] }), transform: [{ scale: ripple.interpolate({ inputRange: [0, 1], outputRange: [1, 0.35] }) }] }]} />
+      <Animated.View style={{ transform: [{ scale }] }}><Ionicons name={icon} size={16} color={tone === 'whatsapp' ? '#12A64A' : '#5935E8'} /></Animated.View>
+    </Pressable>
   );
 }
 
-function ContactIcon({ icon, label, disabled, tone, onPress }: { icon: 'call-outline' | 'logo-whatsapp'; label: string; disabled: boolean; tone: 'phone' | 'whatsapp'; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.actionButton, tone === 'whatsapp' && styles.actionButtonWhatsapp, disabled && styles.actionDisabled, pressed && !disabled && styles.pressed]}>
-      <Ionicons name={icon} size={16} color={tone === 'whatsapp' ? '#12A64A' : '#5935E8'} />
-    </Pressable>
-  );
+function useCustomerMotion() {
+  const [reduced, setReduced] = useState(true);
+  const [focused, setFocused] = useState(false);
+  const [foreground, setForeground] = useState(AppState.currentState === 'active');
+  useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
+  useEffect(() => {
+    let alive = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then(value => { if (alive) setReduced(value); }).catch(() => {});
+    const reduce = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
+    const app = AppState.addEventListener('change', state => setForeground(state === 'active'));
+    return () => { alive = false; reduce.remove(); app.remove(); };
+  }, []);
+  return focused && foreground && !reduced;
+}
+
+function useEntrance(enabled: boolean, delay = 0) {
+  const progress = useRef(new Animated.Value(1)).current;
+  const played = useRef(false);
+  useEffect(() => {
+    if (!enabled || played.current) { progress.setValue(1); return; }
+    played.current = true;
+    progress.setValue(0);
+    const animation = Animated.timing(progress, { toValue: 1, duration: 230, delay, useNativeDriver: true, isInteraction: false });
+    animation.start();
+    return () => { animation.stop(); progress.setValue(1); };
+  }, [enabled, delay, progress]);
+  return progress;
+}
+
+function CountValue({ value, motion }: { value: number; motion: boolean }) {
+  const [shown, setShown] = useState(value);
+  const played = useRef(false);
+  useEffect(() => {
+    if (!motion || played.current || value === 0) { setShown(value); return; }
+    played.current = true;
+    const start = Date.now();
+    let frame = 0;
+    const tick = () => {
+      const t = Math.min((Date.now() - start) / 500, 1);
+      setShown(Math.round(value * (1 - Math.pow(1 - t, 3))));
+      if (t < 1) frame = requestAnimationFrame(tick);
+    };
+    setShown(0);
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [motion, value]);
+  return <>{shown}</>;
+}
+
+function CustomerSkeleton({ motion }: { motion: boolean }) {
+  const phase = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!motion) { phase.setValue(0); return; }
+    const animation = Animated.loop(Animated.timing(phase, { toValue: 1, duration: 1100, useNativeDriver: true, isInteraction: false }));
+    animation.start();
+    return () => { animation.stop(); phase.setValue(0); };
+  }, [motion, phase]);
+  return <View accessibilityRole="progressbar" accessibilityLabel="Finding customers">{Array.from({ length: 5 }, (_, index) => <View key={index} style={styles.cardWrap}><View style={[styles.card, { overflow: 'hidden' }]}><View style={styles.skeletonAvatar} /><View style={{ flex: 1, gap: 5 }}><View style={styles.skeletonLine} /><View style={[styles.skeletonLine, { width: '65%' }]} /><View style={[styles.skeletonLine, { width: '35%' }]} /></View><View style={styles.skeletonAvatar} /><Animated.View pointerEvents="none" style={[styles.shimmer, { transform: [{ translateX: phase.interpolate({ inputRange: [0, 1], outputRange: [-80, 400] }) }] }]} /></View></View>)}</View>;
 }
 
 function normalizePhone(value: string) { return value.replace(/\D/g, '').slice(-10); }
@@ -305,8 +454,8 @@ const styles = StyleSheet.create({
   kpiLoading: { height: 48, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DEE7F2' },
   kpiSkeletonBlock: { flex: 1, height: 35, borderRadius: 8, backgroundColor: '#EDEFF3' },
   kpiStrip: { height: 48, flexDirection: 'row', borderRadius: 10, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DCE5F0' },
-  kpiCell: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: '#E1E7F0', backgroundColor: '#FFFFFF' },
-  kpiCellActive: { backgroundColor: '#0B2E63', borderLeftColor: '#0B2E63' },
+  kpiCell: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: '#E1E7F0', backgroundColor: 'transparent' },
+  selection: { position: 'absolute', top: 0, bottom: 0, left: 0, backgroundColor: '#0B2E63' },
   kpiCellPressed: { opacity: 0.78 },
   kpiCopy: { minWidth: 0, alignItems: 'flex-start' },
   kpiCellFirst: { borderLeftWidth: 0 },
@@ -324,6 +473,11 @@ const styles = StyleSheet.create({
   cardWrap: { paddingHorizontal: 10, paddingTop: 5 },
   card: { minHeight: 65, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E0E8F2', shadowColor: '#15375F', shadowOpacity: 0.035, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
   avatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1EDFF' },
+  avatarHighlight: { position: 'absolute', top: 1, left: 2, width: 30, height: 16, borderRadius: 15, backgroundColor: '#FFFFFF', opacity: 0.16 },
+  contactRipple: { ...StyleSheet.absoluteFillObject, borderRadius: 15 },
+  skeletonAvatar: { width: 29, height: 29, borderRadius: 18, backgroundColor: '#EDEFF3' },
+  skeletonLine: { width: '85%', height: 7, borderRadius: 4, backgroundColor: '#EDEFF3' },
+  shimmer: { position: 'absolute', top: 0, bottom: 0, width: 45, backgroundColor: '#FFFFFF', opacity: 0.45 },
   avatarText: { color: '#583CE7', fontSize: 8, lineHeight: 10, fontWeight: '800' },
   customerMain: { flex: 1, minWidth: 0, paddingVertical: 2, borderRadius: 6 },
   customerMainPressed: { opacity: 0.62 },
