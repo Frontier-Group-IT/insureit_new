@@ -18,11 +18,13 @@ Do not confuse this with the legacy `.github/skills/insureit-policy-ocr-automate
 
 ## Mandatory reading before edits
 
-Read `AGENTS.md`, `docs/AI_POLICY_PARSER_DIRECT_BOOKING_CONTRACT.md`, `docs/NON_TATA_COMMERCIAL_N8N_PARSER_TRAINING_2026-11-19.md`, `.github/workflows/verify-web-portal.yml` and this skill's `references/diagnostic-playbook.md` and `references/acceptance-gates.md`. Consult current source and live workflow; these may evolve.
+Read `AGENTS.md`, `docs/AI_POLICY_PARSER_DIRECT_BOOKING_CONTRACT.md`, `docs/NON_TATA_COMMERCIAL_N8N_PARSER_TRAINING_2026-11-19.md`, `.github/workflows/verify-web-portal.yml` and this skill's `references/diagnostic-playbook.md`, `references/acceptance-gates.md` and `references/insurer-layout-incidents-2026-11.md`. Consult current source and live workflow; these may evolve.
 
 Current shared local n8n workflow ID: `0uGscm0WUegvxa6V`. Confirm ID, name, draft versus published version, active status and exact node names **live** before editing. Current insurer nodes include `New India Assurance CV Parser`, `IFFCO Tokio CV Parser`, `Go Digit CV Parser`, `United India GCV Parser`, `Oriental GCCV Parser`, `ICICI Product 3005 Parser`, and Tata AIG nodes.
 
 Important website code paths (verify current repository):
+- `infra/n8n-local/extensions/` — isolated insurer-specific readers (SBI, HDFC, Zurich, Digit OD, United Tractor, etc.);
+- `apps/web-portal/lib/policy-product-variant-direct-eligibility.ts` — strict product, premium, CPA and NCB conversion gate;
 - `apps/web-portal/lib/policy-nontata-commercial-n8n.ts` — whitelist/validate n8n output, internal reference versus plate, field normalization;
 - `apps/web-portal/lib/policy-intake-semi-auto-n8n.ts` — current private PDF, source fingerprint and legacy compatibility;
 - `apps/web-portal/lib/ai-policy-onboarding-eligibility.ts` — parser profiles, required fields, exception reasons;
@@ -32,13 +34,25 @@ Important website code paths (verify current repository):
 - `apps/web-portal/lib/policy-iffco-auto-eligibility.ts`, `apps/web-portal/lib/policy-commercial-direct-eligibility.ts`, `apps/web-portal/lib/policy-iffco-machine-family.ts`;
 - `apps/web-portal/scripts/ai-nontata-signed-queue-regression.mjs`, `apps/web-portal/scripts/policy-intake-semi-auto-regression.mjs`.
 
+## Issuance date source precedence — mandatory for ALL insurer parsers (2026-11-24)
+
+**Primary: printed policy issuance date.** Read the explicit Policy Issue Date / Date of Issue / Policy Issued On or insurer-specific issuance label from the CURRENT PDF. Extract the value using actual PDF reading order (it may precede its label). If valid and unambiguous this is FINAL, regardless of receipt date, PDF creation time, coverage inception or the signature's date. Do not demand a signature date to approve a valid printed issuance date.
+
+**Fallback: date on the signature image only if the printed issuance date is absent.** Render and inspect/recognize the signature image region; ensure its date is visible and unambiguous, provenance is document-bound, and the trusted verifier marks it verified. Persist page, source method and confidence. A PDF /M attribute, plain text claiming 'digitally signed', IsSignaturesPresent flag, CreationDate/ModDate, receipt date or policy-start date are NOT a signature-image extraction. Do not fabricate a fallback from these. If no image verification service is present, return an explicit review-needed reason rather than assuming.
+
+**Conflicts:** conflicting or ambiguous printed issue dates are an exception, not permission to select receipt, coverage start, OCR or signature arbitrarily. When clear printed issue date exists it outranks a differing signature or receipt date. Keep OD/TP coverage dates, receipt dates, date approval/OTP, duplicate booking and signature cryptographic trust as separate responsibilities.
+
+Every successful result must carry policy_issuance_date and provenance printed_policy_issue_date or verified_signature_image_fallback, plus page/label. Tests must show printed outranks metadata/receipt/signature, verified image fallback only when no printed date, and fail-closed missing or unverified image evidence. Migrate insurer rules individually after inspecting the PDFs; do not mass-edit working parsers.
+
+Read references/insurer-layout-incidents-2026-11.md for the November incident library and practices.
+
 ## Standard workflow for EVERY request
 
 1. **Identify** the insurer, PDF, intake UUID/number, product variant and current state; look up the *exact* row and n8n execution. Do not treat a screenshot as the whole record. Establish whether this is old stored OCR, a stale queue exception, wrong draft mapper, missing insurer master option, or canonical booking failure. Check duplicates and existing booked policy before any write.
 2. **Read the original PDF** including native text and tables/page rendering. Record exact source page, source label and confidence for every onboarding field; do not borrow values from issuing-office, insured-address or previous-policy blocks. Separate PDF-printed values, official registry mapping, trusted manufacturer-model derivations and unverified conjecture.
 3. **Compare the complete pipeline**: original PDF → native text → live n8n Code output → website filtered fields → queue `field_keys` and `exception_codes` → saved `draft_payload` → visible form/master dropdown → final preflight. Identify **the first stage at which a correct value disappears or changes**, plus independent stale diagnostics. Never "fix" the parser when the value was correctly extracted and discarded downstream.
 4. **Certify a layout family** with a narrowly scoped rule and an insurer-specific product and premium contract. Fix source extraction, adapter, normalization/master, queue, draft and/or conversion at the earliest real defective stage. A make already correctly chosen as Tata with blank RTO is NOT solved by retraining make alone.
-5. **Validate every required value**: issuance date versus coverage start (and insurer-approved signature logic); insured identity and lead-source matching; product and class; make/model/fuel; registration state/complete plate versus partial prefix; actual named registration authority/RTO city and state; correct capacity unit (CC, kW, GVW); chassis, engine, manufacture year; IDV; OD, TP, CPA, add-ons, net, tax components and gross. Respect product-specific mandatory fields.
+5. **Validate every required value**: printed issuance date versus coverage start (signature-image fallback only without an explicit printed date); insured identity and lead-source matching; product and class; make/model/fuel; registration state/complete plate versus partial prefix; actual named registration authority/RTO city and state; correct capacity unit (CC, kW, GVW); chassis, engine, manufacture year; IDV; OD, TP, CPA, add-ons, net, tax components and gross. Respect product-specific mandatory fields.
 6. **Use source-aware evidence**: printed model `TATA MOTOR/1918 AZURA` may map to canonical Tata, but do not blindly infer fuel from make. Do not overwrite explicit conflicting fuel. New JCB electric variants exist: model-family Diesel evidence must be independently certified, not `make==="JCB" ⇒ Diesel`.
 7. **Prove financial consistency** by reproducing the insurer's printed tax treatment, including mixed GST rates and CPA/paid-driver portions. Do not require a universal 18% GST. Do not silently double count CPA if TP already includes it; confirm which canonical slots must contain TP excluding or including CPA. If insurer totals cannot be correctly mapped, block booking with a precise reason.
 8. **Prevent false exception loops**: reconcile saved review holds, new parser evidence and old fingerprints without changing records automatically. Where an old extraction was missing data, only allow an exact-document, validated re-evaluation; never clear genuine conflicting identity, date approval, duplicate or premium exceptions.

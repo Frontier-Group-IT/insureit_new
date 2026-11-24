@@ -13,7 +13,7 @@
 - [ ] Unregistered versus registered status and vehicle lookup work for correct product variant.
 - [ ] Make/model/fuel matches actual dropdown choices; no guessed Diesel for electric/unknown models.
 - [ ] Capacity correctly typed: GVW versus CC versus kW; no fallback from seat count/model digits.
-- [ ] Printed issuance date and validity distinguished and insurer-specific approval honored.
+- [ ] Printed Policy Issue Date / Date of Issue is FIRST and final if valid, even when receipt, metadata or signature dates differ; page and label evidenced.\n- [ ] When printed issue date is unavailable, independently verified document-bound signature-image date is the ONLY automated fallback; absent image verifier fails closed (no PDF CreationDate, receipt or start substitution).\n- [ ] Printed-versus-fallback precedence regression, conflicting printed labels, negative unverified image, and date approval/OTP independence tested.
 - [ ] OD/TP/CPA/LL/add-ons, tax by schedule (5% and 18% possible), net and gross reconcile.
 - [ ] Each true missing/conflicting field has a **specific, current** exception reason; stale reasons not shown as current.
 - [ ] Green Convert/Verify & Convert invokes server preflight, not just a parser check count; no manual form prerequisite for a truly bookable policy.

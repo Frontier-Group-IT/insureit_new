@@ -15,16 +15,22 @@ const product=/Private Car Insurance Policy\s*-\s*Package/i.test(flat);
 const number=grab(/Policy\s*\/\s*Certificate No\s*:\s*(POPMCAR\d{11})/i);
 const numberReceipt=grab(/Policy Number\s+(POPMCAR\d{11})/i);
 const insured=grab(/Policy Holder Name\s+((?:Mr|Mrs|Ms)\.?\s+[A-Za-z ]{3,65})\s+Intermediary Name/i);
-const issue=toIso(grab(/Receipt Date\s+(\d{2}\/\d{2}\/\d{4})/i));
-const signatureDate=grab(/Digitally signed by DS SBI\s+GENERAL INSURANCE\s+COMPANY LTD\s+Date:\s+(\d{4}\.\d{2}\.\d{2})/i);
-const signedDate=signatureDate?.replace(/\./g,'-');
+// Issuance-date precedence: explicitly printed schedule date first.
+// The signature image is a fallback ONLY when the printed date is absent.
+// The PDF-text node does not render/OCR a signature image, so a missing date
+// must remain review-required until independently extracted image evidence exists.
+// Receipt date, PDF creation metadata and coverage start are never substitutes.
 const printedIssue=toIso(grab(/(\d{2}\/\d{2}\/\d{4})\s+POPMCAR\d{11}\s+Period of Insurance TP/i));
-const policyIssueReceipt=toIso(grab(/Receipt Date\s+(\d{2}\/\d{2}\/\d{4})/i));
-// PDF metadata is corroborating document evidence, NOT a cryptographic
-// signature-chain or signed-attribute verification. Preserve that distinction. 
-const issueDateCorroborated=!!issue&&issue===policyIssueReceipt&&issue===printedIssue
-  &&!!pdfCreationDay&&issue===pdfCreationDay&&info.IsSignaturesPresent===true
-  &&(!signedDate||signedDate===issue);
+const signatureImageEvidence=$input.first()?.json?.signature_image_evidence;
+const imageFallback=signatureImageEvidence?.source==='verified_pdf_signature_image'
+  &&signatureImageEvidence?.verified===true
+  &&signatureImageEvidence?.document_bound===true
+  ?toIso(String(signatureImageEvidence.date||'')):null;
+const issue=printedIssue||imageFallback;
+const issueSource=printedIssue?'printed_policy_issue_date'
+  :imageFallback?'verified_signature_image_fallback':'not_verified';
+const receiptDate=toIso(grab(/Receipt Date\s+(\d{2}\/\d{2}\/\d{4})/i));
+const issueDateValidated=!!issue&&issueSource!=='not_verified';
 const period=flat.match(/Period of Insurance OD\s*:\s*From:(\d{2}\/\d{2}\/\d{4})\s+\d{2}:\d{2}:\d{2}\s+To:(\d{2}\/\d{2}\/\d{4})/i)||[];
 const start=toIso(period[1]),end=toIso(period[2]);
 const tpPeriod=flat.match(/Period of Insurance TP\s*:\s*From:(\d{2}\/\d{2}\/\d{4})\s+\d{2}:\d{2}:\d{2}\s+To:(\d{2}\/\d{2}\/\d{4})/i)||[];
@@ -82,7 +88,7 @@ put('insurer_name','SBI General Insurance Company Limited',pfx);
 put('policy_product','Package',pfx);
 put('policy_number',number,'Native PDF: Policy / Certificate No');
 put('insured_name',insured,'Native PDF: Premium Receipt Policy Holder Name');
-put('policy_issuance_date',issue,'Native PDF: receipt, policy schedule, and PDF creation date (signature not cryptographically verified)');
+put('policy_issuance_date',issue,printedIssue?'Native PDF: printed Policy Issue Date':'Verified PDF signature image: fallback issue date');
 put('policy_start_date',start,'Native PDF: OD Period From');
 put('policy_end_date',end,'Native PDF: OD Period To');
 put('third_party_start_date',tpStart,'Native PDF: TP Period From');
@@ -106,7 +112,7 @@ put('cpa_premium',cpa,'Native PDF: PA to Owner Driver');
 const checks={
  insurer_verified:insurer,package_product_verified:product,
  policy_identity_verified:!!number&&number===numberReceipt&&!!insured,
- issue_and_signature_date_consistent:issueDateCorroborated,
+ issue_and_signature_date_consistent:issueDateValidated,
  od_period_evidenced:!!start&&!!end&&end>start,
  tp_period_evidenced:!!tpStart&&!!tpEnd&&tpStart===start&&tpEnd===end,
  registered_plate_evidenced:!!plate&&/^UK\d{2}[A-Z]{1,3}\d{4}$/.test(plate),
@@ -130,5 +136,8 @@ return [{json:{contract_version:'1',parser_id:'sbi_general_private_car_package_n
  extraction_method:'native_pdf_text',checks,failed_checks,fields,warnings:failed_checks.map(k=>'Evidence incomplete: '+k),
  premium_components:{od,tp,cpa,net,gst,gross,addOn,odBasic:basicOd,
    odBasicAfterNcb,ncbPercent,ncbDiscount,tpWithCpa},
- layout_variant:variant,issuance_evidence:{date:issue,source:'policy schedule + receipt + PDF metadata',
-   signature_present:info.IsSignaturesPresent===true,cryptographic_signature_verified:false}}}];
+ layout_variant:variant,issuance_evidence:{date:issue,source:issueSource,
+   printed_date:printedIssue,receipt_date:receiptDate,
+   signature_image_fallback_used:!printedIssue&&!!imageFallback,
+   signature_present:info.IsSignaturesPresent===true,
+   cryptographic_signature_verified:false}}}];
