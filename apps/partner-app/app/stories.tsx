@@ -59,6 +59,8 @@ export default function StoriesScreen() {
   const story = data?.items[index] || null;
   const [impactPaused, setImpactPaused] = useState(false);
   const impactClock = useImpactTimeline(!loading && !error && story?.kind === 'impact', impactPaused);
+  const journeyClock = useImpactTimeline(!loading && !error && story?.kind === 'journey', impactPaused);
+  const backdropClock = story?.kind === 'journey' ? journeyClock : impactClock;
   useEffect(() => { setImpactPaused(false); }, [index]);
 
   useEffect(() => {
@@ -101,7 +103,7 @@ export default function StoriesScreen() {
       return;
     }
     navigationTouch.current = { x: event.nativeEvent.pageX, y: event.nativeEvent.pageY, started: Date.now() };
-    if (story?.kind === 'impact') setImpactPaused(true);
+    if (story?.kind === 'impact' || story?.kind === 'journey') setImpactPaused(true);
   }
 
   function handleStoryTouchMove(event: { nativeEvent: { pageX: number; pageY: number } }) {
@@ -116,7 +118,7 @@ export default function StoriesScreen() {
     setImpactPaused(false);
     navigationTouch.current = null;
     if (!start) return;
-    if (story?.kind === 'impact' && Date.now() - start.started > 250) return;
+    if ((story?.kind === 'impact' || story?.kind === 'journey') && Date.now() - start.started > 250) return;
     if (Math.abs(start.x - event.nativeEvent.pageX) > 12 || Math.abs(start.y - event.nativeEvent.pageY) > 12) return;
     if (event.nativeEvent.pageX < windowWidth / 2) previous();
     else next();
@@ -198,9 +200,9 @@ export default function StoriesScreen() {
             onScrollBeginDrag={() => { navigationTouch.current = null; setImpactPaused(false); }}
           >
             <View pointerEvents="none" style={styles.storyBackdrop}>
-              <Animated.View style={[styles.waveUpper, impactClock.enabled && { transform: [{ rotate: '-9deg' }, { translateX: impactClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,5]}) }] }]} />
-              <Animated.View style={[styles.waveMiddle, impactClock.enabled && { transform: [{ rotate: '-10deg' }, { translateX: impactClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,-8]}) }] }]} />
-              <Animated.View style={[styles.waveLower, impactClock.enabled && { transform: [{ rotate: '-11deg' }, { translateY: impactClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,6]}) }] }]} />
+              <Animated.View style={[styles.waveUpper, backdropClock.enabled && { transform: [{ rotate: '-9deg' }, { translateX: backdropClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,5]}) }] }]} />
+              <Animated.View style={[styles.waveMiddle, backdropClock.enabled && { transform: [{ rotate: '-10deg' }, { translateX: backdropClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,-8]}) }] }]} />
+              <Animated.View style={[styles.waveLower, backdropClock.enabled && { transform: [{ rotate: '-11deg' }, { translateY: backdropClock.ambient.interpolate({inputRange:[0,1],outputRange:[0,6]}) }] }]} />
             </View>
             <View style={styles.storyContent}>
               {story.kind === 'today' ? (
@@ -208,7 +210,7 @@ export default function StoriesScreen() {
               ) : story.kind === 'business' ? (
                 <BusinessMonthStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />
               ) : story.kind === 'journey' ? (
-                <JourneyMilestoneStory story={story} artworkHeight={journeyArtworkHeight} />
+                <JourneyMilestoneStory story={story} artworkHeight={journeyArtworkHeight} clock={journeyClock} />
               ) : story.kind === 'impact' ? (
                 <ImpactStory story={story} onOpen={openStory} artworkHeight={artworkHeight} clock={impactClock} onPause={setImpactPaused} />
               ) : story.kind === 'learn' ? (
@@ -425,7 +427,7 @@ function LearnStory({ story, onOpen, artworkHeight }: { story: PartnerStory; onO
  * The shared curved background, story header, progress dashes and invisible
  * tap navigation remain owned by StoriesScreen.
  */
-function JourneyMilestoneStory({ story, artworkHeight }: { story: PartnerStory; artworkHeight: number }) {
+function JourneyMilestoneStory({ story, artworkHeight, clock }: { story: PartnerStory; artworkHeight: number; clock: ImpactTimeline }) {
   const current = Number(story.progress_current);
   const target = Number(story.progress_target);
   const hasMilestone = Number.isFinite(current) && current >= 0 &&
@@ -435,10 +437,28 @@ function JourneyMilestoneStory({ story, artworkHeight }: { story: PartnerStory; 
   const completion = hasMilestone ? Math.min(100, Math.max(0, (current / target) * 100)) : 0;
   const formatCount = (value: number) => Math.round(value).toLocaleString('en-IN');
 
+  const [sample, setSample] = useState(1600);
+  useEffect(() => {
+    if (!clock.enabled) { setSample(1600); return; }
+    setSample(0);
+    let last = -Infinity;
+    const id = clock.time.addListener(({ value }) => {
+      if (value - last >= 32 || (value >= 1600 && last < 1600)) { last = value; setSample(Math.min(1600, value)); }
+    });
+    return () => clock.time.removeListener(id);
+  }, [clock.enabled, clock.time]);
+  const fraction = clock.enabled ? Math.max(0, Math.min(1, (sample - 200) / 1400)) : 1;
+  const shownAchieved = Math.round(achieved * fraction);
+  const shownRemaining = Math.max(0, Math.round(target) - shownAchieved);
+  const shownCompletion = hasMilestone ? Math.min(100, Math.max(0, shownAchieved / target * 100)) : 0;
+  const progressReveal = clock.time.interpolate({ inputRange: [200,1600], outputRange: [0,1], extrapolate: 'clamp' });
+  const gold = clock.time.interpolate({ inputRange:[1500,2000,2400,2800],outputRange:[0,completion >= 75 ? 0.38 : 0.12,0.12,0],extrapolate:'clamp' });
+  const float = clock.ambient.interpolate({inputRange:[0,1],outputRange:[0,-7]});
+  const scale = clock.ambient.interpolate({inputRange:[0,1],outputRange:[1,1.02]});
   return (
     <View style={styles.journeyStory}>
-      <View pointerEvents="none" style={styles.journeyBlueArc} />
-      <StoryHeading icon="people" title={story.eyebrow} tone="violet" />
+      <Animated.View pointerEvents="none" style={[styles.journeyBlueArc, clock.enabled && {transform:[{translateY:clock.ambient.interpolate({inputRange:[0,1],outputRange:[0,-5]})}]}]} />
+      <Animated.View style={[{alignItems:'center',maxWidth:'100%'},reveal(clock,0,300,4,0.95)]}><StoryHeading icon="people" title={story.eyebrow} tone="violet" />{clock.enabled ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject,{borderRadius:25,borderWidth:2,borderColor:'#B89AEE',opacity:clock.ambient.interpolate({inputRange:[0,1],outputRange:[0,0.28]})}]} /> : null}</Animated.View>
       <Text style={styles.journeySubtitle}>Your milestone progress at a glance.</Text>
 
       {hasMilestone ? (
@@ -446,25 +466,25 @@ function JourneyMilestoneStory({ story, artworkHeight }: { story: PartnerStory; 
           <View style={styles.journeyMetricPanel}>
           <View style={styles.journeyStats}>
             <View style={styles.journeyStat}>
-              <View style={[styles.journeyStatIcon, styles.journeyStatIconBlue]}>
+              <Animated.View style={[styles.journeyStatIcon, styles.journeyStatIconBlue,reveal(clock,200,500,3,0.88)]}>
                 <Ionicons name="people" size={25} color="#146DD5" />
-              </View>
-              <Text style={styles.journeyStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{formatCount(current)}</Text>
+              </Animated.View>
+              <Text style={styles.journeyStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{formatCount(shownAchieved)}</Text>
               <Text style={styles.journeyStatLabel}>Customers achieved</Text>
             </View>
             <View style={styles.journeyStatDivider} />
             <View style={styles.journeyStat}>
-              <View style={[styles.journeyStatIcon, styles.journeyStatIconViolet]}>
+              <Animated.View style={[styles.journeyStatIcon, styles.journeyStatIconViolet,reveal(clock,250,550,3,0.88)]}>
                 <Ionicons name="locate" size={25} color="#8B45DB" />
-              </View>
-              <Text style={styles.journeyStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{formatCount(remaining)}</Text>
+              </Animated.View>
+              <Text style={styles.journeyStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{formatCount(shownRemaining)}</Text>
               <Text style={styles.journeyStatLabel}>Customers to go</Text>
             </View>
             <View style={styles.journeyStatDivider} />
             <View style={styles.journeyStat}>
-              <View style={[styles.journeyStatIcon, styles.journeyStatIconGold]}>
+              <Animated.View style={[styles.journeyStatIcon, styles.journeyStatIconGold,reveal(clock,300,600,3,0.88)]}>
                 <Ionicons name="trophy" size={25} color="#E7A408" />
-              </View>
+              </Animated.View>
               <Text style={styles.journeyStatValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{formatCount(target)}</Text>
               <Text style={styles.journeyStatLabel}>Customer milestone</Text>
             </View>
@@ -473,16 +493,19 @@ function JourneyMilestoneStory({ story, artworkHeight }: { story: PartnerStory; 
           <View style={styles.journeyProgressBlock} accessibilityLabel={`Milestone ${Math.round(completion)} percent complete, ${formatCount(remaining)} customers remaining`}>
             <View style={styles.journeyProgressTop}>
               <Text style={styles.journeyProgressLabel}>Milestone completion</Text>
-              <View style={styles.journeyProgressPercent}><Text style={styles.journeyProgressPercentText}>{Math.round(completion)}%</Text></View>
+              <Animated.View style={[styles.journeyProgressPercent,reveal(clock,500,800,2,0.94)]}><Text style={styles.journeyProgressPercentText}>{Math.round(shownCompletion)}%</Text></Animated.View>
             </View>
             <View style={styles.journeyProgressTrack}>
-              <View style={[styles.journeyProgressFill, { width: `${completion}%` as `${number}%` }]} />
+              <View style={[styles.journeyProgressFill, { width: `${shownCompletion}%` as `${number}%`,overflow:'hidden' }]}>{clock.enabled ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject,{backgroundColor:'#73E7B8',opacity:progressReveal.interpolate({inputRange:[0,0.5,1],outputRange:[0,0.22,0]})}]} /> : null}</View>
             </View>
           </View>
 
           </View>
           <View style={[styles.journeyScene, { height: artworkHeight }]} pointerEvents="none">
             <View style={[styles.journeySceneHalo, { height: Math.min(235, artworkHeight - 20) }]} />
+            <Animated.View style={[{width:'100%',height:artworkHeight,alignItems:'center',justifyContent:'center'},reveal(clock,1000,1400,7)]}>
+            {clock.enabled ? <Animated.View style={{position:'absolute',bottom:5,width:'58%',height:12,borderRadius:20,backgroundColor:'#72A9DF',opacity:clock.ambient.interpolate({inputRange:[0,1],outputRange:[0.13,0.06]})}} /> : null}
+            <Animated.View style={[{width:'100%',height:artworkHeight,alignItems:'center'},clock.enabled && {transform:[{translateY:float},{scale}]}]}>
             <Image
               source={require('../assets/partner/stories/my-journey.png')}
               style={[styles.storyHeroArtwork, { height: artworkHeight }]}
@@ -490,13 +513,15 @@ function JourneyMilestoneStory({ story, artworkHeight }: { story: PartnerStory; 
               accessibilityElementsHidden
               importantForAccessibility="no-hide-descendants"
             />
-            <View style={styles.journeySceneAchieved}>
+            {clock.enabled ? <Animated.View pointerEvents="none" style={{position:'absolute',top:'25%',right:'20%',width:24,height:24,borderRadius:12,backgroundColor:'#FFE5A0',opacity:gold}} /> : null}
+            </Animated.View></Animated.View>
+            <Animated.View style={[styles.journeySceneAchieved,reveal(clock,1200,1500,3,0.95)]}>
               <Ionicons name="checkmark-circle" size={16} color="#0FA565" />
               <Text style={styles.journeySceneMarkerText}>{formatCount(achieved)} achieved</Text>
-            </View>
-            <View style={styles.journeySceneTarget}>
+            </Animated.View>
+            <Animated.View style={[styles.journeySceneTarget,reveal(clock,1250,1550,3,0.95)]}>
               <Text style={styles.journeySceneMarkerText}>{formatCount(target)} target</Text>
-            </View>
+            </Animated.View>
           </View>
         </>
       ) : (
