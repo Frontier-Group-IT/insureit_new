@@ -401,11 +401,16 @@ async function preparePolicyIntakeHandoffInternal(
       "tata_aig_two_wheeler_bundled_n8n_native_pdf",
     ].includes(verified.parserId)
       && hasVerifiedN8nParserEvidence(verified.parserId,verified.checksPassed,verified.warnings)
-      && Boolean(verified.premium && verified.autoAcceptedIssuanceDate?.date)
+      && Boolean(verified.premium)
       && ["policy_number","insured_name","vehicle_chassis_number","vehicle_engine_number",
           "policy_start_date","policy_end_date"].every(key=>
             verified.fields.some(field=>field.key===key&&field.value.trim().length>0))
-      && policyDateDecision(verified.autoAcceptedIssuanceDate?.date??"")==="allowed";
+      // A verified printed Policy Issue Date is final even if the document
+      // uses no recognized embedded signature. Do not require receipt equality.
+      // An old signing fallback must still pass accepted-issuance proof.
+      && policyDateDecision(
+        verified.fields.find(field=>field.key==="policy_issuance_date")?.value
+          ||verified.autoAcceptedIssuanceDate?.date||"")==="allowed";
     const eligibleForVerifiedConversion=tata18Ready||verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible
       ||standardReview.eligible||niaReview.eligible||uiicReview.eligible||uiicPrivateCarReview.eligible||productVariantReview.eligible;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
