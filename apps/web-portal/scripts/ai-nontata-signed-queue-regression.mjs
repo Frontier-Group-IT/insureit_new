@@ -273,7 +273,8 @@ assert.match(oldBridge,/insureit-policy-intake-icici-v1/);
 assert.doesNotMatch(signed,/supabaseAdmin|\.from\("policies"\)/);
 assert.doesNotMatch(preview,/auto_finalize_allowed:\s*true/);
 assert.ok(handoff.includes("const productVariantReview=assessProductVariantDirectConversion({")
-  &&handoff.includes("||standardReview.eligible||niaReview.eligible||productVariantReview.eligible")
+  &&handoff.includes("||standardReview.eligible||niaReview.eligible||uiicReview.eligible||productVariantReview.eligible")
+  &&handoff.includes("const uiicReview=assessUiicGcvDirectConversion({")
   &&handoff.includes("PRODUCT_VARIANT_PARSERS.has(verified.parserId)?productVariantReview.reason"),
   "New TP and SAOD parser reparse may enter verified queue only after strict variant financial and source preflight");
 assert.ok(handoff.includes("selectVerifiedN8nInsuredDraftIdentity(verified.fields,masterIdentity,verified.parserId)"));
