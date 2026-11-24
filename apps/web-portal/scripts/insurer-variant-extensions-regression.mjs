@@ -139,7 +139,7 @@ for(const [parser,vehicleClass,product] of [
  ["go_digit_two_wheeler_od_native_pdf","TWP","SAOD"],
  ["united_india_tractor_tp_native_pdf","MISD","Third Party"],
 ]){
- assert.ok(convert.includes('"'+parser+'"'),"Preflight missing "+parser);
+ assert.ok(parser==="united_india_tractor_tp_native_pdf" ? eligibility.includes(parser) : convert.includes('"'+parser+'"'),"Preflight missing "+parser);
  const classSegment=convert.slice(convert.indexOf("const expectedCommercialClass="),convert.indexOf("const expectedCommercialProduct="));
  const productSegment=convert.slice(convert.indexOf("const expectedCommercialProduct="),convert.indexOf("if(commercial && (forwarded.draft.policyProduct"));
  assert.ok(classSegment.includes(vehicleClass),"Expected class mapping "+parser+" = "+vehicleClass);
