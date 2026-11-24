@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 const file=(p)=>readFileSync(new URL(p,import.meta.url),"utf8");
 const signed=file("../lib/policy-nontata-commercial-n8n.ts");
 const preview=file("../lib/policy-intake-semi-auto-n8n.ts");
@@ -12,6 +13,45 @@ const handoff=file("../app/policy-intakes/handoff-actions.ts");
 const premiumHelper=file("../lib/policy-n8n-onboarding-premium.ts");
 const insuredHelper=file("../lib/policy-n8n-onboarding-insured.ts");
 const enrichmentHelper=file("../lib/policy-n8n-onboarding-enrichment.ts");
+// Regression: representative native-text layout fragments only, with entirely
+// synthetic identity and vehicle numbers. Previously working Hyundai/Maruti
+// patterns must continue to pass alongside Tata's alphanumeric engine suffix.
+const kotakScript=file("../../../infra/n8n-local/extensions/zurich-kotak-private-car-tp.js");
+for(const [makeLines,engineLines,chassisLines,expectedMake] of [
+  ["HYUNDAI\\nMOTORS\\nEON ERA PLUS","G3HAHM\\n501316","MALA251A\\nLHM543217","HYUNDAI"],
+  ["MARUTI SWIFT\\nDZIRE\\nLXI","K12MN1\\n029812","MA3ESKD1\\nS00250790","MARUTI"],
+  ["TATA NANO (CX)","273MPFI01\\nNQZE12885","MAT61222\\n19YN12469","TATA"],
+]){
+  const text=`Zurich Kotak General Insurance Company (India) Limited
+Liability only (Private Car)
+Policy number: 123456789012
+INSURED DETAILS POLICY DETAILS
+Name: MS SYNTHETIC OWNER
+Period of Insurance:
+From: 12/11/2026 00:00 to: 11/11/2027 Midnight
+Policy issued on: 11/11/2026
+VEHICLE DETAILS
+Registration Number Manufacturer Model Variant Year of Manufacture RTO Location Engine Number Chassis Capacity Fuel
+UK 07 BX
+3604
+${makeLines.replaceAll("\\\\n","\\n")} 2017 Dehradun ${engineLines.replaceAll("\\\\n","\\n")}
+${chassisLines.replaceAll("\\\\n","\\n")}
+814 PETROL 5
+PREMIUM COMPUTATION TABLE (IN ₹)
+Total Own Damage Premium (A) 0.00
+Total Liability Premium (B) 2,094.00
+Total Personal Accident Premium (C) 0.00
+Taxable value of Services (A+B+C) 2,094.00
+CGST @ 9% 188.46
+SGST @ 9% 188.46
+Total Premium (in ₹ ) 2,471.00`;
+  const result=runInNewContext(`(function(){ ${kotakScript} })()`,
+    {$input:{first:()=>({json:{text}})}})[0].json;
+  assert.equal(result.ok,true,`Kotak ${expectedMake} must retain all 16 strict checks: ${result.failed_checks}`);
+  assert.equal(result.fields.find(f=>f.key==="vehicle_make")?.value,expectedMake);
+  assert.equal(result.premium_components.net,2094);
+  assert.equal(result.premium_components.gross,2471);
+}
 // An NIA RTO prefix is an unregistered vehicle, never a blocking incomplete
 // registered plate. The source prefix must not fill registrationNo.
 assert.match(signed,/isNewIndiaUnregistered/);
