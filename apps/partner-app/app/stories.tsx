@@ -18,7 +18,9 @@ export default function StoriesScreen() {
   const [focused, setFocused] = useState(false);
   const [foreground, setForeground] = useState(AppState.currentState === 'active');
   const [reduced, setReduced] = useState(true);
-  const [held, setHeld] = useState(false);
+  const [held, setHeldState] = useState(false);
+  const heldRef = useRef(false);
+  const setHeld = useCallback((value: boolean) => { heldRef.current = value; setHeldState(value); }, []);
   const [trackWidth, setTrackWidth] = useState(0);
   const [closing, setClosing] = useState(false);
   const closingRef = useRef(false);
@@ -35,14 +37,14 @@ export default function StoriesScreen() {
   const navAt = useRef(0);
   const active = focused && foreground && !closing;
   const motion = active && !reduced;
-  useFocusEffect(useCallback(() => { setFocused(true); return () => { setFocused(false); setHeld(false); }; }, []));
+  useFocusEffect(useCallback(() => { setFocused(true); return () => { setFocused(false); setHeld(false); }; }, [setHeld]));
   useEffect(() => {
     let alive = true;
     void AccessibilityInfo.isReduceMotionEnabled().then(value => { if (alive) setReduced(value); }).catch(() => {});
     const preference = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
     const app = AppState.addEventListener('change', state => { setForeground(state === 'active'); if (state !== 'active') setHeld(false); });
     return () => { alive = false; preference.remove(); app.remove(); if (closeTimer.current) clearTimeout(closeTimer.current); closeMotion.stopAnimation(); closePress.stopAnimation(); };
-  }, [closeMotion, closePress]);
+  }, [closeMotion, closePress, setHeld]);
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const params = useLocalSearchParams<{ start?: string }>();
@@ -151,7 +153,7 @@ export default function StoriesScreen() {
     progressValue.setValue(initial / STORY_DURATION_MS);
     const animation = Animated.timing(progressValue, { toValue: 1, duration: remaining, easing: Easing.linear, useNativeDriver: true, isInteraction: false });
     animation.start();
-    const timer = setTimeout(() => { if (valid && generation.current === epoch) advanceRef.current(1, false); }, remaining);
+    const timer = setTimeout(() => { if (valid && generation.current === epoch && !heldRef.current && AppState.currentState === 'active' && !closingRef.current) advanceRef.current(1, false); }, remaining);
     return () => {
       valid = false;
       clearTimeout(timer);
@@ -375,7 +377,7 @@ function MotionCount({ value, currency = false }: { value: number | string; curr
     return () => cancelAnimationFrame(frame);
   }, [enabled, target]);
   if (!Number.isFinite(target) || !enabled) return <>{currency && Number.isFinite(target) ? formatIndianCurrency(target) : value}</>;
-  return <>{currency ? formatIndianCurrency(shown) : typeof value === 'string' && value.includes(',') ? shown.toLocaleString('en-IN') : shown}</>;
+  return <>{currency ? formatIndianCurrency(shown) : shown === target ? value : typeof value === 'string' && value.includes(',') ? shown.toLocaleString('en-IN') : shown}</>;
 }
 
 function storyIcon(kind: PartnerStory['kind']) {
@@ -689,7 +691,16 @@ function BusinessMonthStory({ story, onOpen, artworkHeight }: { story: PartnerSt
  * text contains an actual rupee amount.
  */
 function TodayRenewalStory({ story, onOpen, artworkHeight }: { story: PartnerStory; onOpen: () => void; artworkHeight: number }) {
-  const { hold } = useContext(StoryMotion);
+  const { hold, running, enabled } = useContext(StoryMotion);
+  const arrow = useStoryLoop(running, 2200);
+  const entrance = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!enabled) { entrance.setValue(1); return; }
+    entrance.setValue(0);
+    const animation = Animated.spring(entrance, { toValue: 1, speed: 18, bounciness: 3, useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [enabled, entrance]);
   const premiumMatch = story.body.match(/₹\s*[\d,]+(?:\.\d{1,2})?/);
   const premium = premiumMatch?.[0].replace(/\s+/g, '') ?? null;
   const remainingCopy = premiumMatch
@@ -706,12 +717,12 @@ function TodayRenewalStory({ story, onOpen, artworkHeight }: { story: PartnerSto
   return (
     <View style={styles.todaySnapshot}>
       <StoryHeading icon="sunny" title={story.eyebrow} tone="gold" />
-      <View style={styles.todayCard}>
+      <Animated.View style={[styles.todayCard, { opacity: entrance, transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }, { scale: entrance.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] }) }] }]}>
         <View pointerEvents="none" style={styles.todayCornerAccent} />
         <View style={styles.todayHeadlineRow}>
-          <View style={[styles.todaySunIcon, isClaim && styles.todayClaimsIcon]}>
+          <Animated.View style={[styles.todaySunIcon, isClaim && styles.todayClaimsIcon, { transform: [{ scale: entrance.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] }]}>
             <Ionicons name={isClaim ? 'shield-checkmark' : 'sunny-outline'} size={34} color="#FFFFFF" />
-          </View>
+          </Animated.View>
           <View style={styles.todayHeadlineText}>
             <Text style={styles.todayEyebrow}>{storyCategory}</Text>
             <Pressable
@@ -724,7 +735,7 @@ function TodayRenewalStory({ story, onOpen, artworkHeight }: { story: PartnerSto
               style={styles.todayTitleLink}
             >
               <Text style={styles.todayHeadline}>{titleParts ? <>{titleParts[1]}<Text style={styles.todayDaysBadge}>{titleParts[2]}</Text>{titleParts[3]}</> : countTitle ? <><MotionCount value={countTitle[1]} />{countTitle[2]}</> : story.title}</Text>
-              {hasRoute ? <Ionicons name="arrow-forward" size={20} color="#0B6DD6" /> : null}
+              {hasRoute ? <Animated.View style={{ transform: [{ translateX: arrow.interpolate({ inputRange: [0, 1], outputRange: [0, 3] }) }] }}><Ionicons name="arrow-forward" size={20} color="#0B6DD6" /></Animated.View> : null}
             </Pressable>
           </View>
         </View>
@@ -747,7 +758,7 @@ function TodayRenewalStory({ story, onOpen, artworkHeight }: { story: PartnerSto
             </View>
           </View>
         ) : null}
-      </View>
+      </Animated.View>
       <View pointerEvents="none" style={[styles.todayArtWrap, { height: artworkHeight }]}>
         {isRenewal ? (
           <MotionArtwork source={require('../assets/partner/stories/today-renewal.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
