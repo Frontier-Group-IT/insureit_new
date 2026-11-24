@@ -88,6 +88,7 @@ from public,anon,authenticated;
 grant execute on function public.claim_policy_intake_ai_queue_v3(integer,text,uuid)
 to service_role;
 comment on function public.claim_policy_intake_ai_queue_v3(integer,text,uuid)
+is 'Service-role-only unified AI Policy Intake queue. No policy booking or manual lane transfer.';
 
 -- Remove the old ability to discard a failed automated intake into a manual lane.
 revoke all on function public.move_policy_intake_automation_to_manual_v1(uuid,uuid,text)
