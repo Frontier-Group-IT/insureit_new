@@ -1707,3 +1707,7 @@ if (profile.indexOf('setPhotoSuccess(true)') < profile.indexOf('if (!refreshedAv
 requireText(policyDetail, "sectionHeaderFill: { backgroundColor: '#E6EFF9' }", 'Reference light blue section header');
 requireText(policyDetail, 'return <View style={[styles.overviewItem, tone]}>', 'Overview tiles use semantic colours');
 for (const marker of ['styles.overviewLabelRow', 'styles.tileBlue', 'styles.tileGreen', 'styles.tileAmber', 'styles.tileSlate', 'minHeight: 44, justifyContent', 'minHeight: 36, padding: 5', 'customerVehicleRow: { minHeight: 48']) requireText(policyDetail, marker, 'Compact approved design: ' + marker);
+
+const claimsEmptyMotionSource = read('app/(tabs)/claims.tsx');
+const claimsEmptyMotionBody = claimsEmptyMotionSource.slice(claimsEmptyMotionSource.indexOf('function ClaimsEmptyState('), claimsEmptyMotionSource.indexOf('function ClaimCard('));
+for (const marker of ['useActivityMotion()', 'opacity: 0.43', 'translateY: emptyFloat', 'toValue: -5, duration: 1800', 'animation.stop(); emptyFloat.setValue(0)', 'if (!motion) return;', 'isInteraction: false', 'accessibilityElementsHidden', 'Everything looks settled here']) requireText(claimsEmptyMotionBody, marker, 'Claims empty-only faded motion: ' + marker);
