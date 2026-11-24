@@ -55,3 +55,9 @@ export async function requirePolicyEditor(policyId?: string) {
   if (usesLifeTeamPortfolio(profile.id, profile.role) && (!policyId || !(await canAccessPolicy(profile.id, profile.role, policyId, "view_policies", true)))) redirect("/access-denied");
   return profile;
 }
+
+/** Keep existing role/capability checks; additionally deny newly visible sales-head cases for writes. */
+export async function requireLifeTeamSalesCaseWrite(profile: {id:string;role?:string|null}, caseId:string) {
+  const {canWriteLifeTeamSalesCase}=await import("@/lib/policy-access-scope");
+  if (!(await canWriteLifeTeamSalesCase(profile.id,profile.role,caseId))) throw new Error("life_team_case_write_access_denied");
+}

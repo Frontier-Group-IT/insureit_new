@@ -43,4 +43,8 @@ assert.ok(read("lib/reports/policy-business.ts").includes("lifeTeamReportSegment
 assert.ok(read("lib/reports/policy-business-export.ts").includes("loadPolicyBusinessReport(profile,"));
 assert.ok(read("app/policies/life-health-case-documents/[documentId]/view/route.ts").includes("canReadLifeTeamCase"));
 for(const path of ["app/policies/documents/[documentId]/download/route.ts","app/policies/policy-document-actions.ts"])assert.ok(read(path).includes("usesLifeTeamPortfolio"));
+assert.ok(read("app/dashboard/page.tsx").includes("portfolioFilter !== null || isDownlineHead || dashboardCommercialAccess"));
+assert.ok(read("components/life-team-portfolio-summary.tsx").includes("Team-generated business"));
+assert.ok(read("lib/policy-access-server.ts").includes("canWriteLifeTeamSalesCase"));
+for(const path of ["app/policies/life-health-policy-actions.ts","app/policies/life-health-case-edit-actions.ts","app/policies/life-health-case-reject-actions.ts"]) assert.ok(read(path).includes("requireLifeTeamSalesCaseWrite(profile"));
 console.log("Historical Life team and independent Direct Business read-scope regression passed.");

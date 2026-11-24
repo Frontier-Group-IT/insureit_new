@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { convertLifeHealthCaseForVerifiedActor } from "@/lib/life-health-case-conversion-engine";
-import { requirePolicyCreator } from "@/lib/policy-access-server";
+import { requirePolicyCreator, requireLifeTeamSalesCaseWrite } from "@/lib/policy-access-server";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { requireOperationsHeadRecordOwnership } from "@/lib/operations-head-record-authorization";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
@@ -107,6 +107,7 @@ export async function uploadLifeHealthCaseDocument(formData:FormData):Promise<Li
     const profile=requester.role==="operations_head_life"
       ? await requireOperationsHeadRecordOwnership("life_health_case",caseId)
       : await requirePolicyCreator();
+    await requireLifeTeamSalesCaseWrite(profile,caseId);
     const admin=createSupabaseAdminClient();
     const{data:caseRow,error}=await admin.from("life_health_cases").select("id,final_policy_id,status").eq("id",caseId).maybeSingle<{id:string;final_policy_id:string|null;status:string}>();
     if(error){console.error("Life/Health upload case lookup failed",{caseId,message:error.message});return{ok:false,error:"Could not verify this case. Please retry."}}
@@ -131,7 +132,8 @@ export async function deleteLifeHealthCaseDocument(caseId:string,documentId:stri
   if(requester?.role==="operations_head_life"){
     await requireOperationsHeadRecordOwnership("life_health_case",caseId);
   }else{
-    await requirePolicyCreator();
+    const profile=await requirePolicyCreator();
+    await requireLifeTeamSalesCaseWrite(profile,caseId);
   }
   const admin=createSupabaseAdminClient();
   const{data:caseRow,error:caseError}=await admin.from("life_health_cases").select("id,final_policy_id,status").eq("id",caseId).maybeSingle<{id:string;final_policy_id:string|null;status:string}>();
@@ -154,5 +156,6 @@ export async function convertLifeHealthCaseToPolicy(formData:FormData):Promise<L
   const profile=requester?.role==="operations_head_life"
     ?await requireOperationsHeadRecordOwnership("life_health_case",caseId)
     :await requirePolicyCreator();
+  await requireLifeTeamSalesCaseWrite(profile,caseId);
   return convertLifeHealthCaseForVerifiedActor(formData,profile);
 }

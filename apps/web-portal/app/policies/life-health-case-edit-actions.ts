@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requirePolicyCreator } from "@/lib/policy-access-server";
+import { requirePolicyCreator, requireLifeTeamSalesCaseWrite } from "@/lib/policy-access-server";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { requireOperationsHeadRecordOwnership } from "@/lib/operations-head-record-authorization";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -22,6 +22,7 @@ export async function updateLifeHealthCaseDetails(formData: FormData) {
   const profile = requester?.role === "operations_head_life"
     ? await requireOperationsHeadRecordOwnership("life_health_case", caseId)
     : await requirePolicyCreator();
+  await requireLifeTeamSalesCaseWrite(profile, caseId);
   const admin = createSupabaseAdminClient();
   const insurerId = clean(formData.get("insurerId"));
   const customerName = clean(formData.get("customerName"));
@@ -118,6 +119,7 @@ export async function appendLifeHealthCaseRemark(formData: FormData): Promise<{o
   const profile = requester?.role === "operations_head_life"
     ? await requireOperationsHeadRecordOwnership("life_health_case",caseId)
     : await requirePolicyCreator();
+  await requireLifeTeamSalesCaseWrite(profile, caseId);
   if (!newRemark || newRemark.length > 2000) return {ok:false,error:"Enter a remark of up to 2000 characters."};
   const admin = createSupabaseAdminClient();
   const {data:caseRow,error:loadError} = await admin.from("life_health_cases")

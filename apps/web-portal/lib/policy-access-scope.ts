@@ -188,6 +188,22 @@ export async function canReadLifeTeamCase(profileId: string, role: string | null
   return !error && Boolean(data?.id);
 }
 
+/** New read visibility is not a new sales-head mutation grant. */
+export async function getLifeTeamSalesWriteOwnerIds(profileId: string, role: string | null | undefined): Promise<string[] | null> {
+  if (role !== "sales_head" || !usesLifeTeamPortfolio(profileId, role)) return null;
+  const portfolio = await getLifeTeamPortfolioScope(profileId, role);
+  if (!portfolio?.directEmployeeId) return [];
+  const scope = await getEmployeeAccessScope(profileId, role, "view_policies");
+  return scope.mode === "hierarchy" ? scope.employeeIds.filter(id => id !== portfolio.directEmployeeId && portfolio.employeeIds.includes(id)) : [];
+}
+export async function canWriteLifeTeamSalesCase(profileId: string, role: string | null | undefined, caseId: string) {
+  const ids = await getLifeTeamSalesWriteOwnerIds(profileId, role);
+  if (ids === null) return true;
+  if (!ids.length || !caseId) return false;
+  const { data, error } = await createSupabaseAdminClient().from("life_health_cases").select("id").eq("id",caseId).in("rm_employee_id",ids).maybeSingle<{id:string}>();
+  return !error && Boolean(data?.id);
+}
+
 export async function canAccessPolicy(
   profileId: string,
   role: string | null | undefined,
@@ -195,6 +211,7 @@ export async function canAccessPolicy(
   capability: Capability = "view_policies",
   write = false,
 ) {
+  if (write && capability === "view_policies" && usesLifeTeamPortfolio(profileId, role) && !(await canAccessPolicy(profileId, role, policyId, capability, false))) return false;
   if (!write && capability === "view_policies" && usesLifeTeamPortfolio(profileId, role)) {
     const filter = await getLifeTeamPortfolioReadFilter(profileId, role);
     if (!filter) return false;
@@ -243,7 +260,8 @@ export async function canAccessPolicy(
       .select("id").eq("id", policyId).or(filter).maybeSingle<{ id: string }>();
     return !error && Boolean(data?.id);
   }
-  const rmEmployeeIds = await getAccessiblePolicyRmEmployeeIds(profileId, role, capability);
+  const salesWriteIds = write && capability === "view_policies" ? await getLifeTeamSalesWriteOwnerIds(profileId, role) : null;
+  const rmEmployeeIds = salesWriteIds ?? await getAccessiblePolicyRmEmployeeIds(profileId, role, capability);
   if (rmEmployeeIds === null) return true;
   if (!rmEmployeeIds.length) return false;
 
