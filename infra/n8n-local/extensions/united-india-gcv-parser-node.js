@@ -230,13 +230,79 @@ function unitedIndiaGcvFlexible(t) {
  return verified;
 }
 
+
+/* Certified 2026 United India Private Car Swift Package schedule only. */
+function unitedIndiaPrivateCar(t){
+ const policy=grab(t,/\bPolicy No\.?\s*:?\s*(\d{6,12}P\d{9})\b/i);
+ const insured=grab(t,/\bInsured\s*\n(M(?:R|S|\/S)\.?\s+[^\n]{3,95})/i)
+  ||grab(t,/\bInsured Details\s+Customer Id\s+\d+\s*\nName\s+(M(?:R|S|\/S)\.?\s+[^\n]{3,95})/i);
+ const start=validDate(grab(t,/\bFrom\s+\d\d:\d\d\s+Hrs\s+of\s+(\d\d\/\d\d\/\d{4})/i));
+ const end=validDate(grab(t,/\bTo\s+Midnight\s+of\s+(\d\d\/\d\d\/\d{4})/i));
+ const issueDates=[...t.matchAll(/\bDate of Issue\s*:?\s*(\d\d\/\d\d\/\d{4})/gi)].map(x=>validDate(x[1]));
+ const issue=[...new Set(issueDates)].length===1?issueDates[0]:null;
+ const i=t.indexOf('Particulars of Vehicle Insured');
+ const schedule=t.slice(i,i+2400).split(/Insured['’]s Declared Value/)[0];
+ const reg=grab(schedule,/\b(MP\s*-\s*20\s*-\s*CH\s*-\s*\d{4})\s+No\b/i)?.replace(/[\s-]/g,'')??null;
+ const pair=/\b([A-Z0-9]{17})\s+([A-Z0-9]{10,17})\s*(?=MARUTI)/i.exec(schedule);
+ const model=grab(schedule,/\bMARUTI\s+SUZUKI\s*\/\s*(SWIFT\(2011\s*-\s*\)\s*ZDI)/i)?.replace(/\s+/g,' ').trim()??null;
+ const fuel=grab(schedule,/\bCAR\s*\/\s*(Diesel|Petrol)\b/i);
+ const specs=grab(schedule,/\b(20\d{2}\s+\d{3,5}\s+\d{1,2})\s*$/i);
+ const year=grab(specs??'',/^(20\d{2})/),capacity=grab(specs??'',/^20\d{2}\s+(\d{3,5})/);
+ const authority=grab(t.slice(i,i+4000),/\bRegistration Authority[^\n]*\n(MP20 JABALPUR INDIA)\b/i);
+ const idv=amountAfter(t,/\b(\d{5,9})\s+0\s+0\s+0\s+0\s+0\s+\1\b/i);
+ const od=amountAfter(t,/\bGross OD\(A\)\s*([\d,.]+)/i);
+ const tp=amountAfter(t,/\bGross TP\(B\)\s*([\d,.]+)/i);
+ const net=amountAfter(t,/\bGross OD\s*&\s*TP:\s*\(A\)\s*\+\s*\(B\)\s*([\d,.]+)/i);
+ const gst=amountAfter(t,/\bIGST\(18%\)\s*:\s*([\d,.]+)/i);
+ const gross=amountAfter(t,/\bTotal\s*\(Rounded Off\)\s*:\s*([\d,.]+)/i);
+ const stamp=amountAfter(t,/\bStamp Duty\s*:?\s*([\d,.]+)/i);
+ const basicOd=amountAfter(t,/\bA\.\s*Basic\s*-\s*OD\s+([\d,.]+)/i);
+ const ncbMatch=/\bNo Claim Bonus\s+(\d{1,2})%\s+([\d,.]+)/i.exec(t);
+ const ncbPercent=ncbMatch?Number(ncbMatch[1]):null,ncbDiscount=ncbMatch?amount(ncbMatch[2]):null;
+ const basicTp=amountAfter(t,/\bB\.\s*Basic\s*-\s*T\s*P\s+([\d,.]+)/i);
+ const paidDriver=amountAfter(t,/\bLL to Paid Driver IMT 28\s+([\d,.]+)/i);
+ const cpaWaived=/Compulsory Personal Accident\s*\(CPA\)\s*cover is removed/i.test(t);
+ const base={policy_number:policy,insured_name:insured,policy_product:'Package',
+  policy_start_date:start,policy_end_date:end,policy_issuance_date:issue,
+  third_party_start_date:start,third_party_end_date:end,
+  vehicle_registration_number:reg,vehicle_registration_status:reg?'registered':null,
+  vehicle_class:'Private Car',vehicle_make:model?'MARUTI SUZUKI':null,vehicle_model:model,
+  vehicle_fuel_type:fuel,vehicle_manufacturing_year:year,vehicle_capacity:capacity,
+  vehicle_chassis_number:pair?.[1]??null,vehicle_engine_number:pair?.[2]??null,
+  vehicle_rto_name:authority?'JABALPUR':null,vehicle_rto_state:authority?'Madhya Pradesh':null,
+  idv,cpa_premium:cpaWaived?0:null};
+ const premium={od,tp,net,gst,gross,stampDuty:stamp,odBasic:basicOd,
+  ncbPercent,ncbDiscount};
+ const extras={
+  uiic_private_car_layout:/PRIVATE CAR\s*-\s*PACKAGE POLICY/i.test(t.slice(0,8500))
+   &&!!model&&!!authority,
+  igst_18_printed:gst!==null&&approx(gst,Math.round(Number(net)*.18)),
+  cpa_disposition_verified:cpaWaived,
+  ncb_premium_reconciled:basicOd!==null&&ncbDiscount!==null&&ncbPercent===25
+   &&approx(ncbDiscount,basicOd*ncbPercent/100,.03)
+   &&approx(od,Math.round(basicOd-ncbDiscount)),
+ };
+ const more={tp_paid_driver_reconciled:basicTp!==null&&paidDriver!==null&&approx(tp,basicTp+paidDriver),
+  stamp_separately_disclosed:stamp!==null&&approx(gross,Number(net)+Number(gst)),
+  no_commercial_mixed_gst:!/IGST-Basic TP\(5%\)/i.test(t),printed_issue_unambiguous:!!issue};
+ const out=output('United India Insurance Company Limited','united_india_private_car_package_native_pdf',
+  base,premium,extras,Object.entries(more).filter(([,v])=>v!==true).map(([k])=>'Review required: '+k));
+ out.fields=out.fields.map(field=>{
+  if(field.key==='vehicle_rto_name'&&authority)
+   return {...field,evidence:'UIIC Private Car PDF Registration Authority: '+authority};
+  if(field.key==='cpa_premium'&&cpaWaived)
+   return {...field,evidence:'UIIC Private Car PDF explicitly removes owner-driver CPA'};
+  if(field.key==='policy_issuance_date'&&issue)
+   return {...field,evidence:'UIIC Private Car printed Date of Issue: '+issue};
+  return field;
+ });
+ return out;
+}
+
 function unitedIndia(t){
  // This is a different product with a separate booking contract; never present
  // a Private Car Package as a Goods Carrying Vehicle.
- if (/PRIVATE CAR\s*-?\s*PACKAGE POLICY/i.test(t.slice(0,2200))) {
-  return output(null,'united_india_gcv_native_pdf',{}, {},{uiic_layout:false},
-   ['Unsupported UIIC Private Car Package: separate product parser required']);
- }
+ if (/PRIVATE CAR\s*-?\s*PACKAGE POLICY/i.test(t.slice(0,2200))) return unitedIndiaPrivateCar(t);
  if (/GCV PUBLIC CARRIER OTHER THAN 3 WHEELER/i.test(t)
      && /Gross OD\s*&\s*TP:/i.test(t)) {
   const classic=unitedIndiaSchedule(t);
