@@ -91,8 +91,8 @@ comment on function public.claim_policy_intake_ai_queue_v3(integer,text,uuid)
 is 'Service-role-only unified AI Policy Intake queue. No policy booking or manual lane transfer.';
 
 -- Remove the old ability to discard a failed automated intake into a manual lane.
-revoke all on function public.move_policy_intake_automation_to_manual_v1(uuid,uuid,text)
-  from public,anon,authenticated,service_role;
+-- DROP IF EXISTS also works on databases where the transfer function was
+-- removed by the initial production rollout. Its privileges vanish on DROP.
 drop function if exists public.move_policy_intake_automation_to_manual_v1(uuid,uuid,text);
 
 commit;
