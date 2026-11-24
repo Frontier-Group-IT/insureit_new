@@ -29,6 +29,7 @@ export default function ActivityScreen() {
   const selection = useRef(new Animated.Value(2)).current;
   const [tabWidth, setTabWidth] = useState(0);
   const [searchFocused, setSearchFocused] = useState(false);
+  const clearMotion = useRef(new Animated.Value(0)).current;
   const [newKeys, setNewKeys] = useState<Set<string>>(new Set());
   const previous = useRef<{period: PartnerActivityPeriod; keys: Set<string>; attention: Map<string, number>} | null>(null);
   const [urgent, setUrgent] = useState<Set<string>>(new Set());
@@ -62,6 +63,7 @@ export default function ActivityScreen() {
     if (background) setRefreshing(true);
     const version = ++requestVersion.current;
     if (!background) {
+      setLoadingMore(false);
       setLoading(true);
       setError('');
       setMoreError('');
@@ -104,11 +106,11 @@ export default function ActivityScreen() {
 
   // Refresh only on the visible screen; do not replace a paginated history with its first page.
   useEffect(() => {
-    if (!visible || !loaded.current || loading || loadingMore || hasMore || (data?.items.length ?? 0) >= 100) return;
+    if (!visible || !loaded.current || !data || loading || loadingMore || hasMore || data.items.length >= 100) return;
     const timer = setInterval(() => { void load(true); }, 60000);
     return () => clearInterval(timer);
   }, [visible, loading, loadingMore, hasMore, data?.items.length, load]);
-  useEffect(() => () => { if (newTimer.current) clearTimeout(newTimer.current); }, []);
+  useEffect(() => () => { if (newTimer.current) clearTimeout(newTimer.current); menu.stopAnimation(); }, [menu]);
   useEffect(() => {
     if (!motion || !newKeys.size) { bell.setValue(0); return; }
     const animation = Animated.sequence([0.8, -0.65, 0.35, 0].map(toValue => Animated.spring(bell, { toValue, stiffness: 220, damping: 20, mass: 0.6, useNativeDriver: Platform.OS !== 'web', isInteraction: false })));
@@ -123,6 +125,10 @@ export default function ActivityScreen() {
     const animation = Animated.timing(searchFocus, { toValue: searchFocused ? 1 : 0, duration: motion ? 180 : 0, useNativeDriver: Platform.OS !== 'web', isInteraction: false });
     animation.start(); return () => animation.stop();
   }, [motion, searchFocused, searchFocus]);
+  useEffect(() => {
+    const animation = Animated.timing(clearMotion, { toValue: query ? 1 : 0, duration: motion ? 160 : 0, useNativeDriver: Platform.OS !== 'web', isInteraction: false });
+    animation.start(); return () => animation.stop();
+  }, [Boolean(query), motion, clearMotion]);
   useEffect(() => {
     if (!periodMenuOpen) { menu.setValue(0); return; }
     const animation = Animated.spring(menu, { toValue: 1, stiffness: 210, damping: 22, useNativeDriver: Platform.OS !== 'web', isInteraction: false });
@@ -367,7 +373,7 @@ export default function ActivityScreen() {
                 onPress={() => setQuery('')}
                 style={styles.searchClear}
               >
-                <Ionicons name="close-circle-outline" size={18} color="#96A1B2" />
+                <Animated.View style={{ opacity: clearMotion }}><Ionicons name="close-circle-outline" size={18} color="#96A1B2" /></Animated.View>
               </Pressable>
             ) : null}
           </View>
