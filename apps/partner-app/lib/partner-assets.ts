@@ -30,6 +30,11 @@ export const PartnerAssets = {
     addDocument: require('../assets/partner/actions/add-document.png'),
     customerRegister: require('../assets/partner/actions/customer-register.png'),
     policyChecklist: require('../assets/partner/actions/policy-checklist.png'),
+    aiStudioVerified: require('../assets/partner/actions/ai-studio-verified.png'),
+    aiStudioProcessing: require('../assets/partner/actions/ai-studio-processing.png'),
+    aiStudioReview: require('../assets/partner/actions/ai-studio-review.png'),
+    aiStudioAction: require('../assets/partner/actions/ai-studio-action.png'),
+    aiStudioEmpty: require('../assets/partner/actions/ai-studio-empty.png'),
     policyRegister: require('../assets/partner/actions/policy-register.png'),
     // Keep the historical alias for existing callers that expect the navigation-family renewals icon.
     renewals: require('../assets/partner/navigation/renewals.png'),
