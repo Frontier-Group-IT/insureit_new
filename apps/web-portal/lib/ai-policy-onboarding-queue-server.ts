@@ -2,7 +2,6 @@ import "server-only";
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
-import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
 import { assessAiPolicyIntake, acceptedTataAigIssuanceDate, hasVerifiedN8nParserEvidence, ICICI_N8N_IDS, type AiPolicyEvidence, type AiPolicyExceptionCode } from "@/lib/ai-policy-onboarding-eligibility";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { policyDateDecision } from "@/lib/policy-date-rule";
@@ -118,7 +117,7 @@ export async function processAiQueueBatch(options?: {preferredIntakeId?:string;m
     throw new Error("Invalid immediate policy Intake reference");
   }
   const boundedMax=preferredIntakeId?1:Math.max(1,Math.min(MAX_BATCH,options?.maxBatch??MAX_BATCH));
-  const {data,error}=await admin.rpc(segregatePolicyIntakeLanes() ? "claim_policy_intake_ai_queue_v3" : "claim_policy_intake_ai_queue_v2",{
+  const {data,error}=await admin.rpc("claim_policy_intake_ai_queue_v3",{
     p_max:boundedMax,p_parser_revision:parserRevision,
     p_preferred_intake_id:preferredIntakeId??null,
   });
