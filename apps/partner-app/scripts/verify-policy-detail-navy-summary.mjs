@@ -33,7 +33,8 @@ assert.match(source, /<View style=\{styles.unifiedDetails\}>\s*<View style=\{sty
 assert.match(source, /sectionHeaderFill: \{ backgroundColor: '#E6EFF9' \}/, 'Reference blue heading fill');
 assert.match(source, /overviewItem: [^\n]*backgroundColor: '#FFFFFF'/, 'White outlined overview tiles');
 assert.match(source, /miniInfo: [^\n]*backgroundColor: '#F5F7FA'/, 'Neutral premium and sales tiles');
-assert.doesNotMatch(source, /styles\.tone(?:Blue|Purple|Mint|Amber|Rose)/, 'No multicoloured tiles');
+for (const tone of ['tileBlue', 'tileGreen', 'tileAmber', 'tileSlate']) assert.ok(source.includes('styles.' + tone), 'Approved semantic tile color: ' + tone);
+assert.match(source, /styles\.overviewLabelRow/, 'Overview label and icon share the first row');
 for (const obsolete of ['styles.quickDocument', 'styles.quickRenewal', 'styles.quickClaim', 'styles.quickCustomer']) {
   assert.ok(!source.includes(obsolete), 'Obsolete colored action reference: ' + obsolete);
 }
