@@ -329,12 +329,8 @@ async function preparePolicyIntakeHandoffInternal(
     // specific review hold rather than calling every such case bulk failure.
     const nia=verified.parserId==="new_india_cv_native_pdf"
       && verified.checksPassed===16 && verified.warnings.length===0;
-    const hasField=(key:string)=>verified.fields.some(f=>f.key===key&&f.value.trim());
-    const niaMissingAuthority=nia && (!hasField("vehicle_rto_name")
-      ||verified.fields.some(f=>f.key==="vehicle_rto_name" && /^FASTag ID:$/i.test(f.value.trim())));
-    // Optional CPA is not a missing GCV field. Keep NIA review limited to
-    // actual absent authority or other independently verified booking rules.
-    const niaHoldCode=null; // Unresolved RTO is not a review hold.
+    // A missing city/state is not a blocking NIA review condition.
+    const niaHoldCode=null;
     const goDigit=verified.parserId==="go_digit_cv_native_pdf" && verified.checksPassed===18
       && verified.warnings.length===0;
     // Business rule: where the manufacturer did not print a manufacturing
