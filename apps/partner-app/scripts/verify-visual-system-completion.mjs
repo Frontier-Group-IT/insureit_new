@@ -1357,7 +1357,26 @@ requireText(journey, '20 - Math.cos(angle) * 15.5', 'Progress segments must fit 
 requireText(journey, 'styles.progressCircle', 'Milestone progress ring must replace the separate horizontal bar.');
 requireText(journey, 'CIRCLE_SEGMENTS.map(', 'Progress ring must render its percentage-based circular segments.');
 requireText(journey, 'accessibilityRole="progressbar"', 'Circular milestone progress must remain accessible.');
-requireText(journey, 'Math.round(progress * 100)', 'Real progress percentage must be retained.');
+requireText(journey, 'Math.round(displayProgress * 100)', 'Animated ring percentage must derive from the live milestone progress.');
+for (const required of [
+  'AccessibilityInfo.isReduceMotionEnabled()',
+  "AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion)",
+  'function MotionEntrance(',
+  'function AnimatedCount(',
+  'function PressScale(',
+  'useNativeDriver: true',
+  'useNativeDriver: false',
+  'duration: 1100',
+  'duration: 900',
+  'duration: 280',
+  'styles.filterSlidingUnderline',
+  'onPress={() => changeFilter(choice.key)}',
+  'filterTransition.current?.stop()',
+  'style={styles.timelinePressContent}',
+]) requireText(journey, required, 'My Progress subtle motion/reduced-motion contract missing: ' + required);
+requireText(journey, 'filterPosition.interpolate(', 'Active filter typography must transition with the selected underline.');
+requireText(journey, 'Animated.multiply(filterPosition, filterWidth / JOURNEY_FILTERS.length)', 'Timeline underline must slide between equal-size filters.');
+requireText(journey, 'setDisplayProgress(value)', 'Milestone progress ring must update from the animation, not a hardcoded number.');
 for (const required of [
   'PartnerAssets.status.achievement',
   'PartnerAssets.actions.quickPolicyIntake',
