@@ -67,13 +67,10 @@ function commercialBookingIssue(row:SemiAutoIntakeRow,code:string):
       detail:"The verified PDF refers to a chassis already linked to an active policy with overlapping cover dates. Compare the prior Policy Register record and resolve its coverage or replacement status before registering another policy. Reprocessing the same PDF will not remove this conflict."};
   }
   if(/New India Assurance/i.test(insurer) && ["booking_review_required","missing_field"].includes(code)){
-    const rawRto=values.get("vehicle_rto_name")??"";
-    const missingRto=!rawRto||/^FASTag ID:$/i.test(rawRto);
-    const title=missingRto?"NIA PDF verified · provisional RTO pending":"NIA policy · canonical booking review";
-    const issues=[
-      ...(missingRto?["The policy does not print a registration authority. Reparse the current PDF to obtain a labelled provisional issuing-office city where supported. CPA may legitimately be zero."]:[]),
-    ];
-    return {title,detail:issues.length?issues.join(" "):"NIA extraction passed, but commercial-policy booking remains review-controlled. Check identity, premium components, tax and canonical preflight."};
+    // RTO name/state may legitimately be absent; never display them as a
+    // booking blocker or request a reparse solely to populate geography.
+    return {title:"NIA policy · canonical booking review",
+      detail:"RTO city and state are optional. If booking still needs review, check insured identity, registration evidence, premium, dates, duplicates and other canonical requirements."};
   }
   if(/Go Digit General Insurance/i.test(insurer) && code==="missing_field"
       && !values.get("vehicle_manufacturing_year")){

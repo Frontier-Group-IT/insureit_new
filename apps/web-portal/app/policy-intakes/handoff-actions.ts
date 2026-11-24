@@ -329,12 +329,8 @@ async function preparePolicyIntakeHandoffInternal(
     // specific review hold rather than calling every such case bulk failure.
     const nia=verified.parserId==="new_india_cv_native_pdf"
       && verified.checksPassed===16 && verified.warnings.length===0;
-    const hasField=(key:string)=>verified.fields.some(f=>f.key===key&&f.value.trim());
-    const niaMissingAuthority=nia && (!hasField("vehicle_rto_name")
-      ||verified.fields.some(f=>f.key==="vehicle_rto_name" && /^FASTag ID:$/i.test(f.value.trim())));
-    // Optional CPA is not a missing GCV field. Keep NIA review limited to
-    // actual absent authority or other independently verified booking rules.
-    const niaHoldCode=niaMissingAuthority?"nia_missing_registration_authority":null;
+    // A missing city/state is not a blocking NIA review condition.
+    const niaHoldCode=null;
     const goDigit=verified.parserId==="go_digit_cv_native_pdf" && verified.checksPassed===18
       && verified.warnings.length===0;
     // Business rule: where the manufacturer did not print a manufacturing
@@ -343,7 +339,7 @@ async function preparePolicyIntakeHandoffInternal(
     const digitYear=goDigit?resolveManufacturingYearEvidence(verified.fields):null;
     const requiredGoDigitKeys=[
       "insured_name","policy_product","vehicle_manufacturing_year",
-      "vehicle_capacity","vehicle_rto_name","vehicle_rto_state",
+      "vehicle_capacity",
       "vehicle_registration_number","vehicle_chassis_number","vehicle_engine_number",
       "policy_issuance_date","policy_start_date","policy_end_date",
     ];

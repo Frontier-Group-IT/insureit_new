@@ -506,7 +506,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     // labelled fallback, never a claim about manufacturer evidence or a
     // fabricated manufacturing date. All premium checks stay exact.
     for (const key of ["insured_name","policy_product","vehicle_manufacturing_year",
-      "vehicle_capacity","vehicle_rto_name","vehicle_rto_state","vehicle_class"]) {
+      "vehicle_capacity","vehicle_class"]) {
       if (!pdfField(key) && !(key==="vehicle_manufacturing_year" && manufacturingEvidence.year))
         return fail("Missing verified PDF field",
           key==="vehicle_manufacturing_year"
@@ -566,8 +566,8 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     || forwarded.draft.vehicleClass!==expectedCommercialClass
     || forwarded.draft.manufacturingYear!==manufacturingEvidence.year
     || forwarded.draft.capacity!==pdfField("vehicle_capacity")
-    || forwarded.draft.rtoName!==pdfField("vehicle_rto_name")
-    || forwarded.draft.rtoState!==pdfField("vehicle_rto_state")
+    || (pdfField("vehicle_rto_name") && forwarded.draft.rtoName!==pdfField("vehicle_rto_name"))
+    || (pdfField("vehicle_rto_state") && forwarded.draft.rtoState!==pdfField("vehicle_rto_state"))
     || (iffco && (forwarded.draft.registrationMode
            !==(pdfField("vehicle_registration_status")==="registration_pending"?"unregistered":"registered")
       ||(pdfField("vehicle_registration_status")==="registration_pending"
@@ -579,7 +579,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
         ?forwarded.draft.remarks.includes("IFFCO_PROVISIONAL_RTO_FROM_INSURED_ADDRESS:")
         :forwarded.draft.remarks.includes("IFFCO_REGISTERED_RTO_FROM_PLATE:"))
       ||!forwarded.draft.remarks.includes("IFFCO_FUEL_FROM_JCB_MODEL:")))))
-    return fail("Verified commercial fields","The saved commercial identity, class, year, CC, RTO, fuel, registration status, source notes or Package selection differs from the verified PDF.");
+    return fail("Verified commercial fields","The saved commercial identity, class, year, CC, any independently printed RTO value, fuel, registration status, source notes or Package selection differs from the verified PDF.");
   if(isOdElectricTwoWheeler
       && (forwarded.draft.vehicleClass!=="TWP"
         ||forwarded.draft.fuelType!=="Electric"

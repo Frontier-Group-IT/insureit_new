@@ -30,7 +30,8 @@ const insured=grab(/Name\s*\n([A-Z][A-Z .'-]+)\s*\nVehicle Registration No\./i);
 const plate=grab(/Vehicle Registration No\.\s*(UK\d{2}[A-Z]{1,3}\d{4})/i);
 const start=iso(grab(/Period of Policy for Own Damage Cover and Optional cover\(s\) if\s*\nOpted\s*\n\d+\s*%\s*\n(\d{2}-[A-Za-z]{3}-\d{4})/i));
 const end=iso(grab(/Period of Policy for Own Damage Cover and Optional cover\(s\) if\s*\nOpted\s*\n\d+\s*%\s*\n\d{2}-[A-Za-z]{3}-\d{4}\s*\n(\d{2}-[A-Za-z]{3}-\d{4})/i));
-const rto=grab(/RTO Location\s+([^,\n]+),UTTARAKHAND/i);
+const rto=grab(/RTO Location\s+([^,\n]+)(?:,\s*[A-Za-z ]+)?/i);
+const printedRtoState=grab(/RTO Location\s+[^,\n]+,\s*([A-Za-z ]+)(?:\n|$)/i);
 const make=grab(/Make\s+(ROYAL ENFIELD)\b/i);
 const variant=grab(/Model\/Vehicle Variant \(Sub-\s*\nType\)\s*\n([^\n]+)/i);
 const model=variant?.split('/')[0]?.trim()||null;
@@ -62,7 +63,7 @@ put('vehicle_model',model,source('Model/Vehicle Variant'));
 put('vehicle_fuel_type',fuel,source('Fuel Type'));
 put('vehicle_registration_year',regYear,source('Year of Regn / Year of Mfg 2025/--, manufacturing year not printed'));
 put('vehicle_rto_name',rto,source('RTO Location'));
-put('vehicle_rto_state','Uttarakhand',source('RTO Location'));
+put('vehicle_rto_state',printedRtoState|| (plate?.startsWith('UK')?'Uttarakhand':null),source(printedRtoState?'RTO Location state':'Registered UK plate prefix'));
 put('vehicle_engine_number',engine,source('Engine No.'));
 put('vehicle_chassis_number',chassis,source('Chassis No.'));
 put('vehicle_capacity',cc,source('Cubic Capacity CC'));
@@ -72,7 +73,7 @@ put('tp_premium',0,source('Standalone OD issues no TP'));
 put('cpa_premium',0,source('Standalone OD no owner-driver CPA charged'));
 const checks={
  insurer_verified:issuer,standalone_od_product_verified:product,identity_verified:!!policy&&!!insured,
- insured_vehicle_registered:!!plate&&!!rto,od_period_verified:!!start&&!!end&&end>start,
+ insured_vehicle_registered:!!plate, // City and state are optional; plate is not.od_period_verified:!!start&&!!end&&end>start,
  issuance_date_evidenced:!!issue,make_model_evidenced:!!make&&!!model,
  vehicle_identification_verified:!!engine&&!!chassis,year_evidence_separate:!!regYear,
  fuel_cc_verified:!!fuel&&!!cc,idv_printed:!!idv&&idv>0,

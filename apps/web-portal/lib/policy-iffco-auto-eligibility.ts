@@ -19,7 +19,7 @@ export function assessIffcoAutoOnboarding(input:Input):{eligible:boolean;reason:
   for(const key of ["insured_name","policy_number","policy_issuance_date","policy_start_date",
     "policy_end_date","third_party_start_date","third_party_end_date","vehicle_class","vehicle_make",
     "vehicle_model","vehicle_manufacturing_year","vehicle_capacity","vehicle_fuel_type",
-    "vehicle_rto_state","vehicle_rto_name","vehicle_chassis_number","vehicle_engine_number",
+    "vehicle_chassis_number","vehicle_engine_number",
     "cpa_premium","idv","policy_product","vehicle_registration_status","vehicle_registration_number"]){
     if(!get(key))return fail("iffco_missing_"+key);
   }
@@ -42,26 +42,27 @@ export function assessIffcoAutoOnboarding(input:Input):{eligible:boolean;reason:
     return fail("iffco_vehicle_evidence_incomplete");
   const registration=get("vehicle_registration_number").toUpperCase().replace(/[ -]/g,"");
   const isPending=get("vehicle_registration_status")==="registration_pending";
-  const rtoCity=get("vehicle_rto_name");
-  const rtoStateEvidence=fields.get("vehicle_rto_state")?.evidence??"";
-  const rtoCityEvidence=fields.get("vehicle_rto_name")?.evidence??"";
-  if(get("vehicle_rto_state")!=="Madhya Pradesh"||!(/^[a-z ]{3,45}$/i.test(rtoCity)))
-    return fail("iffco_location_evidence_incomplete");
+  // Both location fields are optional. Never substitute insured-address city
+  // for the registration authority; keep its provenance when available.
   if(isPending){
-    if(!/^MP\/NEW\/\d{3,6}$/.test(registration)
-      ||!rtoStateEvidence.startsWith("IFFCO PDF State Code 23")
-      ||!rtoCityEvidence.startsWith("IFFCO policyholder address city only;"))
-      return fail("iffco_provisional_location_source_missing");
+    if(!/^MP\/NEW\/\d{3,6}$/.test(registration))
+      return fail("iffco_provisional_registration_unverified");
   }else{
     // The PDF's empty Registration Authority box must never be replaced
     // with the insured's mailing city. Trust only an identified MP RTO code
     // attached to the *same* printed vehicle registration number.
     const match=registration.match(/^MP(\d{2})[A-Z]{1,3}\d{3,4}$/);
     if(!match
-      ||!rtoStateEvidence.startsWith("Registered plate "+get("vehicle_registration_number")+" indicates MP state;")
-      ||!rtoCityEvidence.startsWith("Registered plate "+get("vehicle_registration_number")+" code MP-"+match[1]+" = "+rtoCity+" (MP RTO registry);")
       ||!get("vehicle_chassis_number")||!get("vehicle_engine_number"))
-      return fail("iffco_registered_rto_evidence_missing");
+      return fail("iffco_registered_plate_or_vehicle_identity_unverified");
+    // RTO fields are optional, but any independently recorded source-labelled
+    // registration plate must not contradict the actual selected plate.
+    const geographyProof=[fields.get("vehicle_rto_name")?.evidence,
+      fields.get("vehicle_rto_state")?.evidence].filter((v):v is string=>!!v);
+    if(geographyProof.some(v=>{
+      const printed=v.match(/^Registered plate (\S+)\s/i);
+      return printed&&printed[1].toUpperCase().replace(/[ -]/g,"")!==registration;
+    }))return fail("iffco_registered_plate_source_conflict");
   }
   const cpa=Number(get("cpa_premium"));
   if(!Number.isFinite(cpa)||cpa<0||!input.commercialPremium)

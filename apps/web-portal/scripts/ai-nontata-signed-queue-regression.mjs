@@ -394,14 +394,14 @@ const unified=file("../components/policy-unified-form.tsx");
 const shell=file("../components/policy-commercial-shell.tsx");
 assert.ok(niaHandoff.includes('niaVerified')&&niaHandoff.includes("FASTag ID:"),
   "NIA stale drafts must not show FASTag ID as the registration authority");
-assert.ok(niaHandoff.includes('nia_missing_registration_authority') && !niaHandoff.includes('const niaMissingCpa='));
+assert.ok(niaHandoff.includes('const niaHoldCode=null') && !niaHandoff.includes('const niaMissingCpa='));
 assert.ok(niaPage.includes('readVerifiedNiaPrintedPremiumReference(')
   && niaPage.includes('queue.data.document_id===document.data.id'));
 assert.ok(unified.includes('printedPremiumReference!.gst')
   && unified.includes('Math.round(od*100)===Math.round(printedPremiumReference.od*100)')
   && unified.includes('form.cpaOpted==="No"'));
 assert.ok(shell.includes('printedPremiumReference={props.printedPremiumReference}'));
-assert.ok(component.includes('NIA PDF verified · provisional RTO pending')
+assert.ok(component.includes('RTO city and state are optional.')
   && component.includes('Go Digit · manufacturing year unavailable'));
 
 // Approved operational rule: only when the policy fails to print manufacture
@@ -546,9 +546,9 @@ for(const [parserId,checksPassed] of [
    parserId+" fully evidenced, zero-CPA registered package eligible");
  assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="vehicle_rto_name"?{...f,evidence:"Native PDF policy schedule"}:f)}).eligible,true,"Populated RTO must not require special evidence wording");
  assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="vehicle_rto_name"?{...f,evidence:undefined}:f)}).eligible,true,"Populated RTO must not require separate authority evidence");
- assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.filter(f=>f.key!=="vehicle_rto_state")}).eligible,false);
+ assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.filter(f=>f.key!=="vehicle_rto_state")}).eligible,true);
  assert.equal(assessStandardCommercialDirectConversion({...fixture,checksPassed:checksPassed-1}).eligible,false);
- assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.filter(f=>f.key!=="vehicle_rto_name")}).eligible,false);
+ assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.filter(f=>f.key!=="vehicle_rto_name")}).eligible,true);
  assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="vehicle_registration_number"?{...f,value:"NEW"}:f)}).eligible,false);
  assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="cpa_premium"?{...f,value:"330"}:f)}).eligible,false);
  assert.equal(assessStandardCommercialDirectConversion({...fixture,commercialPremium:{...standardPremium,net:2999}}).eligible,false);
@@ -667,8 +667,8 @@ const iffcoRegistered={
 assert.equal(assessIffcoAutoOnboarding(iffcoRegistered).eligible,true,
   "IFFCO registered MP20 JCB with 18/18 checks and reconciled premium is eligible");
 assert.equal(assessIffcoAutoOnboarding({...iffcoRegistered,fields:iffcoRegistered.fields.map(f=>
-  f.key==="vehicle_rto_name"?{...f,evidence:"IFFCO policyholder address city only;"}:f)}).eligible,false,
-  "Registered RTO must not come from the mailing address");
+  f.key==="vehicle_rto_name"?{...f,evidence:"IFFCO policyholder address city only;"}:f)}).eligible,true,
+  "RTO city is optional; address city source may not be used as RTO proof");
 assert.equal(assessIffcoAutoOnboarding({...iffcoRegistered,fields:iffcoRegistered.fields.map(f=>
   f.key==="vehicle_registration_number"?{...f,value:"MP21ZS7041"}:f)}).eligible,false,
   "RTO evidence must match the exact printed plate");
@@ -679,7 +679,7 @@ assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,parserId:"go_digit_cv_nativ
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,checksPassed:17}).eligible,false);
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,commercialPremium:{...iffcoAuto.commercialPremium,gross:14300}}).eligible,false);
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.filter(f=>f.key!=="vehicle_capacity")}).eligible,false);
-assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.map(f=>f.key==="vehicle_rto_name"?{...f,evidence:"Native PDF policy schedule"}:f)}).eligible,false);
+assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.map(f=>f.key==="vehicle_rto_name"?{...f,evidence:"Native PDF policy schedule"}:f)}).eligible,true);
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.map(f=>f.key==="vehicle_fuel_type"?{...f,evidence:"Native PDF policy schedule"}:f)}).eligible,false);
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:[...iffcoAuto.fields,iffcoAuto.fields[0]]}).eligible,false);
 assert.ok(handoff.includes("const iffcoReview=assessIffcoAutoOnboarding(")
@@ -736,7 +736,7 @@ assert.ok(!unified.includes("CPA amount is mandatory for GCV policies")
   && !unified.includes('...(form.vehicleClass==="GCV"?[form.cpa]:[])'),
   "Form must allow zero CPA while preserving opted-in amount check");
 assert.ok(!handoff.includes('const niaMissingCpa=')
-  && handoff.includes('niaHoldCode=niaMissingAuthority?"nia_missing_registration_authority":null'),
+  && handoff.includes('const niaHoldCode=null'),
   "NIA reparse queue must not hold verified zero-CPA commercial policies as missing CPA");
 assert.ok(component.includes("Historical NIA CPA hold"),
   "The UI must clarify older CPA-only exceptions are obsolete");

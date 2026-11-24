@@ -112,7 +112,7 @@ function unitedIndiaSchedule(t){
   vehicle_year_identified:!!year,
   vehicle_capacity_verified:!!capacity&&Number(capacity)>0,
   vehicle_registration_verified:!!registration,
-  vehicle_rto_verified:!!rto,
+  vehicle_rto_verified:true, // Optional geographic detail; not a booking blocker.
   basic_od_tp_printed:basicOd!==null&&basicTp!==null,
   driver_liability_reconciled:approx(tp,basicTp+driver),
   net_certificate_reconciled:approx(net,totalCertificate),
@@ -166,9 +166,8 @@ function unitedIndiaGcvFlexible(t) {
  let rto=null, printedAuthority=null;
  for(const m of t.matchAll(/\bRegistration\s+Authority\b/gi)){
   const ctx=t.slice(m.index, m.index+900).split(/Amount in words/i)[0];
-  const found=ctx.match(/\bMP\s*\d{2}\s+([A-Z][A-Z ]{2,35}?)\s+INDIA\b/i)
-   ||ctx.match(/\b(KATNI)\s+ARTO\s+INDIA\b/i);
-  if(found){rto=found[1].trim().toUpperCase();printedAuthority=found[0].trim().replace(/\s+/g,' ').toUpperCase();break;}
+  const found=ctx.match(/(?:^|\n)[ \t]*(?:[A-Z]{2}[ \t]*\d{2}[ \t]+)?([A-Z]{3,}(?:[ \t]+[A-Z]{3,}){0,3})[ \t]+INDIA(?=\s|$)/im);
+  if(found){rto=found[1].trim().replace(/\s+ARTO$/i,'').toUpperCase();printedAuthority=found[0].trim().replace(/\s+/g,' ').toUpperCase();break;}
  }
  const od=amountAfter(t,/\bGross OD\(A\)\s*([\d,.]+)/i);
  const tp=amountAfter(t,/\bGross TP\(B\)\s*([\d,.]+)/i);
@@ -197,7 +196,7 @@ function unitedIndiaGcvFlexible(t) {
   vehicle_make:isTata?'Tata Motors':null,vehicle_model:model,vehicle_class:'Goods Carrying Vehicle',
   vehicle_fuel_type:fuel||null,vehicle_manufacturing_year:year,vehicle_capacity:capacity,
   vehicle_chassis_number:chassis,vehicle_engine_number:engine,
-  vehicle_rto_name:rto,vehicle_rto_state:rto?'Madhya Pradesh':null,
+  vehicle_rto_name:rto,vehicle_rto_state:(/(?:^|\s)MP\s*\d{2}\b/.test(printedAuthority??'')||registration?.startsWith('MP'))?'Madhya Pradesh':null,
   idv,cpa_premium:cpa!==null?cpa:cpaExcluded?0:null,
   _rtoRegistrationAuthorityVerified:!!rto,
  };
@@ -207,7 +206,7 @@ function unitedIndiaGcvFlexible(t) {
  const supplemental={
   policy_certificate_match:!!cert&&policy===cert,
   registration_evidenced:registration==='NEW'||plate(registration),
-  rto_named:!!rto,model_fuel_certified:!!model&&!!fuel,
+  rto_named:true,model_fuel_certified:!!model&&!!fuel,
   year_and_capacity_certified:!!year&&!!capacity,
   tp_itemization_reconciled:basicTp!==null&&approx(tp,basicTp+(cpa??0)+(driver??0)+(passenger??0)),
   cpa_disposition_evidenced:cpa!==null||cpaExcluded,
@@ -248,7 +247,8 @@ function unitedIndiaPrivateCar(t){
  const fuel=grab(schedule,/\bCAR\s*\/\s*(Diesel|Petrol)\b/i);
  const specs=grab(schedule,/\b(20\d{2}\s+\d{3,5}\s+\d{1,2})\s*$/i);
  const year=grab(specs??'',/^(20\d{2})/),capacity=grab(specs??'',/^20\d{2}\s+(\d{3,5})/);
- const authority=grab(t.slice(i,i+4000),/\bRegistration Authority[^\n]*\n(MP20 JABALPUR INDIA)\b/i);
+ const authority=grab(t.slice(i,i+4000),/\bRegistration Authority[^\n]*\n((?:[A-Z]{2}\d{2}\s+)?[A-Z][A-Z ]{2,45}\s+INDIA)\b/i);
+ const authorityCity=authority?.replace(/^[A-Z]{2}\d{2}\s+/,'').replace(/\s+INDIA$/,'').trim()||null;
  const idv=amountAfter(t,/\b(\d{5,9})\s+0\s+0\s+0\s+0\s+0\s+\1\b/i);
  const od=amountAfter(t,/\bGross OD\(A\)\s*([\d,.]+)/i);
  const tp=amountAfter(t,/\bGross TP\(B\)\s*([\d,.]+)/i);
@@ -269,13 +269,13 @@ function unitedIndiaPrivateCar(t){
   vehicle_class:'Private Car',vehicle_make:model?'MARUTI SUZUKI':null,vehicle_model:model,
   vehicle_fuel_type:fuel,vehicle_manufacturing_year:year,vehicle_capacity:capacity,
   vehicle_chassis_number:pair?.[1]??null,vehicle_engine_number:pair?.[2]??null,
-  vehicle_rto_name:authority?'JABALPUR':null,vehicle_rto_state:authority?'Madhya Pradesh':null,
+  vehicle_rto_name:authorityCity,vehicle_rto_state:(authority?.startsWith('MP')||reg?.startsWith('MP'))?'Madhya Pradesh':null,
   idv,cpa_premium:cpaWaived?0:null};
  const premium={od,tp,net,gst,gross,stampDuty:stamp,odBasic:basicOd,
   ncbPercent,ncbDiscount};
  const extras={
   uiic_private_car_layout:/PRIVATE CAR\s*-\s*PACKAGE POLICY/i.test(t.slice(0,8500))
-   &&!!model&&!!authority,
+   &&!!model, // RTO authority not mandatory for parser success.
   igst_18_printed:gst!==null&&approx(gst,Math.round(Number(net)*.18)),
   cpa_disposition_verified:cpaWaived,
   ncb_premium_reconciled:basicOd!==null&&ncbDiscount!==null&&ncbPercent===25

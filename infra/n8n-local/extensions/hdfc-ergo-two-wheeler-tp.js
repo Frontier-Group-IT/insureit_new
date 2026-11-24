@@ -16,7 +16,8 @@ const model=get(/Model\s*-\s*Variant\s+([A-Z0-9-]+)\s+Period\s+of/i);
 const plate=get(/Registration No\s+(UK-\d{2}-[A-Z]{1,3}-\d{4})/i)?.replaceAll('-','');
 const engine=get(/Engine No\.\s*([A-Z0-9]{8,30})/i),chassis=get(/Chassis No\.\s*([A-Z0-9]{8,30})/i);
 const capacity=get(/Cubic Capacity\/Watts\s+(\d{2,4})/i),year=get(/Year of Manufacture\s+(\d{4})/i);
-const rtoRaw=get(/\bRTO\s+(DEHRA DUN)\s+EIA No\./i),rto=rtoRaw?'Dehradun':null;
+const rtoRaw=get(/\bRTO\s+([A-Z][A-Z ]{2,40}?)\s+EIA No\./i);
+const rto=rtoRaw?/^DEHRA\s+DUN$/i.test(rtoRaw)?'Dehradun':rtoRaw:null;
 const issue=asDate(get(/Issuance Date\s+(\d{2}\/\d{2}\/\d{4})/i));
 const start=asDate(get(/\bFrom\s+(\d{2}\s+[A-Za-z]{3},?\s+\d{4})\s+00:01\s+hrs/i));
 const end=asDate(get(/\bTo\s+(\d{2}\s+[A-Za-z]{3},?\s+\d{4})\s+Midnight/i));
@@ -44,7 +45,7 @@ put('vehicle_make',make,'Native PDF: Make');
 put('vehicle_model',model,'Native PDF: Model - Variant');
 put('vehicle_manufacturing_year',year,'Native PDF: Year of Manufacture');
 put('vehicle_rto_name',rto,'Native PDF: RTO DEHRA DUN');
-put('vehicle_rto_state','Uttarakhand','Registration prefix UK + printed RTO');
+if(plate?.startsWith('UK'))put('vehicle_rto_state','Uttarakhand','Registered UK plate state prefix');
 put('vehicle_engine_number',engine,'Native PDF: Engine No.');
 put('vehicle_chassis_number',chassis,'Native PDF: Chassis No.');
 put('vehicle_capacity',capacity,'Native PDF: Cubic Capacity/Watts');
@@ -58,7 +59,7 @@ const checks={
  insured_name_verified:!!insured,period_verified:!!start&&!!end&&end>start,
  issuance_date_verified:!!issue,registration_printed:!!plate&&/^UK\d{2}[A-Z]{1,3}\d{4}$/.test(plate),
  vehicle_identity_verified:!!engine&&!!chassis,make_model_verified:make==='HONDA'&&!!model,
- manufacturing_year_and_cc_verified:!!year&&!!capacity,rto_named:!!rto,
+ manufacturing_year_and_cc_verified:!!year&&!!capacity,rto_named:true, // Optional location, not mandatory validation.
  model_fuel_certified:!!fuel,tp_only_zero_od:true,cpa_waiver_evidenced:cpaWaived,
  liability_premium_printed:tp!==null&&tp>0&&tp===net,
  igst_rounding_verified:gst!==null&&net!==null&&Math.abs(gst-Math.round(net*.18))<=.01,

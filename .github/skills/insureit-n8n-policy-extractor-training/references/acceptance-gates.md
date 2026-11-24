@@ -9,7 +9,7 @@
 
 ## Parsing and mapping
 - [ ] Source provenance stored as PDF-printed, registry-confirmed, or manufacturer-derived; uncertain fields review-held.
-- [ ] RTO state **and city** populated from named authority when present; no false full plates or insured-address authority.
+- [ ] RTO city and state independently optional: both present → both, one present → only one, neither present → both blank; never fail extraction/Convert/booking solely because missing; no false full plates or insured-address authority.
 - [ ] Unregistered versus registered status and vehicle lookup work for correct product variant.
 - [ ] Make/model/fuel matches actual dropdown choices; no guessed Diesel for electric/unknown models.
 - [ ] Capacity correctly typed: GVW versus CC versus kW; no fallback from seat count/model digits.

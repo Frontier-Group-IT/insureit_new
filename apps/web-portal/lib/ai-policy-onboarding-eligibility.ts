@@ -182,7 +182,7 @@ const requiredFields = [
   "insured_name", "policy_number", "insurer_name", "vehicle_class",
   "vehicle_make", "vehicle_model", "vehicle_fuel_type",
   "vehicle_manufacturing_year", "vehicle_chassis_number", "vehicle_engine_number",
-  "vehicle_rto_name", "policy_product", "policy_start_date", "policy_end_date",
+  "policy_product", "policy_start_date", "policy_end_date",
   "third_party_end_date", "idv", "od_premium", "tp_premium",
   "vehicle_motor_power_kw",
 ] as const;
@@ -224,7 +224,7 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
       && !(thirdPartyOnly && key==="idv")
       && (key!=="vehicle_motor_power_kw" || (parser?.family!=="tata_private_car" && parser?.family!=="commercial")));
     if (parser?.family==="tata_private_car" || parser?.family==="tata_two_wheeler" || parser?.family==="commercial") {
-      required.push("vehicle_capacity","vehicle_registration_status","vehicle_rto_state");
+      required.push("vehicle_capacity","vehicle_registration_status");
       if (fields.get("vehicle_registration_status")?.toLowerCase()==="registered") {
         required.push("vehicle_registration_number");
       }

@@ -39,6 +39,10 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Non-Tata normal Read and registered/unregistered review regression
         run: node scripts/non-tata-normal-read-regression.mjs
+      - name: RTO city and state independently optional across policy onboarding
+        run: node --experimental-strip-types scripts/rto-optional-policy-regression.mjs
+      - name: Tata AIG Private Car RTO and CNG IMT25 source regression
+        run: node ../../infra/n8n-local/tests/tata-aig-private-car-source-variants-regression.mjs
       - name: United India GCV native PDF layout and false-positive regression
         run: node --experimental-strip-types ../../infra/n8n-local/tests/united-india-gcv-layout-regression.mjs
       - name: AI queue non-Tata signed-PDF and printed premium regression
