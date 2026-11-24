@@ -118,5 +118,23 @@ assert.match(handoff,/assessProductVariantDirectConversion/);
 assert.match(handoff,/mapVerifiedProductVariantPremium/);
 assert.match(convert,/const productVariant=PRODUCT_VARIANT_PARSERS/);
 assert.match(convert,/expectedCommercialProduct=productVariant/);
+for(const [parser,vehicleClass,product] of [
+ ["hdfc_ergo_two_wheeler_tp_native_pdf","TWP","Third Party"],
+ ["sbi_general_private_car_package_native_pdf","PCP","Package"],
+ ["zurich_kotak_private_car_tp_native_pdf","PCP","Third Party"],
+ ["go_digit_two_wheeler_od_native_pdf","TWP","SAOD"],
+ ["united_india_tractor_tp_native_pdf","MISD","Third Party"],
+]){
+ assert.ok(convert.includes('"'+parser+'"'),"Preflight missing "+parser);
+ const classSegment=convert.slice(convert.indexOf("const expectedCommercialClass="),convert.indexOf("const expectedCommercialProduct="));
+ const productSegment=convert.slice(convert.indexOf("const expectedCommercialProduct="),convert.indexOf("if(commercial && (forwarded.draft.policyProduct"));
+ assert.ok(classSegment.includes(vehicleClass),"Expected class mapping "+parser+" = "+vehicleClass);
+ assert.ok(productSegment.includes(product),"Expected product mapping "+parser+" = "+product);
+}
+assert.ok(convert.includes('variantParser==="sbi_general_private_car_package_native_pdf"?"Package"'),
+ "SBI must not be rejected as Third Party after a verified Package draft");
+assert.ok(convert.includes('"hdfc_ergo_two_wheeler_tp_native_pdf"].includes(variantParser)?"TWP"'),
+ "HDFC liability-only must preserve TWP, never MISD");
+
 assert.match(eligibility,/zurich_kotak_private_car_tp_native_pdf/);
 console.log("Isolated product-variant extraction, financial and direct-convert regression passed");
