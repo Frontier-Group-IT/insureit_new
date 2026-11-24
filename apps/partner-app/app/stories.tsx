@@ -96,6 +96,7 @@ export default function StoriesScreen() {
 
   const story = data?.items[index] || null;
   const impactClock = useImpactTimeline(active && !loading && !error && story?.kind === 'impact', held);
+  const learnClock = useImpactTimeline(focused && !closing && !loading && !error && story?.kind === 'learn', held);
 
   useEffect(() => {
     setArtworkReduction(0);
@@ -294,7 +295,7 @@ export default function StoriesScreen() {
               ) : story.kind === 'impact' ? (
                 <ImpactStory story={story} onOpen={openStory} artworkHeight={artworkHeight} clock={impactClock} onPause={setHeld} />
               ) : story.kind === 'learn' ? (
-                <LearnStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />
+                <LearnStory story={story} onOpen={openStory} artworkHeight={artworkHeight} clock={learnClock} />
               ) : (
               <>
               <View style={styles.lessonBadge}>
@@ -521,29 +522,79 @@ function ImpactStory({ story, onOpen, artworkHeight, clock, onPause }: { story: 
   );
 }
 
-function LearnStory({ story, onOpen, artworkHeight }: { story: PartnerStory; onOpen: () => void; artworkHeight: number }) {
+
+/**
+ * Animated 60 SEC LEARN story. The original learning-car.png is a flattened
+ * artwork containing the car, registration plate and gold attention marks.
+ * Animate that one image as a unit; do not pretend any part is OCR-verified.
+ *
+ * The shared timeline pauses for story holds/background and resets on exit.
+ * Static JSX is legible immediately when Reduce Motion is enabled.
+ */
+function LearnStory({ story, onOpen, artworkHeight, clock }: {
+  story: PartnerStory; onOpen: () => void; artworkHeight: number; clock: ImpactTimeline;
+}) {
   const { hold } = useContext(StoryMotion);
   const hasRoute = Boolean(story.route);
+  const entrance = clock.time.interpolate({ inputRange: [700, 1400], outputRange: [0, 1], extrapolate: 'clamp' });
+  const shadowReveal = clock.time.interpolate({ inputRange: [1000, 1800], outputRange: [0, 0.17], extrapolate: 'clamp' });
+  const ambient = clock.ambient.interpolate({ inputRange: [0, 1], outputRange: [0, -7] });
+  const pulse = clock.ambient.interpolate({ inputRange: [0, 1], outputRange: [1, 1.02] });
+  const iconTick = clock.time.interpolate({ inputRange: [0, 120, 230, 370], outputRange: ['0deg', '0deg', '7deg', '0deg'], extrapolate: 'clamp' });
+  const badgeGlow = clock.ambient.interpolate({ inputRange: [0, 1], outputRange: [0.08, 0.22] });
+  const underline = clock.time.interpolate({ inputRange: [200, 900], outputRange: [0, 1], extrapolate: 'clamp' });
+
   return (
     <View style={styles.unifiedStory}>
-      <StoryHeading icon="time-outline" title={story.eyebrow} tone="green" />
+      <Animated.View style={[{ maxWidth: '96%', alignItems: 'center' }, reveal(clock, 0, 300, 5, 0.96)]}>
+        {clock.enabled ? <Animated.View pointerEvents="none" style={[styles.learnBadgeGlow, { opacity: badgeGlow }]} /> : null}
+        <View style={[styles.unifiedHeading, styles.unifiedHeadingGreen]}>
+          <Animated.View style={clock.enabled ? { transform: [{ rotate: iconTick }] } : undefined}>
+            <Ionicons name="time-outline" size={19} color="#087A57" />
+          </Animated.View>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.unifiedHeadingText}>{story.eyebrow}</Text>
+        </View>
+      </Animated.View>
       <StoryPanel>
         <Pressable
           onPress={onOpen}
           disabled={!hasRoute}
           onTouchStart={(event) => { hold(true); event.stopPropagation(); }}
-          onTouchEnd={(event) => { hold(false); event.stopPropagation(); }} onTouchCancel={() => hold(false)}
+          onTouchEnd={(event) => { hold(false); event.stopPropagation(); }}
+          onTouchCancel={() => hold(false)}
           accessibilityRole={hasRoute ? 'link' : undefined}
           accessibilityLabel={hasRoute ? 'Open ' + story.title : undefined}
-          style={styles.learnStoryLink}
+          style={({ pressed }) => [styles.learnStoryLink, pressed && hasRoute ? styles.storyTextPressed : null]}
         >
-          <Text style={styles.learnStoryTitle} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.78}>{story.title}</Text>
-          <View style={styles.titleRule}><View style={styles.titleRuleActive} /></View>
-          <Text style={styles.learnStoryQuestion}>{highlightStoryText(story.body)}</Text>
+          <Animated.View style={[{ alignSelf: 'stretch', alignItems: 'center' }, reveal(clock, 200, 550, 7, 0.98)]}>
+            <Text style={styles.learnStoryTitle} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.78}>{story.title}</Text>
+            <View style={styles.titleRule}>
+              <Animated.View style={[styles.titleRuleActive, clock.enabled ? { transform: [{ scaleX: underline }] } : null]} />
+            </View>
+          </Animated.View>
+          <Animated.View style={[{ width: '100%' }, reveal(clock, 400, 780, 5)]}>
+            <Text style={styles.learnStoryQuestion}>{highlightStoryText(story.body)}</Text>
+          </Animated.View>
         </Pressable>
       </StoryPanel>
       <View pointerEvents="none" style={[styles.unifiedArtworkBox, { height: artworkHeight }]}>
-        <StoryIllustration kind={story.kind} body={story.body} artworkHeight={artworkHeight} />
+        {clock.enabled ? <Animated.View style={[styles.learnArtShadow, {
+          opacity: shadowReveal,
+          transform: [{ scaleX: pulse }],
+        }]} /> : null}
+        <Animated.View style={[{ width: '100%', height: artworkHeight, alignItems: 'center', justifyContent: 'center' },
+          clock.enabled ? {
+            opacity: entrance,
+            transform: [
+              { translateX: entrance.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) },
+              { translateY: Animated.add(entrance.interpolate({ inputRange: [0, 1], outputRange: [9, 0] }), ambient) },
+              { scale: Animated.multiply(entrance.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }), pulse) },
+              { rotate: clock.ambient.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '0.3deg'] }) },
+            ],
+          } : null
+        ]}>
+          <StoryIllustration kind={story.kind} body={story.body} artworkHeight={artworkHeight} />
+        </Animated.View>
       </View>
       {story.answered_today ? (
         <View style={styles.completedPill}>
@@ -817,7 +868,7 @@ function StoryIllustration({ kind, body, artworkHeight = 300 }: { kind: PartnerS
     return (
       <View style={[styles.vehicleScene, { height: artworkHeight }]}>
         <View style={styles.vehicleHalo} />
-        <MotionArtwork
+        <Image
           source={require('../assets/partner/stories/learning-car.png')}
           resizeMode="contain"
           style={[styles.storyHeroArtwork, { height: artworkHeight }]}
@@ -902,6 +953,8 @@ const styles = StyleSheet.create({
   impactVehicleArtwork: { width: 166, height: 137, position: 'absolute', bottom: 0, left: '2%' },
   impactDocumentArtwork: { width: 117, height: 127, position: 'absolute', bottom: 2, right: '2%' },
   learnStoryLink: { alignItems: 'center', alignSelf: 'stretch' },
+  learnBadgeGlow: { ...StyleSheet.absoluteFillObject, borderRadius: 25, backgroundColor: '#80E6BA', transform: [{ scale: 1.045 }] },
+  learnArtShadow: { position: 'absolute', bottom: 8, width: '58%', height: 14, borderRadius: 20, backgroundColor: '#3974AD' },
   learnStoryTitle: { color: '#092B5B', fontSize: 18, lineHeight: 23, fontWeight: '800', textAlign: 'center' },
   learnStoryQuestion: { color: '#31537E', fontSize: 14, lineHeight: 20, textAlign: 'center', fontWeight: '600', marginTop: 7 },
   journeyStory: { width: '100%', alignItems: 'center', paddingTop: 4, paddingBottom: 8, gap: 6 },

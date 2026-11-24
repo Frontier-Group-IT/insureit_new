@@ -373,6 +373,23 @@ for (const fragment of [
 if (stories.includes('storySkeleton: { margin: 24')) throw new Error('Old short Stories loading card must not return.');
 if (stories.indexOf('<PartnerCaseBottomNavigation activeTab="Home" />') < stories.indexOf('</ScrollView>')) throw new Error('Stories Home tab bar must stay outside loading and story content.');
 
+for (const fragment of [
+  "const learnClock = useImpactTimeline(focused && !closing && !loading && !error && story?.kind === 'learn', held);",
+  '<LearnStory story={story} onOpen={openStory} artworkHeight={artworkHeight} clock={learnClock} />',
+  'reveal(clock, 0, 300, 5, 0.96)',
+  'reveal(clock, 200, 550, 7, 0.98)',
+  'reveal(clock, 400, 780, 5)',
+  "inputRange: [700, 1400]",
+  "inputRange: [1000, 1800]",
+  'clock.ambient.interpolate({ inputRange: [0, 1], outputRange: [0, -7] })',
+  'outputRange: [1, 1.02]',
+  'styles.learnArtShadow',
+  "source={require('../assets/partner/stories/learning-car.png')}",
+  'onTouchStart={(event) => { hold(true); event.stopPropagation(); }}',
+]) requireText(stories, fragment, 'Learning Story cinematic, pause-safe, original-art contract: ' + fragment);
+if (stories.includes('react-native-reanimated') || stories.includes('react-native-svg')) throw new Error('Unapproved native animation dependency');
+if (stories.includes('OCR verified') || stories.includes('plate recognized')) throw new Error('Decorative story must not claim real vehicle OCR');
+
 // Compact Stories update is typography/card sizing only; keep artwork sizes and navigation unchanged.
 for (const marker of [
   "unifiedPanel: { width: '100%', padding: 8,",
@@ -511,9 +528,9 @@ for (const marker of [
   '<StoryHeading icon="shield-checkmark-outline" title={story.eyebrow} />',
   '<StoryHeading icon="people" title={story.eyebrow} tone="violet" />',
   '<StoryHeading icon="stats-chart-outline" title={story.eyebrow} />',
-  '<StoryHeading icon="time-outline" title={story.eyebrow} tone="green" />',
+  '<Ionicons name="time-outline" size={19} color="#087A57" />',
   'function ImpactStory({ story, onOpen, artworkHeight, clock, onPause }',
-  'function LearnStory({ story, onOpen, artworkHeight }',
+  'function LearnStory({ story, onOpen, artworkHeight, clock }',
   'function StoryPanel({ children, impact = false }',
   'style={[styles.unifiedPanel, impact && styles.impactPanel,',
   'style={styles.impactSmallGrid}',
