@@ -144,6 +144,7 @@ export default function JourneyScreen() {
                     <MotionEntrance key={`${item.kind}-${item.date}-${index}`} reducedMotion={reducedMotion} delay={300 + index * 100} style={styles.achievement}>
                       <PressScale reducedMotion={reducedMotion} style={styles.achievement} accessibilityLabel={item.title}>
                         <MotionEntrance reducedMotion={reducedMotion} delay={380 + index * 100} icon style={styles.achievementIcon}>
+                          {index === 0 && recentlyUnlocked(item.date) ? <AchievementGlow reducedMotion={reducedMotion} /> : null}
                           <Image source={journeyMilestoneArtwork(item.kind, item.title)} style={styles.achievementArtwork} resizeMode="contain" accessibilityLabel={item.title} />
                         </MotionEntrance>
                         <Text style={styles.achievementTitle} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={item.title}>{item.title}</Text>
@@ -294,6 +295,25 @@ function PressScale({ children, style, contentStyle, reducedMotion, accessibilit
   );
 }
 
+function recentlyUnlocked(date: string) {
+  const timestamp = Date.parse(`${date}T00:00:00`);
+  return Number.isFinite(timestamp) && Date.now() >= timestamp && Date.now() - timestamp < 48 * 60 * 60 * 1000;
+}
+
+function AchievementGlow({ reducedMotion }: { reducedMotion: boolean }) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (reducedMotion) return;
+    const animation = Animated.sequence([
+      Animated.timing(opacity, { toValue: 0.45, duration: 380, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 0, duration: 420, useNativeDriver: true }),
+    ]);
+    animation.start();
+    return () => animation.stop();
+  }, [opacity, reducedMotion]);
+  return <Animated.View pointerEvents="none" style={[styles.achievementGlow, { opacity }]} />;
+}
+
 function AnimatedCount({ value, reducedMotion, delay, style }: { value: number; reducedMotion: boolean; delay: number; style?: object }) {
   const animated = useRef(new Animated.Value(0)).current;
   const [display, setDisplay] = useState(reducedMotion ? value : 0);
@@ -383,7 +403,7 @@ const styles = StyleSheet.create({
   summaryItem: { flex: 1, minWidth: 0, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 5, paddingVertical: 4, gap: 16 },
   summaryItemPressed: { backgroundColor: '#F1F5FB' },
   summaryPressable: { flex: 1, paddingHorizontal: 0, paddingVertical: 0 },
-  pressScaleContent: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  pressScaleContent: { alignItems: 'center', justifyContent: 'center' },
   summaryDivider: { width: 1, alignSelf: 'stretch', backgroundColor: '#A6B3C6', marginVertical: 5 },
   summaryArtwork: { width: 27, height: 29, flexShrink: 0 },
   summaryDetails: { flexShrink: 1, minWidth: 0, alignItems: 'flex-start', justifyContent: 'center', gap: 1 },
@@ -400,6 +420,7 @@ const styles = StyleSheet.create({
   achievementRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
   achievement: { flex: 1, minWidth: 0, alignItems: 'center' },
   achievementIcon: { width: 52, height: 52, justifyContent: 'center', alignItems: 'center', marginBottom: 5, backgroundColor: 'transparent' },
+  achievementGlow: { position: 'absolute', width: 52, height: 52, borderRadius: 26, backgroundColor: '#E9E1FF' },
   achievementArtwork: { width: 48, height: 48 },
   achievementTitle: { width: '100%', color: '#192333', fontSize: 10.5, lineHeight: 14, fontWeight: '700', textAlign: 'center' },
   achievementDate: { color: '#7A8698', fontSize: 9, lineHeight: 13, textAlign: 'center', marginTop: 3 },
@@ -415,7 +436,7 @@ const styles = StyleSheet.create({
   filterActiveText: { color: '#17233A' },
   timeline: { borderTopWidth: 1, borderTopColor: '#E7E9EE' },
   timelineRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 9 },
-  timelinePressContent: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'flex-start' },
+  timelinePressContent: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'flex-start' },
   timelineArtwork: { width: 30, height: 32, flexShrink: 0 },
   timelineDivider: { borderTopWidth: 1, borderTopColor: '#E7E9EE' },
   timelineBody: { flex: 1, minWidth: 0 },
