@@ -1,168 +1,25 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { segregatePolicyIntakeLanes } from "@/lib/policy-ocr-routing-mode";
-import { after } from "next/server";
-import { extractPolicyIntakeDocumentTrusted } from "@/lib/policy-intake-ocr-service";
-import { POLICY_INTAKE_OCR_STALE_MS, isPolicyIntakeOcrRetryable } from "@/lib/policy-intake-ocr-retry";
-import { hasEffectiveCapability } from "@/lib/effective-permissions";
-import { requirePolicyIntakeReviewer, requirePolicyIntakeViewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { requirePolicyIntakeReviewer, requirePolicyIntakeViewer } from "@/lib/policy-intake-server";
 
-type RetryableIntake = {
-  id: string;
-  status: string;
-  policy_type: string | null;
-  ocr_status: string;
-  created_at: string;
-  storage_bucket: string;
-  storage_path: string;
-  file_name: string;
-  mime_type: string | null;
-  processing_lane?: string;
-};
-
-function isProposalType(value: string | null | undefined) {
-  return value === "life" || value === "health";
-}
-
+/** Legacy Google/manual retry is retired. Reprocessing must use the controlled
+ * n8n queue and current-PDF verification in AI Policy Studio. */
 export type RetryPolicyIntakeOcrResult =
   | { ok: true; status: "processing" }
   | { ok: false; error: string };
 
 export async function getPolicyIntakeOcrRetryState(id: string) {
-  const profile = await requirePolicyIntakeViewer(id);
-  const admin = createSupabaseAdminClient();
-  const { data, error } = await admin
-    .from("policy_intake_requests")
-    .select("status,policy_type,ocr_status,created_at,submitted_by_profile_id,processing_lane")
-    .eq("id", id)
-    .maybeSingle<{ status: string; policy_type: string | null; ocr_status: string; created_at: string; submitted_by_profile_id: string | null }>();
-  if (error || !data) return { ok: false as const, retryable: false, error: "Retry status is unavailable." };
-
-  if (segregatePolicyIntakeLanes() && (data as typeof data & {processing_lane?:string}).processing_lane==="automation")
-    return {ok:true as const,retryable:false,ocrStatus:data.ocr_status};
-  const canReview = profile.role === "operations_head_life" || await hasEffectiveCapability(profile, "review_policy_intakes", "edit");
-  const isOwner = data.submitted_by_profile_id === profile.id;
-  if (!canReview && !isOwner) {
-    return { ok: false as const, retryable: false, error: "You do not have access to this intake." };
-  }
-
-  return {
-    ok: true as const,
-    retryable: canReview && isPolicyIntakeOcrRetryable({ status: data.status, ocrStatus: data.ocr_status, createdAt: data.created_at }) && !isProposalType(data.policy_type),
-    ocrStatus: data.ocr_status,
-  };
+  await requirePolicyIntakeViewer(id);
+  const admin=createSupabaseAdminClient();
+  const {data,error}=await admin.from("policy_intake_requests")
+    .select("ocr_status").eq("id",id)
+    .maybeSingle<{ocr_status:string}>();
+  if(error||!data)return {ok:false as const,retryable:false,error:"Intake status is unavailable."};
+  return {ok:true as const,retryable:false,ocrStatus:data.ocr_status};
 }
 
-export async function retryPolicyIntakeOcr(id: string): Promise<RetryPolicyIntakeOcrResult> {
+export async function retryPolicyIntakeOcr(id:string):Promise<RetryPolicyIntakeOcrResult> {
   await requirePolicyIntakeReviewer(id);
-  const admin = createSupabaseAdminClient();
-  const { data: intake, error } = await admin
-    .from("policy_intake_requests")
-    .select("id,status,policy_type,ocr_status,created_at,storage_bucket,storage_path,file_name,mime_type,processing_lane")
-    .eq("id", id)
-    .maybeSingle<RetryableIntake>();
-
-  if (error || !intake) return { ok: false, error: "This policy intake is unavailable. Refresh and try again." };
-  if (segregatePolicyIntakeLanes() && intake.processing_lane==="automation") return {ok:false,error:"This Intake belongs to AI Automation; use its controlled reprocess action."};
-  if (isProposalType(intake.policy_type)) return { ok: false, error: "Life and Health proposal forms do not use policy OCR and are stored for review only." };
-  if (!isPolicyIntakeOcrRetryable({ status: intake.status, ocrStatus: intake.ocr_status, createdAt: intake.created_at })) {
-    return { ok: false, error: "This detail fetch is already running or no longer needs a retry." };
-  }
-
-  let claim = admin
-    .from("policy_intake_requests")
-    .update({ ocr_status: "pending", ocr_warnings: [] })
-    .eq("id", id)
-    .eq("status", intake.status);
-  if (segregatePolicyIntakeLanes()) claim=claim.eq("processing_lane","manual");
-
-  if (intake.ocr_status === "failed") {
-    claim = claim.eq("ocr_status", "failed");
-  } else {
-    const staleBefore = new Date(Date.now() - POLICY_INTAKE_OCR_STALE_MS).toISOString();
-    claim = claim.in("ocr_status", ["pending", "processing"]).lte("created_at", staleBefore);
-  }
-
-  const { data: claimed, error: claimError } = await claim.select("id").maybeSingle<{ id: string }>();
-  if (claimError || !claimed) {
-    return { ok: false, error: "Another retry has already started. Refresh to see the latest status." };
-  }
-
-  revalidatePath("/policy-intakes");
-  revalidatePath(`/policy-intakes/${id}`);
-  after(async () => {
-    await processRetry(id, intake.storage_path, intake.status);
-  });
-  return { ok: true, status: "processing" };
-}
-
-async function processRetry(id: string, expectedStoragePath: string, expectedWorkflowStatus: string) {
-  const admin = createSupabaseAdminClient();
-  const { data: intake } = await admin
-    .from("policy_intake_requests")
-    .select("id,status,policy_type,ocr_status,storage_bucket,storage_path,file_name,mime_type,processing_lane")
-    .eq("id", id)
-    .maybeSingle<Omit<RetryableIntake, "created_at">>();
-
-  if (!intake || (segregatePolicyIntakeLanes() && intake.processing_lane==="automation") || isProposalType(intake.policy_type) || intake.status !== expectedWorkflowStatus || intake.ocr_status !== "pending" || intake.storage_path !== expectedStoragePath) return;
-
-  const { data: started } = await admin
-    .from("policy_intake_requests")
-    .update({ ocr_status: "processing" })
-    .eq("id", id)
-    .eq("status", expectedWorkflowStatus)
-    .eq("ocr_status", "pending")
-    .eq("storage_path", expectedStoragePath)
-    .select("id")
-    .maybeSingle<{ id: string }>();
-  if (!started) return;
-
-  const { data: blob, error: downloadError } = await admin.storage.from(intake.storage_bucket).download(intake.storage_path);
-  if (downloadError || !blob) {
-    await markRetryFailure(id, expectedStoragePath, expectedWorkflowStatus, "The stored policy copy could not be read automatically.");
-    return;
-  }
-
-  try {
-    const file = new File([await blob.arrayBuffer()], intake.file_name, { type: intake.mime_type || blob.type || "application/pdf" });
-    const formData = new FormData();
-    formData.set("policy_document", file);
-    const ocr = await extractPolicyIntakeDocumentTrusted(formData);
-    if (!ocr.ok) {
-      await markRetryFailure(id, expectedStoragePath, expectedWorkflowStatus, ocr.error);
-      return;
-    }
-
-    await admin
-      .from("policy_intake_requests")
-      .update({
-        status: expectedWorkflowStatus === "in_review" ? "in_review" : "ready_for_review",
-        ocr_status: "completed",
-        ocr_fields: ocr.fields,
-        ocr_parser_id: ocr.parserId,
-        ocr_parser_version: ocr.parserVersion,
-        ocr_warnings: ocr.warnings,
-        attention_reason: null,
-      })
-      .eq("id", id)
-      .eq("status", expectedWorkflowStatus)
-      .eq("storage_path", expectedStoragePath);
-  } catch {
-    await markRetryFailure(id, expectedStoragePath, expectedWorkflowStatus, "Automatic detail fetch failed again. You can retry or continue with manual review.");
-  } finally {
-    revalidatePath("/policy-intakes");
-    revalidatePath(`/policy-intakes/${id}`);
-  }
-}
-
-async function markRetryFailure(id: string, storagePath: string, expectedWorkflowStatus: string, message: string) {
-  const admin = createSupabaseAdminClient();
-  await admin
-    .from("policy_intake_requests")
-    .update({ ocr_status: "failed", ocr_warnings: [message] })
-    .eq("id", id)
-    .eq("status", expectedWorkflowStatus)
-    .eq("storage_path", storagePath);
+  return {ok:false,error:"The old manual OCR retry is retired. Reprocess the current PDF through AI Policy Studio."};
 }
