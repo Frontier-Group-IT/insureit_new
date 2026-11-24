@@ -317,6 +317,7 @@ export default function AiPolicyStudioScreen() {
                 </Pressable>
               </StudioRowEnter>;
             })}
+            <View style={s.intakePageSpacer} accessible={false}/>
             {!loading&&!searchLoading&&!error&&!searchError?(
               <View style={s.paginationRow}>
                 <Text style={s.paginationInfo}>{matchingCount===0?'0 records':`Showing ${pageIndex*PAGE_SIZE+1}–${Math.min((pageIndex+1)*PAGE_SIZE,matchingCount)} of ${matchingCount}`}</Text>
@@ -433,7 +434,7 @@ function StudioRowEnter({children,index,reduceMotion}:{children:ReactNode;index:
 }
 
 const s=StyleSheet.create({
-  screenContent:{paddingBottom:24},
+  screenContent:{flexGrow:1,paddingBottom:0},
   summarySurface:{backgroundColor:'#FFFFFF',paddingHorizontal:11,paddingTop:10,paddingBottom:8},
   summaryTop:{flexDirection:'row',alignItems:'center',minHeight:76,gap:8},
   summaryArtwork:{width:43,height:45},
@@ -451,11 +452,11 @@ const s=StyleSheet.create({
   metricCopy:{minWidth:0},
   metricLabel:{color:'#627089',fontSize:10},
   metricValue:{color:'#071D38',fontSize:16,fontWeight:'800'},
-  listSection:{backgroundColor:'#F4F6FB',paddingHorizontal:10,paddingTop:10,paddingBottom:18,flex:1},
+  listSection:{backgroundColor:'#F4F6FB',paddingHorizontal:10,paddingTop:10,paddingBottom:12,flexGrow:1},
   listHeading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:8},
   listHeadingText:{fontSize:14,fontWeight:'800',color:'#0C2342'},
   recordPill:{fontSize:9,color:'#6048C9',backgroundColor:'#EFE8FF',borderRadius:14,overflow:'hidden',paddingVertical:5,paddingHorizontal:10},
-  intakePanel:{backgroundColor:'#FFFFFF',borderRadius:15,borderWidth:1,borderColor:'#DEE5EF',paddingHorizontal:10,paddingTop:10,paddingBottom:2,overflow:'hidden'},
+  intakePanel:{backgroundColor:'#FFFFFF',borderRadius:15,borderWidth:1,borderColor:'#DEE5EF',paddingHorizontal:10,paddingTop:10,paddingBottom:2,overflow:'hidden',flexGrow:1},
   searchBar:{height:36,borderRadius:10,borderWidth:1,borderColor:'#DCE4ED',flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:9,marginBottom:7},
   searchInput:{flex:1,fontSize:10.5,color:'#1A365B',paddingVertical:0,minHeight:34},
   tabsRow:{flexDirection:'row',height:30,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#DDE5EF',position:'relative'},
@@ -473,7 +474,8 @@ const s=StyleSheet.create({
   skeletonCopy:{flex:1,gap:7},
   skeletonLineWide:{height:9,width:'58%',borderRadius:5,backgroundColor:'#EDF2FA'},
   skeletonLineShort:{height:7,width:'74%',borderRadius:4,backgroundColor:'#EDF2FA'},
-  compactEmpty:{minHeight:115,alignItems:'center',justifyContent:'center',gap:5,padding:12},
+  compactEmpty:{flexGrow:1,minHeight:115,alignItems:'center',justifyContent:'center',gap:5,padding:12},
+  intakePageSpacer:{flexGrow:1,minHeight:0},
   emptyArtwork:{width:49,height:49},
   paginationRow:{minHeight:44,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:6,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:'#E6ECF4',paddingTop:7,paddingBottom:5},
   paginationInfo:{color:'#78889A',fontSize:10,flexShrink:1},

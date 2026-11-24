@@ -21,6 +21,14 @@ assert(screen.includes("count('in_review')/count('open')") && screen.includes('M
 assert(screen.includes('loadAiStudioPage(filter,offset,25)') && screen.includes('setSearchRows(all.filter('));
 assert(screen.includes('const PAGE_SIZE=10;') && screen.includes('const totalPages=Math.max(1,Math.ceil(matchingCount/PAGE_SIZE))'));
 assert(screen.includes('Page {pageIndex+1} of {totalPages}') && screen.includes('Previous page') && screen.includes('Next page'));
+// Keep the pager anchored to the full-height intake panel for empty and short buckets.
+assert(screen.includes('screenContent:{flexGrow:1,paddingBottom:0}'));
+assert(screen.includes("listSection:{backgroundColor:'#F4F6FB'") && screen.includes('paddingBottom:12,flexGrow:1}'));
+assert(screen.includes("intakePanel:{backgroundColor:'#FFFFFF'") && screen.includes("overflow:'hidden',flexGrow:1}"));
+assert(screen.includes('intakePageSpacer:{flexGrow:1,minHeight:0}'));
+assert(screen.indexOf('<View style={s.intakePageSpacer}') < screen.indexOf('<View style={s.paginationRow}'));
+assert(screen.includes('compactEmpty:{flexGrow:1,minHeight:115'));
+
 assert(screen.includes('Math.min(4,Math.max(0,count(filter)))') && screen.includes('No intakes found'));
 assert(screen.includes('PartnerAssets.actions.policyChecklist') && screen.includes('PartnerAssets.actions.documentSearch'));
 assert(data.includes('p_limit: Math.max(1, Math.min(25, Math.trunc(limit)))'));
