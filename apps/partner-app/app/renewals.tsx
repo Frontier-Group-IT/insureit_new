@@ -203,7 +203,8 @@ export default function RenewalsScreen() {
             placeholder="Search policy, customer or insurer..."
             leadingIconVariant="blue3d"
             containerStyle={styles.searchField}
-            renewalMotion={motion}
+            premiumMotion={motion}
+            pausePlaceholder={!motion}
           />
         </View>
       </View></RenewalEnter>
