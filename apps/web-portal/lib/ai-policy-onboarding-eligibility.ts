@@ -92,6 +92,7 @@ const TATA_INFORMATIONAL_WARNINGS = new Set([
   "tata_aig_printed_net_rounding",
   "tata_aig_signature_date_not_in_native_text",
   "tata_aig_issuance_date_requires_verified_pdf_signature",
+  "tata_aig_receipt_date_as_issuance",
 ]);
 export const NON_TATA_COMMERCIAL_N8N_IDS = new Set([
   "new_india_cv_native_pdf", "iffco_tokio_cv_native_pdf", "go_digit_cv_native_pdf",
