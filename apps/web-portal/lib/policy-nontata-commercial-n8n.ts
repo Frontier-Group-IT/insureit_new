@@ -361,9 +361,11 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
     // Retain it in verified extraction for the insurer-specific eligibility
     // evidence check. The canonical onboarding mapper independently clears
     // registrationNo for registration_pending, so it is never booked as a plate.
-    // NIA/United reference-only numbers remain filtered as before.
+    // NIA partial RTO prefixes are filtered. UIIC `NEW` must be retained
+    // as source evidence for its strict assessor, never as a registered plate;
+    // the canonical intake mapper clears registrationNo for pending vehicles.
     fields: enrichIffcoCertifiedMachineFamily(
-      isNewIndiaUnregistered || isUnitedNewVehicle
+      isNewIndiaUnregistered
         ? fields.filter((f) => f.key !== "vehicle_registration_number") : fields,
       insurer),
     warnings,
