@@ -52,15 +52,15 @@ assert(actions.includes('profile.role === "claims_head" || await canAccessInterm
 assert(read("lib/policy-intake-server.ts").includes('profile.role === "claims_head"'),"Claims Head source list must include all active sources");
 assert(actions.includes('createSignedUploadUrl(storagePath,{upsert:false})'),"Large policy files must use direct signed storage upload instead of a Server Action request body");
 assert(actions.includes('.from("policy_intake_requests").insert('),"Submission must persist the intake before automatic extraction");
-assert(actions.includes('ocrStatus=proposal?"completed":"pending"')
+assert(actions.includes('ocrStatus="pending" as const')
   && actions.includes('processing_lane:"automation"')
-  && actions.includes('status=proposal?"ready_for_review":"processing"')
+  && actions.includes('status="processing" as const')
   && !actions.includes("manualSplit"),
-  "All Policy Intake originals enter automation; proposals remain source-preserving and untrained formats need action");
-assert(actions.includes('if(!proposal && aiQueueEnabled())')
+  "Every original Intake, including Life/Health, starts in one automation queue");
+assert(actions.includes('if(aiQueueEnabled())')
   && actions.includes("processAiQueueBatch({preferredIntakeId:input.id})")
   && !actions.includes("processStoredOcr("),
-  "Policy Intake extraction must use the n8n queue exclusively, without legacy Google fallback");
+  "All Policy Intakes use the n8n queue, not a silent legacy Google OCR fallback");
 assert(actions.includes('policy_type:input.policyType'),"New intake must persist the selected policy type");
 assert(!/from\(["']policies["']\)\s*\.insert\(/.test(actions),"Sales intake submission must never insert a real policy");
 assert(actions.includes('input.storagePath.startsWith(`intakes/${input.id}/original/`)'),"Original upload must use the isolated intake source-document prefix");
