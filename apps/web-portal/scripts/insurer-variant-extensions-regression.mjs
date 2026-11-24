@@ -72,7 +72,8 @@ const sbi=fixture("sbi_general_private_car_package_native_pdf",{
  vehicle_class:"Private Car",vehicle_make:"TATA",vehicle_model:"PUNCH ADVENTURE",
  vehicle_fuel_type:"Petrol",vehicle_capacity:"1199",vehicle_manufacturing_year:"2023",
  idv:"480000",od_premium:"7751.2",tp_premium:"3416",cpa_premium:"325",
-}, {od:7751.2,tp:3416,net:11492.2,gst:2068.6,gross:13561,cpa:325,addOn:3922,odBasic:3829.2});
+}, {od:7751.2,tp:3416,net:11492.2,gst:2068.6,gross:13561,cpa:325,addOn:3922,
+  odBasic:3829.2,ncbPercent:0,ncbDiscount:0,odBasicAfterNcb:3829.2});
 sbi.checksPassed=20;
 assert.deepEqual(assessProductVariantDirectConversion(sbi),{eligible:true,reason:""});
 assert.deepEqual(mapVerifiedProductVariantPremium(sbi.commercialPremium,sbi.parserId),
@@ -80,6 +81,19 @@ assert.deepEqual(mapVerifiedProductVariantPremium(sbi.commercialPremium,sbi.pars
 assert.deepEqual(mapVerifiedProductVariantPremium(hdfc.commercialPremium,hdfc.parserId),
  {od:"0",tp:"714",addOnPremium:"0",cpa:"0",cpaOpted:"No"});
 const altered=(fixture,fn)=>{const f=structuredClone(fixture);fn(f);return f;};
+const sbiMahindra=altered(sbi,x=>{
+  for(const [key,value] of Object.entries({vehicle_make:"MAHINDRA",vehicle_model:"XUV 300 W8 (O)",
+    vehicle_capacity:"1197",vehicle_manufacturing_year:"2022",idv:"900000",od_premium:"7409.54"}))
+    x.fields.find(f=>f.key===key).value=value;
+  x.commercialPremium={od:7409.54,tp:3416,net:11150.54,gst:2007.10,gross:13158,
+    cpa:325,addOn:5830,odBasic:2871.9,ncbPercent:45,ncbDiscount:1292.36,odBasicAfterNcb:1579.54};
+});
+assert.deepEqual(assessProductVariantDirectConversion(sbiMahindra),{eligible:true,reason:""});
+assert.deepEqual(mapVerifiedProductVariantPremium(sbiMahindra.commercialPremium,sbiMahindra.parserId),
+ {od:"1579.54",tp:"3416",addOnPremium:"5830",cpa:"325",cpaOpted:"Yes"});
+assert.equal(assessProductVariantDirectConversion(altered(sbiMahindra,x=>{x.commercialPremium.ncbDiscount=1000;})).eligible,false);
+assert.equal(assessProductVariantDirectConversion(altered(sbiMahindra,x=>{x.commercialPremium.odBasicAfterNcb=2871.9;})).eligible,false);
+
 const kw=fixture(kotak);
 assert.equal(assessProductVariantDirectConversion(altered(hdfc,x=>{x.commercialPremium.gst=99})).eligible,false);
 assert.equal(assessProductVariantDirectConversion(altered(sbi,x=>{x.commercialPremium.cpa=0})).eligible,false);

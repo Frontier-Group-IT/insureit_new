@@ -14,7 +14,7 @@ export type NonTataCommercialRead = {
   fields: OcrField[];
   warnings: string[];
   checksPassed: number;
-  premium: { od: number; tp: number; net: number; gst: number; gross: number; cpa?: number; addOn?: number; odBasic?: number };
+  premium: { od: number; tp: number; net: number; gst: number; gross: number; cpa?: number; addOn?: number; odBasic?: number; ncbPercent?: number; ncbDiscount?: number; odBasicAfterNcb?: number };
 };
 // Use the SAME approved self-hosted webhook as the production ICICI/Tata bridge.
 // Commercial policy verification stays isolated by the insurer classifier and its
@@ -232,9 +232,15 @@ function validateNewVariant(
  const {od,tp,net,gst,gross}=p as {od:number,tp:number,net:number,gst:number,gross:number};
  const sbi=insurer==="sbi_general_private_car_package_native_pdf";
  const cpa=sbi?p.cpa:0,addOn=sbi?p.addOn:0,odBasic=sbi?p.odBasic:0;
+ const ncbPercent=sbi?p.ncbPercent:0,ncbDiscount=sbi?p.ncbDiscount:0;
+ const effectiveOd=sbi?p.odBasicAfterNcb:0;
  if(sbi&&(!isMoney(cpa)||!isMoney(addOn)||!isMoney(odBasic)
     ||cents(Number(byKey.get("cpa_premium")))!==cents(cpa)
-    ||Math.abs(cents((odBasic as number)+(addOn as number))-cents(od))>6))
+    ||!isMoney(ncbPercent)||!isMoney(ncbDiscount)||!isMoney(effectiveOd)
+    ||(ncbPercent as number)>65
+    ||Math.abs(cents((odBasic as number)*(ncbPercent as number)/100)-cents(ncbDiscount as number))>2
+    ||Math.abs(cents((odBasic as number)-(ncbDiscount as number))-cents(effectiveOd as number))>1
+    ||Math.abs(cents((effectiveOd as number)+(addOn as number))-cents(od))>1))
    throw new Error("n8n_extension_sbi_financial_split_invalid");
  if(Math.abs(cents(od+tp+(sbi?(cpa as number):0))-cents(net))>6
     ||Math.abs(cents(net+gst)-cents(gross))>50
@@ -246,7 +252,8 @@ function validateNewVariant(
  // supplied phone is handled by canonical booking identity/duplicate checks.
  return {parserId:insurer,parserVersion:"insureit-product-extension-v1",
    fields,warnings:[],checksPassed:expected.length,
-   premium:{od,tp,net,gst,gross,...(sbi?{cpa:cpa as number,addOn:addOn as number,odBasic:odBasic as number}:{})}};
+   premium:{od,tp,net,gst,gross,...(sbi?{cpa:cpa as number,addOn:addOn as number,odBasic:odBasic as number,ncbPercent:ncbPercent as number,
+      ncbDiscount:ncbDiscount as number,odBasicAfterNcb:effectiveOd as number}:{})}};
 }
 
 function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | "document_id" | "request_id", string>): NonTataCommercialRead {

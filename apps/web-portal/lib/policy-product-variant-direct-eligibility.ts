@@ -13,7 +13,7 @@ export const PRODUCT_VARIANT_PARSERS = new Set([
   "sbi_general_private_car_package_native_pdf",
 ]);
 type Field={key:string;value:string;evidence?:string};
-type Printed={od:number;tp:number;net:number;gst:number;gross:number;cpa?:number;addOn?:number;odBasic?:number};
+type Printed={od:number;tp:number;net:number;gst:number;gross:number;cpa?:number;addOn?:number;odBasic?:number;ncbPercent?:number;ncbDiscount?:number;odBasicAfterNcb?:number};
 type Input={parserId:string;checksPassed:number;warnings:readonly string[];
   fields:readonly Field[];commercialPremium:Printed|null|undefined};
 export function assessProductVariantDirectConversion(input:Input):{eligible:boolean;reason:string}{
@@ -60,16 +60,23 @@ export function assessProductVariantDirectConversion(input:Input):{eligible:bool
    return no("premium_reconciliation_failed");
  const digit=input.parserId==="go_digit_two_wheeler_od_native_pdf";
  if(input.parserId==="sbi_general_private_car_package_native_pdf"){
-   const {cpa,addOn,odBasic}=printed;
+   const {cpa,addOn,odBasic,ncbPercent,ncbDiscount,odBasicAfterNcb}=printed;
    if(field("insurer_name")!=="SBI General Insurance Company Limited"
      ||field("policy_product")!=="Package"||field("vehicle_class")!=="Private Car"
-     ||field("vehicle_make")!=="TATA"||!/^PUNCH\s+ADVENTURE$/i.test(field("vehicle_model"))
+     ||!([
+        field("vehicle_make")==="TATA"&&/^PUNCH\s+ADVENTURE$/i.test(field("vehicle_model"))&&field("vehicle_capacity")==="1199",
+        field("vehicle_make")==="MAHINDRA"&&/^XUV\s*300\s+W8\s*\(O\)$/i.test(field("vehicle_model"))&&field("vehicle_capacity")==="1197",
+       ].some(Boolean))
      ||field("vehicle_fuel_type")!=="Petrol"
      ||Number(field("idv"))<=0||printed.od<=0||printed.tp<=0
      ||!money(cpa??NaN)||!money(addOn??NaN)||!money(odBasic??NaN)
+     ||!money(ncbPercent??NaN)||!money(ncbDiscount??NaN)||!money(odBasicAfterNcb??NaN)
+     ||(ncbPercent??100)>65
      ||(cpa??0)<=0||(addOn??0)<=0||(odBasic??0)<=0
      ||cents(Number(field("cpa_premium")))!==cents(cpa??NaN)
-     ||Math.abs(cents((odBasic??0)+(addOn??0))-cents(printed.od))>6
+     ||Math.abs(cents((odBasic??0)*(ncbPercent??0)/100)-cents(ncbDiscount??0))>2
+     ||Math.abs(cents((odBasic??0)-(ncbDiscount??0))-cents(odBasicAfterNcb??0))>1
+     ||Math.abs(cents((odBasicAfterNcb??0)+(addOn??0))-cents(printed.od))>1
      ||Math.abs(cents(printed.gst)-cents(printed.net*.18))>3
      ||!field("vehicle_manufacturing_year"))
      return no("sbi_package_variant_unverified");
@@ -144,11 +151,13 @@ export function mapVerifiedProductVariantPremium(
    throw new Error("product_variant_premium_components_invalid");
  const cash=(v:number)=>String(Math.round(v*100)/100);
  if(parserId==="sbi_general_private_car_package_native_pdf"){
-   if(![p.cpa,p.addOn,p.odBasic].every(v=>v!==undefined&&Number.isFinite(v)&&v>=0)
-     ||Math.abs(Math.round(((p.odBasic??0)+(p.addOn??0)-p.od)*100))>6
+   if(![p.cpa,p.addOn,p.odBasic,p.ncbPercent,p.ncbDiscount,p.odBasicAfterNcb].every(v=>v!==undefined&&Number.isFinite(v)&&v>=0)
+     ||Math.abs(Math.round(((p.odBasicAfterNcb??0)+(p.addOn??0)-p.od)*100))>1
+     ||Math.abs(Math.round(((p.odBasic??0)-(p.ncbDiscount??0)-(p.odBasicAfterNcb??0))*100))>1
+      ||Math.abs(Math.round(((((p.odBasic??0)*(p.ncbPercent??0))/100)-(p.ncbDiscount??0))*100))>2
      ||(p.cpa??0)<=0)
      throw new Error("sbi_package_cpa_addon_split_invalid");
-   return {od:cash(p.odBasic!),tp:cash(p.tp),addOnPremium:cash(p.addOn!),
+   return {od:cash(p.odBasicAfterNcb!),tp:cash(p.tp),addOnPremium:cash(p.addOn!),
      cpa:cash(p.cpa!),cpaOpted:"Yes" as const};
  }
  return {od:cash(p.od),tp:cash(p.tp),addOnPremium:"0",cpa:"0",cpaOpted:"No"};
