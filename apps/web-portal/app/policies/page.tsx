@@ -141,6 +141,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
           intakeOrFilter: intakePredicates?.join(","),
           denyAll: intakeHierarchyScoped && !intakePredicates?.length,
           includeActionRequired: canReviewPolicyIntakes,
+          proposalScopeFilter: portfolioFilter,
           submittedByProfileId: canTrackOwnPolicyIntakes && !intakeHierarchyScoped ? profile.id : undefined,
         })
       : Promise.resolve(null);
