@@ -539,12 +539,17 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   if(forwarded.draft.issuanceDate!==issuanceDate)
     return fail("Saved issuance date","The saved draft's issue date differs from the verified current PDF. Review it before booking; no existing manual value was overwritten.");
   if(forwarded.draftRevision<1)return fail("Draft revision","Canonical revision is unavailable.");
+  // Canonical class/product must follow the verified insurer and vehicle layout.
+  const variantParser=extracted.preview.parserId;
   const expectedCommercialClass=productVariant
-    ?extracted.preview.parserId==="zurich_kotak_private_car_tp_native_pdf"?"PCP"
-      :extracted.preview.parserId==="go_digit_two_wheeler_od_native_pdf"?"TWP":"MISD"
+    ?["zurich_kotak_private_car_tp_native_pdf","sbi_general_private_car_package_native_pdf"].includes(variantParser)?"PCP"
+      :["go_digit_two_wheeler_od_native_pdf","hdfc_ergo_two_wheeler_tp_native_pdf"].includes(variantParser)?"TWP"
+      :"MISD"
     :/Goods Carrying/i.test(pdfField("vehicle_class"))?"GCV":"MISD";
   const expectedCommercialProduct=productVariant
-    ?extracted.preview.parserId==="go_digit_two_wheeler_od_native_pdf"?"SAOD":"Third Party"
+    ?variantParser==="go_digit_two_wheeler_od_native_pdf"?"SAOD"
+      :variantParser==="sbi_general_private_car_package_native_pdf"?"Package"
+      :"Third Party"
     :"Package";
   if(commercial && (forwarded.draft.policyProduct!==expectedCommercialProduct
     || forwarded.draft.vehicleClass!==expectedCommercialClass
