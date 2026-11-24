@@ -129,6 +129,28 @@ assert.match(bridge,/validateNewVariant\(payload/);
 assert.match(bridge,/Digit Two-Wheeler Insurance/);
 assert.match(bridge,/MISCELLANEOUS AND SPECIAL TYPE OF VEHICLES/);
 assert.match(handoff,/assessProductVariantDirectConversion/);
+// Exercise the actual handoff gate, not only the downstream premium mapper.
+// Extract the local expression from the source; remove TS non-null assertions
+// for the plain-JS regression runner. All source inputs are synthetic.
+const handoffGate=handoff.slice(handoff.indexOf("const commercialChecksOk="),
+ handoff.indexOf("const acceptableCommercialWarning="));
+assert.match(handoffGate,/parsed\.preview\.parserId==="sbi_general_private_car_package_native_pdf"\s*\?\s*assessProductVariantDirectConversion/);
+const runHandoffGate=new Function("commercial","parsed","trainedN8nParserProfile",
+ "PRODUCT_VARIANT_PARSERS","assessProductVariantDirectConversion",
+ handoffGate.replaceAll("commercial!.","commercial.")+"return commercialChecksOk;");
+const acceptsHandoff=(sample)=>runHandoffGate(sample.commercialPremium,
+ {preview:sample},()=>({checks:sample.parserId==="sbi_general_private_car_package_native_pdf"?20:16}),
+ PRODUCT_VARIANT_PARSERS,assessProductVariantDirectConversion);
+for(const sample of [sbi,sbiMahindra]){
+ assert.equal(acceptsHandoff(sample),true,"SBI separately printed CPA must pass the handoff");
+ assert.equal(acceptsHandoff(altered(sample,x=>{x.commercialPremium.cpa=0;})),false);
+ assert.equal(acceptsHandoff(altered(sample,x=>{x.commercialPremium.net-=325;})),false);
+ assert.equal(acceptsHandoff(altered(sample,x=>{x.commercialPremium.gross+=5;})),false);
+ assert.equal(acceptsHandoff(altered(sample,x=>{x.warnings=["unverified"];})),false);
+ assert.equal(acceptsHandoff(altered(sample,x=>{x.checksPassed=19;})),false);
+}
+assert.equal(acceptsHandoff(kw),true,"Existing zero-CPA handoff remains unchanged");
+assert.equal(acceptsHandoff(altered(kw,x=>{x.commercialPremium.net+=325;})),false);
 assert.match(handoff,/mapVerifiedProductVariantPremium/);
 assert.match(convert,/const productVariant=PRODUCT_VARIANT_PARSERS/);
 assert.match(convert,/expectedCommercialProduct=productVariant/);
