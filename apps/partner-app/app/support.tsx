@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, Animated, AppState, Easing, Linking, Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
@@ -14,6 +16,17 @@ type StatTone = 'warning' | 'info' | 'purple';
 
 export default function SupportScreen() {
   const router = useRouter();
+  const focused = useIsFocused();
+  const [foreground, setForeground] = useState(AppState.currentState == null || AppState.currentState === 'active');
+  const [reducedMotion, setReducedMotion] = useState(true);
+  const animate = focused && foreground && !reducedMotion;
+  useEffect(() => {
+    let mounted = true;
+    const app = AppState.addEventListener('change', next => setForeground(next === 'active'));
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion);
+    void AccessibilityInfo.isReduceMotionEnabled().then(value => { if (mounted) setReducedMotion(value); }).catch(() => {});
+    return () => { mounted = false; app.remove(); sub.remove(); };
+  }, []);
   const [data, setData] = useState<PartnerSupport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,7 +37,6 @@ export default function SupportScreen() {
     try {
       setData(await getPartnerSupport());
     } catch {
-      setData(null);
       setError('Support information could not be loaded right now.');
     } finally {
       setLoading(false);
@@ -39,19 +51,17 @@ export default function SupportScreen() {
       <View style={styles.contentInset}>
         <PartnerCasePageHeader title="Support" icon="headset-outline" onBack={() => router.back()} />
       </View>
-      {loading ? (
-        <PartnerStateView state="loading" title="Loading support" />
-      ) : error || !data ? (
+      {loading && !data ? (
+        <SupportSkeleton animate={animate} />
+      ) : error && !data ? (
         <PartnerStateView state="error" title="Support is temporarily unavailable"
           message={error || 'Support information could not be loaded.'}
           actionLabel="Try again" onAction={() => void load()} />
-      ) : (
+      ) : data ? (
         <View style={styles.page}>
           <View style={styles.hero}>
-            <View style={styles.heroIconShell}>
-              <PartnerProfileMenuIcon kind="support" size={60} />
-            </View>
-            <View style={styles.heroContent}>
+            <FloatingHeadphones animate={animate} />
+            <MotionEntrance animate={animate} delay={40} style={styles.heroContent}>
               <View style={styles.heroTopRow}>
                 <View style={styles.heroInformation}>
                   <Text style={[styles.heroTitle, Platform.OS === 'ios' && styles.heroTitleIos]}
@@ -62,19 +72,19 @@ export default function SupportScreen() {
                 </View>
                 <View style={styles.heroRight}>
                   <View style={styles.updatedLine}>
-                    <Text style={styles.updatedText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{formatUpdatedAt(data.generated_at)}</Text>
+                    <TimestampReveal timestamp={data.generated_at} animate={animate} />
                   </View>
                   <View style={styles.heroActions}>
-                    <View style={styles.heroActionBubble}>
+                    <MotionEntrance animate={animate} delay={180} style={styles.heroActionBubble}>
                       <Ionicons name="chatbubble-ellipses" size={18} color="#2681EB" />
-                    </View>
-                    <View style={styles.heroActionBubble}>
+                    </MotionEntrance>
+                    <MotionEntrance animate={animate} delay={280} style={styles.heroActionBubble}>
                       <Ionicons name="document-text" size={18} color="#1E70D4" />
-                    </View>
+                    </MotionEntrance>
                   </View>
                 </View>
               </View>
-            </View>
+            </MotionEntrance>
           </View>
 
           <View style={styles.contentInset}>
@@ -99,30 +109,26 @@ export default function SupportScreen() {
             </View>
           ) : null}
 
-          <View style={styles.sectionTitleWrap}>
+          <MotionEntrance animate={animate} delay={120} style={styles.sectionTitleWrap}>
             <Text style={styles.sectionTitle}>Operations Desk</Text>
-            <View style={styles.sectionUnderline} />
-          </View>
+            <UnderlineMotion animate={animate} />
+          </MotionEntrance>
 
           <View style={styles.statList}>
             <OpsStat value={data.operations.intakes_need_attention}
               label="Need your attention" helper="Items that require your action"
-              tone="warning" onPress={() => router.push('/policy-intakes')} />
+              tone="warning" animate={animate} delay={220} onPress={() => router.push('/policy-intakes')} />
             <OpsStat value={data.operations.intakes_in_progress}
               label="Policy Intakes in progress" helper="Policies currently being processed"
-              tone="info" onPress={() => router.push('/policy-intakes')} />
+              tone="info" animate={animate} delay={330} onPress={() => router.push('/policy-intakes')} />
             <OpsStat value={data.operations.active_claims}
               label="Active claims" helper="Claims currently in progress"
-              tone="purple" onPress={() => router.push('/(tabs)/claims')} />
+              tone="purple" animate={animate} delay={440} onPress={() => router.push('/(tabs)/claims')} />
           </View>
-          <View pointerEvents="none" style={styles.bottomWaveArea}>
-            <View style={styles.bottomWavePale} />
-            <View style={styles.bottomWaveBlue} />
-            <View style={styles.bottomWaveLight} />
-          </View>
+          <BottomWaveMotion animate={animate} />
           </View>
         </View>
-      )}
+      ) : null}
     </PartnerScreen>
   );
 }
@@ -139,19 +145,185 @@ function ContactAction({ icon, label, disabled, onPress }: {
   );
 }
 
-function OpsStat({ value, label, helper, onPress, tone }: {
-  value: number; label: string; helper: string; onPress: () => void; tone: StatTone;
+
+function useSupportEntrance(animate: boolean, delay = 0) {
+  const shown = useRef(false);
+  const opacity = useRef(new Animated.Value(1)).current;
+  const rise = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!animate) { opacity.setValue(1); rise.setValue(0); return; }
+    if (shown.current) return;
+    shown.current = true;
+    opacity.setValue(0); rise.setValue(9);
+    const animation = Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 400, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(rise, { toValue: 0, duration: 400, delay, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]);
+    animation.start();
+    return () => animation.stop();
+  }, [animate, delay, opacity, rise]);
+  return { opacity, transform: [{ translateY: rise }] };
+}
+
+function MotionEntrance({ animate, delay, style, children }: { animate: boolean; delay?: number; style?: ViewStyle; children: ReactNode }) {
+  const entrance = useSupportEntrance(animate, delay);
+  return <Animated.View style={[style, entrance]}>{children}</Animated.View>;
+}
+
+function FloatingHeadphones({ animate }: { animate: boolean }) {
+  const floating = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!animate) { floating.stopAnimation(); floating.setValue(0); return; }
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(floating, { toValue: 1, duration: 2300, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
+      Animated.timing(floating, { toValue: 0, duration: 2300, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [animate, floating]);
+  return <View style={styles.heroIconShell}>
+    <Animated.View style={[styles.headphoneShadow, {
+      opacity: floating.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.055] }),
+      transform: [{ scaleX: floating.interpolate({ inputRange: [0, 1], outputRange: [1, 0.84] }) }],
+    }]} pointerEvents="none" />
+    <Animated.View style={{ transform: [
+      { translateY: floating.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }) },
+      { scale: floating.interpolate({ inputRange: [0, 1], outputRange: [1, 1.018] }) },
+    ] }}>
+      <PartnerProfileMenuIcon kind="support" size={60} />
+    </Animated.View>
+  </View>;
+}
+
+function TimestampReveal({ timestamp, animate }: { timestamp: string; animate: boolean }) {
+  const previous = useRef(timestamp);
+  const fade = useRef(new Animated.Value(1)).current;
+  const tint = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (previous.current === timestamp) return;
+    previous.current = timestamp;
+    if (!animate) { fade.setValue(1); tint.setValue(0); return; }
+    fade.setValue(0.45); tint.setValue(1);
+    const animation = Animated.parallel([
+      Animated.timing(fade, { toValue: 1, duration: 350, useNativeDriver: true }),
+      Animated.timing(tint, { toValue: 0, duration: 700, useNativeDriver: false }),
+    ]);
+    animation.start();
+    return () => animation.stop();
+  }, [timestamp, animate, fade, tint]);
+  return <Animated.View style={{ opacity: fade, backgroundColor: tint.interpolate({ inputRange: [0, 1], outputRange: ['transparent', '#DFF2FF'] }), borderRadius: 5 }}>
+    <Text style={styles.updatedText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{formatUpdatedAt(timestamp)}</Text>
+  </Animated.View>;
+}
+
+function UnderlineMotion({ animate }: { animate: boolean }) {
+  const grow = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!animate) { grow.setValue(1); return; }
+    grow.setValue(0);
+    const motion = Animated.timing(grow, { toValue: 1, duration: 450, delay: 190, easing: Easing.out(Easing.cubic), useNativeDriver: true });
+    motion.start();
+    return () => motion.stop();
+  }, [animate, grow]);
+  return <View style={styles.sectionUnderline}>
+    <Animated.View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#3287EF', transform: [{ scaleX: grow }] }]} />
+  </View>;
+}
+
+function ActualCount({ value, animate }: { value: number; animate: boolean }) {
+  const motion = useRef(new Animated.Value(value)).current;
+  const seen = useRef<number | null>(null);
+  const played = useRef(false);
+  const [displayed, setDisplayed] = useState(value);
+  useEffect(() => {
+    const initial = seen.current === null;
+    const from = !played.current ? 0 : seen.current ?? value;
+    seen.current = value;
+    if (!animate || !Number.isFinite(value)) {
+      motion.setValue(value); setDisplayed(value); return;
+    }
+    played.current = true;
+    if (from === value) {
+      motion.setValue(value); setDisplayed(value); return;
+    }
+    motion.stopAnimation(); motion.setValue(from);
+    setDisplayed(from);
+    let last = from;
+    const subscription = motion.addListener(({ value: next }) => {
+      const rounded = Math.round(next);
+      if (last !== rounded) { last = rounded; setDisplayed(rounded); }
+    });
+    const animation = Animated.timing(motion, { toValue: value, duration: initial ? 850 : 600, easing: Easing.out(Easing.cubic), useNativeDriver: false });
+    animation.start(({ finished }) => { if (finished) setDisplayed(value); });
+    return () => { animation.stop(); motion.removeListener(subscription); };
+  }, [value, animate, motion]);
+  return <Text style={styles.countText}>{displayed.toLocaleString('en-IN')}</Text>;
+}
+
+function OpsStat({ value, label, helper, onPress, tone, animate, delay }: {
+  value: number; label: string; helper: string; onPress: () => void; tone: StatTone; animate: boolean; delay: number;
 }) {
   const color = tone === 'warning' ? '#DF284B' : tone === 'info' ? '#176ED6' : '#6B35D8';
   const icon = tone === 'warning' ? 'alert-circle' : tone === 'info' ? 'hourglass' : 'shield-checkmark';
-  return (
+  const entrance = useSupportEntrance(animate, delay);
+  const pressScale = useRef(new Animated.Value(1)).current;
+  const arrow = useRef(new Animated.Value(0)).current;
+  const iconScale = useRef(new Animated.Value(1)).current;
+  const iconRotate = useRef(new Animated.Value(0)).current;
+  const emphasis = useRef(new Animated.Value(0)).current;
+  const previous = useRef(value);
+  useEffect(() => {
+    const was = previous.current;
+    previous.current = value;
+    if (!animate || value === 0 || (tone === 'warning' && was >= value)) return;
+    iconScale.setValue(0.96);
+    const sequence = Animated.sequence([
+      Animated.spring(iconScale, { toValue: 1.075, friction: 9, tension: 80, useNativeDriver: true }),
+      Animated.spring(iconScale, { toValue: 1, friction: 9, tension: 80, useNativeDriver: true }),
+    ]);
+    sequence.start();
+    return () => sequence.stop();
+  }, [value, tone, animate, iconScale]);
+  useEffect(() => {
+    if (!animate || tone !== 'warning' || value <= 0) { emphasis.setValue(0); return; }
+    emphasis.setValue(0);
+    const animation = Animated.sequence([
+      Animated.timing(emphasis, { toValue: 1, duration: 270, useNativeDriver: true }),
+      Animated.timing(emphasis, { toValue: 0, duration: 430, useNativeDriver: true }),
+    ]);
+    animation.start();
+    return () => animation.stop();
+  }, [tone, value, animate, emphasis]);
+  useEffect(() => {
+    if (!animate || tone !== 'info' || value <= 0) { iconRotate.setValue(0); return; }
+    const spin = Animated.loop(Animated.sequence([
+      Animated.delay(4000),
+      Animated.timing(iconRotate, { toValue: 1, duration: 1000, easing: Easing.inOut(Easing.quad), useNativeDriver: true, isInteraction: false }),
+      Animated.delay(4000),
+      Animated.timing(iconRotate, { toValue: 0, duration: 1000, easing: Easing.inOut(Easing.quad), useNativeDriver: true, isInteraction: false }),
+    ]));
+    spin.start();
+    return () => spin.stop();
+  }, [tone, value, animate, iconRotate]);
+  useEffect(() => () => { pressScale.stopAnimation(); arrow.stopAnimation(); iconScale.stopAnimation(); }, [pressScale, arrow, iconScale]);
+  const press = (pressed: boolean) => {
+    if (!animate) return;
+    Animated.spring(pressScale, { toValue: pressed ? 0.98 : 1, friction: 10, tension: 120, useNativeDriver: true }).start();
+    Animated.spring(arrow, { toValue: pressed ? 3 : 0, friction: 10, tension: 120, useNativeDriver: true }).start();
+  };
+  const rotation = iconRotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
+  return <Animated.View style={[entrance, { transform: [...entrance.transform, { scale: pressScale }] }]}>
     <Pressable accessibilityRole="button" accessibilityLabel={label + ': ' + value + '. ' + helper}
-      accessibilityHint="Opens the related records" onPress={onPress}
+      accessibilityHint="Opens the related records" onPress={() => { if (animate) void Haptics.selectionAsync().catch(() => {}); onPress(); }}
+      onPressIn={() => press(true)} onPressOut={() => press(false)}
       style={({ pressed }) => [styles.statCard, pressed && styles.statPressed]}>
       <View style={[styles.statIconBox, tone === 'warning' ? styles.warningIconBg : tone === 'info' ? styles.infoIconBg : styles.purpleIconBg]}>
-        <Ionicons name={icon} size={29} color={color} />
+        {tone === 'warning' && value > 0 ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, styles.attentionGlow, { opacity: emphasis }]} /> : null}
+        <Animated.View style={{ transform: [{ scale: iconScale }, { rotate: tone === 'info' ? rotation : '0deg' }] }}>
+          <Ionicons name={icon} size={29} color={color} />
+        </Animated.View>
         <View style={[styles.countBubble, { backgroundColor: color }]}>
-          <Text style={styles.countText}>{value}</Text>
+          <ActualCount value={value} animate={animate} />
         </View>
       </View>
       <View style={[styles.statDivider, { backgroundColor: color }]} />
@@ -160,10 +332,50 @@ function OpsStat({ value, label, helper, onPress, tone }: {
         <Text style={styles.statHelper} numberOfLines={2}>{helper}</Text>
       </View>
       <View style={styles.arrowCircle}>
-        <Ionicons name="chevron-forward" size={21} color={color} />
+        <Animated.View style={{ transform: [{ translateX: arrow }] }}>
+          <Ionicons name="chevron-forward" size={21} color={color} />
+        </Animated.View>
       </View>
     </Pressable>
-  );
+  </Animated.View>;
+}
+
+function BottomWaveMotion({ animate }: { animate: boolean }) {
+  const drift = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!animate) { drift.setValue(0); return; }
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(drift, { toValue: 1, duration: 4100, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
+      Animated.timing(drift, { toValue: 0, duration: 4100, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [animate, drift]);
+  return <View pointerEvents="none" style={styles.bottomWaveArea}>
+    <Animated.View style={[styles.bottomWavePale, { transform: [{ rotate: '5deg' }, { translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [0, 7] }) }] }]} />
+    <Animated.View style={[styles.bottomWaveBlue, { transform: [{ rotate: '-5deg' }, { translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [0, -6] }) }] }]} />
+    <Animated.View style={[styles.bottomWaveLight, { transform: [{ rotate: '7deg' }, { translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [0, 4] }) }] }]} />
+  </View>;
+}
+
+function SupportSkeleton({ animate }: { animate: boolean }) {
+  const alpha = useRef(new Animated.Value(0.65)).current;
+  useEffect(() => {
+    if (!animate) { alpha.setValue(0.8); return; }
+    const motion = Animated.loop(Animated.sequence([
+      Animated.timing(alpha, { toValue: 0.95, duration: 650, useNativeDriver: true }),
+      Animated.timing(alpha, { toValue: 0.55, duration: 650, useNativeDriver: true }),
+    ]));
+    motion.start();
+    return () => motion.stop();
+  }, [animate, alpha]);
+  return <View style={styles.skeletonScreen} accessibilityRole="progressbar" accessibilityLabel="Loading Support Operations Desk">
+    <Animated.View style={[styles.skeletonHero, { opacity: alpha }]} />
+    <View style={styles.contentInset}>
+      <Animated.View style={[styles.skeletonHeading, { opacity: alpha }]} />
+      {[0, 1, 2].map(index => <Animated.View key={index} style={[styles.skeletonCard, { opacity: alpha }]} />)}
+    </View>
+  </View>;
 }
 
 function initials(value: string) {
@@ -200,7 +412,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#DDEBFF' },
   sectionTitleWrap: { marginTop: 19, marginBottom: 13 },
   sectionTitle: { color: '#071B42', fontWeight: '800', fontSize: 20, letterSpacing: -0.4 },
-  sectionUnderline: { marginTop: 5, width: 50, height: 4, borderRadius: 3, backgroundColor: '#3287EF' },
+  sectionUnderline: { marginTop: 5, width: 50, height: 4, borderRadius: 3, backgroundColor: 'transparent', overflow: 'hidden' },
   statList: { gap: 12 },
   statCard: {
     minHeight: 91, borderRadius: 19, backgroundColor: '#FFFFFF', borderWidth: 1,
@@ -239,5 +451,11 @@ const styles = StyleSheet.create({
   contactActions: { flexDirection: 'row', gap: 5 },
   contactAction: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#EBF4FF',
     alignItems: 'center', justifyContent: 'center' },
+  headphoneShadow: { position: 'absolute', width: 36, height: 8, bottom: -4, borderRadius: 12, backgroundColor: '#128E91' },
+  attentionGlow: { borderWidth: 1, borderRadius: 16, borderColor: '#DF284B', backgroundColor: '#FFDEE8' },
+  skeletonScreen: { paddingTop: 2, gap: 18 },
+  skeletonHero: { height: 106, backgroundColor: '#EDF3FA' },
+  skeletonHeading: { height: 28, width: 160, borderRadius: 8, marginTop: 7, marginBottom: 14, backgroundColor: '#DFEAF8' },
+  skeletonCard: { height: 91, borderRadius: 19, marginBottom: 12, backgroundColor: '#E1EBF8' },
   disabled: { opacity: 0.4 },
 });
