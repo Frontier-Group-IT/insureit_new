@@ -671,10 +671,10 @@ if (learnSectionStart < 0 || learnSectionEnd < 0) throw new Error('Learn referen
 const learnSection = learn.slice(learnSectionStart, learnSectionEnd);
 for (const required of [
   '<View style={styles.questionHeadingRow}>',
-  '<Ionicons name="bulb"',
+  '<BulbArtwork animate={animate} />',
   '<Text style={styles.questionMeta}>TODAY’S QUESTION</Text>',
   '<Text style={styles.question}>{data.card.prompt}</Text>',
-  'styles.headingUnderline',
+  '<UnderlineReveal animate={animate} />',
 ]) requireText(learnSection, required, 'Learn reference question card missing essential content.');
 for (const required of [
   'optionsList: { marginTop: 17, gap: 10 }',
@@ -682,22 +682,22 @@ for (const required of [
   'borderRadius: 21',
   'data.card.options.map',
   'accessibilityRole="radio"',
-  'accessibilityState={{ disabled: Boolean(data.answered_today || submitting), checked: Boolean(isSelected) }}',
-  'onPress={() => setSelectedOptionKey(option.key)}',
+  'accessibilityState={{ disabled: Boolean(finished || submitting), checked: Boolean(selected) }}',
+  'setSelectedOptionKey(option.key)',
   'styles.radioOuter',
   'styles.radioOuterSelected',
   'styles.radioCenter',
   'async function submitAnswer()',
   'submitPartnerLearningAnswer(data.card.id, selectedOptionKey)',
   'accessibilityLabel="Submit Answer"',
-  'disabled={!selectedOptionKey || submitting}',
-  'onPress={() => void submitAnswer()}',
+  'disabled={!enabled || submitting}',
+  'onSubmit={() => void submitAnswer()}',
   'styles.lightbulbCircle',
   'styles.statsDivider',
   'styles.footnoteTitle',
   '<Stat value={data.stats.attempted_days} label="Learning days"',
   '<Stat value={data.stats.total_attempts} label="Cards completed"',
-  'disabled={Boolean(data.answered_today || submitting)}',
+  'disabled={Boolean(finished || submitting)}',
   'const [showAnswerFeedback, setShowAnswerFeedback] = useState(false)',
   'const timeout = setTimeout(() => setShowAnswerFeedback(false), 1000)',
   'return () => clearTimeout(timeout)',
@@ -728,13 +728,48 @@ const learnActions = learn.slice(learnActionsAt, learnTipAt);
 for (const required of [
   'accessibilityLabel="Cancel learning answer"',
   'onPress={() => router.back()}',
-  'accessibilityLabel="Submit Answer"',
-  'styles.cancelButton', 'styles.submitButton',
+  'styles.cancelButton',
+  '<AnimatedSubmitButton enabled={Boolean(selectedOptionKey && !submitting)}',
+  'onSubmit={() => void submitAnswer()}',
 ]) requireText(learnActions, required, 'Learn actions must preserve Cancel-left and Submit-right behaviors.');
-if (!(learnActions.indexOf('styles.cancelButton') < learnActions.indexOf('styles.submitButton'))) {
+for (const buttonRequirement of [
+  'function AnimatedSubmitButton(',
+  'accessibilityLabel="Submit Answer"',
+  'styles.submitButton',
+  'disabled={!enabled || submitting}',
+  'onPress={onSubmit}',
+]) requireText(learn, buttonRequirement, 'Animated submit must preserve its existing role, behavior and disabled state.');
+if (!(learnActions.indexOf('styles.cancelButton') < learnActions.indexOf('<AnimatedSubmitButton'))) {
   throw new Error('Cancel must appear to the left of Submit Answer.');
 }
 requireText(learn, "answerActions: { flexDirection: 'row'", 'Learn actions must share one horizontal row.');
+for (const marker of [
+  'AccessibilityInfo.isReduceMotionEnabled()',
+  "AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion)",
+  'const animate = focused && foreground && !reduceMotion;',
+  'submitLock.current = true;',
+  'submitPartnerLearningAnswer(data.card.id, selectedOptionKey)',
+  'setFreshResult({ key: selectedOptionKey, correct: result.is_correct, cardId: data.card.id });',
+  'function QuizOption(',
+  'function ConfettiBurst(',
+  'celebrate={Boolean(freshResult?.correct && freshResult?.cardId === data.card?.id && showAnswerFeedback)}',
+  '{celebrate && correct ? <ConfettiBurst animate={animate} /> : null}',
+  'function AnimatedSubmitButton(',
+  'function LearnSkeleton(',
+  'function StopwatchArtwork(',
+  'function CountUp(',
+  'data.card.options.map',
+  'data.stats.attempted_days',
+  'data.stats.total_attempts',
+  'fresh && correct',
+  'fresh && wrong',
+  'Animated.timing(selection',
+  'void Haptics.selectionAsync().catch(() => {});',
+]) requireText(learn, marker, 'Learn animation/answer integrity contract missing: ' + marker);
+for (const nativeDependency of ['react-native-reanimated', 'react-native-svg', 'lottie-react-native', 'expo-linear-gradient']) {
+  if (learn.includes(`from '${nativeDependency}'`)) throw new Error('Native dependency change not approved: ' + nativeDependency);
+}
+
 
 // MISP must provide precise field-level errors, not a generic all-fields alert.
 const mispForm = read('components/misp-partner-form.tsx');
