@@ -36,7 +36,7 @@ export default function LearnScreen() {
     let live = true;
     void AccessibilityInfo.isReduceMotionEnabled().then((reduced) => { if (live) setReduceMotion(reduced); }).catch(() => {});
     const motion = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    const app = AppState.addEventListener('change', (state) => setForeground(state === 'active');
+    const app = AppState.addEventListener('change', (state) => setForeground(state === 'active'));
     return () => { live = false; motion.remove(); app.remove(); };
   }, []);
 
