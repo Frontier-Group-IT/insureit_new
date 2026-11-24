@@ -331,6 +331,9 @@ for(const [parserId,checksPassed] of [
  const fixture={parserId,checksPassed,warnings:[],fields:standardFields,commercialPremium:standardPremium};
  assert.equal(assessStandardCommercialDirectConversion(fixture).eligible,true,
    parserId+" fully evidenced, zero-CPA registered package eligible");
+ assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="vehicle_rto_name"?{...f,evidence:"Native PDF policy schedule"}:f)}).eligible,true,"Populated RTO must not require special evidence wording");
+ assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="vehicle_rto_name"?{...f,evidence:undefined}:f)}).eligible,true,"Populated RTO must not require separate authority evidence");
+ assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.filter(f=>f.key!=="vehicle_rto_state")}).eligible,false);
  assert.equal(assessStandardCommercialDirectConversion({...fixture,checksPassed:checksPassed-1}).eligible,false);
  assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.filter(f=>f.key!=="vehicle_rto_name")}).eligible,false);
  assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="vehicle_registration_number"?{...f,value:"NEW"}:f)}).eligible,false);
