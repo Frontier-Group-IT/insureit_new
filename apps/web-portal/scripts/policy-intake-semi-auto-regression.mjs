@@ -868,7 +868,7 @@ const convertCode=actionsText.slice(convertStart,convertEnd);
 assert(convertCode.includes("await requireDevelopmentPolicyOperator(id)")
   && convertCode.includes('queued.state!=="verified"')
   && convertCode.includes("const sameReviewedFingerprint=")
-  && convertCode.includes("!(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction)")
+  && convertCode.includes("!(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction||reverifiedTataFailedSource||reverifiedTataPrintedDateHold)")
   && convertCode.includes("const reverifiedUiicExtraction=uiicFailedSource")
   && convertCode.includes("extracted.preview.documentId===queued.document_id")
   && convertCode.includes("assessNiaNamedAuthorityUnregisteredConversion({")

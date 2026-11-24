@@ -311,14 +311,22 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   // Only an explicitly confirmed one-intake action can recover those original
   // errors, after freshly rereading the exact queued document and passing the
   // new source-labelled GCV product, CPA and authority assessor.
+  // Only an explicitly confirmed single-intake action may revisit an old
+  // Tata n8n_review_required failure. It must first re-read the CURRENT PDF,
+  // certify the exact trained 18-check parser, and verify issuance evidence.
+  // No background/bulk requeue or automatic booking is permitted.
+  const tataFailedSource=queued?.state==="exception"
+    &&queued.parser_id===null&&queued.checks_passed===0
+    &&queued.exception_codes.length===1&&queued.exception_codes[0]==="extraction_failed"
+    &&queued.last_error_code==="n8n_review_required";
   const uiicFailedSource=queued?.state==="exception"
     &&queued.parser_id===null&&queued.checks_passed===0
     &&queued.exception_codes.length===1&&queued.exception_codes[0]==="extraction_failed"
     &&(/^n8n_(?:failed_checks_|nontata_verification_failed$)/.test(queued.last_error_code??"")
       ||queued.last_error_code==="n8n_review_required");
-  if(queueError||!queued||(!heldReview&&!uiicFailedSource
+  if(queueError||!queued||(!heldReview&&!uiicFailedSource&&!tataFailedSource
       &&(queued.state!=="verified"||queued.exception_codes.length>0))
-      ||(!queued.extraction_fingerprint&&!uiicFailedSource))
+      ||(!queued.extraction_fingerprint&&!uiicFailedSource&&!tataFailedSource))
     return fail("Extraction","The current Intake has other extraction or booking exceptions requiring review.");
   const extracted=await previewSemiAutoN8nExtraction(id);
   if(!extracted.ok)return fail("Extraction",extracted.error);
@@ -333,6 +341,45 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
       warnings:extracted.preview.warnings,fields:extracted.preview.fields,
       commercialPremium:extracted.preview.commercialPremium,
     }).eligible);
+  const tata18Parsers=new Set([
+    "tata_aig_private_car_saod_n8n_native_pdf",
+    "tata_aig_private_car_package_n8n_native_pdf",
+    "tata_aig_private_car_bundled_n8n_native_pdf",
+    "tata_aig_two_wheeler_bundled_n8n_native_pdf",
+  ]);
+  const freshPrintedIssue=extracted.preview.fields.find(f=>f.key==="policy_issuance_date")?.value??"";
+  const printedIssueAccepted=Boolean(freshPrintedIssue
+    &&extracted.preview.acceptedIssuanceDate===freshPrintedIssue
+    &&policyDateDecision(freshPrintedIssue)!=="invalid"
+    &&policyDateDecision(freshPrintedIssue)!=="future");
+  const reverifiedTataFailedSource=Boolean(tataFailedSource
+    &&extracted.preview.documentId===queued.document_id
+    &&tata18Parsers.has(extracted.preview.parserId)
+    &&hasVerifiedN8nParserEvidence(extracted.preview.parserId,
+      extracted.preview.checksPassed,extracted.preview.warnings)
+    &&printedIssueAccepted&&extracted.preview.premium);
+  // A newly trained printed-date extractor necessarily changes the old
+  // fingerprint. Accept this *narrow* legacy upgrade only if every previously
+  // stored OCR key/value matches the freshly read PDF exactly and only the
+  // new, source-certified issuance key is added.
+  let reverifiedTataPrintedDateHold=false;
+  if(heldReview && tata18Parsers.has(queued.parser_id??"")
+    &&queued.last_error_code==="bulk_conversion_review_required"
+    &&extracted.preview.documentId===queued.document_id
+    &&extracted.preview.parserId===queued.parser_id
+    &&printedIssueAccepted){
+    const {data:old,error:oldError}=await admin.from("policy_intake_requests")
+      .select("ocr_fields,final_policy_id").eq("id",id)
+      .maybeSingle<{ocr_fields:{key:string;value:string}[]|null;final_policy_id:string|null}>();
+    const previous=old?.ocr_fields??[];
+    const fresh=new Map(extracted.preview.fields.map(field=>[field.key,field.value]));
+    reverifiedTataPrintedDateHold=!oldError&&!old?.final_policy_id
+      &&previous.length>0
+      &&new Set(previous.map(field=>field.key)).size===previous.length
+      &&previous.every(field=>field.key!=="policy_issuance_date"
+        &&fresh.get(field.key)===field.value)
+      &&fresh.size===previous.length+1;
+  }
   // Backward-compatible once for old IFFCO MP/NEW queue rows. The old
   // fingerprint excluded the printed *internal* registration reference.
   // Re-verified live source fields and document ID remain authoritative.
@@ -397,7 +444,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
       &&/\bRTO\b/i.test(rtoFresh.evidence);
   }
   if(extracted.preview.documentId!==queued.document_id||
-     !(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction)||
+     !(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction||reverifiedTataFailedSource||reverifiedTataPrintedDateHold)||
      (heldReview&&extracted.preview.parserId!==queued.parser_id)||
      !hasVerifiedN8nParserEvidence(extracted.preview.parserId,
        extracted.preview.checksPassed,extracted.preview.warnings))

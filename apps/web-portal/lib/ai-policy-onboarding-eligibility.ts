@@ -92,6 +92,7 @@ const TATA_INFORMATIONAL_WARNINGS = new Set([
   "tata_aig_printed_net_rounding",
   "tata_aig_signature_date_not_in_native_text",
   "tata_aig_issuance_date_requires_verified_pdf_signature",
+  "tata_aig_receipt_date_as_issuance",
 ]);
 export const NON_TATA_COMMERCIAL_N8N_IDS = new Set([
   "new_india_cv_native_pdf", "iffco_tokio_cv_native_pdf", "go_digit_cv_native_pdf",
@@ -131,15 +132,11 @@ export function hasVerifiedN8nParserEvidence(
 }
 
 /**
- * INSUREIT's Tata AIG issuance-date BUSINESS RULE (not CMS chain validation):
- * For approved 18-check Tata AIG variants, use the full-document signing
- * timestamp as the issuance date only if it agrees with the independently
- * read printed receipt date. The PDF metadata extractor additionally rejects
- * partial signed revisions, multiple ByteRanges, non-Tata claimed signers
- * and inconsistent Indian-calendar dates.
- *
- * This is the confirmed insurer-scoped business rule. PKI chain trust is a
- * separate assurance; it does not block applying this issuance-date rule.
+ * Tata AIG date precedence:
+ * 1. An explicitly printed Policy Issue Date on the CURRENT PDF is final.
+ * 2. When absent, retain the already certified exact-document signature
+ *    timestamp fallback. Receipt/coverage start/metadata alone never qualify.
+ * Date-approval OTP and final canonical booking remain separate gates.
  */
 export function acceptedTataAigIssuanceDate(input: {
   parserId:string; checksPassed:number; warnings:readonly string[];
@@ -147,34 +144,34 @@ export function acceptedTataAigIssuanceDate(input: {
   issuanceEvidence?:PolicyIssuanceDateEvidence;
 }):string|null {
   const profile=trainedN8nParserProfile(input.parserId);
-  if(!profile || profile.family==="icici"
+  if(!profile || (profile.family!=="tata_private_car"&&profile.family!=="tata_two_wheeler")
     || !hasVerifiedN8nParserEvidence(input.parserId,input.checksPassed,input.warnings))
     return null;
-  const evidence=input.issuanceEvidence;
-  if(!evidence || evidence.verification!=="detached_signature_integrity_verified"
-      || evidence.source!=="embedded_pdf_signature_timestamp"
-      || evidence.requiresReviewerConfirmation!==false
-      || !/^[a-f0-9]{64}$/.test(evidence.documentSha256)) return null;
   const day=(value:string)=>{
     if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
     const parsed=new Date(value+"T00:00:00Z");
     return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0,10)===value;
   };
-  // Never accept a future calendar day, including later in this same month.
   const parts=new Intl.DateTimeFormat("en-GB",{
     timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit",
   }).formatToParts(new Date());
   const indiaPart=(type:string)=>parts.find(p=>p.type===type)?.value??"";
   const indiaToday=`${indiaPart("year")}-${indiaPart("month")}-${indiaPart("day")}`;
-  if(!day(evidence.proposedDate) || evidence.proposedDate>indiaToday
-    || evidence.proposedDate!==evidence.receiptDate) return null;
   const fields=new Map(input.fields.map(f=>[f.key,f.value.trim()]));
-  // A separately printed issue date takes precedence; conflicting evidence
-  // requires human attention rather than choosing one silently.
-  const printed=fields.get("policy_issuance_date")||"";
-  if(printed && printed!==evidence.proposedDate)return null;
-  const expiry=fields.get("policy_end_date");
-  if(!expiry || !day(expiry) || evidence.proposedDate>expiry) return null;
+  const expiry=fields.get("policy_end_date")??"";
+  if(!day(expiry))return null;
+  const acceptable=(date:string)=>day(date)&&date<=indiaToday&&date<=expiry;
+  const printed=fields.get("policy_issuance_date")??"";
+  // Printed policy issue date outranks a different receipt or signature date.
+  // The source-labelled field was independently validated at the n8n bridge.
+  if(printed)return acceptable(printed)?printed:null;
+  const evidence=input.issuanceEvidence;
+  if(!evidence || evidence.verification!=="detached_signature_integrity_verified"
+    || evidence.source!=="embedded_pdf_signature_timestamp"
+    || evidence.requiresReviewerConfirmation!==false
+    || !/^[a-f0-9]{64}$/.test(evidence.documentSha256)
+    || evidence.proposedDate!==evidence.receiptDate
+    || !acceptable(evidence.proposedDate))return null;
   return evidence.proposedDate;
 }
 

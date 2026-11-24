@@ -15,7 +15,7 @@ import { assessProductVariantDirectConversion, mapVerifiedProductVariantPremium,
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
 import { assessNiaNamedAuthorityUnregisteredConversion, assessStandardCommercialDirectConversion, assessUiicGcvDirectConversion, assessUiicPrivateCarDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
 import { policyDateDecision } from "@/lib/policy-date-rule";
-import { trainedN8nParserProfile } from "@/lib/ai-policy-onboarding-eligibility";
+import { trainedN8nParserProfile, hasVerifiedN8nParserEvidence } from "@/lib/ai-policy-onboarding-eligibility";
 import { enrichVerifiedN8nOnboardingFields, resolveManufacturingYearEvidence } from "@/lib/policy-n8n-onboarding-enrichment";
 import { sameInsuredIdentity, selectVerifiedN8nInsuredDraftIdentity } from "@/lib/policy-n8n-onboarding-insured";
 
@@ -180,6 +180,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
     "tata_aig_printed_net_rounding",
     "tata_aig_signature_date_not_in_native_text",
     "tata_aig_issuance_date_requires_verified_pdf_signature",
+    "tata_aig_receipt_date_as_issuance",
   ]);
   const blockingWarnings = parsed.preview.warnings.filter(warning =>
     !isTata || !informationalTataWarnings.has(warning));
@@ -389,7 +390,29 @@ async function preparePolicyIntakeHandoffInternal(
       warnings:verified.warnings,fields:verified.fields,
       commercialPremium:verified.commercialPremium,
     });
-    const eligibleForVerifiedConversion=verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible
+    // Tata AIG 18-check families must not be returned to a generic review hold
+    // solely because the draft was rebuilt. This is readiness to run the
+    // *explicit* canonical Convert action, never permission to book directly.
+    // Require a separately accepted PDF issuance date and a verified premium;
+    // a successful 18/18 alone must not clear a real date/premium exception.
+    const tata18Ready=[
+      "tata_aig_private_car_saod_n8n_native_pdf",
+      "tata_aig_private_car_package_n8n_native_pdf",
+      "tata_aig_private_car_bundled_n8n_native_pdf",
+      "tata_aig_two_wheeler_bundled_n8n_native_pdf",
+    ].includes(verified.parserId)
+      && hasVerifiedN8nParserEvidence(verified.parserId,verified.checksPassed,verified.warnings)
+      && Boolean(verified.premium)
+      && ["policy_number","insured_name","vehicle_chassis_number","vehicle_engine_number",
+          "policy_start_date","policy_end_date"].every(key=>
+            verified.fields.some(field=>field.key===key&&field.value.trim().length>0))
+      // A verified printed Policy Issue Date is final even if the document
+      // uses no recognized embedded signature. Do not require receipt equality.
+      // An old signing fallback must still pass accepted-issuance proof.
+      && policyDateDecision(
+        verified.fields.find(field=>field.key==="policy_issuance_date")?.value
+          ||verified.autoAcceptedIssuanceDate?.date||"")==="allowed";
+    const eligibleForVerifiedConversion=tata18Ready||verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible
       ||standardReview.eligible||niaReview.eligible||uiicReview.eligible||uiicPrivateCarReview.eligible||productVariantReview.eligible;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
     const{error}=await admin.from("policy_intake_ai_processing_queue").update({

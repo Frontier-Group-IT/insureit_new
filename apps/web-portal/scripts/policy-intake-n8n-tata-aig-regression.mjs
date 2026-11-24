@@ -87,6 +87,42 @@ invalid(withVehicle({"vehicle_registration_number":"WB08H0751","vehicle_rto_stat
   x.fields.find(f=>f.key==="vehicle_registration_number").value="WB08";
 },"n8n_tata_aig_registration_invalid");
 
+// The previously held Tata AIG policies have a verified, PDF-printed
+// receipt day but no separate Policy Issue Date label. Under the approved
+// insurer-specific mapping, retain source evidence and verify receipt match.
+const receiptBased=copy(packageDiesel);
+receiptBased.premium_components.receipt_date="2026-11-25";
+const receiptDay=receiptBased.premium_components.receipt_date;
+assert.match(receiptDay,/^20\d{2}-\d{2}-\d{2}$/);
+receiptBased.fields.push({
+ key:"policy_issuance_date",label:"Issue Date (from printed receipt)",
+ value:receiptDay,confidence:null,page:null,
+ evidence:"Tata AIG printed Receipt Date (approved issuance rule)",
+});
+receiptBased.warnings=receiptBased.warnings.filter(w=>
+ w!=="tata_aig_issuance_date_unverified" &&w!=="tata_aig_signature_date_not_in_native_text");
+receiptBased.warnings.push("tata_aig_receipt_date_as_issuance");
+const verifiedReceipt=validateTataAigN8nResponse(receiptBased,IDS);
+assert.equal(get(verifiedReceipt.fields,"policy_issuance_date"),receiptDay);
+invalid(receiptBased,x=>{
+ x.fields.find(f=>f.key==="policy_issuance_date").value="2026-11-24";
+},"n8n_tata_aig_printed_issue_invalid");
+invalid(receiptBased,x=>{
+ x.fields.find(f=>f.key==="policy_issuance_date").evidence="Unverified receipt";
+},"n8n_tata_aig_printed_issue_invalid");
+invalid(receiptBased,x=>{
+ x.warnings=x.warnings.filter(w=>w!=="tata_aig_receipt_date_as_issuance");
+},"n8n_tata_aig_warning_invalid");
+const explicitPrinted=copy(receiptBased);
+explicitPrinted.fields.find(f=>f.key==="policy_issuance_date").value="2026-11-18";
+explicitPrinted.fields.find(f=>f.key==="policy_issuance_date").label="Policy Issue Date (printed)";
+explicitPrinted.fields.find(f=>f.key==="policy_issuance_date").evidence=
+ "Printed Policy Issue Date / Date of Issue on current policy";
+explicitPrinted.warnings=explicitPrinted.warnings.filter(w=>w!=="tata_aig_receipt_date_as_issuance");
+assert.equal(get(validateTataAigN8nResponse(explicitPrinted,IDS).fields,
+ "policy_issuance_date"),"2026-11-18",
+ "An unambiguous explicit Policy Issue Date must outrank a different receipt day");
+
 const combos=[
   {name:"saod",product:"Stand-Alone Own Damage",registrationMode:"registered",gross:9178},
   {name:"package",product:"Package",registrationMode:"registered",gross:23505},
@@ -139,7 +175,7 @@ for(const entry of combos){
   invalid(raw,x=>{x.fields.find(f=>f.key==="insurer_name").value="Other insurer";},"n8n_tata_aig_vehicle_or_policy_invalid");
   invalid(raw,x=>{x.premium_components.basic_tp_premium+=100;},"n8n_premium_reconciliation_failed");
   invalid(raw,x=>{x.premium_components.gross_premium+=100;},"n8n_premium_reconciliation_failed");
-  invalid(raw,x=>{x.fields.push({key:"policy_issuance_date",label:"Issued",value:"2026-11-19",confidence:null,page:1,evidence:"Receipt date"});},"n8n_field_shape_invalid|n8n_required_field_missing");
+  invalid(raw,x=>{x.fields.push({key:"policy_issuance_date",label:"Issued",value:"2026-11-19",confidence:null,page:1,evidence:"Receipt date"});},"n8n_tata_aig_printed_issue_invalid");
   if(entry.registrationMode==="unregistered"){
     invalid(raw,x=>{x.fields.push({key:"vehicle_registration_number",label:"Registration No",value:"HR00AB0001",confidence:null,page:4,evidence:"fake"});},"n8n_tata_aig_registration_invalid");
   } else {

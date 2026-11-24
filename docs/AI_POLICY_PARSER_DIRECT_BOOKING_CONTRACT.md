@@ -1,5 +1,10 @@
 # INSUREIT policy parser contract — extraction to one-click booking
 
+## Tata AIG 18-check issuance mapping — explicitly approved 25 November 2026
+
+Only for the four trained Tata AIG 18-check native-PDF layouts: a distinct, unambiguous printed **Policy Issue Date / Date of Issue** is the preferred issuance date. If absent, the user has specifically approved treating the PDF-printed **Receipt Date** as the operational issuance date, provided all 18 checks pass (including `receipt_date_document_consistent` and policy-number receipt agreement). Preserve the evidence label `Tata AIG printed Receipt Date (approved issuance rule)` and the informational warning `tata_aig_receipt_date_as_issuance`. This mapping is a business decision, not evidence that the PDF independently labels its receipt as issuance. Printed conflicting issue dates stop conversion; receipt, signature or coverage dates never override a separately printed issue date. Do not apply to ICICI, Tata TP-only or other insurers. Canonical date-approval/OTP, customer identity, policy and vehicle duplicates, finance reconciliation, reviewer scope and explicit user confirmation still apply. No unattended policy registration.
+
+
 ## Product behavior (applies to EVERY existing and future n8n insurer parser)
 
 **Expected UX:** Upload a policy PDF → extraction → source-specific checks → queue **Verified** if all mandatory booking evidence is present → one explicit **Convert to Policy** confirmation → existing canonical booking transaction → policy code on success. Do **not** require **Reprocess PDF**, **Reparse & Replace**, or opening the manual onboarding form merely because a verified PDF originated from n8n.
