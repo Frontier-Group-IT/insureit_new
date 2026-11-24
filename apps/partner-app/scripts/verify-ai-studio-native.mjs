@@ -30,7 +30,16 @@ assert(screen.indexOf('<View style={s.intakePageSpacer}') < screen.indexOf('<Vie
 assert(screen.includes('compactEmpty:{flexGrow:1,minHeight:115'));
 
 assert(screen.includes('Math.min(4,Math.max(0,count(filter)))') && screen.includes('No intakes found'));
-assert(screen.includes('PartnerAssets.actions.policyChecklist') && screen.includes('PartnerAssets.actions.documentSearch'));
+const artwork=file('../lib/partner-assets.ts');
+for(const asset of ['aiStudioVerified','aiStudioProcessing','aiStudioReview','aiStudioAction','aiStudioEmpty']){
+  assert(artwork.includes(asset+': require('), 'Bundled 3D asset must be registered: '+asset);
+  assert(screen.includes('PartnerAssets.actions.'+asset), 'AI Studio must display the '+asset+' artwork');
+}
+assert(screen.includes("metricDivider:{width:1,height:39,backgroundColor:'#D5DFEC'"));
+assert(screen.includes("{index<2?<View style={s.metricDivider} accessible={false}/>:null}"));
+assert(screen.includes("summaryDivider:{height:1,backgroundColor:'#CFD9E6'"));
+assert(screen.includes('onPress={()=>openDetail(row)}'));
+assert(!screen.includes('<Ionicons name="chevron-forward" size={15} color="#91A4B6"/>'));
 assert(data.includes('p_limit: Math.max(1, Math.min(25, Math.trunc(limit)))'));
 assert(screen.includes('setSearchRevision(v=>v+1)') && screen.includes('setSearchRows(all.filter('));
 assert(screen.includes('<PartnerCaseBottomNavigation activeTab="More" />'));
