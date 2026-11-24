@@ -71,12 +71,13 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
             <span>Operations</span>
             <span className="h-1 w-1 bg-[#18BFC2]" />
             <span>{formatHeaderDate(data.generatedAt)}</span>
+            <a href="/download/partner" className="ml-1 normal-case tracking-normal text-[#174B83] underline xl:hidden">Partner App</a>
           </div>
           <h1 className="portal-display mt-1.5 text-[30px] font-semibold leading-none tracking-[-.025em] text-[#10213D] sm:text-[34px]">
             Operations Overview
           </h1>
         </div>
-        <div className="@container hidden min-w-0 max-w-[370px] flex-1 self-end xl:flex">
+        <div className="hidden min-w-0 max-w-[370px] flex-1 self-end xl:flex" style={{ containerType: "inline-size" }}>
           <CompactPartnerAppPromo />
         </div>
         </div>
