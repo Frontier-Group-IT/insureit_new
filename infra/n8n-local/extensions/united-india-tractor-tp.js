@@ -62,7 +62,7 @@ put('vehicle_registration_number',plate,source('Particulars of Vehicle Insured')
 put('vehicle_make','MAHINDRA',source('MAHINDRA & MAHINDRA LIMITED (TRACTOR)'));
 put('vehicle_model',model,source('Make/Model 575 DI XP PLUS'));
 put('vehicle_manufacturing_year',year,source('Year Of Manufacture'));
-put('vehicle_rto_state','Uttarakhand',authorityEvidence);
+if(plate?.startsWith('UK'))put('vehicle_rto_state','Uttarakhand',authorityEvidence||'UK registration prefix');
 put('vehicle_rto_name',rto? rto[0]+rto.slice(1).toLowerCase():null,authorityEvidence);
 put('vehicle_chassis_number',chassis,source('Chassis No.'));
 put('vehicle_engine_number',engine,source('Engine No.'));
@@ -77,7 +77,7 @@ const checks={
  policy_number_verified:!!policy,period_verified:!!start&&!!end&&end>start,
  issuance_evidenced:!!issue,vehicle_identification_verified:!!plate&&!!engine&&!!chassis,
  tractor_make_model_verified:!!model&&/MAHINDRA &\s*\nMAHINDRA/i.test(text),
- registration_authority_verified:!!authorityCode&&!!rto&&plate?.startsWith(authorityCode),
+ registration_authority_verified:!!plate&&(!authorityCode||plate.startsWith(authorityCode)), // RTO city may be absent.
  tractor_class_and_fuel_verified:/AGRICULTURAL\s*\nTRACTOR/i.test(text)&&/Diesel\/Agricultural/i.test(text),
  capacity_and_year_verified:!!cc&&!!year,idv_zero_valid:/INSURED DECLARED VALUE[\s\S]{0,400}?0 0/.test(text),
  od_zero_valid:od===0,paid_driver_ll_reconciled:close(tp,basicTp+ll),
