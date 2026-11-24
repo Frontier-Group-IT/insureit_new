@@ -92,7 +92,8 @@ export function operationsHeadVisiblePolicyFilter(scope: { employeeIds: string[]
 /** Reusable server-side case authorization, never customer-only scope. */
 export async function canAccessOperationsHeadCase(profileId: string, caseId: string, write = false): Promise<boolean> {
   const downline = await getOperationsHeadDownlinePolicyScope(profileId);
-  const filter = write ? operationsHeadPolicyFilter(downline) : operationsHeadVisiblePolicyFilter(downline);
+  const portfolio = write ? null : await getLifeTeamPortfolioReadFilter(profileId, "operations_head_life");
+  const filter = write ? operationsHeadPolicyFilter(downline) : portfolio ?? operationsHeadVisiblePolicyFilter(downline);
   if (!caseId || !filter) return false;
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin.from("life_health_cases")
@@ -159,6 +160,14 @@ export async function getLifeTeamPortfolioReadFilter(profileId: string, role: st
   const filters = employeeIds.length ? [`rm_employee_id.in.(${employeeIds.join(",")})`] : [];
   filters.push(`and(business_line.in.(Life,Health),rm_employee_id.eq.${direct.id})`);
   return filters.join(",");
+}
+
+export async function canReadLifeTeamCase(profileId: string, role: string | null | undefined, caseId: string) {
+  const filter = await getLifeTeamPortfolioReadFilter(profileId, role);
+  if (!filter || !caseId) return false;
+  const { data, error } = await createSupabaseAdminClient().from("life_health_cases")
+    .select("id").eq("id", caseId).or(filter).maybeSingle<{ id: string }>();
+  return !error && Boolean(data?.id);
 }
 
 export async function canAccessPolicy(
