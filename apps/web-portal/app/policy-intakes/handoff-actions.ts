@@ -364,8 +364,14 @@ async function preparePolicyIntakeHandoffInternal(
       && verified.fields.some(f=>f.key==="policy_number"&&f.value.trim())
       && verified.fields.some(f=>f.key==="policy_start_date"&&f.value.trim())
       && verified.fields.some(f=>f.key==="policy_end_date"&&f.value.trim());
+    // No policy is booked by this status change; only certified variants qualify.
+    const productVariantReview=assessProductVariantDirectConversion({
+      parserId:verified.parserId,checksPassed:verified.checksPassed,
+      warnings:verified.warnings,fields:verified.fields,
+      commercialPremium:verified.commercialPremium,
+    });
     const eligibleForVerifiedConversion=verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible
-      ||standardReview.eligible||niaReview.eligible;
+      ||standardReview.eligible||niaReview.eligible||productVariantReview.eligible;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
     const{error}=await admin.from("policy_intake_ai_processing_queue").update({
       // Only previously certified Go Digit and new narrowly evidenced IFFCO
@@ -381,7 +387,8 @@ async function preparePolicyIntakeHandoffInternal(
           ?"go_digit_missing_verified_onboarding_fields"
           :verified.parserId==="iffco_tokio_cv_native_pdf"?iffcoReview.reason
           :verified.parserId==="new_india_cv_native_pdf"?niaReview.reason
-          :["united_india_gcv_native_pdf","oriental_gccv_native_pdf"].includes(verified.parserId)?standardReview.reason
+          :PRODUCT_VARIANT_PARSERS.has(verified.parserId)?productVariantReview.reason
+           :["united_india_gcv_native_pdf","oriental_gccv_native_pdf"].includes(verified.parserId)?standardReview.reason
           :"bulk_conversion_review_required"),
       processed_at:new Date().toISOString(),
       retry_after:new Date(Date.now()+24*60*60*1000).toISOString(),
