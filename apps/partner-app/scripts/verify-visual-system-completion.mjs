@@ -1233,6 +1233,7 @@ if (activity.includes('<Text numberOfLines={1} style={styles.meta}>{item.meta}</
 if (activity.includes('<Ionicons name="chevron-forward" size={20} color="#071C70" />')) throw new Error('Recent Activity record rows must not show a right-side chevron.');
 requireText(activity, 'width: 52', 'Recent Activity logo tile must stay compact so details sit closer to the logo.');
 requireText(activity, 'marginRight: 4', 'Recent Activity logo-to-detail spacing must stay compact.');
+for (const marker of ['AccessibilityInfo.isReduceMotionEnabled()', 'reduceMotionChanged', 'function useEntrance(', 'function MetricText(', 'cancelAnimationFrame(frame)', 'stickyFirstChild', 'animateSelection', 'onPressIn={press.onPressIn}', 'recordTop("journey"', 'useNativeDriver: native']) requireText(impact, marker, 'Impact accessible motion regression: ' + marker);
 for (const impactMarker of [
   'function ImpactIcon(',
   'PartnerAssets.actions.impactBlue3dCar',
