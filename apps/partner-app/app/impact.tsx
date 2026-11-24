@@ -181,7 +181,7 @@ export default function ImpactScreen() {
       hideTopBar
       navyStatusBar
       bottomNavigationNavy
-      bottomNavigation={<PartnerCaseBottomNavigation activeTab="Home" />}
+      bottomNavigation={<PartnerCaseBottomNavigation activeTab="Home" animateSelection />}
       stickyFirstChild
       scrollProps={{ onLayout: event => { viewport.current.height = event.nativeEvent.layout.height; checkVisible(); }, onScroll: event => { viewport.current = { y: event.nativeEvent.contentOffset.y, height: event.nativeEvent.layoutMeasurement.height }; checkVisible(); } }}
     >
