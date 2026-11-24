@@ -114,7 +114,7 @@ function extract(raw){
  const legacyHaryana=/^HR\d{6}$/.test(rawPlate)
    && Boolean(validHistoricRegistration
      && validHistoricRegistration <= new Date().toISOString().slice(0,10));
- const registered=/^(?:HR|DL|MP|WB)[A-Z0-9]{7,13}$/.test(rawPlate)||legacyHaryana;
+ const registered=/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4}$/.test(rawPlate)||legacyHaryana; // Any complete Indian RTO plate, not a state allowlist.
  const status=unregistered?'unregistered':registered?'registered':'unknown';
  checks.vehicle_registration_status_verified=status!=='unknown';
  // PDF.js omits the literal Certificate of prefix in actual Tata AIG PDFs.
@@ -135,7 +135,7 @@ function extract(raw){
  const year=match(vehicleSection,/\bMfg\. Year\s*((?:19|20)\d{2})/i);
  const cckw=match(vehicleSection,/\bCC\s*\/\s*KW\s*(\d+(?:\.\d{1,2})?)/i);
  const seats=match(vehicleSection,/\bSeating Capacity\s*\(Including\s*Driver\)\s*(\d{1,2})/i) || seating(vehicleSection);
- const rto=match(vehicleSection,/\bRTO Location\s+([A-Z]{3,30})\b/i)?.toUpperCase()??null;
+ const rto=match(vehicleSection,/\bRTO Location[ \t]+([A-Za-z][A-Za-z \t]{2,55})(?:\r?\n|$)/i)?.trim().toUpperCase()??null;
  const stateByRto={JABALPUR:'MADHYA PRADESH',SATNA:'MADHYA PRADESH',BADSHAPUR:'HARYANA',REWARI:'HARYANA',GURGAON:'HARYANA',FARIDABAD:'HARYANA',PANCHKULA:'HARYANA',KOLKATA:'WEST BENGAL',DELHI:'DELHI'};
  const stateByPlate={MP:'MADHYA PRADESH',HR:'HARYANA',DL:'DELHI',WB:'WEST BENGAL'};
  const printedRtoState=match(vehicleSection,/\bRTO State\s+([A-Za-z][A-Za-z ]{2,45})(?:\n| {2,}|$)/i)?.toUpperCase()??null;
