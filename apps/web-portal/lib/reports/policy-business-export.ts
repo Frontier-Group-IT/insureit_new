@@ -1,7 +1,8 @@
 import "server-only";
+import { getLifeTeamPortfolioScope } from "@/lib/policy-access-scope";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { resolvePolicyBusinessFilters, type PolicyBusinessQuery, type PolicyBusinessRow } from "@/lib/reports/policy-business";
+import { loadPolicyBusinessReport, resolvePolicyBusinessFilters, type PolicyBusinessQuery, type PolicyBusinessRow } from "@/lib/reports/policy-business";
 
 type ViewerProfile = { id: string; role: string | null };
 
@@ -16,6 +17,17 @@ const PAGE_SIZE = 200;
 const MAX_EXPORT_ROWS = 10_000;
 
 export async function loadPolicyBusinessExport(profile: ViewerProfile, query: PolicyBusinessQuery) {
+  if (await getLifeTeamPortfolioScope(profile.id, profile.role)) {
+    const first = await loadPolicyBusinessReport(profile, {...query,page:"1",pageSize:String(PAGE_SIZE)});
+    const total = first.report.register.total_count;
+    if (total > MAX_EXPORT_ROWS) return { rows: [] as PolicyBusinessRow[], truncated: true };
+    const rows = [...first.report.register.rows];
+    for (let page = 2; page <= Math.ceil(total / PAGE_SIZE); page++) {
+      const next = await loadPolicyBusinessReport(profile, {...query,page:String(page),pageSize:String(PAGE_SIZE)});
+      rows.push(...next.report.register.rows);
+    }
+    return { rows, truncated: false };
+  }
   const filters = resolvePolicyBusinessFilters(query);
   const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_reports");
   if (customerIds !== null && customerIds.length === 0) return { rows: [] as PolicyBusinessRow[], truncated: false };
