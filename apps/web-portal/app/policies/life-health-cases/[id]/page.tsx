@@ -4,7 +4,7 @@ import { LifeHealthCaseDetail } from "@/components/life-health-case-detail";
 import { LifeHealthCaseErrorPopupGuard } from "@/components/life-health-case-error-popup-guard";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { requireCapability } from "@/lib/master-data-server";
-import { getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
+import { getLifeTeamPortfolioReadFilter, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -29,8 +29,9 @@ export default async function LifeHealthCasePage({ params }: { params: Promise<{
   let request = admin.from("life_health_cases")
     .select("id,case_number,business_line,status,sourcing_date,customer_id,insurance_company_id,product_name,proposal_number,premium_paying_term,policy_duration,payment_frequency,payment_mode,premium_amount,intermediary_type,intermediary_code,lead_source,intermediary_mobile,rm_name,rm_code,remarks,final_policy_id,converted_at,created_at,created_by,converted_by,details")
     .eq("id", id);
-  if (profile.role === "operations_head_life") {
-    const downlineFilter = operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id));
+  const portfolioFilter = await getLifeTeamPortfolioReadFilter(profile.id, profile.role);
+  if (portfolioFilter !== null || profile.role === "operations_head_life") {
+    const downlineFilter = portfolioFilter ?? operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id));
     if (!downlineFilter) notFound();
     request = request.or(downlineFilter);
   }
