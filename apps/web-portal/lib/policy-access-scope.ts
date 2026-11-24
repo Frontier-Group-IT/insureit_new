@@ -1,6 +1,8 @@
 import "server-only";
 
 import { cache } from "react";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
+import { lifeTeamOwnerIds, lifeTeamReadFilter } from "@/lib/life-team-portfolio-contract";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import type { Capability } from "@/lib/roles";
 import { getAccessibleIntermediaryIds, getEmployeeAccessScope } from "@/lib/employee-access-scope";
@@ -165,16 +167,17 @@ export const getLifeTeamPortfolioScope = cache(async (profileId: string, role: s
   const { data: direct, error } = await admin.from("employees").select("id")
     .eq("employee_code", "SIBL/0027").maybeSingle<{ id: string }>();
   if (error || !direct?.id) throw new Error("Direct business identity could not be verified.");
-  return { employeeIds: scope.employeeIds.filter(id => id !== direct.id), directEmployeeId: direct.id };
+  // Historical production stays in the reporting portfolio even after an RM leaves.
+  // Only the read portfolio traverses inactive employees; login and write scopes stay unchanged.
+  const employees = await fetchAllPages<{ id: string; reporting_manager_id: string | null }, unknown>((from, to) => admin.from("employees").select("id,reporting_manager_id").order("id").range(from,to).returns<Array<{ id: string; reporting_manager_id: string | null }>>());
+  if (employees.error || !employees.data) throw new Error("Historical reporting hierarchy could not be verified.");
+  return { employeeIds: lifeTeamOwnerIds("ac167429-0ce0-4ffe-90ea-4040cb4fea95", employees.data, direct.id), directEmployeeId: direct.id };
 });
 
 export async function getLifeTeamPortfolioReadFilter(profileId: string, role: string | null | undefined) {
   const scope = await getLifeTeamPortfolioScope(profileId, role);
   if (scope === null) return null;
-  const filters: string[] = [];
-  if (scope.employeeIds.length) filters.push(`rm_employee_id.in.(${scope.employeeIds.join(",")})`);
-  if (scope.directEmployeeId) filters.push(`and(business_line.in.(Life,Health),rm_employee_id.eq.${scope.directEmployeeId})`);
-  return filters.join(",") || "id.eq.00000000-0000-0000-0000-000000000000";
+  return lifeTeamReadFilter(scope);
 }
 
 export async function canReadLifeTeamCase(profileId: string, role: string | null | undefined, caseId: string) {
