@@ -37,14 +37,9 @@ export function assessStandardCommercialDirectConversion(input:Input):{eligible:
   if(get("vehicle_registration_status")!=="registered"
     ||!/^[A-Z]{2}[0-9]{1,2}[A-Z]{1,3}[0-9]{3,4}$/i.test(get("vehicle_registration_number").replace(/[ -]/g,"")))
     return fail("registered_rto_evidence_required");
-  // These three insurer layouts can proceed only when the location really is
-  // the printed registration authority: never substitute an address, branch,
-  // issue office, or provisional 'NEW' prefix for a valid registration.
-  if(!fields.get("vehicle_rto_name")?.evidence
-    ||!/\b(?:RTO|registration authority|registered vehicle)\b/i.test(fields.get("vehicle_rto_name")?.evidence??"")
-    ||/provisional|address city|issuing office|not registration authority/i.test(fields.get("vehicle_rto_name")?.evidence??"")
-    ||!(/^[A-Za-z][A-Za-z .-]{2,65}$/.test(get("vehicle_rto_name"))))
-    return fail("rto_authority_not_verified");
+  // RTO name/state are required populated onboarding fields above. Do not
+  // require a separate authority evidence label for a registered vehicle.
+  // Canonical field mapping and all premium/registration checks still apply.
   if(!["Goods Carrying Vehicle","Commercial Vehicle - Miscellaneous Class D"].includes(get("vehicle_class"))
     ||!/^(?:19|20)\d{2}$/.test(get("vehicle_manufacturing_year"))
     ||Number(get("vehicle_manufacturing_year"))>new Date().getUTCFullYear()

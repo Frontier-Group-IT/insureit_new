@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getPartnerStories, type PartnerStory, type PartnerStoriesData } from '@/lib/stories';
 import { formatIndianCurrency } from '@/lib/format';
+import { ImpactCounter, reveal, useImpactTimeline, type ImpactTimeline } from '@/components/impact-story-motion';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 
 const STORY_DURATION_MS = 10000;
@@ -93,6 +94,7 @@ export default function StoriesScreen() {
   }, [load]);
 
   const story = data?.items[index] || null;
+  const impactClock = useImpactTimeline(active && !loading && !error && story?.kind === 'impact', held);
 
   useEffect(() => {
     setArtworkReduction(0);
@@ -286,7 +288,7 @@ export default function StoriesScreen() {
               ) : story.kind === 'journey' ? (
                 <JourneyMilestoneStory story={story} artworkHeight={journeyArtworkHeight} />
               ) : story.kind === 'impact' ? (
-                <ImpactStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />
+                <ImpactStory story={story} onOpen={openStory} artworkHeight={artworkHeight} clock={impactClock} onPause={setHeld} />
               ) : story.kind === 'learn' ? (
                 <LearnStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />
               ) : (
@@ -433,62 +435,77 @@ function StoryPanel({ children, impact = false }: { children: React.ReactNode; i
   return <Animated.View style={[styles.unifiedPanel, impact && styles.impactPanel, { opacity: entrance, transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [7, 0] }) }] }]}>{children}</Animated.View>;
 }
 
-function ImpactStory({ story, onOpen, artworkHeight }: { story: PartnerStory; onOpen: () => void; artworkHeight: number }) {
-  const { hold } = useContext(StoryMotion);
+function ImpactStory({ story, onOpen, artworkHeight, clock, onPause }: { story: PartnerStory; onOpen: () => void; artworkHeight: number; clock: ImpactTimeline; onPause: (paused: boolean) => void }) {
   const vehicleMatch = story.title.match(/([\d,]+)\s+(vehicles?)(.*)/i);
   const customerMatch = story.body.match(/([\d,]+)\s+customers?\s+served/i);
   const claimMatch = story.body.match(/([\d,]+)\s+claims?\s+assisted/i);
   const hasRoute = Boolean(story.route);
+  const metric = Number(story.metric);
+  const formatMoney = (value: number) => formatIndianCurrency(Math.round(value * (Number.isInteger(metric) ? 1 : 100)) / (Number.isInteger(metric) ? 1 : 100));
+  const count = (value: number) => String(Math.round(value));
+  const accent = clock.time.interpolate({ inputRange: [0, 300, 1100, 1600], outputRange: [0, 0.45, 0.15, 0], extrapolate: 'clamp' });
+  const glow = clock.ambient.interpolate({inputRange:[0,1],outputRange:[0,0.22]});
   return (
     <View style={styles.unifiedStory}>
-      <StoryHeading icon="shield-checkmark-outline" title={story.eyebrow} />
-      <StoryPanel impact>
+      <Animated.View style={[{ alignItems: 'center', maxWidth: '100%' }, reveal(clock, 0, 300, 4, 0.96)]}>
+        {clock.enabled ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { borderRadius: 25, backgroundColor: '#9ACBFF', opacity: glow, transform: [{scale:1.04}] }]} /> : null}
+        <StoryHeading icon="shield-checkmark-outline" title={story.eyebrow} />
+      </Animated.View>
+      <Animated.View style={[{ width: '100%' }, reveal(clock, 0, 200, 5)]}><StoryPanel impact>
+        {clock.enabled ? <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, {borderRadius:21,borderWidth:2,borderColor:'#81BEFF',opacity:accent}]} /> : null}
         <Pressable
           onPress={onOpen}
           disabled={!hasRoute}
-          onTouchStart={(event) => { hold(true); event.stopPropagation(); }}
-          onTouchEnd={(event) => { hold(false); event.stopPropagation(); }} onTouchCancel={() => hold(false)}
+          onTouchStart={(event) => { onPause(true); event.stopPropagation(); }}
+          onTouchEnd={(event) => { onPause(false); event.stopPropagation(); }}
+          onTouchCancel={() => onPause(false)}
           accessibilityRole={hasRoute ? 'link' : undefined}
           accessibilityLabel={hasRoute ? 'Open ' + story.title : undefined}
           style={styles.impactLink}
         >
           {story.metric !== undefined ? (
             <>
-              <Text style={styles.impactPremium} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.43}><MotionCount value={story.metric} currency={Boolean(story.metric_label?.toLowerCase().match(/premium|idv/))} /></Text>
+              <ImpactCounter clock={clock} value={Number.isFinite(metric) ? metric : 0} start={200} duration={1400} format={formatMoney} style={[styles.impactPremium, {fontVariant:['tabular-nums']}]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.43} />
               <Text style={styles.impactCaption}>{story.metric_label?.trim() || 'Coverage value'}</Text>
             </>
           ) : null}
           {vehicleMatch ? (
-            <View style={styles.impactVehicleRow}>
+            <Animated.View style={[styles.impactVehicleRow, reveal(clock, 500, 800)]}>
               <Ionicons name="car-sport-outline" size={27} color={storyColors.blue} />
               <View style={styles.impactVehicleCopy}>
-                <Text style={styles.impactVehicleNumber}><MotionCount value={vehicleMatch[1]} /></Text>
+                <ImpactCounter clock={clock} value={Number(vehicleMatch[1].replace(/,/g, ''))} start={500} duration={650} format={count} style={styles.impactVehicleNumber} />
                 <Text style={styles.impactVehicleLabel}>{vehicleMatch[2] + vehicleMatch[3]}</Text>
               </View>
-            </View>
+            </Animated.View>
           ) : <Text style={styles.impactFallback}>{story.title}</Text>}
         </Pressable>
         {customerMatch || claimMatch ? (
           <View style={styles.impactSmallGrid}>
             {customerMatch ? (
-              <View style={styles.impactSmallTile}>
+              <Animated.View style={[styles.impactSmallTile, reveal(clock, 800, 1100)]}>
                 <Ionicons name="people" size={24} color={storyColors.blue} />
-                <Text style={styles.impactSmallValue}><MotionCount value={customerMatch[1]} /></Text>
+                <ImpactCounter clock={clock} value={Number(customerMatch[1].replace(/,/g, ''))} start={800} duration={650} format={count} style={styles.impactSmallValue} />
                 <Text style={styles.impactSmallLabel}>Customers served</Text>
-              </View>
+              </Animated.View>
             ) : null}
             {claimMatch ? (
-              <View style={styles.impactSmallTile}>
+              <Animated.View style={[styles.impactSmallTile, reveal(clock, 800, 1100)]}>
                 <Ionicons name="checkbox-outline" size={24} color={storyColors.blue} />
-                <Text style={styles.impactSmallValue}><MotionCount value={claimMatch[1]} /></Text>
+                <ImpactCounter clock={clock} value={Number(claimMatch[1].replace(/,/g, ''))} start={800} duration={650} format={count} style={styles.impactSmallValue} />
                 <Text style={styles.impactSmallLabel}>Claims assisted</Text>
-              </View>
+              </Animated.View>
             ) : null}
           </View>
         ) : <Text style={styles.impactFallback}>{story.body}</Text>}
-      </StoryPanel>
+      </StoryPanel></Animated.View>
       <View pointerEvents="none" style={[styles.unifiedArtworkBox, { height: artworkHeight }]}>
-        <MotionArtwork source={require('../assets/partner/stories/your-impact.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+        <Animated.View style={[{width:'100%',height:artworkHeight,alignItems:'center',justifyContent:'center'}, reveal(clock, 1200, 1600, 8)]}>
+          {clock.enabled ? <Animated.View style={{position:'absolute',bottom:4,width:'60%',height:12,borderRadius:20,backgroundColor:'#6FA8DF',opacity:clock.ambient.interpolate({inputRange:[0,1],outputRange:[0.12,0.06]}),transform:[{scaleX:clock.ambient.interpolate({inputRange:[0,1],outputRange:[1,0.96]})}]}} /> : null}
+          <Animated.View style={[{width:'100%',height:artworkHeight,alignItems:'center'}, clock.enabled && {transform:[{translateY:clock.ambient.interpolate({inputRange:[0,1],outputRange:[0,-8]})},{scale:clock.ambient.interpolate({inputRange:[0,1],outputRange:[1,1.015]})},{rotate:clock.ambient.interpolate({inputRange:[0,1],outputRange:['0deg','0.35deg']})}]}]}>
+            <Image source={require('../assets/partner/stories/your-impact.png')} resizeMode="contain" style={[styles.storyHeroArtwork, { height: artworkHeight }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+            {clock.enabled ? <Animated.View pointerEvents="none" style={{position:'absolute',top:'18%',left:'46%',width:22,height:22,borderRadius:11,backgroundColor:'#FFE6A1',opacity:clock.time.interpolate({inputRange:[2000,2250,2500],outputRange:[0,0.32,0],extrapolate:'clamp'}),transform:[{translateX:clock.time.interpolate({inputRange:[2000,2500],outputRange:[-24,24],extrapolate:'clamp'})}]}} /> : null}
+          </Animated.View>
+        </Animated.View>
       </View>
     </View>
   );

@@ -50,11 +50,11 @@ expect(activity.includes("Filter activity by date") && activity.includes('name="
 for (const option of ["Today", "Last Week", "Last Month", "All"]) {
   expect(activity.includes(option), `Activity dropdown supports ${option}`);
 }
-expect(activity.includes('visible={periodMenuOpen}') && activity.includes('transparent') && activity.includes('style={StyleSheet.absoluteFillObject}') && activity.includes('accessibilityLabel="Close activity date filter"') && activity.includes('onPress={() => setPeriodMenuOpen(false)}'), "Activity dropdown closes when the user taps outside without selecting an option");
-expect(activity.includes('onRequestClose={() => setPeriodMenuOpen(false)}') && activity.includes('statusBarTranslucent'), "Activity dropdown supports Android back dismissal and full-screen outside taps");
+expect(activity.includes('visible={periodMenuOpen}') && activity.includes('transparent') && activity.includes('style={StyleSheet.absoluteFillObject}') && activity.includes('accessibilityLabel="Close activity date filter"') && activity.includes('onPress={() => closePeriodMenu()}'), "Activity dropdown closes when the user taps outside without selecting an option");
+expect(activity.includes('onRequestClose={() => closePeriodMenu()}') && activity.includes('statusBarTranslucent'), "Activity dropdown supports Android back dismissal and full-screen outside taps");
 expect(activity.includes('periodTriggerRef.current?.measureInWindow') && activity.includes('top: y + height + 3') && activity.includes('left: Math.max(8, Math.min(x, windowWidth - 160))'), "Activity dropdown remains anchored to its trigger on different screen sizes");
-expect(activity.includes('onPress={() => { setPeriodMenuOpen(false); setPeriod(key); }}'), "Selecting a date period dismisses the menu and applies the selected filter");
-expect(activity.includes("setPeriod(key)") && activity.includes("getPartnerActivityByPeriod(period"), "Changing period fetches scoped records instead of relabeling old results");
+expect(activity.includes('onPress={() => closePeriodMenu(key)}'), "Selecting a date period dismisses the menu and applies the selected filter");
+expect(activity.includes("setPeriod(nextPeriod)") && activity.includes("getPartnerActivityByPeriod(period"), "Changing period fetches scoped records instead of relabeling old results");
 expect(activity.includes("Load more activity") && activity.includes("loadMore()"), "Historical activity can be paginated");
 expect(engagement.includes("partner_app_activity_filtered") && engagement.includes("p_offset: offset"), "Period RPC receives server-side date filter and pagination");
 expect(periodMigration.includes("v_start is null or coalesce(p.created_at"), "Policy events filter by policy activity timestamp");
@@ -115,7 +115,7 @@ expect(activity.includes("function attentionStatus(title: string)") &&
 expect(activity.includes("styles.attentionText") && activity.includes("onPress={() => router.push(item.route as never)}"), "Attention subtitles and card destinations are preserved");
 expect(activity.includes("useState<'unread' | 'read' | 'all'>('all')"), "Recent Activity defaults to All");
 expect(!activity.includes("setActivityFilter(unreadCount > 0 ? 'unread' : 'all')"), "Loading unread receipts does not override the All default");
-expect(activity.includes("onPress={() => setActivityFilter(key)}") &&
+expect(activity.includes("setActivityFilter(key)") &&
   activity.includes("activityFilter === 'unread' && isRead") &&
   activity.includes("activityFilter === 'read' && !isRead"), "Manual Unread and Read filters remain functional");
 const cardStart = activity.indexOf('<View style={styles.itemBody}>');
@@ -190,3 +190,8 @@ expect(searchField.includes('Keyboard.dismiss();'), "Shared Partner search dismi
 expect(policies.includes("onClear={() => setQuery('')}"), "Partner policies clear query to refresh server results.");
 expect(policies.includes("setVisibleLimit(PAGE_SIZE)"), "Partner policies reset pagination when search changes.");
 expect(claimRegister.includes("setVisibleLimit(PAGE_SIZE)"), "Partner claims reset pagination when search changes.");
+
+const motion = read("components/activity-motion.tsx");
+for (const marker of ["useIsFocused()", "reduceMotionChanged", "AppState.addEventListener", "animation.stop()", "cancelAnimationFrame(frame)", "function ActivityEmpty", "function ActivitySkeleton"]) expect(motion.includes(marker), "Activity motion: " + marker);
+for (const marker of ["newKeys.has(partnerActivityEventKey(item))", "pendingRead.current", "resetScrollOnFocus={false}", "Haptics.selectionAsync()", "styles.slidingTab", "closePeriodMenu(key)", "currencyOnly"]) expect(activity.includes(marker), "Activity interaction: " + marker);
+expect(!motion.includes("react-native-reanimated") && !motion.includes("react-native-svg"), "Activity retains installed native dependencies");

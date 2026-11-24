@@ -1,0 +1,12 @@
+.copy, .stores, .scan, .qr { display: none; }
+.shortcut { display: block; }
+@container (min-width: 180px) {
+  .copy, .qr { display: block; }
+  .shortcut { display: none; }
+}
+@container (min-width: 285px) {
+  .stores { display: flex; }
+}
+@container (min-width: 350px) {
+  .scan { display: block; }
+}

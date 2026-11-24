@@ -149,6 +149,39 @@ assert.equal(selectVerifiedN8nInsuredDraftIdentity(rawName,null).name,"","ICICI/
 assert.equal(selectVerifiedN8nInsuredDraftIdentity(rawName,null,"unexpected_parser").name,"","Unknown parser fails closed");
 assert.equal(selectVerifiedN8nInsuredDraftIdentity(rawName,[{id:"x",name:"UNRELATED"}][0],"go_digit_cv_native_pdf").matchedCustomerId,null);
 assert.equal(selectVerifiedN8nInsuredDraftIdentity([], {id:"x",name:"UNRELATED"},"go_digit_cv_native_pdf").name,"","Do not fallback to a master when verified commercial PDF name is missing");
+for(const [parserId,evidence,name] of [
+  ["united_india_tractor_tp_native_pdf","Native PDF: Name of the Insured","MR SAMPLE TRACTOR OWNER"],
+  ["go_digit_two_wheeler_od_native_pdf","Native PDF: Name","SAMPLE MOTORCYCLE OWNER"],
+  ["zurich_kotak_private_car_tp_native_pdf","Native PDF: INSURED DETAILS Name","SAMPLE PRIVATE CAR OWNER"],
+]){
+  const fields=[{key:"insured_name",value:name,page:null,evidence}];
+  assert.equal(selectVerifiedN8nInsuredDraftIdentity(fields,null,parserId).name,name,
+    "Exact source-labelled name from a new certified variant must populate its editable draft");
+  assert.equal(selectVerifiedN8nInsuredDraftIdentity([{...fields[0],evidence:"Untrusted name"}],null,parserId).name,"",
+    "Unrecognized name evidence must fail closed for "+parserId);
+  assert.equal(selectVerifiedN8nInsuredDraftIdentity(fields,null,"unexpected_parser").name,"",
+    "New variant names must not be accepted by unrecognized parsers");
+  assert.equal(selectVerifiedN8nInsuredDraftIdentity([],null,parserId).name,"",
+    "Missing PDF identity must never fall back to a guessed customer");
+}
+for(const [intake,parser] of [
+  ["PIR-261120-12F51A","united_india_tractor_tp_native_pdf"],
+  ["PIR-261120-74CC09","go_digit_two_wheeler_od_native_pdf"],
+  ["PIR-261120-32D619","zurich_kotak_private_car_tp_native_pdf"],
+  ["PIR-261120-370952","zurich_kotak_private_car_tp_native_pdf"],
+]){
+  assert.ok(actions.includes(`"${intake}":"${parser}"`),
+    "Explicit recovery must permit only the approved legacy cohort "+intake);
+}
+assert.ok(actions.includes("&&APPROVED_VARIANT_LEGACY_INTAKES[lane.intake_number]===queued.parser_id")
+  &&actions.includes("&&PRODUCT_VARIANT_PARSERS.has(queued.parser_id")
+  &&actions.includes("&&hasVerifiedN8nParserEvidence(queued.parser_id")
+  &&actions.includes("{allowManualLane:approvedManualRecovery}")
+  &&actions.includes("if(lane.processing_lane!==\"automation\"&&!approvedManualRecovery)"),
+  "Manual-lane recovery requires exact approved intake/parser pairing and complete verified queue, not a global bypass");
+assert.ok(actions.includes("sameReviewedFingerprint") && actions.includes("await onboardPolicy(payload)"),
+  "Legacy manual recovery must still verify source fingerprint and use canonical booking");
+
 const digitFields=[{key:"policy_product",label:"Policy product",value:"Digit Commercial Vehicle Insurance"},
 {key:"vehicle_class",label:"Class",value:"Commercial Vehicle - Miscellaneous Class D"},
 {key:"od_premium",label:"OD",value:"2415.46"}, {key:"tp_premium",label:"TP",value:"7647"}];
@@ -331,6 +364,9 @@ for(const [parserId,checksPassed] of [
  const fixture={parserId,checksPassed,warnings:[],fields:standardFields,commercialPremium:standardPremium};
  assert.equal(assessStandardCommercialDirectConversion(fixture).eligible,true,
    parserId+" fully evidenced, zero-CPA registered package eligible");
+ assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="vehicle_rto_name"?{...f,evidence:"Native PDF policy schedule"}:f)}).eligible,true,"Populated RTO must not require special evidence wording");
+ assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="vehicle_rto_name"?{...f,evidence:undefined}:f)}).eligible,true,"Populated RTO must not require separate authority evidence");
+ assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.filter(f=>f.key!=="vehicle_rto_state")}).eligible,false);
  assert.equal(assessStandardCommercialDirectConversion({...fixture,checksPassed:checksPassed-1}).eligible,false);
  assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.filter(f=>f.key!=="vehicle_rto_name")}).eligible,false);
  assert.equal(assessStandardCommercialDirectConversion({...fixture,fields:standardFields.map(f=>f.key==="vehicle_registration_number"?{...f,value:"NEW"}:f)}).eligible,false);

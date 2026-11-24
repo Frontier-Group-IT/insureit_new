@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-ai-studio-workbench-actions
+release=partner-ai-studio-open-intake-parity
 source=verified-merged-main
-source_pr=5166
-source_merge=0e2ec6329b2cb28542da7afd435ad044dc0c2c0f
-reason=user-approved-merge-and-publish-ai-studio-mobile-redesign
+source_pr=5180
+source_merge=8e9de8a5701ffdafdb3d63e78b7cca28246ae1fe
+reason=align-ai-studio-all-open-list-with-policy-intakes-register
 channel=production
 runtime=0.2.0
 requested=2026-11-24

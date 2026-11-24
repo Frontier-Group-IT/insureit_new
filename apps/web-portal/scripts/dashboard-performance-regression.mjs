@@ -113,3 +113,16 @@ assert.match(dashboardView, /flex-1 items-center justify-center/, "Business perf
 assert.match(dashboardView, /label: "Producing intermediary"/, "Business performance must rename Active producers to Producing intermediary.");
 
 console.log("Dashboard performance regression passed.");
+
+// Keep the Partner promotion within the existing dashboard header.
+{
+  const promoView = await readFile(new URL("../app/dashboard-v2/dashboard-view.tsx", import.meta.url), "utf8");
+  const promoSource = await readFile(new URL("../components/partner-app-promo.tsx", import.meta.url), "utf8");
+  const header = promoView.split("<header ")[1]?.split("</header>")[0] ?? "";
+  assert.ok(header.includes("<CompactPartnerAppPromo />"), "Partner promotion must remain inside the existing dashboard header.");
+  assert.ok(header.indexOf("Operations Overview") < header.indexOf("<CompactPartnerAppPromo />") && header.indexOf("<CompactPartnerAppPromo />") < header.indexOf("RM Performance"), "Promotion must stay between heading and existing controls.");
+  assert.ok(header.includes('containerType: "inline-size"'), "Promotion must adapt to actual available header width.");
+  assert.ok(header.includes("xl:hidden") && header.includes('href="/download/partner"'), "Smaller screens must retain the download shortcut.");
+  assert.ok(promoSource.includes("export function CompactPartnerAppPromo") && promoSource.includes("h-11 min-w-0 max-w-[370px]"), "Compact promotion must remain height bounded.");
+  assert.ok(promoSource.split("export function CompactPartnerAppPromo")[1].includes("d={qrPath}"), "Dashboard must reuse the existing QR matrix.");
+}

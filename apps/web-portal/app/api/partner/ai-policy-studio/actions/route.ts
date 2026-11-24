@@ -61,6 +61,10 @@ export async function POST(request:NextRequest){
   });
   if(permission.error||!permission.data||permission.data.id!==input.intake_id)
     return respond({ok:false,error:"insufficient_permission_or_intake_unavailable"},403);
+  // The read-only Studio queue now covers both original intake lanes.
+  // Do not let that expand the existing AI reparse/booking write scope.
+  if(permission.data.processing_lane!=="automation")
+    return respond({ok:false,error:"manual_intake_requires_website_onboarding"},409);
 
   // Bind the verified JWT to this async execution only; the shared
   // server-action authorization uses it instead of a potentially unrelated
