@@ -39,6 +39,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Non-Tata normal Read and registered/unregistered review regression
         run: node scripts/non-tata-normal-read-regression.mjs
+      - name: United India GCV native PDF layout and false-positive regression
+        run: node --experimental-strip-types ../../infra/n8n-local/tests/united-india-gcv-layout-regression.mjs
       - name: AI queue non-Tata signed-PDF and printed premium regression
         run: node scripts/ai-nontata-signed-queue-regression.mjs
       - name: Verify Partner AI Studio Cloudflare canonical actions and bearer guard

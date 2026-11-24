@@ -202,7 +202,7 @@ assert.ok(signed.includes("hdfc_ergo_two_wheeler_tp_native_pdf")
 assert.match(signed,/isNewIndiaUnregistered/);
 assert.match(signed,/fields\.filter\(\(f\) => f\.key !== "vehicle_registration_number"\)/);
 assert.ok(signed.includes("fields: enrichIffcoCertifiedMachineFamily(")
-  &&signed.includes("isNewIndiaUnregistered || isUnitedNewVehicle")
+  &&signed.includes("isNewIndiaUnregistered\n        ? fields.filter")
   &&signed.includes("const isIffcoNewVehicle ="),
   "IFFCO MP/NEW reference must remain in verified evidence, not canonical registration; other insurer references stay filtered");
 assert.ok(handoff.includes('registrationMode:verified?.fields.some')
@@ -236,13 +236,14 @@ assert.ok(!signed.includes("auto_finalize_allowed:true"),
 // A parser family is evidence-only, never permission to book.
 const {trainedN8nParserProfile}=await import("../lib/ai-policy-onboarding-eligibility.ts");
 assert.deepEqual(trainedN8nParserProfile("united_india_gcv_native_pdf"),{checks:18,family:"commercial"});
+assert.deepEqual(trainedN8nParserProfile("united_india_private_car_package_native_pdf"),{checks:18,family:"commercial"});
 assert.deepEqual(trainedN8nParserProfile("oriental_gccv_native_pdf"),{checks:17,family:"commercial"});
 assert.deepEqual(trainedN8nParserProfile("go_digit_cv_native_pdf"),{checks:18,family:"commercial"});
 assert.deepEqual(trainedN8nParserProfile("new_india_cv_native_pdf"),{checks:16,family:"commercial"});
 assert.ok(insuredHelper.includes('"united_india_gcv_native_pdf"')
   && insuredHelper.includes('"oriental_gccv_native_pdf"'),
   "Only fixed native PDF evidence for the new insurers may fill an editable name");
-assert.ok(handoff.includes('"united_india_gcv_native_pdf","oriental_gccv_native_pdf"'),
+assert.ok(handoff.includes('"united_india_gcv_native_pdf","united_india_private_car_package_native_pdf","oriental_gccv_native_pdf"'),
   "The two new insurer types must reach review-only handoff without bypassing canonical checks");
 assert.match(preview,/tryReadNonTataCommercialSignedPolicy/);
 assert.ok(preview.indexOf("tryReadNonTataCommercialSignedPolicy") <
@@ -273,7 +274,8 @@ assert.match(oldBridge,/insureit-policy-intake-icici-v1/);
 assert.doesNotMatch(signed,/supabaseAdmin|\.from\("policies"\)/);
 assert.doesNotMatch(preview,/auto_finalize_allowed:\s*true/);
 assert.ok(handoff.includes("const productVariantReview=assessProductVariantDirectConversion({")
-  &&handoff.includes("||standardReview.eligible||niaReview.eligible||productVariantReview.eligible")
+  &&handoff.includes("||standardReview.eligible||niaReview.eligible||uiicReview.eligible||uiicPrivateCarReview.eligible||productVariantReview.eligible")
+  &&handoff.includes("const uiicReview=assessUiicGcvDirectConversion({")
   &&handoff.includes("PRODUCT_VARIANT_PARSERS.has(verified.parserId)?productVariantReview.reason"),
   "New TP and SAOD parser reparse may enter verified queue only after strict variant financial and source preflight");
 assert.ok(handoff.includes("selectVerifiedN8nInsuredDraftIdentity(verified.fields,masterIdentity,verified.parserId)"));
@@ -693,7 +695,9 @@ assert.ok(actions.includes('const heldReview=queued?.state==="exception"')
   &&actions.includes('queued.exception_codes.length===1')
   &&actions.includes('queued.exception_codes[0]==="booking_review_required"')
   &&actions.includes("const sameReviewedFingerprint=")
-  &&actions.includes("!(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold)")
+  &&actions.includes("!(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction)")
+  &&actions.includes("const reverifiedUiicExtraction=uiicFailedSource")
+  &&actions.includes("extracted.preview.documentId===queued.document_id")
   &&actions.includes("extracted.preview.documentId!==queued.document_id")
   &&actions.includes('queued.last_error_code==="missing_verified_vehicle_registration_number"')
   &&actions.includes("assessNiaNamedAuthorityUnregisteredConversion({")

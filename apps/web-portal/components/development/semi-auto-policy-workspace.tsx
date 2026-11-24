@@ -91,6 +91,14 @@ function canRetryReviewHeldPolicy(row:SemiAutoIntakeRow):boolean {
     &&row.ai_exceptions?.length===1
     &&["booking_review_required","registration_pending_review"].includes(row.ai_exceptions[0]);
 }
+/** An explicit source-recovery attempt is not a green booking assessment.
+ * Only the server can determine whether the current original PDF now has a
+ * certified UIIC GCV parser. All other extraction failures remain blocked. */
+function canAttemptFailedSourceRecovery(row:SemiAutoIntakeRow):boolean {
+  return !row.is_duplicate&&row.policy_type==="motor"&&row.ocr_status==="pending"
+    &&row.ai_state==="exception"&&row.ai_exceptions?.length===1
+    &&row.ai_exceptions[0]==="extraction_failed";
+}
 const aiStateLabel: Record<string,string> = {
   pending:"Queued",processing:"Reading PDF",exception:"Needs action",
   verified:"Extracted · booking preflight pending",unsupported:"Not trained",
@@ -525,7 +533,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   async function convertOneVerified() {
     const row=autoConvertRow;
     if(!row||isWaiting||row.is_duplicate||
-      !((row.ai_state==="verified"&&!row.ai_exceptions?.length)||canRetryReviewHeldPolicy(row)))return;
+      !((row.ai_state==="verified"&&!row.ai_exceptions?.length)||canRetryReviewHeldPolicy(row)||canAttemptFailedSourceRecovery(row)))return;
     setBusy("booking");setAutoConvertMessage(null);
     try{
       const result=await convertVerifiedAiIntake(row.id,true);
@@ -1136,6 +1144,13 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                  <span className="text-[11px] text-emerald-900">Rechecks the live PDF and mandatory vehicle fields before any booking; missing or unmatched make/fuel will stop conversion.</span>
                  <button type="button" disabled={isWaiting} onClick={()=>{setAutoConvertRow(exceptionRow);setExceptionRow(null);}}
                    className="rounded-lg bg-emerald-700 px-3 py-2 text-[11px] font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">Verify & Convert</button>
+               </div>
+             ):null}
+             {primaryN8n && canAttemptFailedSourceRecovery(exceptionRow) ? (
+               <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#bfcede] bg-[#f6f9fc] p-3">
+                 <span className="text-[11px] text-[#34516c]">Rechecks the original stored PDF using the current parser. Conversion is attempted only if United India GCV evidence, printed CPA and authority, and every canonical booking check pass. Otherwise nothing is booked.</span>
+                 <button type="button" disabled={isWaiting} onClick={()=>{setAutoConvertRow(exceptionRow);setExceptionRow(null);}}
+                   className="shrink-0 rounded-lg border border-[#7395ba] bg-white px-3 py-2 text-[11px] font-semibold text-[#214d78] hover:bg-[#eef4fa] disabled:opacity-50">Recheck PDF &amp; Convert</button>
                </div>
              ):null}
              {primaryN8n && (exceptionRow.ai_exceptions??[]).includes("booking_review_required") ? (

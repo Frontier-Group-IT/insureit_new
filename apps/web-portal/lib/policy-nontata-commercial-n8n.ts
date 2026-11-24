@@ -3,7 +3,7 @@ import "server-only";
 import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
 import { enrichIffcoCertifiedMachineFamily } from "@/lib/policy-iffco-machine-family";
 
-type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "oriental_gccv_native_pdf";
+type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "united_india_private_car_package_native_pdf" | "oriental_gccv_native_pdf";
 type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf" | "hdfc_ergo_two_wheeler_tp_native_pdf" | "sbi_general_private_car_package_native_pdf";
 type Insurer = ExistingInsurer | NewProductVariant;
 const NEW_VARIANTS = new Set<Insurer>(["zurich_kotak_private_car_tp_native_pdf","go_digit_two_wheeler_od_native_pdf","united_india_tractor_tp_native_pdf","hdfc_ergo_two_wheeler_tp_native_pdf","sbi_general_private_car_package_native_pdf"]);
@@ -49,6 +49,7 @@ const REQUIRED_EXTRA: Record<ExistingInsurer, string[]> = {
   iffco_tokio_cv_native_pdf: ["iffco_layout", "printed_tax_table", "invoice_taxable_matches", "invoice_gross_matches"],
   go_digit_cv_native_pdf: ["digit_layout", "registered_plate", "od_basic_ncb", "tp_itemization"],
   united_india_gcv_native_pdf: ["uiic_layout", "igst_components_printed", "stamp_accounting_disclosed", "stamp_charge_reconciled"],
+  united_india_private_car_package_native_pdf: ["uiic_private_car_layout", "igst_18_printed", "cpa_disposition_verified", "ncb_premium_reconciled"],
   oriental_gccv_native_pdf: ["oicl_layout", "four_tax_components_printed", "stamp_charge_reconciled"],
 };
 const ALLOWED_FIELDS = new Set([
@@ -87,6 +88,9 @@ function insurerForText(head: string): Insurer | null {
     matches.push("go_digit_cv_native_pdf");
   if (/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(issuer) && /GCV PUBLIC CARRIER/i.test(product))
     matches.push("united_india_gcv_native_pdf");
+  if (/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(issuer)
+      && /PRIVATE CAR\s*-\s*PACKAGE POLICY/i.test(product))
+    matches.push("united_india_private_car_package_native_pdf");
   if (/THE ORIENTAL INSURANCE COMPANY LIMITED/i.test(issuer) && /GCCV-PUBLIC CARRIERS/i.test(product))
     matches.push("oriental_gccv_native_pdf");
   // Specific product extensions precede the old CV classifiers. They never
@@ -357,9 +361,11 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
     // Retain it in verified extraction for the insurer-specific eligibility
     // evidence check. The canonical onboarding mapper independently clears
     // registrationNo for registration_pending, so it is never booked as a plate.
-    // NIA/United reference-only numbers remain filtered as before.
+    // NIA partial RTO prefixes are filtered. UIIC `NEW` must be retained
+    // as source evidence for its strict assessor, never as a registered plate;
+    // the canonical intake mapper clears registrationNo for pending vehicles.
     fields: enrichIffcoCertifiedMachineFamily(
-      isNewIndiaUnregistered || isUnitedNewVehicle
+      isNewIndiaUnregistered
         ? fields.filter((f) => f.key !== "vehicle_registration_number") : fields,
       insurer),
     warnings,
