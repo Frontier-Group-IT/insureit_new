@@ -462,7 +462,8 @@ for (const required of [
   'accessibilityActions={[{ name: \'decrement\', label: \'Previous story\' }, { name: \'increment\', label: \'Next story\' }]}',
   "if (nativeEvent.actionName === 'decrement') previous();",
   "if (nativeEvent.actionName === 'increment') next();",
-  'key={index}',
+  'ref={storyScrollRef}',
+  '<Animated.View key={index}',
   'if (step < 0 && index <= 0) return;',
   'if (step > 0 && index >= data.items.length - 1) {',
 ]) requireText(stories, required, 'Story navigation accessibility or boundary regression: ' + required);
@@ -1651,4 +1652,8 @@ if (policies.includes("SortPurpleGradient") || policies.includes("sortPurpleGrad
 
 const impactMotion = read('components/impact-story-motion.tsx');
 for (const marker of ['IMPACT_REVEAL_MS = 2800', 'reduceMotionChanged', 'AppState.addEventListener', 'time.stopAnimation', 'ambient.stopAnimation', 'clock.time.removeListener']) requireText(impactMotion, marker, 'Impact timeline lifecycle: ' + marker);
-for (const marker of ['start={200} duration={1400}', 'reveal(clock, 500, 800)', 'reveal(clock, 800, 1100)', 'reveal(clock, 1200, 1600', 'inputRange:[2000,2250,2500]', 'tabular-nums']) requireText(stories, marker, 'Impact cinematic timing: ' + marker);
+for (const marker of ['start={200} duration={1400}', 'visibleImpactReveal(clock, 500, 800)', 'visibleImpactReveal(clock, 800, 1100)', 'visibleImpactReveal(clock, 1200, 1600', 'inputRange:[2000,2250,2500]', 'tabular-nums']) requireText(stories, marker, 'Impact cinematic timing: ' + marker);
+
+// Keep the scrolling viewport stable and prohibit 3D layer intersections on story changes.
+for (const marker of ['removeClippedSubviews={false}', 'storyBackdrop: { ...StyleSheet.absoluteFillObject, zIndex: 0', "storyContent: { position: 'relative', zIndex: 1", 'storyScrollRef.current?.scrollTo({ y: 0, animated: false })', 'function visibleImpactReveal(']) requireText(stories, marker, 'Stories transition layering regression: ' + marker);
+if (/rotateY\s*:|perspective\s*:|opacity:\s*transition\.interpolate/.test(stories)) throw new Error('Story transition must not introduce 3D layer intersections or fade away the entire foreground.');
