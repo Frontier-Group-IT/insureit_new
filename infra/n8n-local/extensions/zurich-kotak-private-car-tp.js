@@ -29,11 +29,11 @@ const insured=grab(/INSURED DETAILS POLICY DETAILS\s*\nName:\s*([^\n]+)/i)?.repl
 const period=text.match(/Period of Insurance:\s*\nFrom:\s*(\d{2}\/\d{2}\/\d{4})\s+\d{2}:\d{2}\s+to:\s*(\d{2}\/\d{2}\/\d{4})/i)||[];
 const start=iso(period[1]),end=iso(period[2]),issue=iso(grab(/Policy issued on:\s*(\d{2}\/\d{2}\/\d{4})/i));
 const block=grab(/VEHICLE DETAILS\s*\n([\s\S]{0,900}?)PREMIUM COMPUTATION TABLE/i)||'';
-const veh=block.match(/\bUK\s+(\d{2})\s+([A-Z]{1,3})\s*\n\s*(\d{4})\s*\n\s*([\s\S]{1,180}?)\s+(20\d{2})\s+(Dehradun|Haridwar)\s+([A-Z0-9]+\s*\n\s*\d+)\s+([A-Z0-9]+\s*\n\s*[A-Z0-9]+)\s+(\d{3,4})\s+(DIESEL|PETROL)\s+(\d)\b/i);
+const veh=block.match(/\bUK\s+(\d{2})\s+([A-Z]{1,3})\s*\n\s*(\d{4})\s*\n\s*([\s\S]{1,180}?)\s+(20\d{2})\s+(Dehradun|Haridwar)\s+([A-Z0-9]+\s*\n\s*[A-Z0-9]+)\s+([A-Z0-9]+\s*\n\s*[A-Z0-9]+)\s+(\d{3,4})\s+(DIESEL|PETROL)\s+(\d)\b/i);
 const plate=veh?'UK'+veh[1]+veh[2]+veh[3]:null;
 const description=veh?.[4]?.replace(/\s+/g,' ').trim()||'';
-const make=/^HYUNDAI MOTORS\b/i.test(description)?'HYUNDAI':/^MARUTI\b/i.test(description)?'MARUTI':null;
-const model=make?(make==='HYUNDAI'?description.replace(/^HYUNDAI MOTORS\s*/i,''):description.replace(/^MARUTI\s*/i,'')):null;
+const make=/^HYUNDAI MOTORS\b/i.test(description)?'HYUNDAI':/^MARUTI\b/i.test(description)?'MARUTI':/^TATA\b/i.test(description)?'TATA':null;
+const model=make?(make==='HYUNDAI'?description.replace(/^HYUNDAI MOTORS\s*/i,''):make==='MARUTI'?description.replace(/^MARUTI\s*/i,''):description.replace(/^TATA\s*/i,'')):null;
 const rto=veh?.[6],registrationYear=veh?.[5];
 const engine=veh?.[7]?.replace(/\s+/g,''),chassis=veh?.[8]?.replace(/\s+/g,'');
 const od=money(/Total Own Damage Premium \(A\)\s*([\d,.]+)/i);
