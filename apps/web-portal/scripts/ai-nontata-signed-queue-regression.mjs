@@ -123,6 +123,16 @@ Policy Number POPMCAR00103248565
 Policy Holder Name Mr. Sample Owner Intermediary Name SAMPLE BROKER
 Receipt Date 19/11/2026
 Consolidated Stamp Duty ₹ 0.5 paid towards Insurance Policy Stamps`;
+const sbiWithPrevious=sbiSample.replace("Premium Receipt",
+  "Previous Policy Details Previous Insurer SBI General Policy Number POPMCAR00999999999 Policy Expiry 18/11/2026\nPremium Receipt");
+const previousResult=parseVariant(sbiPath,sbiWithPrevious,sbiMeta);
+assert.equal(previousResult.ok,true,
+ "Prior policy number must not override current policy identity in SBI receipt");
+assert.equal(previousResult.checks.policy_identity_verified,true);
+assert.equal(parseVariant(sbiPath,sbiSample.replace(
+ "Policy Number POPMCAR00103248565\nPolicy Holder Name",
+ "Policy Number POPMCAR00999999999\nPolicy Holder Name"),sbiMeta).ok,false,
+ "A genuinely mismatched current receipt number must still fail");
 const sbi=parseVariant(sbiPath,sbiSample,sbiMeta);
 assert.equal(sbi.failed_checks.length,0,"SBI Tata 0% NCB Package must pass all 20");
 assert.equal(sbi.premium_components.odBasicAfterNcb,3829.2);
