@@ -54,10 +54,10 @@ Total Premium (in ₹ ) 2,471.00`;
 }
 // New insurers use fully synthetic schedule fragments; no real policyholder,
 // vehicle, phone or policy number is committed. Execute the actual n8n source.
-const parseVariant=(path,text,info={})=>{
+const parseVariant=(path,text,info={},signature_image_evidence=null)=>{
   const source=file(path);
   return runInNewContext('(function(){'+source+'})()',
-    {$input:{first:()=>({json:{text,info}})}})[0].json;
+    {$input:{first:()=>({json:{text,info,signature_image_evidence}})}})[0].json;
 };
 const hdfcSample=`Vehicle Details Policy Details
 Make HONDA. Policy No. 2301 2092 5528 0300 000
@@ -161,7 +161,25 @@ assert.equal(mahindra.premium_components.gross,13158);
 assert.equal(parseVariant(sbiPath,sbiSample.replace("PA to Owner Driver 325.00","PA to Owner Driver 425.00"),sbiMeta).ok,false);
 assert.equal(parseVariant(sbiPath,mahindraSample.replace("No Claim Bonus % 45%","No Claim Bonus % 0%"),mahindraMeta).ok,false);
 assert.equal(parseVariant(sbiPath,mahindraSample.replace("TOTAL PREMIUM 11150.54","TOTAL PREMIUM 10150.54"),mahindraMeta).ok,false);
-assert.equal(parseVariant(sbiPath,sbiSample,{...sbiMeta,CreationDate:"D:20261118190000+05'30'"}).ok,false);
+// Printed schedule issuance date is authoritative even if receipt or PDF metadata differ.
+const priority=parseVariant(sbiPath,sbiSample.replace("Receipt Date 19/11/2026","Receipt Date 18/11/2026"),
+ {...sbiMeta,CreationDate:"D:20261118190000+05'30'"});
+assert.equal(priority.ok,true);
+assert.equal(priority.fields.find(f=>f.key==="policy_issuance_date").value,"2026-11-19");
+assert.equal(priority.issuance_evidence.source,"printed_policy_issue_date");
+const noPrintedDate=sbiSample.replace("19/11/2026 POPMCAR00103248565 Period of Insurance TP",
+ "Policy Issue Date unavailable POPMCAR00103248565 Period of Insurance TP");
+// Receipt and PDF metadata are NOT sufficient for fallback.
+assert.equal(parseVariant(sbiPath,noPrintedDate,sbiMeta).ok,false);
+// Verified signature-image evidence from a document-bound upstream verifier can fill a missing date.
+const trustedImage={source:"verified_pdf_signature_image",verified:true,document_bound:true,date:"19/11/2026"};
+const restored=parseVariant(sbiPath,noPrintedDate,sbiMeta,trustedImage);
+assert.equal(restored.ok,true);
+assert.equal(restored.issuance_evidence.source,"verified_signature_image_fallback");
+assert.equal(parseVariant(sbiPath,noPrintedDate,sbiMeta,{...trustedImage,verified:false}).ok,false);
+assert.equal(parseVariant(sbiPath,noPrintedDate,sbiMeta,{...trustedImage,document_bound:false}).ok,false);
+// An image date never overrides a printed issue date.
+assert.equal(parseVariant(sbiPath,sbiSample,sbiMeta,{...trustedImage,date:"18/11/2026"}).issuance_evidence.date,"2026-11-19");
 
 assert.ok(signed.includes("hdfc_ergo_two_wheeler_tp_native_pdf")
   &&signed.includes("sbi_general_private_car_package_native_pdf")
