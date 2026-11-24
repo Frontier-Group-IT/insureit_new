@@ -1,7 +1,7 @@
 // Standalone, anonymized n8n Code-node regression. Real PDFs are never committed.
 // Run: node infra/n8n-local/tests/united-india-gcv-layout-regression.mjs
 import assert from 'node:assert/strict';
-import {assessUiicGcvDirectConversion} from '../../../apps/web-portal/lib/policy-commercial-direct-eligibility.ts';
+import {assessUiicGcvDirectConversion,assessUiicPrivateCarDirectConversion} from '../../../apps/web-portal/lib/policy-commercial-direct-eligibility.ts';
 import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {resolve, dirname} from 'node:path';
@@ -83,9 +83,7 @@ const katni=parse(sample({registered:true,authority:'KATNI ARTO INDIA'}));
 assert.equal(katni.ok,true,katni.warnings.join('; '));
 assert.equal(value(katni,'vehicle_rto_name'),'KATNI');
 assert.equal(value(katni,'vehicle_registration_status'),'registered');
-const privateCar=parse('UNITED INDIA INSURANCE COMPANY LIMITED\nPRIVATE CAR -\nPACKAGE POLICY\n'+sample());
-assert.equal(privateCar.ok,false);
-assert.match(privateCar.warnings.join(' '),/Private Car Package/);
+
 for(const [name,text] of [
  ['unknown RTO',sample({authority:'UNKNOWN CITY INDIA'})],
  ['tampered premium',sample({tamperNet:true})],
@@ -96,6 +94,53 @@ for(const [name,text] of [
 ]){
  const r=parse(text);
  assert.equal(r.ok,false,name+' must fail closed');
+}
+
+
+const privateCarText=[
+ 'UNITED INDIA INSURANCE COMPANY LIMITED','PRIVATE CAR -','PACKAGE POLICY',
+ 'POLICY NO.:2230003126P000000001','VEHICLE NO.:MP - 20 - CH - 1211',
+ 'PERIOD OF INSURANCE','From 00:00 Hrs of 29/11/2026','To Midnight of 28/11/2027',
+ 'Insured','MS EXAMPLE CUSTOMER',
+ 'Policy No. 2230003126P000000001 Previous Policy No. 123/31/2026/1',
+ 'Insured Details Customer Id 23680000000','Name MS EXAMPLE CUSTOMER',
+ 'Particulars of Vehicle Insured','Registration No.','Obsolete','Vehicle',
+ 'Engine No. Chassis No. Make/ Model','Type of','Body /','Fuel Type',
+ 'Year of','Mfg','Cubic','Capacity/KW','Seating','including','driver',
+ 'Vehicle','Trailer','( if any)','MP - 20 - CH -','1211','No',
+ 'MBHCZC03SJG000001 D13A0000001','MARUTI','SUZUKI /','SWIFT(2011',
+ '- ) ZDI','CAR /','Diesel','2018 1248 5',"Insured's Declared Value",
+ 'For Vehicle For Trailer Non Electrical Accessories Electrical/Electronic Accessories CNG Unit LPG Unit Total Value',
+ '270000 0 0 0 0 0 270000',
+ 'Registration Authority Auto Association Membership No. Geographical Area Extension',
+ 'MP20 JABALPUR INDIA',
+ 'Premium: 4,823.00','IGST(18%): 868.00','Stamp Duty: 1.00',
+ 'Total (Rounded Off): 5,691.00','A. Basic - OD 1,809.54',
+ 'No Claim Bonus 25% 452.39','Gross OD(A) 1,357.00','B. Basic - T P 3,416.00',
+ 'LL to Paid Driver IMT 28 50.00','Gross TP(B) 3,466.00',
+ 'Gross OD & TP:','(A) + (B)','4,823.00',
+ 'Compulsory Personal Accident (CPA) cover is removed','Date of Issue: 23/11/2026'
+].join('\n');
+const privateCar=parse(privateCarText);
+assert.equal(privateCar.ok,true,privateCar.warnings.join('; '));
+assert.equal(privateCar.parser_id,'united_india_private_car_package_native_pdf');
+assert.equal(value(privateCar,'vehicle_class'),'Private Car');
+assert.equal(value(privateCar,'vehicle_make'),'MARUTI SUZUKI');
+assert.equal(value(privateCar,'vehicle_model'),'SWIFT(2011 - ) ZDI');
+assert.equal(value(privateCar,'cpa_premium'),'0');
+assert.deepEqual([privateCar.premium_components.od,privateCar.premium_components.tp,
+ privateCar.premium_components.net,privateCar.premium_components.gst,
+ privateCar.premium_components.gross],[1357,3466,4823,868,5691]);
+for(const [name,pdf] of [
+ ['wrong insurer product',privateCarText.replace('PRIVATE CAR -','GCV PUBLIC CARRIER OTHER THAN 3 WHEELER -')],
+ ['altered NCB',privateCarText.replace('452.39','352.39')],
+ ['missing CPA waiver',privateCarText.replace('Compulsory Personal Accident (CPA) cover is removed','')],
+ ['tampered private tax',privateCarText.replace('IGST(18%): 868.00','IGST(18%): 768.00')],
+ ['faked RTO from address',privateCarText.replace('MP20 JABALPUR INDIA','KATNI ARTO INDIA')],
+ ['conflicting issue date',privateCarText+'\nDate of Issue: 24/11/2026'],
+]){
+ const r=parse(pdf);
+ assert.equal(r.ok,false,name+' must block');
 }
 
 const eligibility=r=>assessUiicGcvDirectConversion({
@@ -120,10 +165,21 @@ assert.equal(eligibility(inventedPlate).eligible,false,'invented plate not eligi
 const doubleCounted=structuredClone(goodsDiesel);
 doubleCounted.premium_components.tp+=325;
 assert.equal(eligibility(doubleCounted).eligible,false,'double-counted owner driver CPA not eligible');
+const privateEligible=assessUiicPrivateCarDirectConversion({
+ parserId:privateCar.parser_id,checksPassed:Object.values(privateCar.checks).filter(Boolean).length,
+ warnings:privateCar.warnings,fields:privateCar.fields,commercialPremium:privateCar.premium_components,
+});
+assert.equal(privateEligible.eligible,true,'certified private car package: '+privateEligible.reason);
+const wrongSource=structuredClone(privateCar);
+wrongSource.fields.find(f=>f.key==='vehicle_rto_name').evidence='Insured address Jabalpur';
+assert.equal(assessUiicPrivateCarDirectConversion({
+ parserId:wrongSource.parser_id,checksPassed:18,warnings:wrongSource.warnings,
+ fields:wrongSource.fields,commercialPremium:wrongSource.premium_components,
+}).eligible,false);
 const action=readFileSync(resolve(here,'../../../apps/web-portal/app/development/ai-policy-onboarding/actions.ts'),'utf8');
 assert.match(action,/reverifiedUiicExtraction=uiicFailedSource/);
 assert.match(action,/assessUiicGcvDirectConversion/);
 assert.match(action,/mapVerifiedUiicGcvCommercialPremium/);
 assert.match(action,/extracted\.preview\.documentId===queued\.document_id/);
 
-console.log('United India GCV: 3 parser positives, 1 wrong-product block, 6 parser negatives, 3 direct-convert positives and 5 eligibility negatives passed');
+console.log('United India GCV: 4 real-layout-family synthetic positives, 12 parser hard negatives and source-gated 4 direct-convert positives passed');
