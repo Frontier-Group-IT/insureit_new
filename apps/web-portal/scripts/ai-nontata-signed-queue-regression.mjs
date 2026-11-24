@@ -34,8 +34,8 @@ VEHICLE DETAILS
 Registration Number Manufacturer Model Variant Year of Manufacture RTO Location Engine Number Chassis Capacity Fuel
 UK 07 BX
 3604
-${makeLines.replaceAll("\\\\n","\\n")} 2017 Dehradun ${engineLines.replaceAll("\\\\n","\\n")}
-${chassisLines.replaceAll("\\\\n","\\n")}
+${makeLines.replaceAll("\\n","\n")} 2017 Dehradun ${engineLines.replaceAll("\\n","\n")}
+${chassisLines.replaceAll("\\n","\n")}
 814 PETROL 5
 PREMIUM COMPUTATION TABLE (IN ₹)
 Total Own Damage Premium (A) 0.00
