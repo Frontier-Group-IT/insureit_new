@@ -74,7 +74,12 @@ assert(actions.includes('if(!isProposalType(intake.policy_type))'),"Life/Health 
 assert(actions.includes("loadPolicyIntakeDuplicateMatches(admin,[intake])"),"Claiming an intake for review must re-check duplicate status server-side");
 assert(actions.includes("duplicate and cannot be claimed for review"),"Duplicate intakes must be blocked from entering Operations review");
 assert(actions.includes("matched_customer_id:null"),"Policy Intake submission must not preselect a customer from mobile alone");
-assert(actions.includes("resolveMatchedCustomerIdByIdentity"),"Policy Intake OCR completion must resolve customer identity from mobile plus insured name");
+const aiWorker=read("lib/ai-policy-onboarding-queue-server.ts");
+assert(aiWorker.includes("const customerName=normalizedName(")
+  && aiWorker.includes("const phone=normalizedPhone(")
+  && aiWorker.includes("const exact=phoneMatches.filter(")
+  && aiWorker.includes("sharedPhoneHasDistinctNames:sharedDifferentNames"),
+  "AI assessment must compare normalized insured name AND mobile and never treat shared mobile as exact identity");
 assert.equal(selectPolicyIntakeCustomerMatch([
   {id:"cust-rajesh",contact_name:"Rajesh Kumar",company_name:null},
   {id:"cust-abc",contact_name:"Accounts Contact",company_name:"ABC Transport Pvt Ltd"},
