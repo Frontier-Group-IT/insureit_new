@@ -54,6 +54,7 @@ export default function AiPolicyStudioScreen() {
   const [searchError,setSearchError]=useState('');
   const searchGeneration=useRef(0);
   const [reduceMotion,setReduceMotion]=useState(true);
+  const [tabsWidth,setTabsWidth]=useState(0);
   const ringProgress=useRef(new Animated.Value(0)).current;
   const tabProgress=useRef(new Animated.Value(0)).current;
   const refreshRotation=useRef(new Animated.Value(0)).current;
@@ -253,16 +254,16 @@ export default function AiPolicyStudioScreen() {
                 <Ionicons name="close-circle" size={16} color="#91A1B3"/>
               </Pressable>:<Ionicons name="options-outline" size={17} color="#6F88AA"/>}
             </View>
-            <View style={s.tabsRow}>
+            <View style={s.tabsRow} onLayout={event=>setTabsWidth(event.nativeEvent.layout.width)}>
               {TABS.map(tab=><Pressable key={tab.key} style={s.tabItem}
                 accessibilityRole="tab" accessibilityState={{selected:filter===tab.key}}
                 onPress={()=>{setFilter(tab.key);setPage(p=>({...p,rows:[]}));}}>
                 <Text style={[s.tabText,filter===tab.key&&s.tabTextActive]}>{tab.label==='All Open'?'All':tab.label}</Text>
               </Pressable>)}
-              <Animated.View pointerEvents="none" style={[s.tabUnderline,{
-                transform:[{translateX:Animated.multiply(tabProgress,1)}],
-                // The four equal-width tabs share the panel width; translate after onLayout below.
-              }]}/>
+              {tabsWidth>0?<Animated.View pointerEvents="none" style={[s.tabUnderline,{
+                width:tabsWidth/4,
+                transform:[{translateX:Animated.multiply(tabProgress,tabsWidth/4)}],
+              }]}/>:null}
             </View>
             {loading&&page.rows.length===0||searchLoading?
               <View accessibilityRole="progressbar" accessibilityLabel="Loading policy intakes" style={s.rowsLoading}>
@@ -386,7 +387,64 @@ export default function AiPolicyStudioScreen() {
   );
 }
 
+function StudioRowEnter({children,index,reduceMotion}:{children:React.ReactNode;index:number;reduceMotion:boolean}){
+  const opacity=useRef(new Animated.Value(1)).current;
+  const rise=useRef(new Animated.Value(0)).current;
+  useEffect(()=>{
+    if(reduceMotion){opacity.setValue(1);rise.setValue(0);return;}
+    opacity.setValue(0);rise.setValue(7);
+    const animation=Animated.parallel([
+      Animated.timing(opacity,{toValue:1,duration:340,delay:Math.min(index,8)*55,easing:Easing.out(Easing.cubic),useNativeDriver:true}),
+      Animated.timing(rise,{toValue:0,duration:340,delay:Math.min(index,8)*55,easing:Easing.out(Easing.cubic),useNativeDriver:true}),
+    ]);
+    animation.start();return ()=>animation.stop();
+  },[opacity,rise,reduceMotion,index]);
+  return <Animated.View style={{opacity,transform:[{translateY:rise}]}}>{children}</Animated.View>;
+}
+
 const s=StyleSheet.create({
+  screenContent:{paddingBottom:24},
+  summarySurface:{backgroundColor:'#FFFFFF',paddingHorizontal:11,paddingTop:10,paddingBottom:8},
+  summaryTop:{flexDirection:'row',alignItems:'center',minHeight:76,gap:8},
+  summaryArtwork:{width:34,height:39},
+  summaryText:{flex:1,minWidth:0},
+  summaryOverline:{fontSize:8,color:'#6245D2',fontWeight:'700',letterSpacing:0.6},
+  summaryMain:{fontSize:19,color:'#10294D',fontWeight:'800',marginTop:2},
+  summaryDescription:{fontSize:10,color:'#68798F',marginTop:3},
+  summaryDivider:{height:StyleSheet.hairlineWidth,backgroundColor:'#DFE5EE',marginTop:5,marginBottom:8},
+  ringHolder:{width:44,height:44,alignItems:'center',justifyContent:'center',marginLeft:4},
+  ringTick:{position:'absolute',left:20,top:20,width:4,height:7,borderRadius:3},
+  ringText:{fontSize:9,fontWeight:'800',color:'#6844D9'},
+  summaryMetrics:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',minHeight:47},
+  metric:{flex:1,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:4,minWidth:0},
+  metricArtwork:{width:22,height:25},
+  metricCopy:{minWidth:0},
+  metricLabel:{color:'#627089',fontSize:10},
+  metricValue:{color:'#071D38',fontSize:16,fontWeight:'800'},
+  listSection:{backgroundColor:'#F4F6FB',paddingHorizontal:10,paddingTop:10,paddingBottom:18,flex:1},
+  listHeading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:8},
+  listHeadingText:{fontSize:14,fontWeight:'800',color:'#0C2342'},
+  recordPill:{fontSize:9,color:'#6048C9',backgroundColor:'#EFE8FF',borderRadius:14,overflow:'hidden',paddingVertical:5,paddingHorizontal:10},
+  intakePanel:{backgroundColor:'#FFFFFF',borderRadius:15,borderWidth:1,borderColor:'#DEE5EF',paddingHorizontal:10,paddingTop:10,paddingBottom:2,overflow:'hidden'},
+  searchBar:{height:36,borderRadius:10,borderWidth:1,borderColor:'#DCE4ED',flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:9,marginBottom:7},
+  searchInput:{flex:1,fontSize:10.5,color:'#1A365B',paddingVertical:0,minHeight:34},
+  tabsRow:{flexDirection:'row',height:30,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#DDE5EF',position:'relative'},
+  tabItem:{flex:1,alignItems:'center',justifyContent:'center',minWidth:0},
+  tabText:{fontSize:9,color:'#526784'},
+  tabTextActive:{color:'#135CB9',fontWeight:'700'},
+  tabUnderline:{position:'absolute',height:2,bottom:0,left:0,backgroundColor:'#2178EC'},
+  compactRow:{minHeight:63,flexDirection:'row',alignItems:'center',gap:7,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#E7ECF2',paddingVertical:7},
+  compactRowPressed:{backgroundColor:'#F4F8FE'},
+  rowArtworkShell:{width:28,height:32,borderRadius:7,backgroundColor:'#EAF3FF',alignItems:'center',justifyContent:'center'},
+  rowArtwork:{width:23,height:26},
+  rowsLoading:{gap:0},
+  skeletonRow:{height:63,flexDirection:'row',alignItems:'center',gap:9,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#E5EBF2'},
+  skeletonIcon:{width:28,height:32,borderRadius:7,backgroundColor:'#EDF2FA'},
+  skeletonCopy:{flex:1,gap:7},
+  skeletonLineWide:{height:9,width:'58%',borderRadius:5,backgroundColor:'#EDF2FA'},
+  skeletonLineShort:{height:7,width:'74%',borderRadius:4,backgroundColor:'#EDF2FA'},
+  compactEmpty:{minHeight:115,alignItems:'center',justifyContent:'center',gap:7,padding:20},
+
   root:{flex:1,backgroundColor:C.paper},scroll:{flex:1},
   headerShell:{backgroundColor:'#071E49'},
   top:{minHeight:64,paddingHorizontal:14,backgroundColor:'#071E49',flexDirection:'row',alignItems:'center',gap:10},
