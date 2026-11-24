@@ -21,7 +21,7 @@ const features = [
 
 export function PartnerAppPromo() {
   return (
-    <aside aria-label="Download INSUREIT Partner App" className="relative isolate flex min-h-[610px] min-w-0 flex-col overflow-hidden rounded-[24px] border border-[#2B76DF]/65 bg-[linear-gradient(132deg,#061B4D_0%,#073785_44%,#075DCE_77%,#041D5A_100%)] px-5 py-6 text-white shadow-[0_22px_54px_rgba(12,54,135,0.22)] sm:px-7 lg:min-h-[625px]">
+    <aside aria-label="Download INSUREIT Partner App" className="relative isolate flex min-w-0 flex-col overflow-hidden rounded-[24px] border border-[#2B76DF]/65 bg-[linear-gradient(132deg,#061B4D_0%,#073785_44%,#075DCE_77%,#041D5A_100%)] px-5 py-6 text-white shadow-[0_22px_54px_rgba(12,54,135,0.22)] sm:px-7">
       <div aria-hidden className="pointer-events-none absolute -right-32 -top-36 h-[380px] w-[380px] rounded-full bg-[#00C9FF]/30 blur-[75px]" />
       <div aria-hidden className="pointer-events-none absolute -bottom-28 -left-16 h-60 w-[640px] rotate-[-11deg] rounded-[100%] border-t-[26px] border-[#03D3FF]/50 bg-[#087CEF]/15 blur-[9px]" />
       <div aria-hidden className="pointer-events-none absolute right-3 top-3 h-40 w-48 opacity-25" style={{ backgroundImage: "radial-gradient(#59B6FF 1px,transparent 1px)", backgroundSize: "13px 13px" }} />
@@ -34,9 +34,9 @@ export function PartnerAppPromo() {
         </div>
       </div>
 
-      <div className="relative z-10 grid flex-1 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(195px,0.78fr)] md:items-center">
+      <div className="relative z-10 grid flex-1 gap-5 grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))] items-center">
         <div className="min-w-0">
-          <h2 className="max-w-xl text-[clamp(28px,2.5vw,43px)] font-black leading-[1.09] tracking-tight">Get the INSUREIT <span className="block text-[#FFCE3A]">Partner App</span></h2>
+          <h2 className="max-w-xl text-[clamp(25px,2vw,36px)] font-black leading-[1.09] tracking-tight">Get the INSUREIT <span className="block text-[#FFCE3A]">Partner App</span></h2>
           <div className="mt-3 h-[3px] w-36 rounded-full bg-gradient-to-r from-[#04DBFE] to-transparent" />
           <p className="mt-4 max-w-md text-[14px] leading-6 text-[#EBF5FF]">Manage your insurance business anywhere, anytime.</p>
           <ul className="mt-6 space-y-3">
@@ -66,12 +66,12 @@ export function PartnerAppPromo() {
 
       <div className="relative z-10 mt-6 flex flex-wrap items-center gap-3 border-t border-white/20 pt-5">
         <a href={STORE_PLAY} target="_blank" rel="noopener noreferrer" aria-label="Download INSUREIT Partner from Google Play" className="flex min-h-[47px] items-center gap-2 rounded-lg border border-white/50 bg-black px-3 py-1.5 shadow-md transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
-          <span aria-hidden className="text-[24px] text-[#4EE4A1]">▶</span>
+          <svg aria-hidden="true" viewBox="0 0 48 48" className="h-7 w-7 shrink-0"><path fill="#00D7FE" d="M5 3v42l22-21z"/><path fill="#00F076" d="M5 3q2-2 5 0l25 14-8 7z"/><path fill="#FFCE00" d="M35 17l10 6q2 1 0 3l-10 6-8-8z"/><path fill="#F33C51" d="M5 45q2 2 5 0l25-13-8-8z"/></svg>
           <span className="leading-none"><span className="block text-[9px] tracking-[.03em]">GET IT ON</span><span className="mt-1 block text-[17px] font-semibold">Google Play</span></span>
           <ExternalLink aria-hidden className="h-3 w-3 opacity-70" />
         </a>
         <a href={STORE_APPLE} target="_blank" rel="noopener noreferrer" aria-label="Download INSUREIT Partner from Apple App Store" className="flex min-h-[47px] items-center gap-2 rounded-lg border border-white/50 bg-black px-3 py-1.5 shadow-md transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
-          <span aria-hidden className="text-[25px] font-semibold">●</span>
+          <svg aria-hidden="true" viewBox="0 0 48 48" className="h-7 w-7 shrink-0"><g fill="none" stroke="white" strokeWidth="5.5" strokeLinecap="round"><path d="M11 29h26M12 40l3-5M18 29 29 10M19 10l2.5 4.5M28 26l8 14"/></g></svg>
           <span className="leading-none"><span className="block text-[9px]">Download on the</span><span className="mt-1 block text-[17px] font-semibold">App Store</span></span>
           <ExternalLink aria-hidden className="h-3 w-3 opacity-70" />
         </a>

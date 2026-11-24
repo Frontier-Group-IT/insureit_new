@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AndroidStoreLaunch } from "./android-store-launch";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -15,7 +16,7 @@ const APP_STORE = "https://apps.apple.com/in/app/insureit-partner/id6822622280";
 export default async function PartnerAppDownloadPage() {
   const userAgent = (await headers()).get("user-agent") ?? "";
   if (/iPhone|iPad|iPod/i.test(userAgent)) redirect(APP_STORE);
-  if (/Android/i.test(userAgent)) redirect(GOOGLE_PLAY);
+  if (/Android/i.test(userAgent)) return <AndroidStoreLaunch webUrl={GOOGLE_PLAY} />;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(130deg,#061C4A,#075BC3)] px-4 py-12 text-white">
