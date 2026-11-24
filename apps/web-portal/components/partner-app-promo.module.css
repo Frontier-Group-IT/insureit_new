@@ -1,12 +1,7 @@
-.copy, .stores, .scan, .qr { display: none; }
-.shortcut { display: block; }
-@container (min-width: 180px) {
-  .copy, .qr { display: block; }
-  .shortcut { display: none; }
+.copy, .stores { display: none; }
+@container (min-width: 135px) {
+  .copy { display: block; }
 }
 @container (min-width: 285px) {
-  .stores { display: flex; }
-}
-@container (min-width: 350px) {
-  .scan { display: block; }
+  .stores { display: grid; }
 }
