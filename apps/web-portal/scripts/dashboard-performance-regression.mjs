@@ -124,5 +124,10 @@ console.log("Dashboard performance regression passed.");
   assert.ok(header.includes('containerType: "inline-size"'), "Promotion must adapt to actual available header width.");
   assert.ok(header.includes("xl:hidden") && header.includes('href="/download/partner"'), "Smaller screens must retain the download shortcut.");
   assert.ok(promoSource.includes("export function CompactPartnerAppPromo") && promoSource.includes("h-11 min-w-0 max-w-[370px]"), "Compact promotion must remain height bounded.");
-  assert.ok(promoSource.split("export function CompactPartnerAppPromo")[1].includes("d={qrPath}"), "Dashboard must reuse the existing QR matrix.");
+  const banner = promoSource.split("export function CompactPartnerAppPromo")[1].split("export function CompactPartnerAppQr")[0];
+  const qr = promoSource.split("export function CompactPartnerAppQr")[1];
+  assert.ok(!banner.includes("d={qrPath}") && qr.includes("d={qrPath}"), "QR must be separate while reusing the existing matrix.");
+  assert.ok(banner.includes("grid-cols-2") && !banner.includes("flex-col"), "Store buttons must use one row and two columns.");
+  assert.ok(header.indexOf("<CompactPartnerAppPromo />") < header.indexOf("<CompactPartnerAppQr />") && header.indexOf("<CompactPartnerAppQr />") < header.indexOf("Updated "), "QR must precede the existing right-side controls.");
+  assert.ok(header.includes("items-end justify-center xl:flex"), "Banner must center in the available header space.");
 }
