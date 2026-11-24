@@ -170,17 +170,8 @@ export async function openPolicyIntakeDocument(id:string){const profile=await re
 export async function loadPolicyIntakeOnboardingContext(id:string):Promise<{ok:true;context:PolicyIntakeOnboardingContext}|{ok:false;error:string}>{const profile=await requirePolicyIntakeFinalizer(id),admin=createSupabaseAdminClient();const{data}=await admin.from("policy_intake_requests").select("id,intake_number,submitted_by_profile_id,submitted_by_portal_account_id,lead_source_name,lead_source_type,customer_mobile,processing_lane").eq("id",id).maybeSingle<{id:string;intake_number:string;submitted_by_profile_id:string|null;submitted_by_portal_account_id:string|null;lead_source_name:string;lead_source_type:string;customer_mobile:string}>();if(!data)return{ok:false,error:"Policy Intake context is unavailable."};if(!["it_super_user","super_admin"].includes(profile.role??""))return{ok:false,error:"Only authorized IT/Admin may prepare automated Intake onboarding."};const submittedBy=await resolvePolicyIntakeSubmitterName(admin,data.submitted_by_profile_id,data.submitted_by_portal_account_id);return{ok:true,context:{id:data.id,number:data.intake_number,submittedBy,leadSource:data.lead_source_name,leadSourceType:data.lead_source_type.toUpperCase(),customerMobile:data.customer_mobile}};}
 
 export async function claimPolicyIntakeForReview(id:string){
-  const profile=await requirePolicyIntakeReviewer(id),admin=createSupabaseAdminClient();
-  const{data:intake,error:intakeError}=await admin.from("policy_intake_requests").select("id,intake_number,status,created_at,ocr_fields,processing_lane").eq("id",id).maybeSingle<{id:string;intake_number:string;status:string;created_at:string;ocr_fields:PolicyIntakeOcrField[]}>();
-  if(intakeError||!intake)return{ok:false as const,error:"This policy intake is unavailable. Refresh and try again."};
-  return{ok:false as const,error:"Use AI Policy Studio to review this Intake; manual claiming is disabled."};
-  const duplicateCheck=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
-  if(!duplicateCheck.ok)return{ok:false as const,error:duplicateCheck.error};
-  if(duplicateCheck.matches.has(id))return{ok:false as const,error:"This policy intake is a duplicate and cannot be claimed for review."};
-  let claim=admin.from("policy_intake_requests").update({status:"in_review",assigned_to_profile_id:profile.id,attention_reason:null}).eq("id",id).in("status",["ready_for_review","in_review","processing"]).or(`assigned_to_profile_id.is.null,assigned_to_profile_id.eq.${profile.id}`);
-  const{data,error}=await claim.select("id").maybeSingle<{id:string}>();if(error||!data)return{ok:false as const,error:"This intake is already assigned or belongs to AI Automation."};
-  if(intake.status!=="in_review") await recordDailyWorkflowActivity(admin,{actorId:profile.id,table:"policy_intake_requests",recordId:id,action:"policy_intake_review_started"});
-  revalidatePath(`/policy-intakes/${id}`);revalidatePath("/policy-intakes");return{ok:true as const};
+  await requirePolicyIntakeReviewer(id);
+  return {ok:false as const,error:"Manual Intake review is retired. Use AI Policy Studio."};
 }
 export async function updatePolicyIntakeStatus(id:string,status:"needs_attention"|"rejected",reason:string){const profile=await requirePolicyIntakeReviewer(id),clean=reason.trim();if(!clean)return{ok:false as const,error:"Add a short reason."};const admin=createSupabaseAdminClient();
   let manualStatus=admin.from("policy_intake_requests").update({status,attention_reason:clean,assigned_to_profile_id:profile.id}).eq("id",id).in("status",["processing","ready_for_review","in_review","needs_attention"]);
