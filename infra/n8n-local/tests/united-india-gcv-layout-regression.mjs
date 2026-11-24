@@ -84,18 +84,25 @@ assert.equal(katni.ok,true,katni.warnings.join('; '));
 assert.equal(value(katni,'vehicle_rto_name'),'KATNI');
 assert.equal(value(katni,'vehicle_registration_status'),'registered');
 
-for(const [name,text] of [
- ['unknown RTO',sample({authority:'UNKNOWN CITY INDIA'})],
+// RTO geography is optional: missing both, city-only, state-only, or unfamiliar
+// city must never cause a failed parser check by itself.
+for(const [label,options,city,state] of [
+ ['neither',{authority:'NOT PRINTED'},undefined,undefined],
+ ['city only',{authority:'KATNI ARTO INDIA'},'KATNI',undefined],
+ ['state only',{authority:'NOT PRINTED',registered:true},undefined,'Madhya Pradesh'],
+ ['new city',{authority:'RJ14 JAIPUR INDIA'},'JAIPUR',undefined],
+]){
+ const result=parse(sample(options));
+ assert.equal(result.ok,true,label+': '+result.warnings.join('; '));
+ assert.equal(value(result,'vehicle_rto_name'),city,label);
+ assert.equal(value(result,'vehicle_rto_state'),state,label);
+}
+for(const [label,pdf] of [
  ['tampered premium',sample({tamperNet:true})],
  ['missing chassis',sample({omitChassis:true})],
  ['unreconciled CPA',sample({omitCpa:true})],
  ['conflicting issue dates',sample({conflictingIssue:true})],
- ['spoofed insured city',sample({authority:'UNKNOWN LOCATION INDIA'})],
-]){
- const r=parse(text);
- assert.equal(r.ok,false,name+' must fail closed');
-}
-
+])assert.equal(parse(pdf).ok,false,label+' must fail closed');
 
 const privateCarText=[
  'UNITED INDIA INSURANCE COMPANY LIMITED','PRIVATE CAR -','PACKAGE POLICY',
@@ -121,6 +128,9 @@ const privateCarText=[
  'Gross OD & TP:','(A) + (B)','4,823.00',
  'Compulsory Personal Accident (CPA) cover is removed','Date of Issue: 23/11/2026'
 ].join('\n');
+const privateWithoutRto=parse(privateCarText.replace('MP20 JABALPUR INDIA','NOT PRINTED'));
+assert.equal(privateWithoutRto.ok,true,'missing Private Car RTO city must not block');
+assert.equal(value(privateWithoutRto,'vehicle_rto_name'),undefined);
 const privateCar=parse(privateCarText);
 assert.equal(privateCar.ok,true,privateCar.warnings.join('; '));
 assert.equal(privateCar.parser_id,'united_india_private_car_package_native_pdf');
@@ -136,7 +146,6 @@ for(const [name,pdf] of [
  ['altered NCB',privateCarText.replace('452.39','352.39')],
  ['missing CPA waiver',privateCarText.replace('Compulsory Personal Accident (CPA) cover is removed','')],
  ['tampered private tax',privateCarText.replace('IGST(18%): 868.00','IGST(18%): 768.00')],
- ['faked RTO from address',privateCarText.replace('MP20 JABALPUR INDIA','KATNI ARTO INDIA')],
  ['conflicting issue date',privateCarText+'\nDate of Issue: 24/11/2026'],
 ]){
  const r=parse(pdf);
@@ -152,7 +161,7 @@ for(const [label,r] of [['new petrol',goodsPetrol],['new diesel',goodsDiesel],['
 }
 const fakeAuthority=structuredClone(goodsPetrol);
 fakeAuthority.fields.find(f=>f.key==='vehicle_rto_name').evidence='Native PDF policy schedule';
-assert.equal(eligibility(fakeAuthority).eligible,false,'RTO name without authority label is not eligible');
+assert.equal(eligibility(fakeAuthority).eligible,true,'RTO name provenance is optional');
 const fakeCpa=structuredClone(goodsDiesel);
 fakeCpa.fields.find(f=>f.key==='cpa_premium').evidence='Unverified CPA';
 assert.equal(eligibility(fakeCpa).eligible,false,'CPA amount without source evidence is not eligible');
@@ -175,11 +184,11 @@ wrongSource.fields.find(f=>f.key==='vehicle_rto_name').evidence='Insured address
 assert.equal(assessUiicPrivateCarDirectConversion({
  parserId:wrongSource.parser_id,checksPassed:18,warnings:wrongSource.warnings,
  fields:wrongSource.fields,commercialPremium:wrongSource.premium_components,
-}).eligible,false);
+}).eligible,true,'RTO provenance cannot block conversion');
 const action=readFileSync(resolve(here,'../../../apps/web-portal/app/development/ai-policy-onboarding/actions.ts'),'utf8');
 assert.match(action,/reverifiedUiicExtraction=uiicFailedSource/);
 assert.match(action,/assessUiicGcvDirectConversion/);
 assert.match(action,/mapVerifiedUiicGcvCommercialPremium/);
 assert.match(action,/extracted\.preview\.documentId===queued\.document_id/);
 
-console.log('United India GCV: 4 real-layout-family synthetic positives, 12 parser hard negatives and source-gated 4 direct-convert positives passed');
+console.log('United India GCV: 4 layout families, optional RTO city/state combinations, strict financial negatives and source-gated conversion passed');
