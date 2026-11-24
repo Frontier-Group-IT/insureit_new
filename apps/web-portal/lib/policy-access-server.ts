@@ -51,5 +51,7 @@ export async function requirePolicyEditor(policyId?: string) {
   }
   const permission = await getEffectivePermission(profile.id, profile.role, "view_policies");
   if (accessRank[permission.access] < accessRank.edit) redirect("/access-denied");
+  const { usesLifeTeamPortfolio, canAccessPolicy } = await import("@/lib/policy-access-scope");
+  if (usesLifeTeamPortfolio(profile.id, profile.role) && (!policyId || !(await canAccessPolicy(profile.id, profile.role, policyId, "view_policies", true)))) redirect("/access-denied");
   return profile;
 }

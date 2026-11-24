@@ -1,5 +1,5 @@
 import "server-only";
-import { getLifeTeamPortfolioReadFilter, getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
+import { getLifeTeamPortfolioReadFilter, getLifeTeamPortfolioScope, getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -28,6 +28,7 @@ export type DashboardBusinessData = {
   topInsurers: DashboardBusinessRankRow[]; topProducers: DashboardBusinessRankRow[]; topGroups: DashboardBusinessRankRow[];
   commercial: { projectedPayin: number; tdsAmount: number; payinAfterTds: number; partnerPayout: number; retention: number; retentionRate: number; payinPolicies: number; payoutPolicies: number; needsReview: number; reconciliationExceptions: number } | null;
   warnings: string[];
+  lifeTeamProduction?: { teamPolicies: number; directPolicies: number; teamGross: number | null; directGross: number | null; rms: DashboardBusinessRankRow[] };
 };
 
 type PolicyRow = { id: string; premium_amount: number | string | null; vehicle_id: string | null; insurance_company_id: string | null; policy_type: string | null; business_line: string | null; issuance_date: string | null; created_at: string; intermediary_type: string | null; intermediary_code: string | null; lead_source: string | null; rm_employee_id: string | null; rm_name: string | null; intermediary_group_id: string | null; intermediary_group_name: string | null };
@@ -43,6 +44,7 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
   if (!profile?.id) return empty;
 
   const portfolioFilter = await getLifeTeamPortfolioReadFilter(profile.id, profile.role);
+  const portfolioScope = portfolioFilter !== null ? await getLifeTeamPortfolioScope(profile.id, profile.role) : null;
   const downlineFilter = portfolioFilter ?? (profile.role === "operations_head_life"
     ? operationsHeadVisiblePolicyFilter(await getOperationsHeadDownlinePolicyScope(profile.id))
     : null);
@@ -161,7 +163,24 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
     }
   }
 
+  const teamProduction = portfolioScope?.directEmployeeId ? (() => {
+    const directId = portfolioScope.directEmployeeId;
+    const team = filteredPolicies.filter(policy => policy.rm_employee_id !== directId);
+    const direct = filteredPolicies.filter(policy => policy.rm_employee_id === directId);
+    const gross = (rows: PolicyRow[]) => commercialAccess && rows.every(row => premiumByPolicy.has(row.id))
+      ? rows.reduce((sum, row) => sum + (premiumByPolicy.get(row.id)?.gross ?? 0), 0) : null;
+    const grouped = new Map<string, DashboardBusinessRankRow>();
+    for (const policy of team) {
+      const key = policy.rm_employee_id ?? "unassigned";
+      const row = grouped.get(key) ?? {key,label:clean(policy.rm_name) || "Unassigned",detail:null,policies:0,grossPremium:0};
+      row.policies++;
+      row.grossPremium += premiumByPolicy.get(policy.id)?.gross ?? 0;
+      grouped.set(key,row);
+    }
+    return {teamPolicies:team.length,directPolicies:direct.length,teamGross:gross(team),directGross:gross(direct),rms:[...grouped.values()].sort(rankByGrossPremium)};
+  })() : undefined;
   return {
+    lifeTeamProduction: teamProduction,
     filters, periodLabel: periodLabel(filters), periodShortLabel: periodShortLabel(filters), appliedFilterCount: appliedFilterCount(filters), options: buildOptions(allPolicies, insurerById, vehicleClassById), policyCount: filteredPolicies.length, incompletePolicies,
     activeProducerCount: new Set(filteredPolicies.map((row) => clean(row.intermediary_code)).filter(Boolean)).size, netPremium, grossPremium, averageGrossPremium: grossPremium !== null && filteredPolicies.length ? grossPremium / filteredPolicies.length : null,
     channelMix: mix(channel, commercialAccess), vehicleClassMix: mix(vehicleClass, commercialAccess), coverageMix: mix(coverage, commercialAccess), businessLineMix: mix(businessLine, commercialAccess),

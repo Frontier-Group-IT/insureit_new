@@ -102,14 +102,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const [data, business, proposalSummary, intakeAttention] = await Promise.all([
     getDashboardCurrentData(profile, access, base),
-    getDashboardBusinessData(profile, query, isDownlineHead || dashboardCommercialAccess, !isDownlineHead && dashboardCommercialOperationsAccess),
+    getDashboardBusinessData(profile, query, portfolioFilter !== null || isDownlineHead || dashboardCommercialAccess, !isDownlineHead && dashboardCommercialOperationsAccess),
     proposalSummaryRequest,
     intakeAttentionRequest,
   ]);
 
   return (
     <ClaimManagerShell title="Operations Overview" activeNav="dashboard">
-      {portfolioFilter !== null && <LifeTeamPortfolioSummary operations={isDownlineHead} summary={proposalSummary} />}
+      {portfolioFilter !== null && <LifeTeamPortfolioSummary operations={isDownlineHead} summary={proposalSummary} business={business} />}
       <DashboardFullyLoaded
         data={data}
         access={access}
