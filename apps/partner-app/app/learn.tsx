@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Animated, AppState, Easing, Image, Pressable, StyleSheet, Text, View, type ViewStyle, type TextStyle } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Animated, AppState, Easing, Image, Pressable, StyleSheet, Text, View, type ViewStyle, type TextStyle, type StyleProp } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
@@ -151,7 +151,7 @@ export default function LearnScreen() {
                 finished={Boolean(data.answered_today)}
                 submitting={submitting}
                 animate={animate}
-                fresh={Boolean(freshResult?.cardId === data.card.id && showAnswerFeedback)}
+                fresh={Boolean(freshResult?.cardId === data.card?.id && showAnswerFeedback)}
                 onChoose={() => {
                   if (data.answered_today || submitting) return;
                   setSelectedOptionKey(option.key);
@@ -220,7 +220,7 @@ function useEntrance(animate: boolean, delay = 0) {
 }
 
 function MotionEnter({ animate, delay = 0, children, style, accessibilityRole }: {
-  animate: boolean; delay?: number; children: ReactNode; style?: ViewStyle; accessibilityRole?: 'alert';
+  animate: boolean; delay?: number; children: ReactNode; style?: StyleProp<ViewStyle>; accessibilityRole?: 'alert';
 }) {
   const entrance = useEntrance(animate, delay);
   return <Animated.View accessibilityRole={accessibilityRole} style={[style, entrance]}>{children}</Animated.View>;
