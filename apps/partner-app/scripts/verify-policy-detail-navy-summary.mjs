@@ -28,17 +28,20 @@ assert.doesNotMatch(source, /quickGlyph/, 'QuickAction must not use generic vect
 assert.match(source, /iconKind="renew-policy" label="Renew Policy" onPress=\{\(\) => router\.push\('\/renewals'/, 'Renewal route remains unchanged');
 assert.match(source, /iconKind="raise-claim" label="Raise Claim" onPress=\{\(\) => router\.push\('\/claims'/, 'Claims route remains unchanged');
 assert.match(source,/PartnerCaseBottomNavigation activeTab="Policies"/,'Bottom navigation unchanged');
-// Only the information tiles retain their pastel fills; action and section headings are uncolored.
-for (const marker of ['styles.toneBlue', 'styles.tonePurple', 'styles.toneMint', 'styles.toneAmber', 'styles.toneRose']) {
-  assert.ok(source.includes(marker), 'Overview information tile treatment missing: ' + marker);
-}
-for (const obsolete of ['styles.quickDocument', 'styles.quickRenewal', 'styles.quickClaim', 'styles.quickCustomer', 'styles.policySectionHeaderTint']) {
-  assert.ok(!source.includes(obsolete), 'Obsolete colored action/header reference: ' + obsolete);
+// Approved reference replaces pastel tiles with neutral surfaces and unified blue section headers.
+assert.match(source, /<View style=\{styles.unifiedDetails\}>\s*<View style=\{styles.unifiedSection\}>/, 'One continuous white details container');
+assert.match(source, /sectionHeaderFill: \{ backgroundColor: '#E6EFF9' \}/, 'Reference blue heading fill');
+assert.match(source, /overviewItem: [^\n]*backgroundColor: '#FFFFFF'/, 'White outlined overview tiles');
+assert.match(source, /miniInfo: [^\n]*backgroundColor: '#F5F7FA'/, 'Neutral premium and sales tiles');
+assert.doesNotMatch(source, /styles\.tone(?:Blue|Purple|Mint|Amber|Rose)/, 'No multicoloured tiles');
+for (const obsolete of ['styles.quickDocument', 'styles.quickRenewal', 'styles.quickClaim', 'styles.quickCustomer']) {
+  assert.ok(!source.includes(obsolete), 'Obsolete colored action reference: ' + obsolete);
 }
 assert.match(source, /quickAction:\s*\{[\s\S]*?backgroundColor: 'transparent'/, 'Quick Action tiles are transparent');
-assert.match(source, /<View style=\{styles.externalSection\}>\s*<CardHeader iconKind="policy-overview" title="Policy Overview"/, 'Overview heading sits outside its content card');
-assert.match(source, /<View style=\{styles.externalSection\}>\s*<Pressable accessibilityRole="button" accessibilityState=\{\{ expanded: showPremiumDetails \}\}/, 'Premium disclosure is outside its detail card');
-assert.match(source, /<View style=\{styles.externalSection\}>\s*<Pressable accessibilityRole="button" accessibilityState=\{\{ expanded: showCommercialDetails \}\}/, 'Sales disclosure is outside its detail card');
-assert.doesNotMatch(source, /premiumDisclosure:[^\n]*backgroundColor:|commercialRow:[^\n]*backgroundColor:/, 'Premium and Sales headings must not have background colors');
-assert.doesNotMatch(source, /name="chevron-forward"/, 'Do not introduce arrows in the redesign');
-console.log('Navy Policy Details hero and original icons preserved; clean headings and transparent Quick Actions verified.');
+assert.match(source, /<View style=\{styles.unifiedSection\}>\s*<CardHeader iconKind="policy-overview" title="Policy Overview"/, 'Overview heading within unified card');
+assert.match(source, /<View style=\{styles.unifiedSection\}>\s*<Pressable accessibilityRole="button" accessibilityState=\{\{ expanded: showPremiumDetails \}\}/, 'Premium disclosure within unified card');
+assert.match(source, /<View style=\{styles.unifiedSection\}>\s*<Pressable accessibilityRole="button" accessibilityState=\{\{ expanded: showCommercialDetails \}\}/, 'Sales disclosure within unified card');
+assert.match(source, /premiumDisclosure:[^\n]*backgroundColor: '#E6EFF9'/, 'Premium header uses reference fill');
+assert.match(source, /commercialRow:[^\n]*backgroundColor: '#E6EFF9'/, 'Sales header uses reference fill');
+assert.match(source, /<Ionicons name="chevron-forward" size=\{13\} color="#0969CF"/, 'View All retains reference chevron');
+console.log('Navy Policy Details hero, original icons and unified reference design verified.');
