@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Modal, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Animated, Image, Modal, Platform, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { ActivityEmpty, ActivitySkeleton, MotionCard, MotionNumber, useActivityMotion } from '@/components/activity-motion';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
@@ -20,6 +22,24 @@ import { PartnerAssets } from '@/lib/partner-assets';
 
 export default function ActivityScreen() {
   const router = useRouter();
+  const { visible, motion } = useActivityMotion();
+  const bell = useRef(new Animated.Value(0)).current;
+  const menu = useRef(new Animated.Value(0)).current;
+  const searchFocus = useRef(new Animated.Value(0)).current;
+  const selection = useRef(new Animated.Value(2)).current;
+  const [tabWidth, setTabWidth] = useState(0);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const clearMotion = useRef(new Animated.Value(0)).current;
+  const [newKeys, setNewKeys] = useState<Set<string>>(new Set());
+  const previous = useRef<{period: PartnerActivityPeriod; keys: Set<string>; attention: Map<string, number>} | null>(null);
+  const [urgent, setUrgent] = useState<Set<string>>(new Set());
+  const newTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const busy = useRef(false);
+  const loaded = useRef(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
+  const pendingRead = useRef(new Set<string>());
   const { width: windowWidth } = useWindowDimensions();
   const periodTriggerRef = useRef<View>(null);
   const [periodMenuPosition, setPeriodMenuPosition] = useState({ top: 0, left: 0 });
@@ -30,41 +50,94 @@ export default function ActivityScreen() {
   const [activityFilter, setActivityFilter] = useState<'unread' | 'read' | 'all'>('all');
   const [period, setPeriod] = useState<PartnerActivityPeriod>('today');
   const [periodMenuOpen, setPeriodMenuOpen] = useState(false);
+  const closingMenu = useRef(false);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState('');
   const requestVersion = useRef(0);
   const [readKeys, setReadKeys] = useState<Set<string>>(new Set());
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (background = false) => {
+    if (background && (busy.current || !visibleRef.current || pendingRead.current.size)) return;
+    busy.current = true;
+    if (background) setRefreshing(true);
     const version = ++requestVersion.current;
-    setLoading(true);
-    setError('');
-    setMoreError('');
-    setHasMore(false);
+    if (!background) {
+      setLoadingMore(false);
+      setLoading(true);
+      setError('');
+      setMoreError('');
+      setHasMore(false);
+    }
     try {
       const nextData = await getPartnerActivityByPeriod(period);
       const nextReadKeys = await getPartnerActivityReadKeys(nextData.items);
+      if (background && (!visibleRef.current || pendingRead.current.size)) return;
       if (requestVersion.current !== version) return;
+      const keys = new Set(nextData.items.map(partnerActivityEventKey));
+      const attention = new Map(nextData.attention.map(item => [item.kind + ':' + item.route, item.count]));
+      const prior = previous.current;
+      if (prior?.period === period && background) {
+        const added = nextData.items.map(partnerActivityEventKey).filter(key => !prior.keys.has(key) && !nextReadKeys.has(key));
+        const alerts = nextData.attention.filter(item => item.count > (prior.attention.get(item.kind + ':' + item.route) ?? 0) && ['due', 'expired'].includes(attentionStatus(item.title) ?? '')).map(item => item.kind + ':' + item.route);
+        if (added.length || alerts.length) {
+          setNewKeys(new Set(added)); setUrgent(new Set(alerts));
+          if (newTimer.current) clearTimeout(newTimer.current);
+          newTimer.current = setTimeout(() => { setNewKeys(new Set()); setUrgent(new Set()); }, 2300);
+        }
+      }
+      previous.current = { period, keys, attention };
+      loaded.current = true;
       setData(nextData);
       setReadKeys(nextReadKeys);
       setHasMore(nextData.has_more);
     } catch {
       if (requestVersion.current !== version) return;
-      setData(null);
-      setError('Recent activity could not be loaded.');
+      if (!background) { setData(null); setError('Recent activity could not be loaded.'); }
     } finally {
-      if (requestVersion.current === version) setLoading(false);
+      if (requestVersion.current === version) { setLoading(false); setRefreshing(false); busy.current = false; }
     }
   }, [period]);
 
   useEffect(() => {
     void load();
-    return () => { requestVersion.current += 1; };
+    return () => { requestVersion.current += 1; busy.current = false; };
   }, [load]);
 
+  // Refresh only on the visible screen; do not replace a paginated history with its first page.
+  useEffect(() => {
+    if (!visible || !loaded.current || !data || loading || loadingMore || hasMore || data.items.length >= 100) return;
+    const timer = setInterval(() => { void load(true); }, 60000);
+    return () => clearInterval(timer);
+  }, [visible, loading, loadingMore, hasMore, data?.items.length, load]);
+  useEffect(() => () => { if (newTimer.current) clearTimeout(newTimer.current); menu.stopAnimation(); }, [menu]);
+  useEffect(() => {
+    if (!motion || !newKeys.size) { bell.setValue(0); return; }
+    const animation = Animated.sequence([0.8, -0.65, 0.35, 0].map(toValue => Animated.spring(bell, { toValue, stiffness: 220, damping: 20, mass: 0.6, useNativeDriver: Platform.OS !== 'web', isInteraction: false })));
+    animation.start(); return () => { animation.stop(); bell.setValue(0); };
+  }, [motion, newKeys, bell]);
+  useEffect(() => {
+    const animation = Animated.spring(selection, { toValue: activityFilter === 'unread' ? 0 : activityFilter === 'read' ? 1 : 2, stiffness: 220, damping: 24, mass: 0.8, useNativeDriver: Platform.OS !== 'web', isInteraction: false });
+    if (motion) animation.start(); else selection.setValue(activityFilter === 'unread' ? 0 : activityFilter === 'read' ? 1 : 2);
+    return () => animation.stop();
+  }, [motion, activityFilter, selection]);
+  useEffect(() => {
+    const animation = Animated.timing(searchFocus, { toValue: searchFocused ? 1 : 0, duration: motion ? 180 : 0, useNativeDriver: Platform.OS !== 'web', isInteraction: false });
+    animation.start(); return () => animation.stop();
+  }, [motion, searchFocused, searchFocus]);
+  useEffect(() => {
+    const animation = Animated.timing(clearMotion, { toValue: query ? 1 : 0, duration: motion ? 160 : 0, useNativeDriver: Platform.OS !== 'web', isInteraction: false });
+    animation.start(); return () => animation.stop();
+  }, [Boolean(query), motion, clearMotion]);
+  useEffect(() => {
+    if (!periodMenuOpen) { menu.setValue(0); return; }
+    const animation = Animated.spring(menu, { toValue: 1, stiffness: 210, damping: 22, useNativeDriver: Platform.OS !== 'web', isInteraction: false });
+    if (motion) animation.start(); else menu.setValue(1);
+    return () => animation.stop();
+  }, [periodMenuOpen, motion, menu]);
+
   async function loadMore() {
-    if (!data || !hasMore || loadingMore || loading) return;
+    if (!data || !hasMore || loadingMore || loading || refreshing) return;
     const version = requestVersion.current;
     setLoadingMore(true);
     setMoreError('');
@@ -113,9 +186,17 @@ export default function ActivityScreen() {
     });
   }, [activityFilter, data, query, readKeys]);
 
+  function closePeriodMenu(nextPeriod?: PartnerActivityPeriod) {
+    if (closingMenu.current) return;
+    const finish = () => { closingMenu.current = false; setPeriodMenuOpen(false); if (nextPeriod && nextPeriod !== period) { setLoading(true); setNewKeys(new Set()); setUrgent(new Set()); setPeriod(nextPeriod); } };
+    if (!motion) { finish(); return; }
+    closingMenu.current = true;
+    Animated.timing(menu, { toValue: 0, duration: 140, useNativeDriver: Platform.OS !== 'web', isInteraction: false }).start(({ finished }) => { if (finished) finish(); else closingMenu.current = false; });
+  }
+
   function togglePeriodMenu() {
     if (periodMenuOpen) {
-      setPeriodMenuOpen(false);
+      closePeriodMenu();
       return;
     }
     periodTriggerRef.current?.measureInWindow((x, y, _width, height) => {
@@ -123,6 +204,7 @@ export default function ActivityScreen() {
         top: y + height + 3,
         left: Math.max(8, Math.min(x, windowWidth - 160)),
       });
+      closingMenu.current = false;
       setPeriodMenuOpen(true);
     });
   }
@@ -132,6 +214,8 @@ export default function ActivityScreen() {
     const wasRead = readKeys.has(key);
 
     if (!wasRead) {
+      pendingRead.current.add(key);
+      if (busy.current && refreshing) { requestVersion.current += 1; busy.current = false; setRefreshing(false); }
       setReadKeys((current) => {
         const next = new Set(current);
         next.add(key);
@@ -143,7 +227,7 @@ export default function ActivityScreen() {
           next.delete(key);
           return next;
         });
-      });
+      }).finally(() => pendingRead.current.delete(key));
     }
 
     router.push(item.route as never);
@@ -157,6 +241,7 @@ export default function ActivityScreen() {
       navyStatusBar
       bottomNavigationNavy
       bottomNavigation={<PartnerCaseBottomNavigation activeTab="Home" />}
+      resetScrollOnFocus={false}
     >
       <View style={styles.hero}>
         <Pressable
@@ -168,7 +253,7 @@ export default function ActivityScreen() {
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </Pressable>
-        <Ionicons name="notifications-outline" size={23} color="#FFFFFF" style={styles.heroActivityIcon} />
+        <Animated.View style={{ transform: [{ rotate: bell.interpolate({ inputRange: [-1, 1], outputRange: ['-10deg', '10deg'] }) }] }}><Ionicons name="notifications-outline" size={23} color="#FFFFFF" style={styles.heroActivityIcon} /></Animated.View>
         <View style={styles.heroText}>
           <Text style={styles.heroTitle}>Activity</Text>
         </View>
@@ -176,7 +261,7 @@ export default function ActivityScreen() {
 
       <View style={styles.body}>
         {loading ? (
-          <PartnerStateView state="loading" title="Loading recent activity" />
+          <ActivitySkeleton motion={motion} />
         ) : error || !data ? (
           <PartnerStateView
             state="error"
@@ -191,14 +276,15 @@ export default function ActivityScreen() {
               <Text style={styles.sectionTitle}>Needs attention</Text>
             </View>
             <View style={styles.attentionList}>
-              {data.attention.slice(0, 3).map((item) => {
+              {data.attention.slice(0, 3).map((item, index) => {
                 const isRenewal = item.kind === 'renewal' || /renewal/i.test(item.title);
                 const isClaim = item.kind === 'claim' || /claim/i.test(item.title);
                 const tint = isRenewal ? 'renewal' : isClaim ? 'claim' : 'other';
                 const status = attentionStatus(item.title);
                 return (
-                  <Pressable
-                    key={`${item.kind}-${item.title}`}
+                  <MotionCard
+                    motion={motion} delay={index * 100} highlight={urgent.has(item.kind + ':' + item.route)} highlightColor={status === 'expired' ? '#DC3545' : status === 'due' ? '#C56B12' : '#16834B'}
+                    key={`${item.kind}-${item.route}`}
                     accessibilityRole="button"
                     accessibilityLabel={`${item.title}. ${item.subtitle}`}
                     onPress={() => router.push(item.route as never)}
@@ -238,10 +324,10 @@ export default function ActivityScreen() {
                         status === 'active' ? styles.attentionTitleActive
                           : status === 'due' ? styles.attentionTitleDue
                             : status === 'expired' ? styles.attentionTitleExpired : null,
-                      ]}>{item.title}</Text>
-                      <Text style={styles.attentionText}>{item.subtitle}</Text>
+                      ]}><MotionNumber motion={motion} text={item.title} count={item.count} /></Text>
+                      <Text style={styles.attentionText}><MotionNumber motion={motion} text={item.subtitle} currencyOnly /></Text>
                     </View>
-                  </Pressable>
+                  </MotionCard>
                 );
               })}
             </View>
@@ -260,15 +346,17 @@ export default function ActivityScreen() {
               style={styles.periodTrigger}
             >
               <Text style={styles.today}>{period === 'today' ? 'Today' : period === 'last_week' ? 'Last Week' : period === 'last_month' ? 'Last Month' : 'All'}</Text>
-              <Ionicons name="chevron-down" size={13} color="#8390AA" />
+              <Animated.View style={{ transform: [{ rotate: menu.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }] }}><Ionicons name="chevron-down" size={13} color="#8390AA" /></Animated.View>
             </Pressable>
           </View>
 
           <View style={styles.searchWrap}>
-            <Ionicons name="search-outline" size={20} color="#61728A" />
+            <Animated.View pointerEvents="none" style={[styles.searchGlow, { opacity: searchFocus }]} />
+            <Animated.View style={{ transform: [{ scale: searchFocus.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }] }}><Ionicons name="search-outline" size={20} color="#61728A" /></Animated.View>
             <TextInput
               value={query}
               onChangeText={setQuery}
+              onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)}
               placeholder="Search all activity..."
               placeholderTextColor="#8390A4"
               autoCapitalize="none"
@@ -285,12 +373,13 @@ export default function ActivityScreen() {
                 onPress={() => setQuery('')}
                 style={styles.searchClear}
               >
-                <Ionicons name="close-circle-outline" size={18} color="#96A1B2" />
+                <Animated.View style={{ opacity: clearMotion }}><Ionicons name="close-circle-outline" size={18} color="#96A1B2" /></Animated.View>
               </Pressable>
             ) : null}
           </View>
 
-          <View style={styles.filterTabs}>
+          <View style={styles.filterTabs} onLayout={event => setTabWidth((event.nativeEvent.layout.width - 2) / 3)}>
+            {tabWidth > 0 ? <Animated.View pointerEvents="none" style={[styles.slidingTab, { width: tabWidth, transform: [{ translateX: Animated.multiply(selection, tabWidth) }] }]}><View style={styles.filterIndicator} /></Animated.View> : null}
             {([
               ['unread', 'Unread', counts.unread],
               ['read', 'Read', counts.read],
@@ -302,13 +391,13 @@ export default function ActivityScreen() {
                   key={key}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
-                  onPress={() => setActivityFilter(key)}
-                  style={[styles.filterTab, active && styles.filterTabActive]}
+                  onPress={() => { if (key !== activityFilter && Platform.OS !== 'web') void Haptics.selectionAsync().catch(() => {}); setActivityFilter(key); }}
+                  style={[styles.filterTab, tabWidth > 0 ? { backgroundColor: 'transparent' } : active && styles.filterTabActive]}
                 >
                   <Text style={[styles.filterTabText, active && styles.filterTabTextActive]}>
-                    {label} ({count})
+                    {label} (<MotionNumber motion={motion} text={String(count)} count={count} />)
                   </Text>
-                  {active ? <View style={styles.filterIndicator} /> : null}
+                  {active && !tabWidth ? <View style={styles.filterIndicator} /> : null}
                 </Pressable>
               );
             })}
@@ -316,13 +405,14 @@ export default function ActivityScreen() {
 
           {filteredItems.length ? (
             <View style={styles.activityList}>
-              {filteredItems.map((item) => {
+              {filteredItems.map((item, index) => {
                 const isUnread = !readKeys.has(partnerActivityEventKey(item));
                 const logo = item.kind === 'claim'
                   ? getPartnerManufacturerLogoSource(item.manufacturer)
                   : getPartnerInsurerLogoSource(item.meta);
                 return (
-                  <Pressable
+                  <MotionCard
+                    motion={motion && index < 8} delay={Math.min(index, 7) * 80} highlight={isUnread && newKeys.has(partnerActivityEventKey(item))} highlightColor="#3478C5"
                     key={`${item.kind}-${item.entity_id}-${item.event_at}`}
                     onPress={() => openActivity(item)}
                     style={[styles.itemCard, isUnread && styles.itemCardUnread]}
@@ -353,13 +443,13 @@ export default function ActivityScreen() {
                         </View>
                       </View>
                     </View>
-                  </Pressable>
+                  </MotionCard>
                 );
               })}
             </View>
           ) : (
-            <PartnerStateView
-              state="empty"
+            <ActivityEmpty
+              key={`${period}-${activityFilter}-${Boolean(query)}`} motion={motion}
               asset={PartnerAssets.status.announcement}
               title={query ? "No matching activity" : activityFilter === "unread" ? "No unread activity" : activityFilter === "read" ? "No read activity" : "No recent activity"}
               message={query ? "Try another search term or activity filter." : activityFilter === "unread" ? "You are caught up. New activity will appear here." : "New policy, claim, intake and learning events will appear here when they are recorded."}
@@ -385,18 +475,18 @@ export default function ActivityScreen() {
         transparent
         statusBarTranslucent
         animationType="none"
-        onRequestClose={() => setPeriodMenuOpen(false)}
+        onRequestClose={() => closePeriodMenu()}
       >
         <View style={styles.periodModalLayer}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Close activity date filter"
-            onPress={() => setPeriodMenuOpen(false)}
+            onPress={() => closePeriodMenu()}
             style={StyleSheet.absoluteFillObject}
           />
-          <View
+          <Animated.View
             accessibilityViewIsModal
-            style={[styles.periodMenu, { top: periodMenuPosition.top, left: periodMenuPosition.left }]}
+            style={[styles.periodMenu, { top: periodMenuPosition.top, left: periodMenuPosition.left, opacity: menu, transform: [{ translateY: menu.interpolate({ inputRange: [0, 1], outputRange: [-4, 0] }) }] }]}
           >
             {([
               ['today', 'Today'],
@@ -408,14 +498,14 @@ export default function ActivityScreen() {
                 key={key}
                 accessibilityRole="button"
                 accessibilityState={{ selected: period === key }}
-                onPress={() => { setPeriodMenuOpen(false); setPeriod(key); }}
+                onPress={() => closePeriodMenu(key)}
                 style={[styles.periodOption, period === key && styles.periodOptionSelected]}
               >
                 <Text style={[styles.periodOptionText, period === key && styles.periodOptionTextSelected]}>{label}</Text>
                 {period === key ? <Ionicons name="checkmark" size={15} color="#236FB8" /> : null}
               </Pressable>
             ))}
-          </View>
+          </Animated.View>
         </View>
       </Modal>
     </PartnerScreen>
@@ -669,6 +759,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
   },
+  searchGlow: { ...StyleSheet.absoluteFillObject, borderRadius: 14, borderWidth: 1, borderColor: '#77B5F5' },
+  slidingTab: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#EEF4FD' },
   filterTabActive: {
     backgroundColor: '#EEF4FD',
   },
