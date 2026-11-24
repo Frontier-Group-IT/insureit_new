@@ -408,7 +408,7 @@ for (const required of [
   'const journeyArtworkHeight = Math.max(100, 304 - artworkReduction);',
   'Math.ceil(storyMeasuredHeight - storyViewportHeight)',
   'Math.min(204, current + Math.min(overflow, 204 - current))',
-  '<ImpactStory story={story} onOpen={openStory} artworkHeight={artworkHeight} />',
+  '<ImpactStory story={story} onOpen={openStory} artworkHeight={artworkHeight} clock={impactClock} onPause={setImpactPaused} />',
   '<JourneyMilestoneStory story={story} artworkHeight={journeyArtworkHeight} />',
   'style={[styles.todayArtWrap, { height: artworkHeight }]}',
   'style={[styles.businessGrowth3dArtwork, { height: artworkHeight }]}',
@@ -432,8 +432,8 @@ for (const snippet of [
 // Stories reference: continuous illustrated slide, not the former floating card.
 for (const [fragment, reason] of [
   ['style={styles.storyBackdrop}', 'Stories use a shared blue curved canvas'],
-  ['style={styles.waveUpper}', 'Header wave is integrated with the story'],
-  ['style={styles.waveMiddle}', 'Blue-white flowing background continues behind story copy'],
+  ['style={[styles.waveUpper,', 'Header wave is integrated with the story'],
+  ['style={[styles.waveMiddle,', 'Blue-white flowing background continues behind story copy'],
   ['style={styles.lessonBadge}', 'Eyebrow is a centered rounded badge'],
   ['style={styles.titleRule}', 'Centered title has the reference underline'],
   ['style={styles.body}', 'Story question is centered'],
@@ -446,7 +446,7 @@ for (const [fragment, reason] of [
   ["onPress={openStory}", 'Story title retains navigation'],
   ['onTouchStart={handleStoryTouchStart}', 'Story taps are observed without blocking native scrolling'],
   ['onTouchEnd={handleStoryTouchEnd}', 'Story taps navigate when the finger is released'],
-  ['onScrollBeginDrag={() => { navigationTouch.current = null; }}', 'Scrolling cancels pending tap navigation'],
+  ['onScrollBeginDrag={() => { navigationTouch.current = null; setImpactPaused(false); }}', 'Scrolling cancels pending tap navigation'],
   ['event.stopPropagation()', 'Story links do not trigger next or previous on tap'],
   ['if (event.nativeEvent.pageX < windowWidth / 2) previous();', 'Left-side taps navigate backwards'],
   ['else next();', 'Right-side taps navigate forwards'],
@@ -511,7 +511,7 @@ for (const marker of [
   '<StoryHeading icon="people" title={story.eyebrow} tone="violet" />',
   '<StoryHeading icon="stats-chart-outline" title={story.eyebrow} />',
   '<StoryHeading icon="time-outline" title={story.eyebrow} tone="green" />',
-  'function ImpactStory({ story, onOpen, artworkHeight }',
+  'function ImpactStory({ story, onOpen, artworkHeight, clock, onPause }',
   'function LearnStory({ story, onOpen, artworkHeight }',
   'function StoryPanel({ children, impact = false }',
   'style={[styles.unifiedPanel, impact && styles.impactPanel]}',
@@ -1648,3 +1648,7 @@ if (policies.includes("setDraftPeriod(value);setDraftLifecycle('all');")) {
 if (policies.includes("SortPurpleGradient") || policies.includes("sortPurpleGradient") || policies.includes('name="checkmark-circle" size={21}')) {
   throw new Error('Sort sheet must not use striped gradient pieces or the period checkmark');
 }
+
+const impactMotion = read('components/impact-story-motion.tsx');
+for (const marker of ['IMPACT_REVEAL_MS = 2800', 'reduceMotionChanged', 'AppState.addEventListener', 'time.stopAnimation', 'ambient.stopAnimation', 'clock.time.removeListener']) requireText(impactMotion, marker, 'Impact timeline lifecycle: ' + marker);
+for (const marker of ['start={200} duration={1400}', 'reveal(clock, 500, 800)', 'reveal(clock, 800, 1100)', 'reveal(clock, 1200, 1600', 'inputRange:[2000,2250,2500]', 'tabular-nums']) requireText(stories, marker, 'Impact cinematic timing: ' + marker);
