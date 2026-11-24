@@ -53,6 +53,7 @@ export default function AiPolicyStudioScreen() {
   const [debouncedSearch,setDebouncedSearch]=useState('');
   const [searchRows,setSearchRows]=useState<AiStudioRow[]|null>(null);
   const [searchLoading,setSearchLoading]=useState(false);
+  const [searchRevision,setSearchRevision]=useState(0);
   const [searchError,setSearchError]=useState('');
   const searchGeneration=useRef(0);
   const [reduceMotion,setReduceMotion]=useState(true);
@@ -75,6 +76,9 @@ export default function AiPolicyStudioScreen() {
     try {
       const next=await loadAiStudioPage(filter,pageIndex*PAGE_SIZE,PAGE_SIZE);
       if(token!==sequence.current)return;
+      if(pageIndex>0 && next.counts[filter] <= pageIndex*PAGE_SIZE){
+        setPageIndex(Math.max(0,Math.ceil(next.counts[filter]/PAGE_SIZE)-1));return;
+      }
       setPage(next);
     } catch(e) {
       if(token===sequence.current) setError(e instanceof Error?e.message:'Could not load the queue.');
@@ -83,9 +87,9 @@ export default function AiPolicyStudioScreen() {
     }
   },[allowed,filter,pageIndex]);
   useFocusEffect(useCallback(()=>{
-    void reload();
+    if(!debouncedSearch)void reload();
     return ()=>{sequence.current++;detailSequence.current++;};
-  },[reload]));
+  },[reload,debouncedSearch]));
   useEffect(()=>{
     if(!selected||!allowed){setDetail(null);return;}
     const token=++detailSequence.current;
@@ -138,18 +142,19 @@ export default function AiPolicyStudioScreen() {
         if(token!==searchGeneration.current)return;
         setSearchRows(all.filter(row=>[row.intake_number,row.lead_source_name,row.policy_type,row.status,row.queue_state].some(value=>value?.toLowerCase().includes(debouncedSearch))));
       }catch(e){if(token===searchGeneration.current)setSearchError(e instanceof Error?e.message:'Intake search could not be completed.');}
-      finally{if(token===searchGeneration.current)setSearchLoading(false);}
+      finally{if(token===searchGeneration.current){setSearchLoading(false);setRefreshing(false);}}
     })();
     return ()=>{searchGeneration.current++;};
-  },[debouncedSearch,filter,allowed]);
+  },[debouncedSearch,filter,allowed,searchRevision]);
   const matchingCount=debouncedSearch?(searchRows?.length??0):count(filter);
   const totalPages=Math.max(1,Math.ceil(matchingCount/PAGE_SIZE));
   const displayedRows=debouncedSearch?(searchRows??[]).slice(pageIndex*PAGE_SIZE,(pageIndex+1)*PAGE_SIZE):page.rows;
   const changePage=(next:number)=>{
     if(next<0||next>=totalPages||next===pageIndex)return;
+    if(!debouncedSearch)setLoading(true);
     setPageIndex(next);
   };
-  const refresh=()=>{setRefreshing(true);void reload();};
+  const refresh=()=>{setRefreshing(true);if(debouncedSearch)setSearchRevision(v=>v+1);else void reload();};
   const closeDetail=()=>{if(actionBusy)return;setSelected(null);setPendingAction(null);setActionError('');setResultUncertain(false);setFieldExpanded(false);};
   const openDetail=(row:AiStudioRow)=>{setSelected(row);setFieldExpanded(false);setActionError('');setResultUncertain(false);};
   const reloadSelected=async()=>{
