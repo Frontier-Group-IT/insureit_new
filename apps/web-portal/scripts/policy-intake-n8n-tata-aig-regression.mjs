@@ -91,6 +91,7 @@ invalid(withVehicle({"vehicle_registration_number":"WB08H0751","vehicle_rto_stat
 // receipt day but no separate Policy Issue Date label. Under the approved
 // insurer-specific mapping, retain source evidence and verify receipt match.
 const receiptBased=copy(packageDiesel);
+receiptBased.premium_components.receipt_date="2026-11-25";
 const receiptDay=receiptBased.premium_components.receipt_date;
 assert.match(receiptDay,/^20\d{2}-\d{2}-\d{2}$/);
 receiptBased.fields.push({
