@@ -13,6 +13,7 @@ export function useImpactTimeline(active: boolean, paused: boolean) {
   const ambient = useRef(new Animated.Value(0)).current;
   const elapsed = useRef(0);
   const phase = useRef(0);
+  const direction = useRef(1);
   const begun = useRef(false);
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -24,7 +25,7 @@ export function useImpactTimeline(active: boolean, paused: boolean) {
   }, []);
   useEffect(() => {
     if (!active) {
-      begun.current = false; elapsed.current = 0; phase.current = 0; setReady(false);
+      begun.current = false; elapsed.current = 0; phase.current = 0; direction.current = 1; setReady(false);
       time.setValue(IMPACT_REVEAL_MS); ambient.setValue(0); return;
     }
     if (reduced !== false) {
@@ -40,9 +41,9 @@ export function useImpactTimeline(active: boolean, paused: boolean) {
     setReady(true);
     const runAmbient = () => {
       if (!live) return;
-      const end = phase.current < 0.5 ? 1 : 0;
+      const end = direction.current;
       Animated.timing(ambient, { toValue: end, duration: Math.max(1, Math.abs(end - phase.current) * 2600), easing: Easing.linear, useNativeDriver: native, isInteraction: false }).start(({ finished }) => {
-        if (finished && live) { phase.current = end; runAmbient(); }
+        if (finished && live) { phase.current = end; direction.current = end === 1 ? 0 : 1; runAmbient(); }
       });
     };
     const remaining = Math.max(0, IMPACT_REVEAL_MS - elapsed.current);
@@ -71,6 +72,7 @@ export function ImpactCounter({ clock, value, start, duration, format, ...props 
       const t = Math.max(0, Math.min(1, (ms - start) / duration));
       if (ms - last >= 40 || t === 1 || ms < last) { last = ms; setShown(value * Easing.out(Easing.cubic)(t)); }
     };
+    setShown(0);
     const id = clock.time.addListener(({ value: ms }) => update(ms));
     return () => clock.time.removeListener(id);
   }, [clock.enabled, clock.time, value, start, duration]);
