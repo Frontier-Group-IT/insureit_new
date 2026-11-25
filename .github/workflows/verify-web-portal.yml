@@ -59,6 +59,8 @@ jobs:
         run: node scripts/held-insurer-canonical-convert-regression.mjs
       - name: Held Magma National Oriental source admission strict regression
         run: node scripts/held-insurer-source-admission-regression.mjs
+      - name: Held insurer queue OEM and SAOD review semantics
+        run: node --experimental-strip-types scripts/held-intake-queue-semantic-regression.mjs
       - name: UIIC Chandigarh source-evidence and MP parity regression
         run: node scripts/uiic-chandigarh-source-regression.mjs
       - name: UIIC Punjab BharatBenz split CGST/SGST source regression
