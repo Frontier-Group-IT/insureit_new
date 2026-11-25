@@ -117,3 +117,20 @@ assert(adapter.includes('INSUREIT_ENABLE_HELD_INSURER_CANDIDATES === "1"'),"Cand
 assert(adapter.includes("assessHeldInsurerCandidate(verifiedPayload,ids)"),"Candidate response must undergo strict admission");
 assert(adapter.includes("verifyOrientalCmsSigningDate(new Uint8Array(await file.arrayBuffer()))"),"Oriental date must be verified from exact source bytes");
 assert(adapter.includes("candidateCanonicalPremium:decision.canonicalPremium"),"Source-certified CPA split must survive adapter");
+
+const classifierSource=adapter.slice(adapter.indexOf("function insurerForText("),
+  adapter.indexOf("/** Recognize only printed, trained native-PDF layouts."));
+const callable=ts.transpileModule(classifierSource+";exports.classifier=insurerForText;",{
+  compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
+function routePdf(head,enabled){
+  const scope={};
+  new Function("exports","recognizeHeldInsurerLayout","process",callable)(
+    scope,classify,{env:{INSUREIT_ENABLE_HELD_INSURER_CANDIDATES:enabled?"1":"0"}});
+  return scope.classifier(head);
+}
+const orientalGccv='THE ORIENTAL INSURANCE COMPANY LIMITED GCCV-PUBLIC CARRIERS OTHER THAN THREE WHEELERS PACKAGE POLICY';
+assert.equal(routePdf(orientalGccv,true),"oriental_gccv_package_native_pdf","Exact new layout uses only new classifier");
+assert.equal(routePdf(orientalGccv,false),"oriental_gccv_native_pdf","Disabled flag preserves legacy Oriental classifier");
+assert.equal(routePdf("THE ORIENTAL INSURANCE COMPANY LIMITED STANDALONE OWN DAMAGE(OD)-PRIVATE CAR POLICY",true),
+ "oriental_private_car_standalone_od_native_pdf");
+
