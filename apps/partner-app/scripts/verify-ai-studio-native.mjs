@@ -139,3 +139,16 @@ const sample=[{key:'idv',value:'123'},{key:'od_premium',value:'0'},{key:'insured
 assert.equal(JSON.stringify(tileContext.rows(sample).flat()),JSON.stringify(sample));
 assert(tileContext.rows(sample).every(row=>row.length<=3));
 assert.equal(tileContext.rows(sample).find(row=>row.some(f=>f.key==='policy_number')).length,1);
+
+assert.match(screen, /heroTypePosition/, 'Policy type stays at the top-right of the hero');
+assert.match(screen, /isIntakeVerified\(detail\)\?/, 'Green name verification is conditional on verified status and no errors');
+assert.match(screen, /'checkmark-circle'|name="checkmark-circle"/, 'Green verified icon is in the hero');
+assert.match(screen, /Policy PDF uploaded/, 'PDF step shows inline secondary detail');
+assert.match(screen, /fields extracted/, 'Extracted step shows inline field count');
+assert.match(screen, /numberOfLines=\{1\} ellipsizeMode="tail"/, 'Disabled security notice is compact and single line');
+assert.match(screen, /function SectionedIntakeFields/, 'Expandable sectioned fields are present');
+assert.match(screen, /function intakeFieldGroup/, 'Returned fields are categorized without made-up values');
+assert.match(screen, /detail\.fields\.filter\(field=>intakeFieldGroup\(field\.key\)===group\.id\)/, 'Grouping preserves all returned field values');
+assert.match(screen, /Additional Extracted Fields/, 'Unknown fields remain available');
+assert.match(screen, /accessibilityState=\{\{expanded:open\}\}/, 'Field groups have accessible toggle state');
+assert.match(screen, /Secure actions unlock after authenticated booking checks/, 'No booking permissions changed');
