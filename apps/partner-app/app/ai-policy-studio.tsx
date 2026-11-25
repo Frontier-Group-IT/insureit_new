@@ -59,7 +59,6 @@ export default function AiPolicyStudioScreen() {
   const [actionError,setActionError]=useState('');
   const [resultUncertain,setResultUncertain]=useState(false);
   const [fieldExpanded,setFieldExpanded]=useState(false);
-  const [detailMenu,setDetailMenu]=useState(false);
   const [copied,setCopied]=useState(false);
   useEffect(()=>{if(!copied)return;const timer=setTimeout(()=>setCopied(false),1800);return ()=>clearTimeout(timer);},[copied]);
   const sequence=useRef(0);
@@ -170,8 +169,8 @@ export default function AiPolicyStudioScreen() {
     setPageIndex(next);
   };
   const refresh=()=>{setRefreshing(true);if(debouncedSearch)setSearchRevision(v=>v+1);else void reload();};
-  const closeDetail=()=>{if(actionBusy)return;setDetailMenu(false);setCopied(false);setSelected(null);setPendingAction(null);setActionError('');setResultUncertain(false);setFieldExpanded(false);};
-  const openDetail=(row:AiStudioRow)=>{setDetailMenu(false);setCopied(false);setSelected(row);setFieldExpanded(false);setActionError('');setResultUncertain(false);};
+  const closeDetail=()=>{if(actionBusy)return;setCopied(false);setSelected(null);setPendingAction(null);setActionError('');setResultUncertain(false);setFieldExpanded(false);};
+  const openDetail=(row:AiStudioRow)=>{setCopied(false);setSelected(row);setFieldExpanded(false);setActionError('');setResultUncertain(false);};
   const reloadSelected=async()=>{
     if(!selected||actionBusy)return;
     const intakeId=selected.id;
@@ -365,27 +364,24 @@ export default function AiPolicyStudioScreen() {
         {/* The full-screen native Modal can report a zero top inset on its opening frame.
             Reuse the already-measured screen inset instead of relying on the modal's
             own SafeAreaView to reposition the title after it becomes visible. */}
-        <SafeAreaView style={s.sheet} edges={['bottom']}>
-          <StatusBar style="dark" backgroundColor="#F7F9FD" />
-          <View style={[s.sheetTop,{paddingTop:insets.top}]}>
-            <Pressable style={s.detailCircle} onPress={closeDetail} disabled={actionBusy} accessibilityRole="button" accessibilityLabel="Back to intakes"><Ionicons name="arrow-back" color="#101A35" size={22}/></Pressable>
-            <Ionicons name="shield-checkmark" color="#0759EC" size={25}/>
+        <SafeAreaView style={s.sheet} edges={[]}>
+          <StatusBar style="light" backgroundColor="#071E49" />
+          <View style={[s.detailHeaderShell,{paddingTop:insets.top}]}>
+          <View style={s.sheetTop}>
+            <Pressable style={s.detailCircle} onPress={closeDetail} disabled={actionBusy} accessibilityRole="button" accessibilityLabel="Back to intakes"><Ionicons name="arrow-back" color="#FFFFFF" size={22}/></Pressable>
+            <Ionicons name="shield-checkmark" color="#9BC7FF" size={25}/>
             <View style={s.detailHeaderCopy}>
               <Text style={s.sheetTitle} accessibilityRole="header" numberOfLines={1}>Verified Intake</Text>
               <View style={s.intakeIdRow}><Text style={s.intakeId} selectable numberOfLines={1}>{selected?.intake_number.replace('PIR-','')}</Text>
-                <Pressable accessibilityRole="button" accessibilityLabel={copied?'Intake number copied':'Copy intake number'} hitSlop={8} onPress={()=>{if(selected){Clipboard.setString(selected.intake_number.replace('PIR-',''));setCopied(true);}}}><Ionicons name={copied?'checkmark':'copy-outline'} color="#435477" size={17}/></Pressable>
+                <Pressable accessibilityRole="button" accessibilityLabel={copied?'Intake number copied':'Copy intake number'} hitSlop={8} onPress={()=>{if(selected){Clipboard.setString(selected.intake_number.replace('PIR-',''));setCopied(true);}}}><Ionicons name={copied?'checkmark':'copy-outline'} color="#D4E3FF" size={17}/></Pressable>
               </View>
             </View>
-            <Pressable style={s.detailCircle} onPress={()=>setDetailMenu(v=>!v)} disabled={actionBusy} accessibilityRole="button" accessibilityLabel="More intake options" accessibilityState={{expanded:detailMenu}}><Ionicons name="ellipsis-horizontal" color="#101A35" size={22}/></Pressable>
-            <Pressable style={s.detailCircle} onPress={closeDetail} disabled={actionBusy} accessibilityRole="button" accessibilityLabel="Close details"><Ionicons name="close" color="#101A35" size={23}/></Pressable>
+            <Pressable style={s.detailCircle} onPress={closeDetail} disabled={actionBusy} accessibilityRole="button" accessibilityLabel="Close details"><Ionicons name="close" color="#FFFFFF" size={23}/></Pressable>
           </View>
-          {detailMenu?<View style={s.detailMenu}>
-            <Pressable accessibilityRole="button" disabled={actionBusy} style={s.menuItem} onPress={()=>{setDetailMenu(false);void reloadSelected();}}><Ionicons name="refresh-outline" size={19} color={C.blue}/><Text style={s.menuText}>Refresh intake details</Text></Pressable>
-            <Pressable accessibilityRole="button" style={s.menuItem} onPress={()=>{setDetailMenu(false);if(selected){Clipboard.setString(selected.intake_number.replace('PIR-',''));setCopied(true);}}}><Ionicons name="copy-outline" size={19} color={C.blue}/><Text style={s.menuText}>Copy intake number</Text></Pressable>
-          </View>:null}
+          </View>
           {detailLoading?<View style={s.center}><ActivityIndicator color={C.blue}/></View>:null}
           {detailError?<View style={s.center}><Text style={s.errorText}>{detailError}</Text></View>:null}
-          {detail?<ScrollView contentContainerStyle={s.sheetContent}>
+          {detail?<ScrollView style={s.scroll} contentContainerStyle={s.sheetContent} refreshControl={<RefreshControl refreshing={detailLoading} tintColor={C.blue} onRefresh={()=>void reloadSelected()}/>} >
             <View style={s.detailHero}>
               <View pointerEvents="none" style={s.heroGlow}/>
               {[0,1,2].map(i=><View key={i} pointerEvents="none" style={[s.detailWave,{right:-68+i*15,bottom:-88+i*14}]}/>)}
@@ -443,17 +439,15 @@ export default function AiPolicyStudioScreen() {
             </View>:null}
 
             <Pressable style={s.fieldsHeader} accessibilityRole="button" onPress={()=>setFieldExpanded(v=>!v)}><View style={s.fieldsIcon}><Ionicons name="document-text-outline" color={C.blue} size={20}/></View><View style={{flex:1}}><Text style={s.sectionTitle}>Extracted policy details</Text><Text style={s.meta}>{detail.fields.length} PDF fields</Text></View><View style={s.fieldsPill}><Text style={s.fieldsToggle}>{fieldExpanded?'Show less':'View all'}</Text><Ionicons name={fieldExpanded?'chevron-up':'chevron-forward'} size={17} color="#0759EC"/></View></Pressable>
-            {detail.fields.length>0?<View style={s.detailList}>
-              {(fieldExpanded?detail.fields:detail.fields.slice(0,8)).map((f,index)=><View key={f.key+String(index)} style={s.detailField}>
-                <Text style={s.fieldLabel}>{fieldName(f.key)}</Text>
-                <Text selectable style={s.fieldValue}>{f.value}</Text>
-              </View>)}
-            </View>:null}
+            {detail.fields.length>0?<ExtractedFieldTiles fields={fieldExpanded?detail.fields:detail.fields.slice(0,8)}/>:null}
 
             {!fieldExpanded&&detail.fields.length>8?<Pressable accessibilityRole="button" style={s.moreFields} onPress={()=>setFieldExpanded(true)}><Text style={s.moreFieldsText}>View {detail.fields.length-8} more fields</Text><Ionicons name="chevron-down" size={14} color={C.blue}/></Pressable>:null}
             <View style={s.safetyRow}><Ionicons name="shield-checkmark" color="#159B42" size={25}/><View style={s.safetyDivider}/><Text style={s.safetyText}>PDF extraction is not booking approval. Final registration always uses the protected onboarding service.</Text></View>
             <View pointerEvents="none" style={s.footerWaves}><View style={s.footerWaveOne}/><View style={s.footerWaveTwo}/></View>
-          </ScrollView>:null}
+          </ScrollView>:<View style={s.scroll}/>}
+          <View style={[s.bottomNavigationShell,{paddingBottom:insets.bottom}]}>
+            <PartnerCaseBottomNavigation activeTab="More" beforeNavigate={()=>{if(actionBusy)return false;closeDetail();return true;}} />
+          </View>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
@@ -473,6 +467,40 @@ function IntakeStepper({detail}:{detail:AiStudioDetail}){
     {([{label:'PDF',icon:'document-text-outline'},{label:'Extracted',icon:'scan-outline'},{label:'Review',icon:'shield-checkmark-outline'}] as const).map((step,index)=><View key={step.label} style={s.stepItem}>
       <View style={[s.stepCircle,index===active&&s.stepCircleActive]}><Ionicons name={step.icon} size={24} color={index===active?'#FFFFFF':'#435477'}/></View>
       <View style={[s.stepCaption,index===active&&s.stepCaptionActive]}><Text style={[s.stepCaptionText,index===active&&s.stepCaptionTextActive]}>{step.label}</Text></View>
+    </View>)}
+  </View>;
+}
+// Layout only: preserve source order, keys, values and duplicates. Long fields
+// get their own row; no guessed fields or financial calculations.
+function extractedFieldRows(fields:AiStudioDetail['fields']){
+  const rows:AiStudioDetail['fields'][]=[];
+  let short:AiStudioDetail['fields']=[];
+  for(const field of fields){
+    const wide=field.value.length>20||field.key.length>28||/^(insured_name|insurer_name|policy_number|vehicle_chassis_number|vehicle_engine_number)$/.test(field.key);
+    if(wide){if(short.length){rows.push(short);short=[];}rows.push([field]);}
+    else{short.push(field);if(short.length===3){rows.push(short);short=[];}}
+  }
+  if(short.length)rows.push(short);
+  return rows;
+}
+function extractedFieldIcon(key:string):keyof typeof Ionicons.glyphMap{
+  if(/premium|gst|tax|idv|amount|cpa/i.test(key))return 'wallet-outline';
+  if(/date|start|end|issued/i.test(key))return 'calendar-outline';
+  if(/insured|customer/i.test(key))return 'person-outline';
+  if(/insurer/i.test(key))return 'business-outline';
+  if(/vehicle|registration|chassis|engine|make|model/i.test(key))return 'car-outline';
+  return 'document-text-outline';
+}
+function ExtractedFieldTiles({fields}:{fields:AiStudioDetail['fields']}){
+  const rows=extractedFieldRows(fields);
+  return <View style={s.fieldTileGroups}>
+    {Array.from({length:Math.ceil(rows.length/2)},(_,group)=><View key={group} style={[s.fieldTileGroup,{backgroundColor:['#E9F1FC','#E5F5ED','#EFE9FD'][group%3]}]}>
+      {rows.slice(group*2,group*2+2).map((row,index)=><View key={index} style={s.fieldTileRow}>
+        {row.map((field,i)=><View key={field.key+':'+i} style={s.fieldTile}>
+          <View style={s.fieldTileLabelRow}><Ionicons name={extractedFieldIcon(field.key)} size={13} color="#315B87"/><Text style={s.fieldTileLabel}>{fieldName(field.key)}</Text></View>
+          <Text selectable style={s.fieldTileValue}>{field.value}</Text>
+        </View>)}
+      </View>)}
     </View>)}
   </View>;
 }
@@ -596,17 +624,15 @@ const s=StyleSheet.create({
   showMoreText:{fontWeight:'800',fontSize:12,color:C.blue},
   footer:{fontSize:9,letterSpacing:1.2,color:'#99A6A4',textAlign:'center',marginTop:23},
   sheet:{flex:1,backgroundColor:'#F7F9FD'},
-  sheetTop:{minHeight:78,paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:7},
-  detailCircle:{width:39,height:39,borderRadius:21,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DCE5F4',alignItems:'center',justifyContent:'center',elevation:2},
+  detailHeaderShell:{backgroundColor:'#071E49'},
+  sheetTop:{minHeight:64,paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:9,backgroundColor:'#071E49'},
+  detailCircle:{width:39,height:39,borderRadius:21,backgroundColor:'#203A63',alignItems:'center',justifyContent:'center'},
   detailHeaderCopy:{flex:1,minWidth:0},
-  sheetTitle:{fontSize:18,fontWeight:'800',color:'#101A35',letterSpacing:-.5},
+  sheetTitle:{fontSize:18,fontWeight:'800',color:'#FFFFFF',letterSpacing:-.5},
   intakeIdRow:{flexDirection:'row',alignItems:'center',gap:7,marginTop:4},
-  intakeId:{fontSize:12,fontWeight:'600',color:'#435477',flexShrink:1},
-  detailMenu:{marginHorizontal:14,backgroundColor:'#FFFFFF',borderRadius:12,borderWidth:1,borderColor:'#DCE5F4',padding:6},
-  menuItem:{flexDirection:'row',alignItems:'center',gap:9,minHeight:44,paddingHorizontal:10},
-  menuText:{fontSize:13,color:'#14274B',fontWeight:'600'},
+  intakeId:{fontSize:12,fontWeight:'600',color:'#D4E3FF',flexShrink:1},
   sheetContent:{paddingHorizontal:14,paddingTop:8,paddingBottom:0,flexGrow:1},
-  detailHero:{backgroundColor:'#092858',borderRadius:17,padding:17,minHeight:140,marginBottom:14,flexDirection:'row',alignItems:'center',overflow:'hidden'},
+  detailHero:{backgroundColor:'#092858',borderRadius:17,padding:17,minHeight:125,marginBottom:12,flexDirection:'row',alignItems:'center',overflow:'hidden'},
   detailHeroCopy:{flex:1,minWidth:0,zIndex:1},
   heroGlow:{position:'absolute',width:280,height:220,borderRadius:140,backgroundColor:'#104783',opacity:.35,left:-85,top:-135},
   detailWave:{position:'absolute',width:255,height:160,borderRadius:120,borderWidth:9,borderColor:'#1455A5',opacity:.26,transform:[{rotate:'-24deg'}]},
@@ -644,16 +670,19 @@ const s=StyleSheet.create({
   footerWaves:{flexGrow:1,minHeight:56,marginHorizontal:-14,marginTop:16,overflow:'hidden',justifyContent:'flex-end'},footerWaveOne:{position:'absolute',bottom:-55,left:'-12%',width:'83%',height:105,borderRadius:100,backgroundColor:'#E5EFFC',transform:[{rotate:'10deg'}]},footerWaveTwo:{position:'absolute',bottom:-65,right:'-12%',width:'90%',height:120,borderRadius:100,backgroundColor:'#D8E8FC',transform:[{rotate:'-12deg'}]},
   issue:{backgroundColor:'#FFF0DC',padding:13,borderRadius:13,borderLeftWidth:5,borderLeftColor:'#FF921B',flexDirection:'row',alignItems:'center',gap:9,marginBottom:12},
   issueText:{flex:1,fontSize:14,lineHeight:19,color:'#9C390F',fontWeight:'800'},
-  detailList:{backgroundColor:'#FFFFFF',borderRadius:19,borderWidth:1,borderColor:C.line,paddingHorizontal:16},
-  detailField:{paddingVertical:14,minHeight:54,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:C.line,flexDirection:'row',alignItems:'center',gap:14},
-  fieldLabel:{flex:.38,fontSize:11,color:C.faint},
-  fieldValue:{flex:.62,fontSize:11.5,color:C.ink,fontWeight:'700',textAlign:'right'},
+  fieldTileGroups:{gap:8},
+  fieldTileGroup:{borderRadius:13,padding:7,gap:6},
+  fieldTileRow:{flexDirection:'row',gap:6},
+  fieldTile:{flex:1,minWidth:0,minHeight:49,backgroundColor:'#FFFFFF',borderRadius:9,paddingHorizontal:7,paddingVertical:7,gap:3},
+  fieldTileLabelRow:{flexDirection:'row',alignItems:'center',gap:4},
+  fieldTileLabel:{flex:1,fontSize:10,color:'#435673'},
+  fieldTileValue:{fontSize:12,fontWeight:'700',color:'#10294D'},
   note:{fontSize:10.5,lineHeight:17,color:C.faint,marginTop:19,textAlign:'center'},
   actionsWrap:{marginTop:4},
   actionsRow:{flexDirection:'row',gap:10},
-  reparseButton:{flex:1,minWidth:0,minHeight:137,borderRadius:16,borderWidth:1,borderColor:'#D7E1F4',backgroundColor:'#F8FAFF',padding:13,alignItems:'flex-start',justifyContent:'flex-start',elevation:2},
+  reparseButton:{flex:1,minWidth:0,minHeight:112,borderRadius:16,borderWidth:1,borderColor:'#D7E1F4',backgroundColor:'#F8FAFF',padding:13,alignItems:'flex-start',justifyContent:'flex-start',elevation:2},
   reparseLabel:{fontSize:15,fontWeight:'800',color:'#101A35',marginTop:8},actionSub:{fontSize:12,lineHeight:17,color:'#435477',marginTop:4,paddingRight:19},
-  convertButton:{flex:1,minWidth:0,minHeight:137,borderRadius:16,backgroundColor:'#0751DB',padding:13,alignItems:'flex-start',justifyContent:'flex-start',overflow:'hidden',elevation:2},convertGlow:{position:'absolute',width:210,height:180,borderRadius:90,backgroundColor:'#179DFF',opacity:.35,top:-100,left:-85},actionArrow:{position:'absolute',right:10,bottom:12,width:27,height:27,borderRadius:15,backgroundColor:'#E6E9FF',alignItems:'center',justifyContent:'center'},convertArrow:{position:'absolute',right:10,bottom:12,width:27,height:27,borderRadius:15,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center'},
+  convertButton:{flex:1,minWidth:0,minHeight:112,borderRadius:16,backgroundColor:'#0751DB',padding:13,alignItems:'flex-start',justifyContent:'flex-start',overflow:'hidden',elevation:2},convertGlow:{position:'absolute',width:210,height:180,borderRadius:90,backgroundColor:'#179DFF',opacity:.35,top:-100,left:-85},actionArrow:{position:'absolute',right:10,bottom:12,width:27,height:27,borderRadius:15,backgroundColor:'#E6E9FF',alignItems:'center',justifyContent:'center'},convertArrow:{position:'absolute',right:10,bottom:12,width:27,height:27,borderRadius:15,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center'},
   convertLabel:{fontSize:15,fontWeight:'800',color:'#FFFFFF',marginTop:8},convertSub:{fontSize:12,lineHeight:17,color:'#FFFFFF',marginTop:4,paddingRight:19},
   actionError:{color:'#B04A3B',fontSize:11,lineHeight:16,marginBottom:10},
   confirmPanel:{borderRadius:17,borderColor:'#C8D8F5',borderWidth:1,padding:16,backgroundColor:'#FFFFFF'},

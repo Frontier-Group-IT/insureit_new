@@ -7,7 +7,7 @@ import { canPartnerAccess } from '@/lib/partner-permissions';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 /** Stack-screen companion to the permission-gated Home tab bar. */
-export function PartnerCaseBottomNavigation({ activeTab, animateSelection = false }: { activeTab?: 'Home' | 'Business' | 'Policies' | 'Claims' | 'More'; animateSelection?: boolean } = {}) {
+export function PartnerCaseBottomNavigation({ activeTab, animateSelection = false, beforeNavigate }: { activeTab?: 'Home' | 'Business' | 'Policies' | 'Claims' | 'More'; animateSelection?: boolean; beforeNavigate?: () => boolean } = {}) {
   const router = useRouter();
   const { context } = usePartnerSession();
   const items = [
@@ -52,7 +52,7 @@ export function PartnerCaseBottomNavigation({ activeTab, animateSelection = fals
       {visibleItems.map((item, index) => (
         <Pressable key={item.label} accessibilityRole="button" accessibilityLabel={item.label}
           onPressIn={() => moveTo(index, 160)} onPressOut={() => moveTo(activeIndex, 160)}
-          onPress={() => { moveTo(index, 280); router.navigate(item.route as never); }} style={styles.item}
+          onPress={() => { if(beforeNavigate && !beforeNavigate())return; moveTo(index, 280); router.navigate(item.route as never); }} style={styles.item}
           accessibilityState={{ selected: activeTab === item.label }}>
           <View style={[styles.iconWrap, !enabled && activeTab === item.label && styles.iconWrapActive]}>
             {enabled ? <Animated.View style={{ transform: [{ scale: position.interpolate({ inputRange: [index - 1, index, index + 1], outputRange: [1, 1.2, 1], extrapolate: 'clamp' }) }] }}><Ionicons name={item.icon} color={preview === index ? '#FFFFFF' : '#AFC1DE'} size={20} /></Animated.View> : <Ionicons name={item.icon} color={activeTab === item.label ? '#FFFFFF' : '#AFC1DE'} size={activeTab === item.label ? 24 : 20} />}

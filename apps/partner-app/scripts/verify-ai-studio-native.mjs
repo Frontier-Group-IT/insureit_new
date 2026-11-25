@@ -114,13 +114,28 @@ for(const [row,expected] of [
   [{status:'processing',fields:[{}],ocr_status:'completed'},1],
   [{status:'in_review',fields:[{}],ocr_status:'completed'},2],
 ]) assert.equal(stageContext.stage(row),expected);
-for(const marker of ['presentationStyle="fullScreen"','<StatusBar style="dark"','Clipboard.setString','accessibilityLabel="More intake options"','<IntakeStepper detail={detail}/>','style={s.detailHeroArtwork}','style={s.fieldsPill}','style={s.footerWaves}','accessibilityState={{disabled:true}}','Secure actions awaiting activation']) assert(screen.includes(marker), 'Intake details reference and safety contract: '+marker);
+for(const marker of ['presentationStyle="fullScreen"','<StatusBar style="light"','Clipboard.setString','style={s.sheetTop}','<IntakeStepper detail={detail}/>','style={s.detailHeroArtwork}','style={s.fieldsPill}','style={s.footerWaves}','accessibilityState={{disabled:true}}','Secure actions awaiting activation']) assert(screen.includes(marker), 'Intake details reference and safety contract: '+marker);
 
 console.log('Partner native AI Studio read-only, auth and Vercel-independence contracts passed');
 
 // The full-screen intake detail modal must not rely on its own transient top
 // safe-area measurement; opening/reopening on iPhone must keep the header below
 // the status bar while only the bottom edge is handled by SafeAreaView.
-assert.match(screen, /<SafeAreaView style=\{s\.sheet\} edges=\{\['bottom'\]\}>/, 'Intake modal does not double-apply its own top inset');
-assert.match(screen, /<View style=\{\[s\.sheetTop,\{paddingTop:insets\.top\}\]\}>/, 'Intake header applies parent safe-area top inset on first frame');
+assert(screen.includes('<SafeAreaView style={s.sheet} edges={[]}>'));
+assert(screen.includes('<View style={[s.detailHeaderShell,{paddingTop:insets.top}]}>'));
 assert.match(screen, /const insets=useSafeAreaInsets\(\)/, 'Safe-area inset comes from the existing parent provider');
+
+assert(!screen.includes('detailMenu') && !screen.includes('More intake options'));
+assert(screen.includes('beforeNavigate={()=>{if(actionBusy)return false;closeDetail();return true;}}'));
+assert(screen.includes('<ExtractedFieldTiles fields={fieldExpanded?detail.fields:detail.fields.slice(0,8)}/>'));
+assert(screen.includes('<Text selectable style={s.fieldTileValue}>{field.value}</Text>'));
+const nav=file('../components/partner-case-bottom-navigation.tsx');
+assert(nav.includes('if(beforeNavigate && !beforeNavigate())return;'));
+const rowsStart=screen.indexOf('function extractedFieldRows(');
+const rowsEnd=screen.indexOf('function extractedFieldIcon(',rowsStart);
+const tileContext={};
+vm.runInNewContext(ts.transpileModule(screen.slice(rowsStart,rowsEnd)+'\nthis.rows=extractedFieldRows;', {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,tileContext);
+const sample=[{key:'idv',value:'123'},{key:'od_premium',value:'0'},{key:'insured_name',value:'Synthetic example long name'},{key:'policy_number',value:'00001'},{key:'idv',value:'456'}];
+assert.equal(JSON.stringify(tileContext.rows(sample).flat()),JSON.stringify(sample));
+assert(tileContext.rows(sample).every(row=>row.length<=3));
+assert.equal(tileContext.rows(sample).find(row=>row.some(f=>f.key==='policy_number')).length,1);
