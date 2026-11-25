@@ -213,6 +213,8 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
   // Punjab authority, manufacturer or registered plate is admitted here.
   const registeredPunjab=punjabSplit
     &&/^PB35[A-Z]{1,3}\d{3,4}$/.test(reg)&&status==="registered"
+    &&/^MEC[A-Z0-9]{12,22}$/.test(get("vehicle_chassis_number"))
+    &&/^\d{6}[A-Z]\d{7,9}$/.test(get("vehicle_engine_number"))
     &&get("vehicle_rto_name")==="PATHANKOT"
     &&fields.get("vehicle_rto_name")?.evidence===
       "UIIC PDF vehicle Registration Authority: RTO PATHANKOT INDIA";
