@@ -189,6 +189,9 @@ export default function InsurerListScreen() {
   const skeletonPulse = useRef(new Animated.Value(0)).current;
   const edgeOpacity = useRef(new Animated.Value(0)).current;
   const scrollMetrics = useRef({ x: 0, viewport: 0, content: 0 });
+  const stickyMetricsOffset = useRef(new Animated.Value(0)).current;
+  const stickyGeometry = useRef({ top: 0, rangeHeight: 0 });
+  const [stickyTableVisible, setStickyTableVisible] = useState(false);
   const edgeVisible = useRef(false);
   const updateEdge = useCallback(() => {
     const { x, viewport, content } = scrollMetrics.current;
@@ -291,6 +294,32 @@ export default function InsurerListScreen() {
   }, [motion, initialLoading, skeletonPulse]);
   const skeletonOpacity = skeletonPulse.interpolate({ inputRange: [0, 1], outputRange: [0.48, 1] });
 
+  const onReportVerticalScroll = (y: number) => {
+    const headerTop = stickyGeometry.current.top + stickyGeometry.current.rangeHeight;
+    const bottom = headerTop + 38 + insurers.length * ROW_HEIGHT;
+    const next = reportReady && insurers.length > 0 && headerTop > 0 && y > headerTop && y < bottom - 38;
+    setStickyTableVisible(current => current === next ? current : next);
+  };
+  const reportColumnWidth = columns.reduce((total, column) => total + METRIC_WIDTHS[column.key], 0);
+  const stickyTableHeader = stickyTableVisible ? (
+    <View pointerEvents="box-none" style={styles.stickyHeaderOverlay}>
+      <View style={[styles.registerContents, styles.stickyHeaderSurface]}>
+        <View style={styles.fixedNames}>
+          <View style={styles.registerHeader}><Text style={styles.columnTitle}>INSURER</Text></View>
+        </View>
+        <View style={[styles.financialColumns, styles.stickyMetricsViewport]}>
+          <Animated.View style={{ flexDirection: 'row', width: reportColumnWidth, transform: [{ translateX: Animated.multiply(stickyMetricsOffset, -1) }] }}>
+            {columns.map(column => <View key={column.key}
+              style={[styles.metricHeaderCell, { height: 38, width: METRIC_WIDTHS[column.key], backgroundColor: METRIC_COLORS[column.key].header }]}>
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}
+                style={styles.metricHeaderText}>{column.label.toUpperCase()}</Text>
+            </View>)}
+          </Animated.View>
+        </View>
+      </View>
+    </View>
+  ) : null;
+
   const openDateRange = () => {
     // Keep draft changes isolated until Apply Filter is tapped.
     setDraft(range);
@@ -309,8 +338,9 @@ export default function InsurerListScreen() {
 
   return (
     <PartnerScreen title="Insurer-wise Performance" hideTopBar fullWidth bottomNavigationNavy navyStatusBar
+      fixedHeader={stickyTableHeader} resetScrollOnFocus={false}
       bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />}
-      scrollProps={{ refreshControl: <RefreshControl refreshing={query.refreshing} onRefresh={() => void query.refresh()} /> }}
+      scrollProps={{ refreshControl: <RefreshControl refreshing={query.refreshing} onRefresh={() => void query.refresh()} />, onScroll: event => onReportVerticalScroll(event.nativeEvent.contentOffset.y) }}
     >
       <View style={styles.referenceHeader}>
         <View style={styles.headerOrbLarge} />
@@ -353,8 +383,14 @@ export default function InsurerListScreen() {
         </Animated.View>
       </View>
 
-      <View style={styles.registerArea}>
-        <View style={styles.rangeRow}>
+      <View style={styles.registerArea} onLayout={event => {
+        const y = event.nativeEvent.layout.y;
+        stickyGeometry.current.top = y;
+      }}>
+        <View style={styles.rangeRow} onLayout={event => {
+          const height = event.nativeEvent.layout.height + 8;
+          stickyGeometry.current.rangeHeight = height;
+        }}>
           <Text style={styles.countText} accessibilityLabel={initialLoading ? "Loading insurers" : `${insurers.length} insurers`}>{initialLoading ? "Loading insurers…" : <MotionNumber text={`${insurers.length} insurers`} count={insurers.length} motion={motion && reportReady && !search.trim()} />}</Text>
         </View>
         <View style={styles.register}>
@@ -375,7 +411,7 @@ export default function InsurerListScreen() {
               nestedScrollEnabled scrollEventThrottle={16}
               onLayout={event => { scrollMetrics.current.viewport = event.nativeEvent.layout.width; updateEdge(); }}
               onContentSizeChange={width => { scrollMetrics.current.content = width; updateEdge(); }}
-              onScroll={event => { scrollMetrics.current.x = event.nativeEvent.contentOffset.x; updateEdge(); }}>
+              onScroll={event => { scrollMetrics.current.x = event.nativeEvent.contentOffset.x; stickyMetricsOffset.setValue(scrollMetrics.current.x); updateEdge(); }}>
               <View style={{ width: columns.reduce((total, column) => total + METRIC_WIDTHS[column.key], 0) }}>
               <View style={styles.registerHeader}>
                 {columns.map((column) => (
@@ -552,6 +588,9 @@ const styles = StyleSheet.create({
   sheetApply: { flex: 1.5, minWidth: 0, minHeight: 44, borderRadius: 24, backgroundColor: '#4230B3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
   applyDisabled: { opacity: 0.45 },
   sheetApplyText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
+  stickyHeaderOverlay: { position: 'absolute', top: 0, left: 10, right: 10, zIndex: 15, elevation: 5 },
+  stickyHeaderSurface: { height: 38, overflow: 'hidden', borderWidth: 1, borderTopWidth: 0, borderColor: '#DCE6F2', backgroundColor: '#FFFFFF' },
+  stickyMetricsViewport: { overflow: 'hidden' },
   registerArea: { paddingHorizontal: 10, paddingTop: 3, paddingBottom: 18 },
   rangeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 3, marginBottom: 8 },
   countText: { color: '#667D9C', fontSize: 10.5 },
