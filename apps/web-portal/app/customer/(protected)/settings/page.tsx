@@ -58,19 +58,20 @@ export default function CustomerSettingsPage() {
       </div>
 
       <section aria-labelledby="settings-layout-title" className="customer-appearance-panel w-full min-w-0 rounded-xl border border-[#EAE5F4] bg-white px-3 py-2.5 sm:px-4">
-        <div className="flex w-full min-w-0 flex-nowrap items-center gap-3 overflow-x-auto py-0.5">
-          <h2 id="settings-layout-title" className="shrink-0 whitespace-nowrap text-[13px] font-bold text-[#292655]">Appearance &amp; Layout</h2>
-          <div role="group" aria-label="Navigation layout" className="flex shrink-0 flex-1 items-center justify-evenly gap-2">
-            {([{ value: "sidebar", label: "Sidebar (Default)", name: "Sidebar", icon: PanelLeft }, { value: "top", label: "Top Menu Bar", name: "Top Menu", icon: PanelTop }] as const).map(({ value, label, name, icon: Icon }) => (
-              <button key={value} type="button" title={label} aria-label={label} aria-pressed={navigationLayout === value} onClick={() => setPreferredLayout(value)} className="customer-appearance-option inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-transparent px-3 text-[11px] font-semibold text-[#733BD4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7843DC]"><Icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" /><span>{name}</span></button>
-            ))}
+        <div className="customer-appearance-grid">
+          <div className="customer-appearance-section">
+            <h2 id="settings-layout-title" className="customer-appearance-heading text-[13px] font-bold text-[#292655]">Appearance &amp; Layout</h2>
+            <div role="group" aria-label="Navigation layout" className="customer-layout-options">
+              {([{ value: "sidebar", label: "Sidebar (Default)", name: "Sidebar", icon: PanelLeft }, { value: "top", label: "Top Menu Bar", name: "Top Menu", icon: PanelTop }] as const).map(({ value, label, name, icon: Icon }) => (
+                <button key={value} type="button" title={label} aria-label={label} aria-pressed={navigationLayout === value} onClick={() => setPreferredLayout(value)} className="customer-appearance-option customer-layout-option inline-flex h-9 items-center justify-center whitespace-nowrap rounded-lg border border-[#EAE5F4] text-[11px] font-semibold text-[#733BD4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7843DC]"><Icon className="shrink-0" aria-hidden="true" /><span className="customer-option-full-label">{label}</span><span className="customer-option-short-label">{name}</span></button>
+              ))}
+            </div>
           </div>
-          <span aria-hidden="true" className="h-8 w-px shrink-0 bg-[#EAE5F4]" />
-          <div role="group" aria-label="Color theme" className="flex shrink-0 flex-1 items-center justify-evenly gap-3">
-            <span className="shrink-0 text-[12px] font-bold text-[#292655]">Theme</span>
-            <div className="customer-theme-segment flex shrink-0 flex-1 items-center gap-1 rounded-full border border-[#EAE5F4] p-1">
-              {([{ value: "light", label: "Light theme", name: "Light", icon: Sun }, { value: "dark", label: "Dark theme", name: "Dark", icon: Moon }, { value: "system", label: "System theme", name: "System", icon: Monitor }] as const).map(({ value, label, name, icon: Icon }) => (
-                <button key={value} type="button" title={label} aria-label={label} aria-pressed={theme === value} onClick={() => setPreferredTheme(value)} className="customer-appearance-option inline-flex h-8 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-transparent px-3 text-[11px] font-semibold text-[#733BD4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7843DC]"><span>{name}</span><Icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" /></button>
+          <div className="customer-appearance-section customer-theme-section border-[#EAE5F4]">
+            <h2 id="settings-theme-title" className="customer-appearance-heading text-[13px] font-bold text-[#292655]">Theme</h2>
+            <div role="group" aria-labelledby="settings-theme-title" className="customer-theme-segment rounded-full border border-[#EAE5F4] p-1">
+              {([{ value: "system", label: "System theme", name: "System", icon: Monitor }, { value: "light", label: "Light theme", name: "Light", icon: Sun }, { value: "dark", label: "Dark theme", name: "Dark", icon: Moon }] as const).map(({ value, label, name, icon: Icon }) => (
+                <button key={value} type="button" title={label} aria-label={label} aria-pressed={theme === value} onClick={() => setPreferredTheme(value)} className="customer-appearance-option inline-flex h-8 items-center justify-center whitespace-nowrap rounded-full border border-transparent text-[11px] font-semibold text-[#733BD4] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7843DC]"><Icon className="shrink-0" aria-hidden="true" /><span>{name}</span></button>
               ))}
             </div>
           </div>
