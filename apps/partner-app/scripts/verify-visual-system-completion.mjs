@@ -818,7 +818,7 @@ requireText(home, "icon: PartnerAssets.actions.quickClaims", 'Home Pending Tasks
 requireText(home, "label: 'Active claims'", 'Home Pending Tasks must retain a live active-claims task.');
 requireText(home, "count: data.service.active_claims", 'Home Pending Tasks must use the authorized live claim count.');
 requireText(home, "source={task.icon}", 'Home Pending Tasks must render their existing branded image assets.');
-requireText(home, "{task.count}", 'Home Pending Tasks must keep a live count beside each task.');
+requireText(home, "text={String(task.count)}", 'Home Pending Tasks must keep a live count beside each task.');
 if (home.includes('pendingRowCount')) throw new Error('Home Pending Tasks must not add an unscoped separate red count treatment.');
 
 for (const feature of [
@@ -1711,3 +1711,5 @@ for (const marker of ['styles.overviewLabelRow', 'styles.tileBlue', 'styles.tile
 const claimsEmptyMotionSource = read('app/(tabs)/claims.tsx');
 const claimsEmptyMotionBody = claimsEmptyMotionSource.slice(claimsEmptyMotionSource.indexOf('function ClaimsEmptyState('), claimsEmptyMotionSource.indexOf('function ClaimCard('));
 for (const marker of ['useActivityMotion()', 'opacity: 0.43', 'translateY: emptyFloat', 'toValue: -5, duration: 1800', 'animation.stop(); emptyFloat.setValue(0)', 'if (!motion) return;', 'isInteraction: false', 'accessibilityElementsHidden', 'Everything looks settled here']) requireText(claimsEmptyMotionBody, marker, 'Claims empty-only faded motion: ' + marker);
+
+for (const marker of ['useHomeEntrance', 'HomeCount', 'HomeTrendBar', '500 + index * 90', 'duration={1500}', 'tabular-nums', 'if (!motion) return;', 'cancelAnimationFrame(frame)']) requireText(home, marker, 'Home motion: ' + marker);
