@@ -245,12 +245,23 @@ function payloadFromDraft(d: PolicyIntakeDraft, id: string, revision: number, ma
 async function holdFailedAiConversion(id:string,issues:readonly SemiAutoIssue[]=[]):Promise<void>{
   const admin=createSupabaseAdminClient();
   const now=new Date().toISOString();
-  const activeOverlap=issues.some(item=>item.field==="Existing active policy");
-  const insuredMismatch=issues.some(item=>item.field==="Insured name");
-  const ownershipConflict=issues.some(item=>item.field==="Vehicle ownership");
+  // Keep the exact canonical review reason instead of collapsing safe,
+  // already-source-verified cases to a generic conversion error. The queue
+  // never stores raw personal data or insurer/PDF text.
+  const fields=new Set(issues.map(item=>item.field));
+  const activeOverlap=fields.has("Existing active policy")||fields.has("Policy history");
+  const insuredMismatch=fields.has("Insured name");
+  const ownershipConflict=fields.has("Vehicle ownership");
+  const customerIdentity=fields.has("Customer identity");
   const reviewCode=activeOverlap?"coverage_conflict"
     :ownershipConflict?"vehicle_ownership"
     :insuredMismatch?"insured_name_mismatch"
+    :customerIdentity?"customer_identity"
+    :fields.has("Date approval")?"date_approval"
+    :fields.has("Policy issuance date")?"issuance_date_unverified"
+    :fields.has("PDF reconciliation")||fields.has("Owner-driver CPA")?"draft_conflict"
+    :fields.has("Vehicle capacity")||fields.has("Vehicle identity")?"missing_field"
+    :fields.has("Source PDF")||fields.has("Extraction")?"unverified_parser"
     :"booking_review_required";
   // A certified NIA review hold is not a parsing failure. Preserve a real
   // vehicle-history conflict rather than overwriting it with the generic
@@ -261,9 +272,21 @@ async function holdFailedAiConversion(id:string,issues:readonly SemiAutoIssue[]=
       last_error_code:activeOverlap?"existing_active_policy_overlap":"bulk_conversion_review_required",
       updated_at:now})
     .eq("intake_id",id);
+  // Never overwrite an existing source/queue exception merely because an
+  // operator clicked Convert before the intake reached onboarding. Repair a
+  // historical generic hold only if its immutable source parser/fingerprint
+  // and exact current document are already present.
   update=activeOverlap
-    ?update.eq("parser_id","new_india_cv_native_pdf").in("state",["verified","exception"])
-    :update.eq("state","verified");
+    ?update.eq("parser_id","new_india_cv_native_pdf")
+      .in("state",["verified","exception"])
+    :update.in("state",["verified","exception"])
+      .not("parser_id","is",null)
+      .not("extraction_fingerprint","is",null)
+      .or("state.eq.verified,and(state.eq.exception,last_error_code.eq.bulk_conversion_review_required)");
+  if(issues.length===0 || (reviewCode==="unverified_parser"&&issues.some(item=>item.field==="Extraction"||item.field==="Source PDF"))) {
+    // Keep the underlying extraction diagnostic and retry budget unchanged.
+    return;
+  }
   const {error}=await update;
   if(error)console.error("[ai-policy] booking review hold failed",{code:error.code||"unknown"});
 }
