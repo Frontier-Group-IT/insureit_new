@@ -66,7 +66,7 @@ export default function CustomerDetailScreen() {
                 {customerTone(data.customer.status) === 'success' ? <Ionicons name="checkmark-circle" size={19} color="#0CB76B" /> : null}
               </View>
               <View style={redesign.actions}>
-                <PartnerContactActions phone={data.customer.phone} email={data.customer.email} inlineLabeled customerDetailLayout />
+                <PartnerContactActions phone={data.customer.phone} email={data.customer.email} customerDetailIconOnly />
               </View>
             </View>
           </View>
@@ -79,19 +79,32 @@ export default function CustomerDetailScreen() {
               <Pressable key={key} accessibilityRole="tab" accessibilityState={{ selected: activeTab === key }} onPress={() => setActiveTab(key)} style={[redesign.tab, activeTab === key && redesign.activeTab]}>
                 <Ionicons name={icon} size={17} color={activeTab === key ? '#0879F1' : '#69758A'} />
                 <Text style={[redesign.tabText, activeTab === key && redesign.activeTabText]}>{title}</Text>
+                {key !== 'overview' ? <View style={[redesign.tabCountBadge, activeTab === key && redesign.activeTabCountBadge]}><Text style={[redesign.tabCountText, activeTab === key && redesign.activeTabCountText]}>{key === 'vehicles' ? data.summary.vehicles : data.summary.policies}</Text></View> : null}
               </Pressable>
             ))}
           </View>
           <View style={redesign.content}>
             {activeTab === 'overview' ? (
               <>
-                <Text style={redesign.sectionTitle}>Customer Information</Text>
-                <DetailLine icon="person-outline" label="Customer Type" value={humanize(data.customer.customer_type || 'Not recorded')} />
-                <DetailLine icon="document-text-outline" label="Customer ID" value={data.customer.customer_code || 'Not recorded'} />
-                <DetailLine icon="people-outline" label="Intermediary" value={data.customer.intermediary_code || 'Not recorded'} />
-                <DetailLine icon="calendar-outline" label="Customer Since" value={formatMonthYear(data.customer.created_at)} />
-                <DetailLine icon="car-outline" label="Fleet" value={humanize(data.customer.fleet_size_band || 'Not recorded')} />
-                <DetailLine icon="checkmark-circle-outline" label="Status" value={humanize(data.customer.status || 'Not recorded')} />
+
+                <View style={redesign.overviewCard}>
+                  <View style={redesign.overviewHeading}>
+                    <View style={redesign.overviewHeadingIcon}><Ionicons name="person-outline" size={23} color="#FFFFFF" /></View>
+                    <Text style={redesign.overviewHeadingText}>Customer Information</Text>
+                  </View>
+                  <View style={redesign.overviewBody}>
+                    <View style={redesign.overviewGrid}>
+                      <OverviewTile icon="business-outline" label="Customer Type" value={humanize(data.customer.customer_type || 'Not recorded')} />
+                      <OverviewTile icon="calendar-outline" label="Customer Since" value={formatMonthYear(data.customer.created_at)} />
+                      <OverviewTile icon="people-outline" label="Intermediary" value={data.customer.intermediary_code || 'Not recorded'} />
+                      <OverviewTile icon="checkmark-circle-outline" label="Status" value={humanize(data.customer.status || 'Not recorded')} status={data.customer.status?.trim().toLowerCase() === 'active'} />
+                    </View>
+                    <View style={redesign.overviewBottom}>
+                      <OverviewDetailLine icon="id-card-outline" label="Customer ID" value={data.customer.customer_code || 'Not recorded'} />
+                      <OverviewDetailLine icon="car-outline" label="Fleet" value={humanize(data.customer.fleet_size_band || 'Not recorded')} />
+                    </View>
+                  </View>
+                </View>
                 {data.summary.renewals_30_days > 0 ? <PartnerBanner tone="warning" title="Renewal attention" message={`${data.summary.renewals_30_days} policies due within 30 days.`} /> : null}
                 {data.claims.length ? (
                   <View style={redesign.claimsSection}>
@@ -177,6 +190,24 @@ export default function CustomerDetailScreen() {
   );
 }
 
+function OverviewTile({ icon, label, value, status = false }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; status?: boolean }) {
+  return <View style={redesign.overviewTile}>
+    <View style={redesign.overviewTileIcon}><Ionicons name={icon} size={22} color="#205BA9" /></View>
+    <View style={redesign.overviewTileText}>
+      <Text style={redesign.overviewTileLabel} numberOfLines={1}>{label}</Text>
+      {status ? <View style={redesign.overviewStatus}><Text style={redesign.overviewStatusText}>{value}</Text></View>
+        : <Text style={redesign.overviewTileValue} numberOfLines={2} adjustsFontSizeToFit>{value}</Text>}
+    </View>
+  </View>;
+}
+function OverviewDetailLine({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
+  return <View style={redesign.overviewDetailRow}>
+    <View style={redesign.overviewDetailIcon}><Ionicons name={icon} size={18} color="#325D95" /></View>
+    <Text style={redesign.overviewDetailLabel}>{label}</Text>
+    <Text style={redesign.overviewDetailValue} selectable numberOfLines={2}>{value}</Text>
+  </View>;
+}
+
 function Logo({ source, fallback, compact = false }: { source: ReturnType<typeof getPartnerInsurerLogoSource>; fallback: number; compact?: boolean }) {
   return <View style={[styles.logoShell, compact && styles.logoShellCompact]}><Image source={source || fallback} style={[styles.logoImage, compact && styles.logoImageCompact]} resizeMode="contain" /></View>;
 }
@@ -243,9 +274,31 @@ const redesign = StyleSheet.create({
   tab: { flex: 1, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderBottomWidth: 3, borderBottomColor: 'transparent' },
   activeTab: { borderBottomColor: '#0879F1' },
   tabText: { fontSize: 11, color: '#69758A', fontWeight: '500' },
+  tabCountBadge: { minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: 10, backgroundColor: '#E7EDFA', alignItems: 'center', justifyContent: 'center' },
+  activeTabCountBadge: { backgroundColor: '#DCEBFF' },
+  tabCountText: { fontSize: 10, fontWeight: '800', color: '#294E87' },
+  activeTabCountText: { color: '#0879F1' },
   activeTabText: { color: '#0879F1', fontWeight: '700' },
   content: { backgroundColor: '#FFFFFF', padding: 12, gap: 10, minHeight: 350 },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: '#111B37' },
+  overviewCard: { borderRadius: 16, borderWidth: 1, borderColor: '#D7E5FA', backgroundColor: '#FFFFFF', overflow: 'hidden', marginTop: 8 },
+  overviewHeading: { minHeight: 62, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#DFEAFF' },
+  overviewHeadingIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: '#3E83E8', alignItems: 'center', justifyContent: 'center' },
+  overviewHeadingText: { fontSize: 16, fontWeight: '800', color: '#111B37' },
+  overviewBody: { padding: 12, gap: 12 },
+  overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
+  overviewTile: { flexBasis: '47%', flexGrow: 1, minWidth: 0, minHeight: 70, borderRadius: 13, padding: 9, backgroundColor: '#EDF4FF', flexDirection: 'row', alignItems: 'center', gap: 7 },
+  overviewTileIcon: { width: 35, height: 35, borderRadius: 18, backgroundColor: '#DBE9FF', alignItems: 'center', justifyContent: 'center' },
+  overviewTileText: { flex: 1, minWidth: 0, gap: 4 },
+  overviewTileLabel: { fontSize: 10, fontWeight: '600', color: '#63748C' },
+  overviewTileValue: { fontSize: 12, fontWeight: '800', color: '#111B37' },
+  overviewStatus: { alignSelf: 'flex-start', backgroundColor: '#CCF5DD', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2 },
+  overviewStatusText: { fontSize: 11, fontWeight: '800', color: '#08743E' },
+  overviewBottom: { borderTopWidth: 1, borderTopColor: '#DCE5F3' },
+  overviewDetailRow: { minHeight: 55, flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DCE5F3' },
+  overviewDetailIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#EDF4FF', alignItems: 'center', justifyContent: 'center' },
+  overviewDetailLabel: { flex: 1, minWidth: 0, fontSize: 11, color: '#63748C', fontWeight: '600' },
+  overviewDetailValue: { flexShrink: 1, maxWidth: '62%', fontSize: 10.5, color: '#111B37', fontWeight: '700', textAlign: 'right' },
   sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   detailLine: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E8EDF4' },
   iconCircle: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#EDF5FF', alignItems: 'center', justifyContent: 'center' },
