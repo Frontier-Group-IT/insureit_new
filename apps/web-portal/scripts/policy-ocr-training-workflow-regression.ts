@@ -232,7 +232,8 @@ assert.equal(existsSync("lib/policy-ocr-training-schedule.ts"), false);
 const vercelConfig = JSON.parse(readFileSync("vercel.json", "utf8"));
 assert.deepEqual(vercelConfig.crons ?? [],[
   {path:"/api/internal/ai-policy-onboarding/process",schedule:"* * * * *"},
-],"The only allowed production cron is the newly approved, separate read-only n8n Intake extraction queue");
+  {path:"/api/internal/ai-policy-onboarding/auto-book",schedule:"* * * * *"},
+],"Only the approved Intake extraction and separately flagged canonical auto-booking crons may run; legacy OCR training must remain manual");
 assert(!vercelConfig.crons.some((job: {path:string})=>
   job.path.includes("policy-ocr-training") || job.path.includes("ocr-training")),
   "Policy OCR training remains strictly manual and can never be scheduled");
