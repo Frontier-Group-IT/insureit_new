@@ -118,17 +118,29 @@ export async function verifyOrientalCmsSigningDate(
    const signedTime=attrs.filter(a=>a.type==="1.2.840.113549.1.9.5");
    if(signedTime.length!==1||signedTime[0].values.length!==1)return hold("cms_signing_time_missing");
    const asn=signedTime[0].values[0] as {
-     toDate?:()=>Date;valueBlock?:{value?:unknown};
+     toDate?:()=>Date;toBER?:(sizeOnly:boolean)=>ArrayBuffer;
    };
-   const encoded=asn.valueBlock?.value;
-   if(typeof encoded!=="string"&&typeof asn.toDate!=="function")
-     return hold("cms_signing_time_type");
-   // Explicit-offset GeneralizedTime must not be interpreted as local UTC.
-   const day=typeof encoded==="string"&&/^[0-9]{14}[+-][0-9]{4}$/.test(encoded)
-     ?cmsSigningTimeIndiaDay(encoded)
+   if(typeof asn.toBER!=="function")return hold("cms_signing_time_type");
+   // toBER preserves the ORIGINAL authenticated GeneralizedTime octets,
+   // whereas parsed toDate() can normalize a +0530 signing time incorrectly.
+   // Never use PDF /M as a signing-date source.
+   const timeDer=Buffer.from(asn.toBER(false));
+   const explicitOffset=timeDer.length===21&&timeDer[0]===0x18
+     &&timeDer[1]===19
+     ?timeDer.subarray(2).toString("ascii"):null;
+   const day=explicitOffset
+     ?cmsSigningTimeIndiaDay(explicitOffset)
      :typeof asn.toDate==="function"?indiaDay(asn.toDate()):null;
    if(!day)return hold("cms_time_date_invalid");
-   if(pdfM.length===1&&pdfMToIndiaDay(pdfM[0][1])!==day)return hold("pdf_m_mismatch");
+   if(pdfM.length===1&&pdfMToIndiaDay(pdfM[0][1])!==day){
+     console.warn("[oriental-cms] signing-time format guard",{
+       rawGeneralizedOffset:Boolean(explicitOffset),
+       rawTimeValid:Boolean(explicitOffset&&cmsSigningTimeIndiaDay(explicitOffset)),
+       pdfMDateValid:Boolean(pdfMToIndiaDay(pdfM[0][1])),
+       encodedTag:timeDer[0]===0x18?"generalized":timeDer[0]===0x17?"utc":"other",
+     });
+     return hold("pdf_m_mismatch");
+   }
    const full=Buffer.concat([
      Buffer.from(bytes.subarray(0,firstLen)),
      Buffer.from(bytes.subarray(secondStart,secondStart+secondLen)),
