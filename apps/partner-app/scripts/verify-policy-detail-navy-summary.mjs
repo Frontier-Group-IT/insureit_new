@@ -28,21 +28,26 @@ assert.doesNotMatch(source, /quickGlyph/, 'QuickAction must not use generic vect
 assert.match(source, /iconKind="renew-policy" label="Renew Policy" onPress=\{\(\) => router\.push\('\/renewals'/, 'Renewal route remains unchanged');
 assert.match(source, /iconKind="raise-claim" label="Raise Claim" onPress=\{\(\) => router\.push\('\/claims'/, 'Claims route remains unchanged');
 assert.match(source,/PartnerCaseBottomNavigation activeTab="Policies"/,'Bottom navigation unchanged');
-// Approved reference replaces pastel tiles with neutral surfaces and unified blue section headers.
-assert.match(source, /<View style=\{styles.unifiedDetails\}>\s*<View style=\{styles.unifiedSection\}>/, 'One continuous white details container');
-assert.match(source, /sectionHeaderFill: \{ backgroundColor: '#E6EFF9' \}/, 'Reference blue heading fill');
-assert.match(source, /overviewItem: [^\n]*backgroundColor: '#FFFFFF'/, 'White outlined overview tiles');
-assert.match(source, /miniInfo: [^\n]*backgroundColor: '#F5F7FA'/, 'Neutral premium and sales tiles');
-for (const tone of ['tileBlue', 'tileGreen', 'tileAmber', 'tileSlate']) assert.ok(source.includes('styles.' + tone), 'Approved semantic tile color: ' + tone);
-assert.match(source, /styles\.overviewLabelRow/, 'Overview label and icon share the first row');
-for (const obsolete of ['styles.quickDocument', 'styles.quickRenewal', 'styles.quickClaim', 'styles.quickCustomer']) {
-  assert.ok(!source.includes(obsolete), 'Obsolete colored action reference: ' + obsolete);
+// Approved 25 Nov design: keep navy hero, original text colours and functional contracts,
+// but separate the three outer sections and use white tiles throughout.
+assert.match(source, /<View style=\{styles.separatedDetails\}>/, 'Separated details group exists');
+for (const [section, color] of [['policyOverviewSection', '#EAF3FF'], ['premiumSection', '#E8F7F0'], ['salesSection', '#F0ECFF']]) {
+  assert.ok(source.includes(`styles.${section}`), section + ' is rendered independently');
+  assert.match(source, new RegExp(section + ": \\{ backgroundColor: '" + color + "'"), section + ' has approved background');
 }
-assert.match(source, /quickAction:\s*\{[\s\S]*?backgroundColor: 'transparent'/, 'Quick Action tiles are transparent');
-assert.match(source, /<View style=\{styles.unifiedSection\}>\s*<CardHeader iconKind="policy-overview" title="Policy Overview"/, 'Overview heading within unified card');
-assert.match(source, /<View style=\{styles.unifiedSection\}>\s*<Pressable accessibilityRole="button" accessibilityState=\{\{ expanded: showPremiumDetails \}\}/, 'Premium disclosure within unified card');
-assert.match(source, /<View style=\{styles.unifiedSection\}>\s*<Pressable accessibilityRole="button" accessibilityState=\{\{ expanded: showCommercialDetails \}\}/, 'Sales disclosure within unified card');
-assert.match(source, /premiumDisclosure:[^\n]*backgroundColor: '#E6EFF9'/, 'Premium header uses reference fill');
-assert.match(source, /commercialRow:[^\n]*backgroundColor: '#E6EFF9'/, 'Sales header uses reference fill');
-assert.match(source, /<Ionicons name="chevron-forward" size=\{13\} color="#0969CF"/, 'View All retains reference chevron');
-console.log('Navy Policy Details hero, original icons and unified reference design verified.');
+assert.match(source, /separatedDetails: \{ gap: 11 \}/, 'Visible gap between independent sections');
+assert.match(source, /sectionHeaderFill: \{ backgroundColor: 'transparent' \}/, 'Heading background follows outer section tint');
+assert.match(source, /overviewItem: [^\n]*backgroundColor: '#FFFFFF'/, 'Overview information tiles are white');
+assert.match(source, /miniInfo: [^\n]*backgroundColor: '#FFFFFF'/, 'Premium and sales information tiles are white');
+assert.match(source, /styles\.overviewLabelRow/, 'Overview icon and label remain on one line');
+for (const obsolete of ['styles.quickDocument', 'styles.quickRenewal', 'styles.quickClaim', 'styles.quickCustomer', 'styles.unifiedDetails', 'styles.unifiedSection', 'styles.tileBlue', 'styles.tileGreen', 'styles.tileAmber', 'styles.tileSlate']) {
+  assert.ok(!source.includes(obsolete), 'Obsolete presentation style returned: ' + obsolete);
+}
+assert.match(source, /quickAction:\s*\{[\s\S]*?backgroundColor: 'transparent'/, 'Quick Action tiles remain transparent');
+assert.match(source, /<View style=\{\[styles.policyDetailSection, styles.policyOverviewSection\]\}>\s*<CardHeader iconKind="policy-overview" title="Policy Overview"/, 'Policy Overview in independent blue section');
+assert.match(source, /<View style=\{\[styles.policyDetailSection, styles.premiumSection\]\}>\s*<Pressable accessibilityRole="button" accessibilityState=\{\{ expanded: showPremiumDetails \}\}/, 'Premium disclosure in independent mint section');
+assert.match(source, /<View style=\{\[styles.policyDetailSection, styles.salesSection\]\}>\s*<Pressable accessibilityRole="button" accessibilityState=\{\{ expanded: showCommercialDetails \}\}/, 'Sales disclosure in independent lavender section');
+assert.match(source, /premiumDisclosure:[^\n]*backgroundColor: 'transparent'/, 'Premium header uses section colour');
+assert.match(source, /commercialRow:[^\n]*backgroundColor: 'transparent'/, 'Sales header uses section colour');
+assert.match(source, /<Ionicons name="chevron-forward" size=\{13\} color="#0969CF"/, 'View All chevron retained');
+console.log('Navy Policy Details hero, original data/text colours and three separate coloured sections with white inner cards verified.');
