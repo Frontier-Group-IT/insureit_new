@@ -309,11 +309,18 @@ export default function InsurerListScreen() {
         </View>
         <View style={[styles.financialColumns, styles.stickyMetricsViewport]}>
           <Animated.View style={{ flexDirection: 'row', width: reportColumnWidth, transform: [{ translateX: Animated.multiply(stickyMetricsOffset, -1) }] }}>
-            {columns.map(column => <View key={column.key}
+            {columns.map(column => <Pressable key={column.key} accessibilityRole="button"
+              accessibilityLabel={`Sort by ${column.label}`}
+              onPress={() => {
+                if (column.key === 'policies') setSortKey('policies_desc');
+                else if (column.key === 'premium') setSortKey('amount_desc');
+                else if (column.key === 'payin' && canViewCommercials) setSortKey('payin_desc');
+                else if (column.key === 'retention' && canViewCommercials) setSortKey('retention_desc');
+              }}
               style={[styles.metricHeaderCell, { height: 38, width: METRIC_WIDTHS[column.key], backgroundColor: METRIC_COLORS[column.key].header }]}>
               <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}
                 style={styles.metricHeaderText}>{column.label.toUpperCase()}</Text>
-            </View>)}
+            </Pressable>)}
           </Animated.View>
         </View>
       </View>
