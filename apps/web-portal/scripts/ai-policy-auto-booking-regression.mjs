@@ -5,7 +5,7 @@ const worker=src("lib/ai-policy-auto-booking-server.ts");
 const route=src("app/api/internal/ai-policy-onboarding/auto-book/route.ts");
 const page=src("app/development/ai-policy-onboarding/page.tsx");
 const ui=src("components/development/semi-auto-policy-workspace.tsx");
-const sql=readFileSync(new URL("../../../supabase/migrations/20261125190000_ai_policy_auto_booking_attempts.sql",import.meta.url),"utf8");
+const sql=readFileSync(new URL("../../../supabase/migrations/20261125123144_ai_policy_auto_booking_attempts.sql",import.meta.url),"utf8");
 const vercel=JSON.parse(src("vercel.json"));
 assert.match(worker,/INSUREIT_AI_AUTO_BOOKING_ENABLED==="true"/);
 assert.match(worker,/signInWithPassword/);
