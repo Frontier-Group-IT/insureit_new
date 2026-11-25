@@ -15,7 +15,7 @@ assert.doesNotMatch(support, /label:"Payments"|label:"Other Queries"/, "Removed 
 assert.match(support, /e_challan/, "Challan tickets should use e-challan icon");
 assert.match(support, /insurance_quote/, "Insurance quote tickets should use insurance quote icon");
 assert.match(support, /item\.subject\+" "\+item\.service_type/, "Ticket icon should be based on real ticket topics");
-assert.match(support, /support-activity" className="space-y-3 rounded-2xl border border-\[#C8D8F3\]/, "Highlight support summary wrapper");
+assert.match(support, /support-activity" className="customer-support-activity flex min-w-0 flex-1 flex-col gap-3 rounded-2xl border border-\[#C8D8F3\]/, "Highlight support summary wrapper");
 assert.match(support, /loadCustomerServiceActivity\(account\.id\)/, "Keep authorized support request data");
 assert.match(support, /CustomerSupportTicketPanel/, "Keep support ticket controls");
 assert.match(support, /pathname:`\/customer\/support\/\$\{item\.id\}`/, "Preserve ticket links");

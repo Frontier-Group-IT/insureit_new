@@ -66,4 +66,13 @@ assert.match(profilePage, /customer-profile-page flex min-h-0 min-w-0 flex-1 fle
 assert.match(profilePage, /customer-profile-detail-section relative flex shrink-0/, "Profile summary retains natural height");
 assert.match(profileVault, /customer-profile-vault flex min-w-0 flex-1 flex-col/, "Vault consumes remaining space");
 assert.match(vaultControls, /customer-profile-vault-content flex-1/, "Vault content grows without fixed height");
+const support = read("../app/customer/(protected)/support/page.tsx");
+assert.match(support, /customer-support-page flex min-h-0 min-w-0 flex-1 flex-col gap-5/, "Support page fills available viewport");
+assert.match(support, /customer-support-activity flex min-w-0 flex-1 flex-col/, "Support panel grows regardless of record count");
+assert.match(support, /customer-support-results flex min-w-0 flex-1 flex-col/, "Inner results area fills remaining height");
+assert.match(support, /rows\.length \? "grid content-start items-start gap-3 sm:grid-cols-2 xl:grid-cols-4" : "flex flex-1 items-center justify-center"/, "Populated cards retain natural height and empty results center vertically");
+assert.match(support, /group flex min-h-\[105px\] flex-col/, "Individual ticket card dimensions remain compact");
+assert.match(support, /No matching support requests.*No support requests yet/, "Both empty states remain supported");
+assert.match(support, /relative isolate shrink-0 min-h-\[172px\]/, "Support banner retains natural height");
+assert.match(support, /section className="shrink-0 space-y-2\.5"/, "Quick Help retains natural height");
 console.log("Customer Portal full-height layout regression passed.");
