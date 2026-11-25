@@ -1,9 +1,10 @@
 import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useMemo, useState } from 'react';
-import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
+import { MotionNumber, useActivityMotion } from '@/components/activity-motion';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
 import { PartnerInsurerLogo } from '@/components/ui/partner-insurer-logo';
@@ -18,6 +19,43 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 type Metric = 'premium' | 'payin' | 'retention' | 'payout';
 type SortKey = 'amount_desc' | 'amount_asc' | 'policies_desc' | 'policies_asc' | 'name_asc' | 'name_desc' | 'payin_desc' | 'retention_desc';
 const ROW_HEIGHT = 46;
+const ENTRANCE_ROWS = 6;
+const nativeMotion = Platform.OS !== 'web';
+
+function useReportReveal(motion: boolean, ready: boolean, delay = 0) {
+  const value = useRef(new Animated.Value(1)).current;
+  const played = useRef(false);
+  useEffect(() => {
+    if (!motion || !ready) { value.setValue(1); return; }
+    if (played.current) return;
+    played.current = true;
+    value.setValue(0.72);
+    const animation = Animated.timing(value, { toValue: 1, duration: 260, delay, easing: Easing.out(Easing.cubic), useNativeDriver: nativeMotion, isInteraction: false });
+    animation.start();
+    return () => { animation.stop(); value.setValue(1); };
+  }, [motion, ready, delay, value]);
+  return value;
+}
+
+function revealStyle(value: Animated.Value) {
+  return { opacity: value, transform: [{ translateY: value.interpolate({ inputRange: [0.72, 1], outputRange: [4, 0], extrapolate: 'clamp' }) }] };
+}
+
+function ReportValue({ text, motion }: { text: string; motion: boolean }) {
+  const opacity = useRef(new Animated.Value(1)).current;
+  const previous = useRef(text);
+  useEffect(() => {
+    const changed = previous.current !== text;
+    previous.current = text;
+    if (!motion || !changed) { opacity.setValue(1); return; }
+    opacity.setValue(0.65);
+    const animation = Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: nativeMotion, isInteraction: false });
+    animation.start();
+    return () => { animation.stop(); opacity.setValue(1); };
+  }, [motion, opacity, text]);
+  return <Animated.Text style={[styles.metricAmountText, { opacity }]} numberOfLines={1}
+    adjustsFontSizeToFit minimumFontScale={0.7}>{text}</Animated.Text>;
+}
 const INSURER_COLUMN_WIDTH = '31%';
 
 // Fixed widths keep the first two metrics visible while additional columns scroll.
@@ -141,6 +179,43 @@ export default function InsurerListScreen() {
   const [draft, setDraft] = useState(range);
   const [dateExpanded, setDateExpanded] = useState(false);
   const [search, setSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
+  const { motion } = useActivityMotion();
+  const headerReveal = useReportReveal(motion, true);
+  const filterReveal = useReportReveal(motion, true, 90);
+  const calendarScale = useRef(new Animated.Value(1)).current;
+  const focusGlow = useRef(new Animated.Value(0)).current;
+  const headerGlow = useRef(new Animated.Value(0)).current;
+  const skeletonPulse = useRef(new Animated.Value(0)).current;
+  const edgeOpacity = useRef(new Animated.Value(0)).current;
+  const scrollMetrics = useRef({ x: 0, viewport: 0, content: 0 });
+  const edgeVisible = useRef(false);
+  const updateEdge = useCallback(() => {
+    const { x, viewport, content } = scrollMetrics.current;
+    const next = viewport > 0 && content - viewport - x > 2;
+    if (next === edgeVisible.current) return;
+    edgeVisible.current = next;
+    edgeOpacity.stopAnimation();
+    if (!motion) { edgeOpacity.setValue(next ? 1 : 0); return; }
+    Animated.timing(edgeOpacity, { toValue: next ? 1 : 0, duration: 150, useNativeDriver: nativeMotion, isInteraction: false }).start();
+  }, [edgeOpacity, motion]);
+  const pressCalendar = (toValue: number) => {
+    if (motion) Animated.spring(calendarScale, { toValue, stiffness: 240, damping: 22, mass: 0.8, useNativeDriver: nativeMotion, isInteraction: false }).start();
+  };
+  useEffect(() => {
+    const animation = Animated.timing(focusGlow, { toValue: searchFocused ? 1 : 0, duration: motion ? 160 : 0, useNativeDriver: nativeMotion, isInteraction: false });
+    animation.start();
+    return () => animation.stop();
+  }, [focusGlow, searchFocused, motion]);
+  useEffect(() => {
+    if (!motion) { headerGlow.setValue(0); calendarScale.setValue(1); edgeOpacity.stopAnimation(); edgeOpacity.setValue(edgeVisible.current ? 1 : 0); return; }
+    const animation = Animated.loop(Animated.sequence([
+      Animated.timing(headerGlow, { toValue: 1, duration: 2400, useNativeDriver: nativeMotion, isInteraction: false }),
+      Animated.timing(headerGlow, { toValue: 0, duration: 2400, useNativeDriver: nativeMotion, isInteraction: false }),
+    ]));
+    animation.start();
+    return () => { animation.stop(); headerGlow.setValue(0); calendarScale.stopAnimation(); calendarScale.setValue(1); edgeOpacity.stopAnimation(); edgeOpacity.setValue(edgeVisible.current ? 1 : 0); };
+  }, [motion, headerGlow, calendarScale, edgeOpacity]);
   const [sortKey, setSortKey] = useState<SortKey>('amount_desc');
   const validRange = validDateRange(range.from, range.to);
   const validDraft = validDateRange(draft.from, draft.to);
@@ -179,6 +254,43 @@ export default function InsurerListScreen() {
     });
   }, [query.data, search, sortKey, canViewCommercials]);
 
+  const initialLoading = validRange && query.loading && !query.data;
+  const reportReady = validRange && !!query.data;
+  const tableReveal = useReportReveal(motion, reportReady, 120);
+  // A bounded set of shared row values animates both halves in lockstep.
+  // Never key these animations by search, sort, date or recycled row position.
+  const rowReveals = useRef(Array.from({ length: ENTRANCE_ROWS }, () => new Animated.Value(1))).current;
+  const initialRows = useRef<Map<string, Animated.Value> | null>(null);
+  useEffect(() => {
+    if (!motion || !reportReady) { rowReveals.forEach(value => value.setValue(1)); return; }
+    if (initialRows.current || !insurers.length) return;
+    initialRows.current = new Map(insurers.slice(0, ENTRANCE_ROWS).map((row, index) => [row.name, rowReveals[index]]));
+    const animations = rowReveals.map((value, index) => {
+      value.setValue(0.72);
+      return Animated.timing(value, { toValue: 1, duration: 240, delay: 120 + index * 45, useNativeDriver: nativeMotion, isInteraction: false });
+    });
+    // The entrance style is attached on the next render, without changing data.
+    setEntranceStarted(true);
+    const animation = Animated.parallel(animations);
+    animation.start();
+    return () => { animation.stop(); rowReveals.forEach(value => value.setValue(1)); };
+  }, [motion, reportReady, insurers, rowReveals]);
+  const [entranceStarted, setEntranceStarted] = useState(false);
+  const rowStyle = (name: string) => {
+    const value = entranceStarted ? initialRows.current?.get(name) : undefined;
+    return value ? revealStyle(value) : undefined;
+  };
+  useEffect(() => {
+    if (!motion || !initialLoading) { skeletonPulse.setValue(0); return; }
+    const animation = Animated.loop(Animated.sequence([
+      Animated.timing(skeletonPulse, { toValue: 1, duration: 650, useNativeDriver: nativeMotion, isInteraction: false }),
+      Animated.timing(skeletonPulse, { toValue: 0, duration: 650, useNativeDriver: nativeMotion, isInteraction: false }),
+    ]));
+    animation.start();
+    return () => { animation.stop(); skeletonPulse.setValue(0); };
+  }, [motion, initialLoading, skeletonPulse]);
+  const skeletonOpacity = skeletonPulse.interpolate({ inputRange: [0, 1], outputRange: [0.48, 1] });
+
   const openDateRange = () => {
     // Keep draft changes isolated until Apply Filter is tapped.
     setDraft(range);
@@ -203,7 +315,8 @@ export default function InsurerListScreen() {
       <View style={styles.referenceHeader}>
         <View style={styles.headerOrbLarge} />
         <View style={styles.headerOrbSmall} />
-        <View style={styles.headerCopy}>
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: "#70BFFF", opacity: headerGlow.interpolate({ inputRange: [0, 1], outputRange: [0, 0.055] }) }]} />
+        <Animated.View style={[styles.headerCopy, revealStyle(headerReveal)]}>
           <View style={styles.headerTitleRow}>
             <Pressable accessibilityRole="button" accessibilityLabel="Back to Business"
               onPress={() => router.back()} style={styles.headerIcon}>
@@ -211,12 +324,14 @@ export default function InsurerListScreen() {
             </Pressable>
             <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>Insurer-wise Performance</Text>
           </View>
-        </View>
+        </Animated.View>
       </View>
       <View style={styles.dateSection}>
-        <View style={styles.headerSearch}>
+        <Animated.View style={revealStyle(filterReveal)}>
+        <View style={[styles.headerSearch, searchFocused && styles.searchFocused]}>
+          <Animated.View pointerEvents="none" style={[styles.focusOutline, { opacity: focusGlow }]} />
           <Ionicons name="search-outline" size={18} color="#8698AE" />
-          <TextInput value={search} onChangeText={setSearch} placeholder="Search insurer"
+          <TextInput value={search} onChangeText={setSearch} onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} placeholder="Search insurer"
             placeholderTextColor="#94A2B5" autoCapitalize="none" autoCorrect={false}
             accessibilityLabel="Search insurer" style={styles.headerSearchInput} />
           {search ? <Pressable accessibilityRole="button" accessibilityLabel="Clear insurer search" onPress={() => setSearch('')}>
@@ -225,35 +340,42 @@ export default function InsurerListScreen() {
           <View style={styles.calendarDivider} />
           <Pressable accessibilityRole="button" accessibilityLabel="Date Range"
             accessibilityState={{ expanded: dateExpanded }} onPress={openDateRange}
-            hitSlop={8} style={styles.calendarTrigger}>
+            hitSlop={8} onPressIn={() => pressCalendar(0.92)} onPressOut={() => pressCalendar(1)} style={styles.calendarTrigger}>
+            <Animated.View style={{ transform: [{ scale: calendarScale }] }}>
             <Ionicons name="calendar-outline" size={20} color="#155BB6" />
+            </Animated.View>
           </Pressable>
         </View>
         <View style={styles.selectedRangeRow}>
           <Ionicons name="calendar-outline" size={13} color="#667D9C" />
           <Text style={styles.dateRangeValue}>{validRange ? formatRange(from, to) : 'Select a valid reporting range'}</Text>
         </View>
-
+        </Animated.View>
       </View>
 
       <View style={styles.registerArea}>
         <View style={styles.rangeRow}>
-          <Text style={styles.countText}>{insurers.length} insurers</Text>
+          <Text style={styles.countText} accessibilityLabel={initialLoading ? "Loading insurers" : `${insurers.length} insurers`}>{initialLoading ? "Loading insurers…" : <MotionNumber text={`${insurers.length} insurers`} count={insurers.length} motion={motion && reportReady && !search.trim()} />}</Text>
         </View>
         <View style={styles.register}>
           <View style={styles.registerContents}>
             <View style={styles.fixedNames}>
-              <View style={styles.registerHeader}><Text style={styles.columnTitle}>INSURER</Text></View>
+              <View style={styles.registerHeader}><Animated.Text style={[styles.columnTitle, { opacity: tableReveal }]}>INSURER</Animated.Text></View>
+              {initialLoading ? Array.from({ length: 5 }, (_, index) => <View key={`name-skeleton-${index}`} style={styles.tableRow} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><Animated.View style={[styles.skeletonLogo, { opacity: skeletonOpacity }]} /><Animated.View style={[styles.skeletonName, { opacity: skeletonOpacity }]} /></View>) : null}
               {!validRange || (query.loading && !query.data) || (query.error && !query.data) ? null
                 : insurers.map((insurer) => (
-                  <View key={insurer.name} style={styles.tableRow}>
+                  <Animated.View key={insurer.name} style={[styles.tableRow, rowStyle(insurer.name)]}>
                     <PartnerInsurerLogo name={insurer.name} style={styles.logo} />
                     <Text style={styles.insurerName} numberOfLines={2} ellipsizeMode="tail"
                       accessibilityLabel={insurer.name}>{displayInsurerName(insurer.name)}</Text>
-                  </View>
+                  </Animated.View>
                 ))}
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator accessibilityLabel="Swipe horizontally for additional financial columns" style={styles.financialColumns} contentContainerStyle={styles.financialScrollContent}>
+            <ScrollView horizontal showsHorizontalScrollIndicator accessibilityLabel="Swipe horizontally for additional financial columns" style={styles.financialColumns} contentContainerStyle={styles.financialScrollContent}
+              nestedScrollEnabled scrollEventThrottle={16}
+              onLayout={event => { scrollMetrics.current.viewport = event.nativeEvent.layout.width; updateEdge(); }}
+              onContentSizeChange={width => { scrollMetrics.current.content = width; updateEdge(); }}
+              onScroll={event => { scrollMetrics.current.x = event.nativeEvent.contentOffset.x; updateEdge(); }}>
               <View style={{ width: columns.reduce((total, column) => total + METRIC_WIDTHS[column.key], 0) }}>
               <View style={styles.registerHeader}>
                 {columns.map((column) => (
@@ -266,14 +388,15 @@ export default function InsurerListScreen() {
                       else if (column.key === 'retention' && canViewCommercials) setSortKey('retention_desc');
                     }}
                     style={[styles.metricHeaderCell, { width: METRIC_WIDTHS[column.key], backgroundColor: METRIC_COLORS[column.key].header }]}>
-                    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}
-                      style={styles.metricHeaderText}>{column.label.toUpperCase()}</Text>
+                    <Animated.Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}
+                      style={[styles.metricHeaderText, { opacity: tableReveal }]}>{column.label.toUpperCase()}</Animated.Text>
                   </Pressable>
                 ))}
               </View>
+              {initialLoading ? Array.from({ length: 5 }, (_, index) => <View key={`metric-skeleton-${index}`} style={styles.financialRow} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">{columns.map(column => <View key={column.key} style={[styles.metricPressable, { width: METRIC_WIDTHS[column.key], backgroundColor: METRIC_COLORS[column.key].cell }]}><Animated.View style={[styles.skeletonAmount, { opacity: skeletonOpacity }]} /></View>)}</View>) : null}
               {(!validRange || (query.loading && !query.data) || (query.error && !query.data)) ? null
                 : insurers.map((insurer) => (
-                  <View key={insurer.name} style={styles.financialRow}>
+                  <Animated.View key={insurer.name} style={[styles.financialRow, rowStyle(insurer.name)]}>
                     {columns.map((column) => {
                       const amount = column.key === 'policies' ? null : metricValue(insurer, column.key);
                       if (column.key === 'policies') {
@@ -287,17 +410,15 @@ export default function InsurerListScreen() {
                           accessibilityLabel={`${insurer.name}, ${column.label}, ${exactAmount}. Tap for full amount`}
                           onPress={() => partnerAlert(`${displayInsurerName(insurer.name)} · ${column.label}`, exactAmount)}
                           style={[styles.metricPressable, { width: METRIC_WIDTHS[column.key], backgroundColor: METRIC_COLORS[column.key].cell }]}>
-                          <Text style={styles.metricAmountText} numberOfLines={1}
-                            adjustsFontSizeToFit minimumFontScale={0.7}>
-                            {amount == null ? '—' : formatInsurerCompactRupees(amount)}
-                          </Text>
+                          <ReportValue text={amount == null ? '—' : formatInsurerCompactRupees(amount)} motion={motion} />
                         </Pressable>
                       );
                     })}
-                  </View>
+                  </Animated.View>
                 ))}
               </View>
             </ScrollView>
+            <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.scrollEdge, { opacity: edgeOpacity }]} />
           </View>
           {!validRange ? <PartnerStateView state="empty" title="Date range unavailable"
             message="Choose a valid range of up to 366 days." />
@@ -314,7 +435,7 @@ export default function InsurerListScreen() {
       </View>
 
 
-      <Modal visible={dateExpanded} transparent animationType={Platform.OS === 'ios' ? 'slide' : 'fade'}
+      <Modal visible={dateExpanded} transparent animationType={!motion ? 'none' : Platform.OS === 'ios' ? 'slide' : 'fade'}
         onRequestClose={closeDateRange}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.sheetOverlay}>
@@ -396,6 +517,12 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, minWidth: 0, fontSize: 18, fontWeight: '800', color: '#FFFFFF', lineHeight: 23 },
   // Full-width pill within even side margins; calendar is part of this same search control.
   headerSearch: { width: '100%', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD8E7', borderRadius: 999, minHeight: 46, paddingLeft: 14, paddingRight: 6, alignItems: 'center', flexDirection: 'row', gap: 9 },
+  searchFocused: { borderColor: '#3986D7' },
+  focusOutline: { ...StyleSheet.absoluteFillObject, borderRadius: 999, borderWidth: 2, borderColor: '#A7D0F7' },
+  skeletonLogo: { width: 21, height: 21, borderRadius: 5, backgroundColor: '#DCE7F5' },
+  skeletonName: { flex: 1, maxWidth: 62, height: 8, borderRadius: 4, backgroundColor: '#DCE7F5' },
+  skeletonAmount: { alignSelf: 'flex-end', width: '65%', height: 8, borderRadius: 4, backgroundColor: '#D6E1F2' },
+  scrollEdge: { position: 'absolute', right: 0, top: 0, bottom: 0, width: 5, backgroundColor: 'rgba(26,58,105,0.12)' },
   headerSearchInput: { flex: 1, minWidth: 0, color: '#233D62', fontSize: 12, paddingVertical: 6 },
   dateSection: { marginHorizontal: 14, marginTop: 14, marginBottom: 8 },
   calendarDivider: { width: 1, height: 22, backgroundColor: '#DCE6F2' },
