@@ -4,6 +4,7 @@
 begin;
 create table if not exists public.policy_intake_ai_auto_booking_attempts (
   intake_id uuid primary key references public.policy_intake_requests(id) on delete restrict,
+  operator_profile_id uuid not null references public.profiles(id),
   document_id uuid not null,
   extraction_fingerprint text not null check (extraction_fingerprint ~ '^[0-9a-fA-F]{64}$'),
   state text not null default 'claimed'
@@ -23,12 +24,13 @@ alter table public.policy_intake_ai_auto_booking_attempts enable row level secur
 revoke all on public.policy_intake_ai_auto_booking_attempts from public,anon,authenticated;
 grant select,insert,update on public.policy_intake_ai_auto_booking_attempts to service_role;
 
-create or replace function public.claim_ai_auto_booking_v1(p_limit integer default 3)
+create or replace function public.claim_ai_auto_booking_v1(p_operator_profile_id uuid,p_limit integer default 3)
 returns table(intake_id uuid,document_id uuid,extraction_fingerprint text)
 language plpgsql security invoker set search_path = public,pg_catalog as $$
 begin
   if current_user <> 'service_role' then raise exception 'service_role_required'; end if;
-  if p_limit < 1 or p_limit > 5 then raise exception 'invalid_claim_limit'; end if;
+  if p_limit < 1 or p_limit > 5 or p_operator_profile_id is null
+    then raise exception 'invalid_claim_parameters'; end if;
   return query
     with selected as (
       select q.intake_id,q.document_id,q.extraction_fingerprint
@@ -52,16 +54,16 @@ begin
       limit p_limit
     ), inserted as (
       insert into public.policy_intake_ai_auto_booking_attempts as a
-        (intake_id,document_id,extraction_fingerprint)
-      select s.intake_id,s.document_id,s.extraction_fingerprint from selected s
+        (intake_id,operator_profile_id,document_id,extraction_fingerprint)
+      select s.intake_id,p_operator_profile_id,s.document_id,s.extraction_fingerprint from selected s
       on conflict (intake_id) do nothing
       returning a.intake_id,a.document_id,a.extraction_fingerprint
     )
     select a.intake_id,a.document_id,a.extraction_fingerprint from inserted a;
 end;
 $$;
-revoke all on function public.claim_ai_auto_booking_v1(integer) from public,anon,authenticated;
-grant execute on function public.claim_ai_auto_booking_v1(integer) to service_role;
+revoke all on function public.claim_ai_auto_booking_v1(uuid,integer) from public,anon,authenticated;
+grant execute on function public.claim_ai_auto_booking_v1(uuid,integer) to service_role;
 
 create or replace function public.finish_ai_auto_booking_v1(
  p_intake_id uuid,p_document_id uuid,p_fingerprint text,p_state text,
