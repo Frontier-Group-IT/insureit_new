@@ -38,10 +38,10 @@ export default async function CustomerSupportPage({
   );
 
   return (
-    <div className="space-y-5">
+    <div className="customer-support-page flex min-h-0 min-w-0 flex-1 flex-col gap-5">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/support" />
 
-      <section className="relative isolate min-h-[172px] overflow-hidden rounded-xl border border-[#E3E7F4] bg-[#F4F5FF] px-5 py-5 sm:px-7">
+      <section className="relative isolate shrink-0 min-h-[172px] overflow-hidden rounded-xl border border-[#E3E7F4] bg-[#F4F5FF] px-5 py-5 sm:px-7">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[url('/assets/supclaim.jpeg')] bg-cover bg-center bg-no-repeat" />
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F5F7FF]/94 via-[#F5F7FF]/72 via-45% to-[#F5F7FF]/14" />
         <div className="relative z-10 max-w-[530px]">
@@ -60,7 +60,7 @@ export default async function CustomerSupportPage({
         </div>
       </section>
 
-      <section className="space-y-2.5">
+      <section className="shrink-0 space-y-2.5">
         <div className="flex items-start justify-between gap-2">
           <h2 className="flex items-center gap-2 text-[15px] font-bold text-[#29305D]"><img src="/assets/customer-3d-icons/help_and_support.png" alt="" aria-hidden="true" width={34} height={34} className="h-[34px] w-[34px] object-contain" />Quick Help</h2>
         </div>
@@ -77,7 +77,7 @@ export default async function CustomerSupportPage({
         </div>
       </section>
 
-      <section id="support-activity" className="space-y-3 rounded-2xl border border-[#C8D8F3] bg-white p-3 shadow-[0_8px_26px_rgba(35,83,150,.12)] sm:p-4">
+      <section id="support-activity" className="customer-support-activity flex min-w-0 flex-1 flex-col gap-3 rounded-2xl border border-[#C8D8F3] bg-white p-3 shadow-[0_8px_26px_rgba(35,83,150,.12)] sm:p-4">
         <CustomerSupportTicketPanel customerId={account.id} claims={claims.map(claim=>({id:claim.id,claim_no:claim.claim_no,status:claim.current_status}))} search={
           <form className="flex h-9 w-full max-w-[465px] items-center gap-2 rounded-lg border border-[#E6E8F4] bg-white px-3 focus-within:border-[#AB9BF5]">
             <Search className="h-3.5 w-3.5 shrink-0 text-[#939AB3]"/>
@@ -85,8 +85,8 @@ export default async function CustomerSupportPage({
             <CustomerAnimatedSearchInput name="q" defaultValue={params.q ?? ""} aria-label="Search support requests" hints={["Search by ticket number or subject…","Search request status…"]} className="text-[10px] text-[#252B5E]"/>
           </form>
         }/>
-        <div className="rounded-xl border border-[#E1E9F7] bg-[#F8FAFF] p-3">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="customer-support-results flex min-w-0 flex-1 flex-col rounded-xl border border-[#E1E9F7] bg-[#F8FAFF] p-3">
+          <div className={rows.length ? "grid content-start items-start gap-3 sm:grid-cols-2 xl:grid-cols-4" : "flex flex-1 items-center justify-center"}>
           {rows.length ? rows.map(item=>(
             <Link key={item.id} href={{pathname:`/customer/support/${item.id}`,query:{account:account.id}}} className="group flex min-h-[105px] flex-col rounded-xl border border-[#DCE6F7] bg-white p-3 shadow-[0_2px_7px_rgba(34,68,128,.055)] transition hover:border-[#A9C5F1] hover:shadow-[0_5px_14px_rgba(34,68,128,.11)]">
               <div className="flex items-start gap-2">
@@ -100,7 +100,7 @@ export default async function CustomerSupportPage({
               </div>
               <p className="mt-2 text-[9px] leading-4 text-[#8189A5]">{item.vehicle_no?`Vehicle: ${item.vehicle_no} · `:""}{formatCustomerCompactDate(item.updated_at || item.created_at)}</p>
                           </Link>
-          )) : <div className="sm:col-span-2 xl:col-span-4"><EmptyCustomerState title={activity.length?"No matching support requests":"No support requests yet"} body={activity.length?"Try a different search term.":"Your raised requests will appear here."}/></div>}
+          )) : <div className="w-full"><EmptyCustomerState title={activity.length?"No matching support requests":"No support requests yet"} body={activity.length?"Try a different search term.":"Your raised requests will appear here."}/></div>}
           </div>
         </div>
       </section>
