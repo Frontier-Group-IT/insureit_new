@@ -372,7 +372,10 @@ function unitedIndiaPunjabBharatBenz(t){
  };
  const warnings=[];
  if(!certificate||!policy||policy!==certificate)warnings.push('Review required: certificate_policy_mismatch');
- if(!authority||registration===null)warnings.push('Review required: Punjab authority_not_current_vehicle');
+ // RTO geography may be missing; reject a conflicting or ambiguous printed
+ // current authority, never invent the city from a plate or address.
+ if((authorityRows.length>0&&!authority)||registration===null)
+   warnings.push('Review required: Punjab authority_not_current_vehicle');
  if(!cpaRemoved)warnings.push('Review required: CPA waiver_unverified');
  if(![basicTp,driver,geoTp].every(v=>typeof v==='number')||!approx(tp,basicTp+driver+geoTp))
    warnings.push('Review required: TP itemization_unreconciled');
