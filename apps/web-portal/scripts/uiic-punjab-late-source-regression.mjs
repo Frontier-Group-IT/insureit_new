@@ -50,6 +50,14 @@ assert.match(nativeClassifier,/maxTextPages:16,extendedTimeout:true/,
 assert.match(nativeClassifier,/if\(initial==="united_india_gcv_native_pdf"\)/,
   "Expanded PDF decoding must remain isolated to generic UIIC GCV");
 
+const punctuationVariant=late.replace("PVT. LTD / BHARATBENZ","PVT LTD    BHARATBENZ")
+ .replace("CGST-Others(9%)","CGST Others (9%)")
+ .replace("SGST-Basic TP(2.50%)","SGST Basic TP (2.50%)");
+assert.equal(refine("united_india_gcv_native_pdf",punctuationVariant),
+ "united_india_gcv_punjab_split_gst_native_pdf",
+ "Source text may drop punctuation while retaining exact maker and split tax evidence");
+assert.equal(refine("united_india_gcv_native_pdf",punctuationVariant.replace("9%","18%")),
+ "united_india_gcv_native_pdf","Wrong tax rate cannot pass");
 const bridge=fs.readFileSync(path.resolve(here,"../lib/policy-intake-semi-auto-n8n.ts"),"utf8");
 assert.match(bridge,/"held_source_or_identity_unverified"/,
  "Genuine Oriental issuance hold must be reported as source verification, not n8n outage");
