@@ -84,7 +84,7 @@ assert.equal(eligible(input).eligible,true,JSON.stringify(eligible(input)));
 const wrong=valid.fields.map(f=>f.key==="vehicle_rto_name"?{...f,evidence:"Native PDF policy schedule"}:f);
 assert.equal(eligible({...input,fields:wrong}).eligible,false);
 const missingAuthority=fake.replace(
- "Registration Authority Auto Association Membership No. Geographical Area Extension\\nRTO PATHANKOT INDIA\\n","");
+ "Registration Authority Auto Association Membership No. Geographical Area Extension\nRTO PATHANKOT INDIA\n","");
 const withoutRto=parseOne(missingAuthority);
 assert.equal(withoutRto.ok,true,"Missing optional RTO must not fail otherwise verified PDF");
 assert.equal(withoutRto.fields.some(f=>f.key==="vehicle_rto_name"),false);
