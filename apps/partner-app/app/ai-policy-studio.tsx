@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Animated, Easing, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Animated, Clipboard, Easing, Image, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -59,6 +59,9 @@ export default function AiPolicyStudioScreen() {
   const [actionError,setActionError]=useState('');
   const [resultUncertain,setResultUncertain]=useState(false);
   const [fieldExpanded,setFieldExpanded]=useState(false);
+  const [detailMenu,setDetailMenu]=useState(false);
+  const [copied,setCopied]=useState(false);
+  useEffect(()=>{if(!copied)return;const timer=setTimeout(()=>setCopied(false),1800);return ()=>clearTimeout(timer);},[copied]);
   const sequence=useRef(0);
   const detailSequence=useRef(0);
   const [search,setSearch]=useState('');
@@ -167,8 +170,8 @@ export default function AiPolicyStudioScreen() {
     setPageIndex(next);
   };
   const refresh=()=>{setRefreshing(true);if(debouncedSearch)setSearchRevision(v=>v+1);else void reload();};
-  const closeDetail=()=>{if(actionBusy)return;setSelected(null);setPendingAction(null);setActionError('');setResultUncertain(false);setFieldExpanded(false);};
-  const openDetail=(row:AiStudioRow)=>{setSelected(row);setFieldExpanded(false);setActionError('');setResultUncertain(false);};
+  const closeDetail=()=>{if(actionBusy)return;setDetailMenu(false);setCopied(false);setSelected(null);setPendingAction(null);setActionError('');setResultUncertain(false);setFieldExpanded(false);};
+  const openDetail=(row:AiStudioRow)=>{setDetailMenu(false);setCopied(false);setSelected(row);setFieldExpanded(false);setActionError('');setResultUncertain(false);};
   const reloadSelected=async()=>{
     if(!selected||actionBusy)return;
     const intakeId=selected.id;
@@ -358,31 +361,51 @@ export default function AiPolicyStudioScreen() {
         <PartnerCaseBottomNavigation activeTab="More" />
       </View>
 
-      <Modal visible={Boolean(selected)} presentationStyle="pageSheet" animationType="slide" onRequestClose={closeDetail}>
+      <Modal visible={Boolean(selected)} presentationStyle="fullScreen" animationType="slide" onRequestClose={closeDetail}>
         <SafeAreaView style={s.sheet}>
+          <StatusBar style="dark" backgroundColor="#F7F9FD" />
           <View style={s.sheetTop}>
-            <View><Text style={s.eyebrow}>VERIFIED INTAKE</Text>
-              <Text style={s.sheetTitle}>{selected?.intake_number.replace('PIR-','')}</Text></View>
-            <Pressable style={s.circle} onPress={closeDetail} disabled={actionBusy} accessibilityRole="button" accessibilityLabel="Close details">
-              <Ionicons name="close" color={C.ink} size={21}/>
-            </Pressable>
+            <Pressable style={s.detailCircle} onPress={closeDetail} disabled={actionBusy} accessibilityRole="button" accessibilityLabel="Back to intakes"><Ionicons name="arrow-back" color="#101A35" size={22}/></Pressable>
+            <Ionicons name="shield-checkmark" color="#0759EC" size={25}/>
+            <View style={s.detailHeaderCopy}>
+              <Text style={s.sheetTitle} accessibilityRole="header" numberOfLines={1}>Verified Intake</Text>
+              <View style={s.intakeIdRow}><Text style={s.intakeId} selectable numberOfLines={1}>{selected?.intake_number.replace('PIR-','')}</Text>
+                <Pressable accessibilityRole="button" accessibilityLabel={copied?'Intake number copied':'Copy intake number'} hitSlop={8} onPress={()=>{if(selected){Clipboard.setString(selected.intake_number.replace('PIR-',''));setCopied(true);}}}><Ionicons name={copied?'checkmark':'copy-outline'} color="#435477" size={17}/></Pressable>
+              </View>
+            </View>
+            <Pressable style={s.detailCircle} onPress={()=>setDetailMenu(v=>!v)} disabled={actionBusy} accessibilityRole="button" accessibilityLabel="More intake options" accessibilityState={{expanded:detailMenu}}><Ionicons name="ellipsis-horizontal" color="#101A35" size={22}/></Pressable>
+            <Pressable style={s.detailCircle} onPress={closeDetail} disabled={actionBusy} accessibilityRole="button" accessibilityLabel="Close details"><Ionicons name="close" color="#101A35" size={23}/></Pressable>
           </View>
+          {detailMenu?<View style={s.detailMenu}>
+            <Pressable accessibilityRole="button" disabled={actionBusy} style={s.menuItem} onPress={()=>{setDetailMenu(false);void reloadSelected();}}><Ionicons name="refresh-outline" size={19} color={C.blue}/><Text style={s.menuText}>Refresh intake details</Text></Pressable>
+            <Pressable accessibilityRole="button" style={s.menuItem} onPress={()=>{setDetailMenu(false);if(selected){Clipboard.setString(selected.intake_number.replace('PIR-',''));setCopied(true);}}}><Ionicons name="copy-outline" size={19} color={C.blue}/><Text style={s.menuText}>Copy intake number</Text></Pressable>
+          </View>:null}
           {detailLoading?<View style={s.center}><ActivityIndicator color={C.blue}/></View>:null}
           {detailError?<View style={s.center}><Text style={s.errorText}>{detailError}</Text></View>:null}
           {detail?<ScrollView contentContainerStyle={s.sheetContent}>
             <View style={s.detailHero}>
-              <Text style={s.detailEyebrow}>{humanize(detail.queue_state)}</Text>
-              <Text style={s.detailName}>{detail.fields.find(x=>x.key==='insured_name')?.value||detail.lead_source_name||'Policy intake'}</Text>
-              <Text style={s.detailMeta}>{detail.checks_passed} verified checks · {detail.policy_type||'Motor'}</Text><View style={s.detailSteps}><Ionicons name="document-text-outline" color={C.mint} size={16}/><Text style={s.stepLabel}>PDF</Text><Ionicons name="chevron-forward" size={13} color="#B9C9D0"/><Ionicons name="scan-outline" size={16} color={C.mint}/><Text style={s.stepLabel}>Extracted</Text><Ionicons name="chevron-forward" size={13} color="#B9C9D0"/><Ionicons name="shield-checkmark-outline" size={16} color={C.mint}/><Text style={s.stepLabel}>Review</Text></View>
+              <View pointerEvents="none" style={s.heroGlow}/>
+              {[0,1,2].map(i=><View key={i} pointerEvents="none" style={[s.detailWave,{right:-68+i*15,bottom:-88+i*14}]}/>)}
+              <View style={s.detailHeroCopy}>
+                <Text style={s.detailEyebrow}>{humanize(detail.queue_state)}</Text>
+                <Text style={s.detailName}>{detail.fields.find(x=>x.key==='insured_name')?.value||detail.lead_source_name||'Policy intake'}</Text>
+                <View style={s.detailMetaRow}>
+                  <View style={s.policyTypePill}><Ionicons name={detail.policy_type?.toLowerCase()==='motor'?'car-outline':'shield-outline'} size={15} color="#FFFFFF"/><Text style={s.policyTypeText}>{detail.policy_type?humanize(detail.policy_type):'Policy'}</Text></View>
+                  <View style={s.metaDivider}/>
+                  <Ionicons name="shield-checkmark-outline" size={17} color="#FFFFFF"/><Text style={s.detailMeta}>{detail.checks_passed} verified checks</Text>
+                </View>
+              </View>
+              <Image source={PartnerAssets.actions.aiStudioVerified} style={s.detailHeroArtwork} resizeMode="contain" accessible={false}/>
             </View>
+            <IntakeStepper detail={detail}/>
             {detail.last_error_code||detail.exception_codes.length?<View style={s.issue}>
-              <Ionicons name="information-circle-outline" size={18} color="#996A33"/>
+              <Ionicons name="information-circle-outline" size={23} color="#E87915"/>
               <Text style={s.issueText}>{humanize(detail.last_error_code||detail.exception_codes.join(', '))}</Text>
             </View>:null}
             {(!aiStudioActionsEnabled||detail.processing_lane!=='automation')&&!detail.final_policy_id?<View style={s.actionsWrap}>
               <View style={s.actionsRow}>
-                <View style={[s.reparseButton,s.disabledAction]}><Ionicons name="refresh-outline" color="#7F8EAB" size={22}/><Text style={s.reparseLabel}>Reparse PDF</Text><Text style={s.actionSub}>Awaiting activation</Text></View>
-                <View style={[s.convertButton,s.disabledConvert]}><Ionicons name="lock-closed-outline" color="#FFFFFF" size={22}/><Text style={s.convertLabel}>Verify & Convert</Text><Text style={s.convertSub}>Awaiting activation</Text></View>
+                <View style={[s.reparseButton,s.disabledAction]} accessibilityState={{disabled:true}}><Ionicons name="refresh-outline" color="#7F8EAB" size={30}/><Text style={s.reparseLabel}>Reparse PDF</Text><Text style={s.actionSub}>Awaiting activation</Text><View style={s.actionArrow}><Ionicons name="lock-closed-outline" size={16} color="#71809E"/></View></View>
+                <View style={[s.convertButton,s.disabledConvert]} accessibilityState={{disabled:true}}><Ionicons name="lock-closed-outline" color="#FFFFFF" size={30}/><Text style={s.convertLabel}>Verify & Convert</Text><Text style={s.convertSub}>Awaiting activation</Text><View style={s.convertArrow}><Ionicons name="lock-closed-outline" size={16} color="#6276A5"/></View></View>
               </View>
               <View style={s.disabledNotice}><Ionicons name="lock-closed-outline" size={20} color="#8F7033"/><View style={{flex:1}}><Text style={s.disabledTitle}>Secure actions awaiting activation</Text><Text style={s.disabledText}>{detail.processing_lane==='manual'?'This intake uses the website’s manual onboarding lane. Secure AI conversion is restricted to eligible automation intakes.':'These buttons unlock after the backend passes authenticated booking checks. Your current intakes are unchanged.'}</Text></View></View>
             </View>:null}
@@ -393,11 +416,11 @@ export default function AiPolicyStudioScreen() {
               {!pendingAction&&!resultUncertain?<View style={s.actionsRow}>
                 <Pressable accessibilityRole="button" accessibilityLabel="Reparse current PDF and replace draft"
                   style={s.reparseButton} onPress={()=>setPendingAction('reparse')} disabled={actionBusy}>
-                  <Ionicons name="refresh-outline" color={C.blue} size={22}/><Text style={s.reparseLabel}>Reparse PDF</Text><Text style={s.actionSub}>Replace extracted draft</Text>
+                  <Ionicons name="refresh-outline" color="#5635F4" size={31}/><Text style={s.reparseLabel}>Reparse PDF</Text><Text style={s.actionSub}>Analyze again & extract data</Text><View style={s.actionArrow}><Ionicons name="chevron-forward" size={18} color="#5635F4"/></View>
                 </Pressable>
                 <Pressable accessibilityRole="button" accessibilityLabel="Verify PDF and convert to policy"
                   style={s.convertButton} onPress={()=>setPendingAction('convert')} disabled={actionBusy}>
-                  <Ionicons name="shield-checkmark-outline" color="#FFFFFF" size={22}/><Text style={s.convertLabel}>Verify & Convert</Text><Text style={s.convertSub}>Secure policy booking</Text>
+                  <View pointerEvents="none" style={s.convertGlow}/><Ionicons name="layers-outline" color="#FFFFFF" size={31}/><Text style={s.convertLabel}>Verify & Convert</Text><Text style={s.convertSub}>Analyze, validate & convert to policy</Text><View style={s.convertArrow}><Ionicons name="chevron-forward" size={18} color="#0759EC"/></View>
                 </Pressable>
               </View>:null}
               {pendingAction?<View style={s.confirmPanel}>
@@ -416,16 +439,17 @@ export default function AiPolicyStudioScreen() {
               </View>:null}
             </View>:null}
 
-            <Pressable style={s.fieldsHeader} accessibilityRole="button" onPress={()=>setFieldExpanded(v=>!v)}><View style={s.fieldsIcon}><Ionicons name="document-text-outline" color={C.blue} size={20}/></View><View style={{flex:1}}><Text style={s.sectionTitle}>Extracted policy details</Text><Text style={s.meta}>{detail.fields.length} PDF fields</Text></View><Text style={s.fieldsToggle}>{fieldExpanded?'Show less':'View all'}</Text><Ionicons name={fieldExpanded?'chevron-up':'chevron-down'} size={17} color={C.blue}/></Pressable>
-            <View style={s.detailList}>
+            <Pressable style={s.fieldsHeader} accessibilityRole="button" onPress={()=>setFieldExpanded(v=>!v)}><View style={s.fieldsIcon}><Ionicons name="document-text-outline" color={C.blue} size={20}/></View><View style={{flex:1}}><Text style={s.sectionTitle}>Extracted policy details</Text><Text style={s.meta}>{detail.fields.length} PDF fields</Text></View><View style={s.fieldsPill}><Text style={s.fieldsToggle}>{fieldExpanded?'Show less':'View all'}</Text><Ionicons name={fieldExpanded?'chevron-up':'chevron-forward'} size={17} color="#0759EC"/></View></Pressable>
+            {detail.fields.length>0?<View style={s.detailList}>
               {(fieldExpanded?detail.fields:detail.fields.slice(0,8)).map((f,index)=><View key={f.key+String(index)} style={s.detailField}>
                 <Text style={s.fieldLabel}>{fieldName(f.key)}</Text>
                 <Text selectable style={s.fieldValue}>{f.value}</Text>
               </View>)}
-            </View>
+            </View>:null}
 
             {!fieldExpanded&&detail.fields.length>8?<Pressable accessibilityRole="button" style={s.moreFields} onPress={()=>setFieldExpanded(true)}><Text style={s.moreFieldsText}>View {detail.fields.length-8} more fields</Text><Ionicons name="chevron-down" size={14} color={C.blue}/></Pressable>:null}
-            <View style={s.safetyRow}><Ionicons name="shield-checkmark" color="#2D8065" size={16}/><Text style={s.safetyText}>PDF extraction is not booking approval. Final registration always uses the protected onboarding service.</Text></View>
+            <View style={s.safetyRow}><Ionicons name="shield-checkmark" color="#159B42" size={25}/><View style={s.safetyDivider}/><Text style={s.safetyText}>PDF extraction is not booking approval. Final registration always uses the protected onboarding service.</Text></View>
+            <View pointerEvents="none" style={s.footerWaves}><View style={s.footerWaveOne}/><View style={s.footerWaveTwo}/></View>
           </ScrollView>:null}
         </SafeAreaView>
       </Modal>
@@ -433,6 +457,22 @@ export default function AiPolicyStudioScreen() {
   );
 }
 
+// Presentation only: do not imply extraction completion without returned fields.
+function intakeStage(detail: Pick<AiStudioDetail,'final_policy_id'|'status'|'fields'|'ocr_status'>) {
+  if (detail.final_policy_id) return 2;
+  if (!detail.fields.length || detail.ocr_status==='failed') return 0;
+  return detail.status==='in_review'||detail.status==='ready_for_review'||detail.status==='needs_attention'?2:1;
+}
+function IntakeStepper({detail}:{detail:AiStudioDetail}){
+  const active=intakeStage(detail);
+  return <View style={s.stepper} accessibilityLabel={'Current workflow stage: '+['PDF','Extracted','Review'][active]}>
+    <View pointerEvents="none" style={s.stepLine}><View style={[s.stepLineFill,{width:active===2?'100%':active===1?'50%':'0%'}]}/></View>
+    {([{label:'PDF',icon:'document-text-outline'},{label:'Extracted',icon:'scan-outline'},{label:'Review',icon:'shield-checkmark-outline'}] as const).map((step,index)=><View key={step.label} style={s.stepItem}>
+      <View style={[s.stepCircle,index===active&&s.stepCircleActive]}><Ionicons name={step.icon} size={24} color={index===active?'#FFFFFF':'#435477'}/></View>
+      <View style={[s.stepCaption,index===active&&s.stepCaptionActive]}><Text style={[s.stepCaptionText,index===active&&s.stepCaptionTextActive]}>{step.label}</Text></View>
+    </View>)}
+  </View>;
+}
 function StudioRowEnter({children,index,reduceMotion}:{children:ReactNode;index:number;reduceMotion:boolean}){
   const opacity=useRef(new Animated.Value(1)).current;
   const rise=useRef(new Animated.Value(0)).current;
@@ -552,18 +592,43 @@ const s=StyleSheet.create({
   showMore:{height:48,alignItems:'center',justifyContent:'center'},
   showMoreText:{fontWeight:'800',fontSize:12,color:C.blue},
   footer:{fontSize:9,letterSpacing:1.2,color:'#99A6A4',textAlign:'center',marginTop:23},
-  sheet:{flex:1,backgroundColor:C.paper},
-  sheetTop:{minHeight:90,paddingHorizontal:22,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
-  sheetTitle:{fontSize:24,fontWeight:'800',color:C.ink,letterSpacing:-.9,marginTop:4},
-  sheetContent:{paddingHorizontal:18,paddingTop:5,paddingBottom:48},
-  detailHero:{backgroundColor:C.navy,borderRadius:21,padding:20,marginBottom:15},
-  detailEyebrow:{fontSize:10,letterSpacing:1.4,fontWeight:'800',color:C.mint},
-  detailName:{fontSize:22,color:'#FFFFFF',fontWeight:'800',marginTop:12,letterSpacing:-.5},
-  detailMeta:{fontSize:11,color:'#B9C9D0',marginTop:8},
-  detailSteps:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:7,marginTop:17},stepLabel:{fontSize:10,fontWeight:'700',color:'#D5E5F2'},
-  fieldsHeader:{minHeight:65,padding:13,flexDirection:'row',alignItems:'center',gap:10,borderRadius:16,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:C.line,marginBottom:9},
-  fieldsIcon:{width:39,height:39,borderRadius:12,backgroundColor:'#ECF1FF',alignItems:'center',justifyContent:'center'},
-  fieldsToggle:{fontSize:11,color:C.blue,fontWeight:'800'},moreFields:{height:42,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7},
+  sheet:{flex:1,backgroundColor:'#F7F9FD'},
+  sheetTop:{minHeight:78,paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:7},
+  detailCircle:{width:39,height:39,borderRadius:21,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DCE5F4',alignItems:'center',justifyContent:'center',elevation:2},
+  detailHeaderCopy:{flex:1,minWidth:0},
+  sheetTitle:{fontSize:18,fontWeight:'800',color:'#101A35',letterSpacing:-.5},
+  intakeIdRow:{flexDirection:'row',alignItems:'center',gap:7,marginTop:4},
+  intakeId:{fontSize:12,fontWeight:'600',color:'#435477',flexShrink:1},
+  detailMenu:{marginHorizontal:14,backgroundColor:'#FFFFFF',borderRadius:12,borderWidth:1,borderColor:'#DCE5F4',padding:6},
+  menuItem:{flexDirection:'row',alignItems:'center',gap:9,minHeight:44,paddingHorizontal:10},
+  menuText:{fontSize:13,color:'#14274B',fontWeight:'600'},
+  sheetContent:{paddingHorizontal:14,paddingTop:8,paddingBottom:0,flexGrow:1},
+  detailHero:{backgroundColor:'#092858',borderRadius:17,padding:17,minHeight:140,marginBottom:14,flexDirection:'row',alignItems:'center',overflow:'hidden'},
+  detailHeroCopy:{flex:1,minWidth:0,zIndex:1},
+  heroGlow:{position:'absolute',width:280,height:220,borderRadius:140,backgroundColor:'#104783',opacity:.35,left:-85,top:-135},
+  detailWave:{position:'absolute',width:255,height:160,borderRadius:120,borderWidth:9,borderColor:'#1455A5',opacity:.26,transform:[{rotate:'-24deg'}]},
+  detailEyebrow:{alignSelf:'flex-start',fontSize:11,fontWeight:'800',color:'#A33D12',backgroundColor:'#FFE8C2',borderRadius:18,paddingHorizontal:10,paddingVertical:5,overflow:'hidden'},
+  detailName:{fontSize:23,color:'#FFFFFF',fontWeight:'800',marginTop:10,letterSpacing:-.5},
+  detailHeroArtwork:{width:82,height:92,marginLeft:4},
+  detailMetaRow:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:5,marginTop:9},
+  policyTypePill:{flexDirection:'row',alignItems:'center',gap:4,paddingHorizontal:8,paddingVertical:5,borderRadius:15,backgroundColor:'#31527E'},
+  policyTypeText:{fontSize:11,color:'#FFFFFF',fontWeight:'700'},
+  metaDivider:{width:1,height:15,backgroundColor:'#A7BEDF',marginHorizontal:2},
+  detailMeta:{fontSize:11,color:'#FFFFFF',flexShrink:1},
+  stepper:{flexDirection:'row',alignItems:'flex-start',position:'relative',marginBottom:18,paddingTop:4},
+  stepLine:{position:'absolute',left:'16.67%',right:'16.67%',top:28,height:3,backgroundColor:'#DCE6FA',overflow:'hidden'},
+  stepLineFill:{height:3,backgroundColor:'#2268EA'},
+  stepItem:{flex:1,alignItems:'center',gap:5},
+  stepCircle:{width:49,height:49,borderRadius:26,borderWidth:1,borderColor:'#D7E1F2',backgroundColor:'#F5F8FF',alignItems:'center',justifyContent:'center',elevation:2},
+  stepCircleActive:{backgroundColor:'#075BF0',borderColor:'#9AD5FF',borderWidth:3},
+  stepCaption:{paddingHorizontal:10,paddingVertical:4,borderRadius:14},
+  stepCaptionActive:{backgroundColor:'#D6E6FF'},
+  stepCaptionText:{fontSize:12,fontWeight:'700',color:'#17233B'},
+  stepCaptionTextActive:{color:'#0646BA'},
+  fieldsHeader:{minHeight:69,padding:12,flexDirection:'row',alignItems:'center',gap:9,borderRadius:16,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DCE5F4',marginTop:15,marginBottom:8,elevation:2},
+  fieldsIcon:{width:39,height:39,borderRadius:11,backgroundColor:'#E0EBFF',alignItems:'center',justifyContent:'center'},
+  fieldsPill:{flexDirection:'row',alignItems:'center',gap:3,backgroundColor:'#E6EDFF',borderRadius:18,paddingHorizontal:8,paddingVertical:7},
+  fieldsToggle:{fontSize:11,color:'#0759EC',fontWeight:'800'},moreFields:{height:42,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7},
   moreFieldsText:{fontSize:11,fontWeight:'700',color:C.blue},
   disabledAction:{opacity:.68},disabledConvert:{backgroundColor:'#8297C8'},
   disabledNotice:{flexDirection:'row',gap:10,marginTop:18,padding:15,borderRadius:16,backgroundColor:'#FFF7EA',borderWidth:1,borderColor:'#F0E4C9'},
@@ -572,20 +637,21 @@ const s=StyleSheet.create({
   uncertainText:{flex:1,fontSize:11,lineHeight:17,color:'#925A25'},
   refreshRecord:{height:45,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:C.line,borderRadius:12,marginBottom:8},
   refreshRecordText:{fontWeight:'800',fontSize:12,color:C.blue},
-  safetyRow:{flexDirection:'row',gap:8,paddingHorizontal:5,marginTop:17,alignItems:'flex-start'},safetyText:{flex:1,fontSize:10.5,lineHeight:16,color:C.faint},
-  issue:{backgroundColor:'#FFF4E7',padding:14,borderRadius:14,flexDirection:'row',gap:9,marginBottom:16},
-  issueText:{flex:1,fontSize:12,lineHeight:17,color:'#94652D',fontWeight:'600'},
+  safetyRow:{flexDirection:'row',gap:11,paddingHorizontal:5,marginTop:15,alignItems:'center'},safetyDivider:{width:1,height:31,backgroundColor:'#9DAFCC'},safetyText:{flex:1,fontSize:12,lineHeight:18,color:'#435477'},
+  footerWaves:{flexGrow:1,minHeight:56,marginHorizontal:-14,marginTop:16,overflow:'hidden',justifyContent:'flex-end'},footerWaveOne:{position:'absolute',bottom:-55,left:'-12%',width:'83%',height:105,borderRadius:100,backgroundColor:'#E5EFFC',transform:[{rotate:'10deg'}]},footerWaveTwo:{position:'absolute',bottom:-65,right:'-12%',width:'90%',height:120,borderRadius:100,backgroundColor:'#D8E8FC',transform:[{rotate:'-12deg'}]},
+  issue:{backgroundColor:'#FFF0DC',padding:13,borderRadius:13,borderLeftWidth:5,borderLeftColor:'#FF921B',flexDirection:'row',alignItems:'center',gap:9,marginBottom:12},
+  issueText:{flex:1,fontSize:14,lineHeight:19,color:'#9C390F',fontWeight:'800'},
   detailList:{backgroundColor:'#FFFFFF',borderRadius:19,borderWidth:1,borderColor:C.line,paddingHorizontal:16},
   detailField:{paddingVertical:14,minHeight:54,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:C.line,flexDirection:'row',alignItems:'center',gap:14},
   fieldLabel:{flex:.38,fontSize:11,color:C.faint},
   fieldValue:{flex:.62,fontSize:11.5,color:C.ink,fontWeight:'700',textAlign:'right'},
   note:{fontSize:10.5,lineHeight:17,color:C.faint,marginTop:19,textAlign:'center'},
-  actionsWrap:{marginTop:18},
+  actionsWrap:{marginTop:4},
   actionsRow:{flexDirection:'row',gap:10},
-  reparseButton:{flex:1,minHeight:108,borderRadius:17,borderWidth:1,borderColor:'#C8D8F5',backgroundColor:'#FFFFFF',padding:13,alignItems:'flex-start',justifyContent:'center'},
-  reparseLabel:{fontSize:12,fontWeight:'800',color:C.ink,marginTop:7},actionSub:{fontSize:10,color:C.faint,marginTop:3},
-  convertButton:{flex:1,minHeight:108,borderRadius:17,backgroundColor:C.blue,padding:13,alignItems:'flex-start',justifyContent:'center'},
-  convertLabel:{fontSize:12,fontWeight:'800',color:'#FFFFFF',marginTop:7},convertSub:{fontSize:10,color:'#DCE6FF',marginTop:3},
+  reparseButton:{flex:1,minWidth:0,minHeight:137,borderRadius:16,borderWidth:1,borderColor:'#D7E1F4',backgroundColor:'#F8FAFF',padding:13,alignItems:'flex-start',justifyContent:'flex-start',elevation:2},
+  reparseLabel:{fontSize:15,fontWeight:'800',color:'#101A35',marginTop:8},actionSub:{fontSize:12,lineHeight:17,color:'#435477',marginTop:4,paddingRight:19},
+  convertButton:{flex:1,minWidth:0,minHeight:137,borderRadius:16,backgroundColor:'#0751DB',padding:13,alignItems:'flex-start',justifyContent:'flex-start',overflow:'hidden',elevation:2},convertGlow:{position:'absolute',width:210,height:180,borderRadius:90,backgroundColor:'#179DFF',opacity:.35,top:-100,left:-85},actionArrow:{position:'absolute',right:10,bottom:12,width:27,height:27,borderRadius:15,backgroundColor:'#E6E9FF',alignItems:'center',justifyContent:'center'},convertArrow:{position:'absolute',right:10,bottom:12,width:27,height:27,borderRadius:15,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center'},
+  convertLabel:{fontSize:15,fontWeight:'800',color:'#FFFFFF',marginTop:8},convertSub:{fontSize:12,lineHeight:17,color:'#FFFFFF',marginTop:4,paddingRight:19},
   actionError:{color:'#B04A3B',fontSize:11,lineHeight:16,marginBottom:10},
   confirmPanel:{borderRadius:17,borderColor:'#C8D8F5',borderWidth:1,padding:16,backgroundColor:'#FFFFFF'},
   confirmHeading:{flexDirection:'row',alignItems:'center',gap:8},

@@ -101,4 +101,19 @@ assert(actionFile.includes("EXPO_PUBLIC_AI_STUDIO_ACTIONS_ENABLED === 'true'"));
 assert(actionFile.includes("url.hostname==='studio.nishant.uk'"));
 assert(actionFile.includes("'authorization':'Bearer '+auth.session.access_token"));
 assert(actionFile.includes("body:JSON.stringify({intake_id:intakeId,action,confirm:true})"));
+
+const stageStart=screen.indexOf('function intakeStage(');
+const stageEnd=screen.indexOf('function IntakeStepper(',stageStart);
+assert(stageStart>=0 && stageEnd>stageStart);
+const stageContext={};
+vm.runInNewContext(ts.transpileModule(screen.slice(stageStart,stageEnd)+'\nthis.stage=intakeStage;', {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,stageContext);
+for(const [row,expected] of [
+  [{status:'processing',fields:[],ocr_status:'pending'},0],
+  [{status:'in_review',fields:[],ocr_status:'pending'},0],
+  [{status:'processing',fields:[{}],ocr_status:'failed'},0],
+  [{status:'processing',fields:[{}],ocr_status:'completed'},1],
+  [{status:'in_review',fields:[{}],ocr_status:'completed'},2],
+]) assert.equal(stageContext.stage(row),expected);
+for(const marker of ['presentationStyle="fullScreen"','<StatusBar style="dark"','Clipboard.setString','accessibilityLabel="More intake options"','<IntakeStepper detail={detail}/>','style={s.detailHeroArtwork}','style={s.fieldsPill}','style={s.footerWaves}','accessibilityState={{disabled:true}}','Secure actions awaiting activation']) assert(screen.includes(marker), 'Intake details reference and safety contract: '+marker);
+
 console.log('Partner native AI Studio read-only, auth and Vercel-independence contracts passed');
