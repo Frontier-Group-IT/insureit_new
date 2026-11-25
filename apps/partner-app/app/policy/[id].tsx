@@ -1,9 +1,12 @@
 import { formatAppDate } from '@/lib/indian-date';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { BackHandler, Image, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, Image, Linking, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
+import { partnerAlert } from '@/components/ui/partner-alert-provider';
+import { PartnerPolicyDocuments } from '@/components/partner-policy-documents';
+import { listPartnerPolicyDocuments, openPartnerPolicyDocument } from '@/lib/policy-documents';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerCaseBottomNavigation } from '@/components/partner-case-bottom-navigation';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
@@ -58,6 +61,17 @@ export default function PolicyDetailScreen() {
     return () => subscription.remove();
   }, [router]);
 
+  const openFirstDocument = useCallback(async () => {
+    if (!id) return;
+    try {
+      const documents = await listPartnerPolicyDocuments(id);
+      const file = documents.find(item => item.type === 'policy_copy') || documents[0];
+      if (!file) { partnerAlert('Policy Document', 'No documents available for this policy.'); return; }
+      await Linking.openURL(await openPartnerPolicyDocument(id, file));
+    } catch (cause) {
+      partnerAlert('Policy Document', cause instanceof Error ? cause.message : 'Could not open the policy document.');
+    }
+  }, [id]);
   const category = data ? policyCategory(data) : 'Policy';
   const manufacturerLogo = data?.vehicle ? getPartnerManufacturerLogoSource(data.vehicle.make) : null;
   const policyNumber = data?.policy.policy_no || data?.policy.policy_code || 'Policy';
@@ -106,7 +120,7 @@ export default function PolicyDetailScreen() {
           <View style={styles.quickSection}>
             <Text style={styles.quickSectionHeading}>Quick Actions</Text>
             <View style={styles.quickGrid}>
-              <QuickAction iconKind="policy-document" label="Policy Document" onPress={() => router.push('/policies' as never)} />
+              <QuickAction iconKind="policy-document" label="Policy Document" onPress={() => void openFirstDocument()} />
               <QuickAction iconKind="renew-policy" label="Renew Policy" onPress={() => router.push('/renewals' as never)} />
               <QuickAction iconKind="raise-claim" label="Raise Claim" onPress={() => router.push('/claims' as never)} />
               <QuickAction iconKind="customer-details" label="Customer Details" onPress={() => data.customer.id ? router.push(`/customer/${data.customer.id}` as never) : undefined} />
@@ -200,6 +214,7 @@ export default function PolicyDetailScreen() {
             ) : null}
           </View>
           </View>
+          <PartnerPolicyDocuments policyId={data.policy.id} />
 
         </View>
       )}
