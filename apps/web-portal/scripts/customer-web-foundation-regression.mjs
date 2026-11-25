@@ -240,8 +240,8 @@ const appearanceStart = customerSettings.indexOf('<section aria-labelledby="sett
 const appearanceEnd = customerSettings.indexOf("</section>", appearanceStart);
 const appearanceSection = customerSettings.slice(appearanceStart, appearanceEnd);
 assert(appearanceStart > customerSettings.indexOf("Account Settings") && appearanceEnd < customerSettings.indexOf('aria-labelledby="settings-account-title"'), "Appearance controls must sit between heading and My Account");
-assert(appearanceSection.includes("customer-appearance-panel w-full min-w-0") && appearanceSection.includes("flex-nowrap") && appearanceSection.includes("overflow-x-auto"), "Appearance must occupy full width and keep a single responsive row");
-assert(appearanceSection.includes('name: "Sidebar"') && appearanceSection.includes('name: "Top Menu"') && appearanceSection.includes("h-8 w-px shrink-0"), "Layout options require visible names and a vertical divider");
+assert(appearanceSection.includes("customer-appearance-panel w-full min-w-0") && appearanceSection.includes("customer-appearance-grid") && !appearanceSection.includes("overflow-x-auto"), "Appearance must reflow rather than scroll horizontally");
+assert(appearanceSection.includes('name: "Sidebar"') && appearanceSection.includes('name: "Top Menu"') && appearanceSection.includes("customer-theme-section"), "Layout options require visible names and a separate theme section");
 assert(appearanceSection.includes("customer-theme-segment") && appearanceSection.includes("rounded-full border") && ["Light", "Dark", "System"].every(name => appearanceSection.includes('name: "' + name + '"')), "Theme options must share one rounded container with visible labels");
 assert(appearanceSection.includes("aria-pressed={navigationLayout === value}") && appearanceSection.includes("aria-pressed={theme === value}"), "Appearance controls must expose selected state");
 assert(customerSettings.includes("window.localStorage.setItem(customerNavigationPreferenceKey, next)") && customerSettings.includes("window.localStorage.setItem(customerThemeKey, next)"), "Appearance preferences must remain persistent");
@@ -292,6 +292,18 @@ const sharedAuthConfig = read("lib/auth-config.ts");
 assert(!sharedAuthConfig.includes('allowedAdminRoles = ["customer"'), "Customer must not be added to employee admin roles");
 assert(sharedAuthConfig.includes('role!==\"customer\"') || read("lib/roles.ts").includes('role!=="customer"'), "Customer must remain excluded from employee portal roles");
 
+const appearanceCss = read("app/customer/(protected)/customer-theme.css");
+assert(/\.customer-appearance-grid\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/.test(appearanceCss), "Equal width columns");
+assert(/\.customer-appearance-panel\s*\{[^}]*container: customer-appearance \/ inline-size/.test(appearanceCss), "Container-based responsiveness");
+assert(/\.customer-appearance-section\s*\{[^}]*flex-direction: column/.test(appearanceCss), "Stack headings above options by default");
+assert(/@container customer-appearance \(min-width: 980px\)\s*\{\s*\.customer-appearance-section\s*\{[^}]*flex-direction: row/.test(appearanceCss), "Wide panel inline heading");
+assert(/@container customer-appearance \(max-width: 599px\)\s*\{\s*\.customer-appearance-grid\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/.test(appearanceCss), "Narrow panel single column");
+assert(/\.customer-appearance-grid \.customer-appearance-option\s*\{[^}]*flex-direction: row/.test(appearanceCss), "Horizontal icon and label");
+assert(/icon: PanelLeft.*icon: PanelTop/.test(appearanceSection), "Appearance icons");
+assert(/value: "system".*value: "light".*value: "dark"/.test(appearanceSection), "Theme order");
+assert(/<Icon[^>]*\/><span className="customer-option-full-label">/.test(appearanceSection), "Appearance inline icon precedes label");
+assert(/<Icon[^>]*\/><span>\{name\}<\/span>/.test(appearanceSection), "Theme inline icon precedes label");
+assert(appearanceSection.includes("customer-option-short-label"));
 if (!process.exitCode) {
-  console.log("Customer Web foundation regression passed.");
+  console.log("Customer Web foundation and Settings responsive appearance regression passed.");
 }
