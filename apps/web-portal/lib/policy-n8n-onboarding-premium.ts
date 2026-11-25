@@ -183,3 +183,35 @@ export function mapVerifiedUiicGcvCommercialPremium(
 ):ReturnType<typeof mapVerifiedN8nMotorPremium>{
   return mapVerifiedIffcoCommercialPremium(printed,sourceVerifiedCpa);
 }
+
+/** Exact Magma PDF Package: Total OD includes add-ons after NCB; printed
+ * Liability includes owner-driver CPA. Never store CPA as plain TP or
+ * silently discard optional cover premiums when preparing review drafts.
+ * Magma prints gross to whole rupees, while GST retains paise. */
+export function mapVerifiedMagmaPrivateCarPremium(p:{
+ od:number;tp:number;net:number;gst:number;gross:number;
+ cpa?:number;odBasic?:number;ncb?:number;
+ odAddons?:{name:string;amount:number}[];
+}):{od:string;tp:string;addOnPremium:string;cpa:string;cpaOpted:"Yes"|"No"}{
+ const cents=(n:number)=>Math.round(n*100);
+ const money=(x:number)=>Number.isFinite(x)&&x>=0&&x<=1e9&&Math.abs(x*100-cents(x))<.0001;
+ const names=new Set(["Basic Roadside Assistance","Depreciation Re-imbursement",
+   "Consumables","Key Replacement","Loss Of Personal Belongings"]);
+ if(![p.od,p.tp,p.net,p.gst,p.gross,p.cpa,p.odBasic,p.ncb].every(x=>
+   typeof x==="number"&&money(x))
+   ||!Array.isArray(p.odAddons)||p.odAddons.length===0
+   ||p.odAddons.some(x=>!names.has(x.name)||!money(x.amount))
+   ||new Set(p.odAddons.map(x=>x.name)).size!==p.odAddons.length)
+   throw new Error("magma_coverage_components_invalid");
+ const addon=p.odAddons.reduce((sum,x)=>sum+cents(x.amount),0);
+ const od=cents(p.od)-addon,tp=cents(p.tp)-cents(p.cpa!);
+ if(od<0||tp<=0||p.cpa!<=0
+   ||Math.abs(cents(p.odBasic!)+addon-cents(p.ncb!)-cents(p.od))>51
+   ||Math.abs(cents(p.od)+cents(p.tp)-cents(p.net))>6
+   ||Math.abs(cents(p.net)+cents(p.gst)-cents(p.gross))>51
+   ||od+addon+tp+cents(p.cpa!)!==cents(p.net))
+   throw new Error("magma_printed_coverage_reconciliation_failed");
+ const format=(n:number)=>(n/100).toFixed(2);
+ return{od:format(od),tp:format(tp),addOnPremium:format(addon),
+   cpa:format(cents(p.cpa!)),cpaOpted:"Yes"};
+}
