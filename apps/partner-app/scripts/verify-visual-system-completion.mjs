@@ -1734,3 +1734,12 @@ for (const marker of [
   "insurerMiniInfo: { flexDirection: 'row'"
 ]) requireText(policyDetail, marker, 'Colored outer sections and white inner cards: ' + marker);
 if (/styles\.tile(?:Blue|Green|Amber|Slate)|styles\.unifiedDetails|styles\.unifiedSection/.test(policyDetail)) throw new Error('Old unified or tinted inner tiles must not return');
+
+const policyDocumentsSection = read('components/partner-policy-documents.tsx');
+const policyDocumentsClient = read('lib/policy-documents.ts');
+const policyDocumentApi = fs.readFileSync(path.resolve(root, '../web-portal/app/api/partner/policies/[id]/documents/route.ts'), 'utf8');
+for (const marker of ['<PartnerPolicyDocuments policyId={data.policy.id} />', 'onPress={() => void openFirstDocument()}', "listPartnerPolicyDocuments(id)", "openPartnerPolicyDocument(id, file)"]) requireText(policyDetail, marker, 'Policy details document access: ' + marker);
+for (const marker of ['No documents available for this policy.', 'Policy attachments', 'View', 'Download', 'partnerAlert', 'listPartnerPolicyDocuments(policyId)', "openPartnerPolicyDocument(policyId, file, download)", 'styles.file', 'backgroundColor: \'#FFFFFF\'']) requireText(policyDocumentsSection, marker, 'Document section design and functionality: ' + marker);
+for (const marker of ['getCurrentSession()', "Authorization: 'Bearer ' + session.access_token", "source: document.source", "params.set('download', 'true')"]) requireText(policyDocumentsClient, marker, 'Policy document bearer API client: ' + marker);
+for (const marker of ['scoped.auth.getUser(bearer)', 'scoped.rpc("partner_app_policy_detail"', 'detail.policy?.id !== policyId', '.eq("policy_id", policyId)', '.eq("final_policy_id", policyId)', '.in("case_id", caseIds)', 'row.source === source', 'createSignedUrl(', '120, download ?', 'Cache-Control', 'private, no-store']) requireText(policyDocumentApi, marker, 'Policy-scoped secure document API: ' + marker);
+if (/return respond\(\{ ok: true, documents:.*storage_path/.test(policyDocumentApi)) throw new Error('Private storage paths must never enter the document inventory response');

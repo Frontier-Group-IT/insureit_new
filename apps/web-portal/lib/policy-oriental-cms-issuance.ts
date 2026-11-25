@@ -46,55 +46,60 @@ function pdfMToIndiaDay(value:string):string|null {
 export async function verifyOrientalCmsSigningDate(
   bytes:Uint8Array,
 ):Promise<OrientalSignedIssuanceEvidence|null>{
- if(!(bytes instanceof Uint8Array)||bytes.byteLength<1024||bytes.byteLength>MAX_BYTES)
+ const hold=(stage:string):null=>{
+   console.warn("[oriental-cms] verification hold",{stage});
    return null;
+ };
+ if(!(bytes instanceof Uint8Array)||bytes.byteLength<1024||bytes.byteLength>MAX_BYTES)
+   return hold("byte_limits");
  const raw=Buffer.from(bytes).toString("latin1");
- if(!raw.startsWith("%PDF-"))return null;
+ if(!raw.startsWith("%PDF-"))return hold("pdf_header");
  const ranges=[...raw.matchAll(RANGE)];
- if(ranges.length!==1)return null;
+ if(ranges.length!==1)return hold("range_count");
  const [firstStart,firstLen,secondStart,secondLen]=ranges[0].slice(1).map(Number);
  if(![firstStart,firstLen,secondStart,secondLen].every(Number.isSafeInteger)
    ||firstStart!==0||firstLen<=0||secondLen<=0
    ||secondStart<=firstLen||secondStart+secondLen!==bytes.byteLength)
-   return null;
+   return hold("range_coverage");
  const gap=raw.slice(firstLen,secondStart);
- if(!/^<[0-9A-Fa-f]{1024,65536}>$/.test(gap))return null;
+ if(!/^<[0-9A-Fa-f]{1024,65536}>$/.test(gap))return hold("contents_slot");
  // /Contents can precede /ByteRange, /SubFilter and /M inside the SAME
  // signature dictionary. Inspect the signed dictionary around the CMS slot,
  // never an unrelated earlier PDF object or the unsigned gap itself.
  const dictStart=raw.lastIndexOf("<<",firstLen);
  const dictEnd=raw.indexOf(">>",secondStart);
  if(dictStart<0||dictEnd<0||firstLen-dictStart>2000
-   ||dictEnd-secondStart>3000)return null;
+   ||dictEnd-secondStart>3000)return hold("dictionary_bounds");
  const beforeCms=raw.slice(dictStart,firstLen);
  const afterCms=raw.slice(secondStart,dictEnd+2);
- if(!/\/Contents\s*$/.test(beforeCms))return null;
+ if(!/\/Contents\s*$/.test(beforeCms))return hold("contents_marker");
  const dictionary=beforeCms+" "+afterCms;
- if(!/\/Type\s*\/Sig\b/.test(dictionary))return null;
+ if(!/\/Type\s*\/Sig\b/.test(dictionary))return hold("signature_type");
  const filters=[...dictionary.matchAll(/\/SubFilter\s*\/([A-Za-z0-9.]+)/g)];
  if(filters.length!==1||!["adbe.pkcs7.detached","ETSI.CAdES.detached"].includes(filters[0][1]))
-   return null;
+   return hold("signature_subfilter");
  const declaredRanges=[...dictionary.matchAll(RANGE)];
  if(declaredRanges.length!==1||declaredRanges[0].slice(1).map(Number).join(",")!==
-   [firstStart,firstLen,secondStart,secondLen].join(","))return null;
+   [firstStart,firstLen,secondStart,secondLen].join(","))return hold("dictionary_range_identity");
  const pdfM=[...dictionary.matchAll(/\/M\s*\((D:[^)]{14,28})\)/g)];
- if(pdfM.length>1)return null;
+ if(pdfM.length>1)return hold("multiple_pdf_m");
  try{
    const padded=Buffer.from(gap.slice(1,-1),"hex");
    const parsed=fromBER(padded);
    if(parsed.offset<=0||parsed.offset>padded.length
-     ||padded.subarray(parsed.offset).some(byte=>byte!==0))return null;
+     ||padded.subarray(parsed.offset).some(byte=>byte!==0))return hold("asn1_padding");
    const envelope=ContentInfo.fromBER(padded.subarray(0,parsed.offset));
-   if(envelope.contentType!==ContentInfo.SIGNED_DATA)return null;
+   if(envelope.contentType!==ContentInfo.SIGNED_DATA)return hold("cms_content_type");
    const cms=new SignedData({schema:envelope.content});
-   if(cms.signerInfos.length!==1||cms.encapContentInfo.eContent)return null;
+   if(cms.signerInfos.length!==1||cms.encapContentInfo.eContent)return hold("cms_signer_shape");
    const attrs=cms.signerInfos[0].signedAttrs?.attributes||[];
    const signedTime=attrs.filter(a=>a.type==="1.2.840.113549.1.9.5");
-   if(signedTime.length!==1||signedTime[0].values.length!==1)return null;
+   if(signedTime.length!==1||signedTime[0].values.length!==1)return hold("cms_signing_time_missing");
    const asn=signedTime[0].values[0] as {toDate?:()=>Date};
-   if(typeof asn.toDate!=="function")return null;
+   if(typeof asn.toDate!=="function")return hold("cms_signing_time_type");
    const day=indiaDay(asn.toDate());
-   if(!day||(pdfM.length===1&&pdfMToIndiaDay(pdfM[0][1])!==day))return null;
+   if(!day)return hold("cms_time_date_invalid");
+   if(pdfM.length===1&&pdfMToIndiaDay(pdfM[0][1])!==day)return hold("pdf_m_mismatch");
    const full=Buffer.concat([
      Buffer.from(bytes.subarray(0,firstLen)),
      Buffer.from(bytes.subarray(secondStart,secondStart+secondLen)),
@@ -102,9 +107,9 @@ export async function verifyOrientalCmsSigningDate(
    const valid=await cms.verify({
      signer:0,data:Uint8Array.from(full).buffer,checkChain:false,
    });
-   if(!valid)return null;
+   if(!valid)return hold("cms_cryptographic_verify_false");
    return {date:day,documentSha256:createHash("sha256").update(bytes).digest("hex"),
      verification:"detached_signature_integrity_verified",
      source:"cms_signed_attribute_signing_time"};
- }catch{return null;}
+ }catch{return hold("cms_exception");}
 }

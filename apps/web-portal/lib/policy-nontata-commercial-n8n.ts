@@ -375,7 +375,20 @@ function validate(payload: unknown, insurer: Insurer,
       || payload.review_required !== true || payload.auto_finalize_allowed !== false
       || payload.intake_id !== ids.intake_id || payload.document_id !== ids.document_id
       || payload.request_id !== ids.request_id)
+  {
+    const safe=object(payload)?payload:null;
+    const rawParser=safe?.parser_id;
+    console.warn("[nontata-contract] validation hold",{
+      classifiedAs:insurer,
+      returnedParser:typeof rawParser==="string"&&/^[a-z0-9_]{1,80}$/.test(rawParser)?rawParser:"invalid",
+      versionMatches:safe?.contract_version==="1"&&safe?.parser_version==="non-tata-cv-v2",
+      sourceMatches:safe?.extraction_method==="native_pdf_text",
+      flagsMatch:safe?.review_required===true&&safe?.auto_finalize_allowed===false,
+      identityMatches:safe?.intake_id===ids.intake_id&&safe?.document_id===ids.document_id
+        &&safe?.request_id===ids.request_id,
+    });
     throw new Error("n8n_nontata_identity_or_contract_invalid");
+  }
   if (!object(payload.checks) || !Array.isArray(payload.fields)
       || !Array.isArray(payload.warnings) || typeof payload.ok !== "boolean"
       || payload.validation_passed !== payload.ok)

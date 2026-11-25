@@ -362,9 +362,12 @@ export default function AiPolicyStudioScreen() {
       </View>
 
       <Modal visible={Boolean(selected)} presentationStyle="fullScreen" animationType="slide" onRequestClose={closeDetail}>
-        <SafeAreaView style={s.sheet}>
+        {/* The full-screen native Modal can report a zero top inset on its opening frame.
+            Reuse the already-measured screen inset instead of relying on the modal's
+            own SafeAreaView to reposition the title after it becomes visible. */}
+        <SafeAreaView style={s.sheet} edges={['bottom']}>
           <StatusBar style="dark" backgroundColor="#F7F9FD" />
-          <View style={s.sheetTop}>
+          <View style={[s.sheetTop,{paddingTop:insets.top}]}>
             <Pressable style={s.detailCircle} onPress={closeDetail} disabled={actionBusy} accessibilityRole="button" accessibilityLabel="Back to intakes"><Ionicons name="arrow-back" color="#101A35" size={22}/></Pressable>
             <Ionicons name="shield-checkmark" color="#0759EC" size={25}/>
             <View style={s.detailHeaderCopy}>
