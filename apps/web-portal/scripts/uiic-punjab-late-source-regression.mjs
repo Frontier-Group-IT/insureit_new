@@ -28,6 +28,18 @@ assert.equal(refine("united_india_gcv_native_pdf",late.replace("SGST-Basic TP(2.
 assert.equal(refine("oriental_gccv_package_native_pdf",late),"oriental_gccv_package_native_pdf",
  "Other insurer routes must not be mutated");
 assert.equal(refine(null,late),null);
+
+// Real-world PDF extraction engines may separate tax punctuation and OEM labels.
+const brokenSpacing=late.replace("PVT. LTD / BHARATBENZ","PVT LTD / BHARATBENZ")
+ .replace("CGST-Others(9%)","CGST - Others ( 9 % )")
+ .replace("SGST-Basic TP(2.50%)","SGST - Basic TP ( 2.50 % )");
+assert.equal(refine("united_india_gcv_native_pdf",brokenSpacing),
+ "united_india_gcv_punjab_split_gst_native_pdf");
+assert.equal(refine("united_india_gcv_native_pdf",brokenSpacing.replace("DAIMLER","UNKNOWN")),
+ "united_india_gcv_native_pdf","No maker identity means no promotion");
+assert.equal(refine("united_india_gcv_native_pdf",brokenSpacing.replace("SGST - Basic TP","IGST - Basic TP")),
+ "united_india_gcv_native_pdf","No split tax means no promotion");
+
 const bridge=fs.readFileSync(path.resolve(here,"../lib/policy-intake-semi-auto-n8n.ts"),"utf8");
 assert.match(bridge,/"held_source_or_identity_unverified"/,
  "Genuine Oriental issuance hold must be reported as source verification, not n8n outage");
