@@ -127,6 +127,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   const bulkCandidates = workspaceRows.filter(row => {
     const q=queue.get(row.id);
     return row.policy_type==="motor" && !duplicateIds.has(row.id)
+      && (!autoRequested || row.assigned_to_profile_id===null)
       && !attemptedIds.has(row.id)
       && q?.state==="verified" && q.exception_codes.length===0;
   }).map(row=>({id:row.id,intake_number:row.intake_number}));
