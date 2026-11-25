@@ -32,7 +32,7 @@ for(const claim of [
  'extracted.preview.checksPassed===18',
  'extracted.preview.warnings.length===0',
  'extracted.preview.candidateCanonicalPremium',
- 'reverifiedHeldExtraction)||',
+ '&& !reverifiedHeldExtraction',
  'verifiedMoney=extracted.preview.candidateCanonicalPremium!',
  'if(confirmed!==true)'
 ])assert(source.includes(claim),"Held source direct-Convert guard missing: "+claim);
