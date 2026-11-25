@@ -46,6 +46,7 @@ function build(kind){
  const p=national?{od:0,tp:3416,net:3416,gst:615,gross:4031,cpa:0,cgst:0,sgst:0,igst:615}
   :ori?{od:4558,tp:44370,net:48928,gst:3094,gross:52022,cpa:320,taxRegime:"CGST_SGST_FOUR_COMPONENT",printedComponents:12}
   :{od:4649,tp:2594,net:7243,gst:1303.74,gross:8547,cpa:450,basicTp:2094,paidDriver:50,
+   basicOd:2680.4,odAddons:2907,ncb:938.14,
    taxRegime:"CGST_SGST",cgst:651.87,sgst:651.87,igst:null};
  const pid=national?"national_private_car_liability_only_native_pdf":ori?"oriental_gccv_package_native_pdf":"magma_private_car_package_native_pdf";
  const checks=Object.fromEntries((national?NATIONAL:ori?OI:MAGMA).map(k=>[k,true]));
@@ -74,6 +75,10 @@ for(const kind of ["magma","national","oriental"]){
  assert.equal(passed.accepted,true,kind+": "+passed.reason);
  assert.equal(Number(passed.canonicalPremium.tp)+Number(passed.canonicalPremium.cpa),
    v.premium_components.tp,"CPA must be split exactly once");
+ assert.equal(Number(passed.canonicalPremium.od)+Number(passed.canonicalPremium.addOnPremium),
+   v.premium_components.od,"OD addons must split exactly once");
+ if(kind==="magma")assert.equal(Number(passed.canonicalPremium.addOnPremium),2907);
+
  const oneRto=clone(v);
  oneRto.fields.push(f("vehicle_rto_name","PALWAL","Source RTO city row"));
  assert.equal(admit(oneRto,ids).accepted,true,"City only must not block");
