@@ -16,6 +16,19 @@ const TABS: Array<{key:AiStudioBucket;label:string}> = [
   {key:'open',label:'All Open'}, {key:'action',label:'Action'}, {key:'in_review',label:'In Review'}, {key:'processing',label:'Processing'},
 ];
 const PAGE_SIZE=10;
+// Presentation only: mirrors the existing open-intake RPC status precedence.
+const STUDIO_STATUS_ART = {
+  processing: { image: PartnerAssets.actions.aiStudioProcessing, label: 'Fetching details', color: '#1765C1' },
+  in_review: { image: PartnerAssets.actions.aiStudioReview, label: 'In review', color: '#7543B4' },
+  action: { image: PartnerAssets.actions.aiStudioAction, label: 'Action required', color: '#A5773A' },
+  completed: { image: PartnerAssets.actions.aiStudioVerified, label: 'Completed', color: '#398562' },
+} as const;
+function studioRowVisual(row: Pick<AiStudioRow, 'final_policy_id' | 'status' | 'ocr_status'>) {
+  if (row.final_policy_id) return STUDIO_STATUS_ART.completed;
+  if (row.status === 'in_review') return STUDIO_STATUS_ART.in_review;
+  if (row.status === 'processing' && row.ocr_status !== 'failed') return STUDIO_STATUS_ART.processing;
+  return STUDIO_STATUS_ART.action;
+}
 const humanize = (value:string) => value.replace(/_/g,' ').replace(/\b\w/g,s=>s.toUpperCase());
 const fieldName = (key:string) => ({
   insured_name:'Insured',policy_number:'Policy',policy_issuance_date:'Issued',
@@ -204,7 +217,7 @@ export default function AiPolicyStudioScreen() {
           <Pressable onPress={()=>router.back()} accessibilityRole="button" accessibilityLabel="Back to More" style={s.headerAction}>
             <Ionicons name="arrow-back" size={22} color="#FFFFFF"/>
           </Pressable>
-          <Image source={PartnerAssets.actions.aiStudioVerified} style={s.headerArtwork} resizeMode="contain" accessible={false}/>
+          <Image source={PartnerAssets.actions.aiStudioHeader} style={s.headerArtwork} resizeMode="contain" accessible={false}/>
           <Text style={s.topWord} numberOfLines={1}>AI Onboarding Studio</Text>
           <Pressable onPress={refresh} accessibilityRole="button" accessibilityLabel="Refresh" style={s.headerAction}>
             <Animated.View style={{transform:[{rotate:refreshRotation.interpolate({inputRange:[0,1],outputRange:['0deg','360deg']})}]}}><Ionicons name="refresh-outline" size={22} color="#FFFFFF"/></Animated.View>
@@ -217,7 +230,7 @@ export default function AiPolicyStudioScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={C.blue} onRefresh={refresh}/>}>
         <View style={s.summarySurface}>
           <View style={s.summaryTop}>
-            <Image source={PartnerAssets.actions.aiStudioVerified} style={s.summaryArtwork} resizeMode="contain" accessible={false}/>
+            <Image source={PartnerAssets.actions.aiStudioOpen} style={s.summaryArtwork} resizeMode="contain" accessible={false}/>
             <View style={s.summaryText}>
               <Text style={s.summaryOverline}>POLICY WORK QUEUE</Text>
               <Text style={s.summaryMain}>{count('open')} Open Intakes</Text>
@@ -238,9 +251,9 @@ export default function AiPolicyStudioScreen() {
           <View style={s.summaryDivider}/>
           <View style={s.summaryMetrics}>
             {([
-              {key:'processing',title:'Processing',image:PartnerAssets.actions.aiStudioProcessing},
-              {key:'in_review',title:'In Review',image:PartnerAssets.actions.aiStudioReview},
-              {key:'action',title:'Action',image:PartnerAssets.actions.aiStudioAction},
+              {key:'processing',title:'Processing',image:STUDIO_STATUS_ART.processing.image},
+              {key:'in_review',title:'In Review',image:STUDIO_STATUS_ART.in_review.image},
+              {key:'action',title:'Action',image:STUDIO_STATUS_ART.action.image},
             ] as const).map((metric,index)=>(
               <View style={s.metricGroup} key={metric.key}>
                 <View style={s.metric}>
@@ -300,13 +313,12 @@ export default function AiPolicyStudioScreen() {
                 <Text style={s.emptyText}>{debouncedSearch?'Try another intake number or source.':'There are no intakes in this view.'}</Text>
               </View>:null}
             {!loading&&!searchLoading&&!error&&!searchError&&displayedRows.map((row,index)=>{
-              const done=!!row.final_policy_id,flag=row.exception_codes.length>0;
-              const status=done?'Completed':row.status==='in_review'?'In review':row.status==='processing'&&row.ocr_status!=='failed'?'Fetching details':'Action required';
+              const visual=studioRowVisual(row);
               return <StudioRowEnter key={row.id} index={index} reduceMotion={reduceMotion}>
                 <Pressable accessibilityRole="button" accessibilityLabel={'Open '+row.intake_number}
                   style={({pressed})=>[s.compactRow,pressed&&s.compactRowPressed]} onPress={()=>openDetail(row)}>
                   <View style={s.rowArtworkShell}>
-                    <Image source={flag?PartnerAssets.actions.aiStudioAction:done?PartnerAssets.actions.aiStudioVerified:row.status==='in_review'?PartnerAssets.actions.aiStudioReview:row.status==='processing'?PartnerAssets.actions.aiStudioProcessing:PartnerAssets.actions.aiStudioVerified}
+                    <Image source={visual.image}
                       style={s.rowArtwork} resizeMode="contain" accessible={false}/>
                   </View>
                   <View style={s.rowMain}>
@@ -314,7 +326,7 @@ export default function AiPolicyStudioScreen() {
                     <Text numberOfLines={1} style={s.rowSub}>{row.lead_source_name||row.policy_type||'Policy intake'}</Text>
                   </View>
                   <View style={s.rowRight}>
-                    <Text numberOfLines={1} style={[s.rowStatus,{color:done?'#398562':flag?'#A5773A':'#5C78A8'}]}>{status}</Text>
+                    <Text numberOfLines={1} style={[s.rowStatus,{color:visual.color}]}>{visual.label}</Text>
                     <Text numberOfLines={1} style={s.rowChecks}>{row.checks_passed?String(row.checks_passed)+' checks':'Pending'}</Text>
                   </View>
                 </Pressable>
