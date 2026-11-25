@@ -187,7 +187,7 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
       ?(get("vehicle_make")!=="Daimler India Commercial Vehicles Pvt. Ltd."
         ||get("vehicle_model")!=="BHARATBENZ 2828C 6X4 BSVI"
         ||get("vehicle_fuel_type")!=="Diesel"
-        ||get("vehicle_rto_state")!=="Punjab")
+        ||(get("vehicle_rto_state")!==""&&get("vehicle_rto_state")!=="Punjab"))
       :(get("vehicle_make")!=="Tata Motors"
         ||!["Petrol","Diesel"].includes(get("vehicle_fuel_type")))))
     return fail("uiic_insurer_product_vehicle_conflict");
@@ -215,9 +215,13 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
     &&/^PB35[A-Z]{1,3}\d{3,4}$/.test(reg)&&status==="registered"
     &&/^MEC[A-Z0-9]{12,22}$/.test(get("vehicle_chassis_number"))
     &&/^\d{6}[A-Z]\d{7,9}$/.test(get("vehicle_engine_number"))
-    &&get("vehicle_rto_name")==="PATHANKOT"
-    &&fields.get("vehicle_rto_name")?.evidence===
-      "UIIC PDF vehicle Registration Authority: RTO PATHANKOT INDIA";
+    // RTO geography is optional if missing from the source. When printed,
+    // its value/state/evidence must all agree with the CURRENT vehicle row.
+    &&((!get("vehicle_rto_name")&&!get("vehicle_rto_state"))
+      ||(get("vehicle_rto_name")==="PATHANKOT"
+        &&get("vehicle_rto_state")==="Punjab"
+        &&fields.get("vehicle_rto_name")?.evidence===
+          "UIIC PDF vehicle Registration Authority: RTO PATHANKOT INDIA"));
   // Separate printed Chandigarh UT vehicle schedule profile; never accept
   // arbitrary non-MP registrations without the exact insurer PDF RLA/STA
   // Registration Authority and the same current policy's CH registration.
