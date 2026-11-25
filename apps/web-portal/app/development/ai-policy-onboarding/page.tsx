@@ -5,6 +5,7 @@ import { SemiAutoPolicyWorkspace, type SemiAutoIntakeRow } from "@/components/de
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
+import { inferLegacyAiReviewReason } from "@/lib/ai-intake-legacy-review";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { policyIntakeBucket, policyIntakeStatusCounts, type IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
 import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-read-access";
@@ -155,7 +156,66 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
         : queue.get(row.id)?.exception_codes??[],
       ai_processed_at: queue.get(row.id)?.processed_at ?? null,
       ai_diagnostic_code: queue.get(row.id)?.diagnostic_code ?? null,
+      ai_source_verified: queue.get(row.id)?.source_verified ?? false,
     }));
+  // Historical bulk conversion failures stored only a generic code.
+  // Explain a hold from verified current-document OCR, saved draft and
+  // existing customer/vehicle master records. Display-only, no mutations.
+  const legacyRows=pageRows.filter(row=>!row.is_duplicate
+    &&row.ocr_status==="completed"
+    &&row.ai_state==="exception"
+    &&row.ai_exceptions?.length===1
+    &&row.ai_exceptions[0]==="booking_review_required"
+    &&Boolean(queue.get(row.id)?.document_id));
+  if(legacyRows.length){
+    const ids=legacyRows.map(row=>row.id);
+    const [dr,documents]=await Promise.all([
+      admin.from("policy_intake_onboarding_drafts")
+        .select("intake_id,draft_payload").in("intake_id",ids),
+      admin.from("policy_intake_documents")
+        .select("intake_id,id").in("intake_id",ids).eq("is_current",true),
+    ]);
+    if(!dr.error&&!documents.error){
+      const current=new Map((documents.data??[]).map(d=>[d.intake_id,d.id]));
+      const drafts=new Map((dr.data??[]).map(d=>[d.intake_id,
+        d.draft_payload as {insuredName?:string;chassisNo?:string}]));
+      const candidates=legacyRows.filter(row=>current.get(row.id)===queue.get(row.id)?.document_id
+        &&drafts.has(row.id));
+      const chassis=[...new Set(candidates.map(row=>drafts.get(row.id)?.chassisNo?.trim()??"")
+        .filter(value=>value.length>=8&&value.length<=24))];
+      const vehicles=chassis.length
+        ?await admin.from("vehicles").select("chassis_no,customer_id").in("chassis_no",chassis)
+        :{data:[],error:null};
+      if(!vehicles.error){
+        const linkedIds=[...new Set((vehicles.data??[]).map(v=>v.customer_id).filter(Boolean))];
+        const owners=linkedIds.length
+          ?await admin.from("customers").select("id,contact_name,company_name,phone").in("id",linkedIds)
+          :{data:[],error:null};
+        if(!owners.error){
+          const byChassis=new Map<string,typeof vehicles.data>();
+          for(const vehicle of vehicles.data??[]){
+            const found=byChassis.get(vehicle.chassis_no)??[];
+            byChassis.set(vehicle.chassis_no,[...found,vehicle]);
+          }
+          const byId=new Map((owners.data??[]).map(owner=>[owner.id,owner]));
+          for(const row of candidates){
+            const draft=drafts.get(row.id);
+            const saved=row.ocr_fields?.find(field=>field.key==="insured_name")?.value?.trim()??"";
+            const linked=byChassis.get(draft?.chassisNo?.trim()??"")??[];
+            // Multiple matching vehicle masters are ambiguous, never guess.
+            const owner=linked.length===1?byId.get(linked[0].customer_id):null;
+            row.ai_legacy_review_hint=inferLegacyAiReviewReason({
+              sourceInsuredName:saved,draftInsuredName:draft?.insuredName??"",
+              intakeMobile:row.customer_mobile,
+              hasCurrentVehicle:linked.length===1&&Boolean(owner),
+              currentVehicleOwnerName:owner?.company_name||owner?.contact_name,
+              currentVehicleOwnerMobile:owner?.phone,
+            });
+          }
+        }
+      }
+    }
+  }
   return (
     <AppShell title="AI Policy Studio">
       <main className="mx-auto max-w-[1560px] space-y-2 pb-4">
