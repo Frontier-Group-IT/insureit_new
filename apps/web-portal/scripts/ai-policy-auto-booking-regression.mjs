@@ -19,6 +19,8 @@ assert.match(route,/CRON_SECRET/);
 assert.match(route,/INSUREIT_AI_AUTO_BOOKING_WORKER_TOKEN/);
 assert.match(route,/autoBookingEnabled\(\)/);
 assert.match(sql,/intake_id uuid primary key/);
+assert.match(sql,/operator_profile_id uuid not null/);
+assert.match(worker,/p_operator_profile_id:operatorId/);
 assert.match(sql,/on conflict \(intake_id\) do nothing/);
 assert.match(sql,/q\.state='verified'/);
 assert.match(sql,/cardinality\(q\.exception_codes\)=0/);
