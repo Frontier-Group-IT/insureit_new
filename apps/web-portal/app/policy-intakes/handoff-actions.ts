@@ -500,7 +500,8 @@ async function preparePolicyIntakeHandoffInternal(
       commercialPremium:verified.commercialPremium,
     }).eligible;
   const niaCpa=niaCertified?Number(verified.fields.find(f=>f.key==="cpa_premium")?.value):NaN;
-  const uiicCertified=["united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf"].includes(verified?.parserId??"")
+  const uiicCertified=Boolean(verified)
+    &&["united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf"].includes(verified!.parserId)
     &&assessUiicGcvDirectConversion({
       parserId:verified.parserId,checksPassed:verified.checksPassed,
       warnings:verified.warnings,fields:verified.fields,
