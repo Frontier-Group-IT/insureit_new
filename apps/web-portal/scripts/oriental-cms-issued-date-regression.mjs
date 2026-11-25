@@ -5,7 +5,7 @@ import path from "node:path";
 import {execFileSync} from "node:child_process";
 import {verifyOrientalCmsSigningDate} from "../lib/policy-oriental-cms-issuance.ts";
 const scratch=fs.mkdtempSync(path.join(tmpdir(),"insureit-oriental-cms-"));
-function signedPdf(withM=false){
+function signedPdf(withM=false,trailingDictionary=false){
  const openssl=(args)=>execFileSync("openssl",args,{cwd:scratch,stdio:"pipe"});
  const key=path.join(scratch,"key.pem"),cert=path.join(scratch,"cert.pem"),
    signedBytes=path.join(scratch,"signed.bin"),cms=path.join(scratch,"signed.der");
@@ -13,9 +13,15 @@ function signedPdf(withM=false){
    "-out",cert,"-subj","/CN=Insurer Signing Test","-days","1"]);
  const gapBytes="0".repeat(16000);
  const m=withM?" /M (D:20000101000000+05'30')":"";
- const original="%PDF-1.7\n1 0 obj\n<< /Type /Sig /Filter /Adobe.PPKLite /SubFilter /adbe.pkcs7.detached"+
-   m+" /ByteRange [0000000000 0000000000 0000000000 0000000000] /Contents <"+
-   gapBytes+"> >>\nendobj\n%%EOF\n";
+ const signatureHead="%PDF-1.7\n1 0 obj\n<< /Type /Sig /Filter /Adobe.PPKLite";
+ const byteRange="/ByteRange [0000000000 0000000000 0000000000 0000000000]";
+ // Real Oriental PDFs put the CMS /Contents first and /ByteRange,
+ // /SubFilter and /M later in the SAME signature dictionary.
+ const original=trailingDictionary
+   ? signatureHead+" /Contents <"+gapBytes+"> "+byteRange+
+     " /SubFilter /adbe.pkcs7.detached"+m+" >>\nendobj\n%%EOF\n"
+   : signatureHead+" /SubFilter /adbe.pkcs7.detached"+m+
+     " "+byteRange+" /Contents <"+gapBytes+"> >>\nendobj\n%%EOF\n";
  const beforeContents=original.indexOf("/Contents <");
  const a=original.indexOf("<",beforeContents),b=a+gapBytes.length+2;
  const first=a,second=b,third=original.length-b;
@@ -39,6 +45,12 @@ try{
  assert.equal(a.verification,"detached_signature_integrity_verified");
  assert.match(a.date,/^20\d{2}-\d{2}-\d{2}$/);
  assert.match(a.documentSha256,/^[a-f0-9]{64}$/);
+ const trailing=signedPdf(false,true);
+ const trailingEvidence=await verifyOrientalCmsSigningDate(Uint8Array.from(trailing));
+ assert(trailingEvidence,"CMS with post-Contents ByteRange/SubFilter must be recognized");
+ assert.equal(trailingEvidence.verification,"detached_signature_integrity_verified");
+ assert.equal(await verifyOrientalCmsSigningDate(Uint8Array.from(signedPdf(true,true))),null,
+  "A post-Contents /M that disagrees with CMS signingTime must be rejected");
  const altered=Uint8Array.from(good);
  altered[12]^=1; // Signed /Type or header data, not excluded /Contents
  assert.equal(await verifyOrientalCmsSigningDate(altered),null,
