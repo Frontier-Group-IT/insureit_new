@@ -41,6 +41,8 @@ begin
         and q.extraction_fingerprint ~ '^[0-9a-fA-F]{64}$'
         and i.policy_type='motor'
         and i.final_policy_id is null
+        -- Never silently take over an Intake already owned by a reviewer.
+        and i.assigned_to_profile_id is null
         and i.status in ('ready_for_review','in_review','needs_attention','processing')
         and not exists (
           select 1 from public.policy_intake_ai_auto_booking_attempts a
