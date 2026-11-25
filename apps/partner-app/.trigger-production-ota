@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-insurer-ui-motion-sticky-header
+release=partner-customer-details-compact-overview
 source=verified-merged-main
-source_pr=5244
-source_merge=cb0159c4e9758933d2c46f46d329440e5abd2e91
-reason=publish-insurer-performance-ui-only-animations
+source_pr=5253
+source_merge=5c0df398cfad83afd4703d544f4730b545895f0d
+reason=publish-approved-customer-details-icon-only-actions-and-overview-ui
 channel=production
 runtime=0.2.0
 requested=2026-11-25
