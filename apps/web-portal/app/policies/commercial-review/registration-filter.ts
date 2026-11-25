@@ -1,3 +1,5 @@
+import { isValidVehicleRegistrationNumber } from "../../../lib/vehicle-registration";
+
 export type CommercialRegistrationType = "new" | "rollover" | null;
 export type CommercialRegistrationFilter = "all" | NonNullable<CommercialRegistrationType>;
 
@@ -6,7 +8,8 @@ export function classifyCommercialRegistration(vehicle: { registration_status: s
   const status = vehicle.registration_status?.trim().toLowerCase();
   const number = vehicle.vehicle_no?.trim() ?? "";
   if (status === "registration_pending" || /^(?:NEW|PENDING)-/i.test(number)) return "new";
-  if (status === "registered") return "rollover";
+  if (status === "registered" || status === "active") return "rollover";
+  if ((!status || status === "na" || status === "n/a") && isValidVehicleRegistrationNumber(number)) return "rollover";
   return null;
 }
 
