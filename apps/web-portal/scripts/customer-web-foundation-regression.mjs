@@ -292,19 +292,18 @@ const sharedAuthConfig = read("lib/auth-config.ts");
 assert(!sharedAuthConfig.includes('allowedAdminRoles = ["customer"'), "Customer must not be added to employee admin roles");
 assert(sharedAuthConfig.includes('role!==\"customer\"') || read("lib/roles.ts").includes('role!=="customer"'), "Customer must remain excluded from employee portal roles");
 
-if (!process.exitCode) {
-  console.log("Customer Web foundation regression passed.");
-}
 const appearanceCss = read("app/customer/(protected)/customer-theme.css");
-assert.match(appearanceCss, /\.customer-appearance-grid\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-assert.match(appearanceCss, /\.customer-appearance-panel\s*\{[^}]*container: customer-appearance \/ inline-size/);
-assert.match(appearanceCss, /\.customer-appearance-section\s*\{[^}]*flex-direction: column/);
-assert.match(appearanceCss, /@container customer-appearance \(min-width: 980px\)\s*\{\s*\.customer-appearance-section\s*\{[^}]*flex-direction: row/);
-assert.match(appearanceCss, /@container customer-appearance \(max-width: 599px\)\s*\{\s*\.customer-appearance-grid\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/);
-assert.match(appearanceCss, /\.customer-appearance-grid \.customer-appearance-option\s*\{[^}]*flex-direction: row/);
-assert.match(appearanceSection, /icon: PanelLeft.*icon: PanelTop/);
-assert.match(appearanceSection, /value: "system".*value: "light".*value: "dark"/);
-assert.match(appearanceSection, /<Icon[^>]*\/><span className="customer-option-full-label">/);
-assert.match(appearanceSection, /<Icon[^>]*\/><span>\{name\}<\/span>/);
+assert(/\.customer-appearance-grid\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/.test(appearanceCss), "Equal width columns");
+assert(/\.customer-appearance-panel\s*\{[^}]*container: customer-appearance \/ inline-size/.test(appearanceCss), "Container-based responsiveness");
+assert(/\.customer-appearance-section\s*\{[^}]*flex-direction: column/.test(appearanceCss), "Stack headings above options by default");
+assert(/@container customer-appearance \(min-width: 980px\)\s*\{\s*\.customer-appearance-section\s*\{[^}]*flex-direction: row/.test(appearanceCss), "Wide panel inline heading");
+assert(/@container customer-appearance \(max-width: 599px\)\s*\{\s*\.customer-appearance-grid\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/.test(appearanceCss), "Narrow panel single column");
+assert(/\.customer-appearance-grid \.customer-appearance-option\s*\{[^}]*flex-direction: row/.test(appearanceCss), "Horizontal icon and label");
+assert(/icon: PanelLeft.*icon: PanelTop/.test(appearanceSection), "Appearance icons");
+assert(/value: "system".*value: "light".*value: "dark"/.test(appearanceSection), "Theme order");
+assert(/<Icon[^>]*\/><span className="customer-option-full-label">/.test(appearanceSection), "Appearance inline icon precedes label");
+assert(/<Icon[^>]*\/><span>\{name\}<\/span>/.test(appearanceSection), "Theme inline icon precedes label");
 assert(appearanceSection.includes("customer-option-short-label"));
-console.log("Customer Settings responsive appearance regression passed.");
+if (!process.exitCode) {
+  console.log("Customer Web foundation and Settings responsive appearance regression passed.");
+}
