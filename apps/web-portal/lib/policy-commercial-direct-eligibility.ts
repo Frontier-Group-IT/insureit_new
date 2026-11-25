@@ -215,21 +215,21 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
     &&/^PB35[A-Z]{1,3}\d{3,4}$/.test(reg)&&status==="registered"
     &&/^MEC[A-Z0-9]{12,22}$/.test(get("vehicle_chassis_number"))
     &&/^\d{6}[A-Z]\d{7,9}$/.test(get("vehicle_engine_number"))
-    // RTO geography is optional if missing from the source. When printed,
-    // its value/state/evidence must all agree with the CURRENT vehicle row.
-    &&((!get("vehicle_rto_name")&&!get("vehicle_rto_state"))
-      ||(get("vehicle_rto_name")==="PATHANKOT"
-        &&get("vehicle_rto_state")==="Punjab"
-        &&fields.get("vehicle_rto_name")?.evidence===
-          "UIIC PDF vehicle Registration Authority: RTO PATHANKOT INDIA"));
+    // RTO City and State are optional, independent fields. A supplied city
+    // must have matching source-labelled evidence, not a fixed city allowlist.
+    &&(!get("vehicle_rto_name")
+      ||fields.get("vehicle_rto_name")?.evidence===
+        "UIIC PDF vehicle Registration Authority: RTO "+get("vehicle_rto_name")+" INDIA");
   // Separate printed Chandigarh UT vehicle schedule profile; never accept
   // arbitrary non-MP registrations without the exact insurer PDF RLA/STA
   // Registration Authority and the same current policy's CH registration.
-  const registeredChandigarh=/^CH\d{2}[A-Z]{1,3}\d{3,4}$/.test(reg)
+  const registeredChandigarh=/^CH\\d{2}[A-Z]{1,3}\\d{3,4}$/.test(reg)
     &&status==="registered"
-    &&get("vehicle_rto_name")==="CHANDIGARH"
-    &&fields.get("vehicle_rto_name")?.evidence===
-      "UIIC PDF vehicle Registration Authority: CHANDIGARH UT (RLA AND STA) INDIA";
+    // Missing RTO city/state alone is never an exception.
+    &&(!get("vehicle_rto_name")
+      ||(get("vehicle_rto_name")==="CHANDIGARH"
+        &&fields.get("vehicle_rto_name")?.evidence===
+          "UIIC PDF vehicle Registration Authority: CHANDIGARH UT (RLA AND STA) INDIA"));
   if(!newPrinted&&!registered&&!registeredChandigarh&&!registeredPunjab)
     return fail("uiic_registration_status_not_source_verified");
   const dates=["policy_start_date","policy_end_date","policy_issuance_date","third_party_start_date","third_party_end_date"];
