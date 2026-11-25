@@ -14,7 +14,7 @@ export type NonTataCommercialRead = {
   fields: OcrField[];
   warnings: string[];
   checksPassed: number;
-  premium: { od: number; tp: number; net: number; gst: number; gross: number; cpa?: number; addOn?: number; odBasic?: number; ncbPercent?: number; ncbDiscount?: number; odBasicAfterNcb?: number };
+  premium: { od: number; tp: number; net: number; gst: number; gross: number; cpa?: number; addOn?: number; odBasic?: number; odAddons?: {name:string;amount:number}[]; ncb?: number; ncbPercent?: number; ncbDiscount?: number; odBasicAfterNcb?: number };
 };
 // Use the SAME approved self-hosted webhook as the production ICICI/Tata bridge.
 // Commercial policy verification stays isolated by the insurer classifier and its
@@ -361,6 +361,23 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
       ||!isMoney(premium.stampDuty)||premium.stampDuty!==1)
       throw new Error("n8n_uiic_split_cgst_sgst_evidence_invalid");
   }
+  const magma=insurer==="magma_private_car_package_native_pdf";
+  const magmaAddons=Array.isArray(premium.odAddons)?premium.odAddons:[];
+  const magmaAddonTotal=magmaAddons.reduce((sum:number,item:unknown)=>{
+    if(!object(item)||typeof item.name!=="string"
+       ||!["Basic Roadside Assistance","Depreciation Re-imbursement",
+          "Consumables","Key Replacement","Loss Of Personal Belongings"].includes(item.name)
+       ||!isMoney(item.amount))return NaN;
+    return sum+Number(item.amount);
+  },0);
+  if(magma&&(!isMoney(premium.cpa)||Number(premium.cpa)<=0
+    ||!isMoney(premium.odBasic)||!isMoney(premium.ncb)
+    ||!Number.isFinite(magmaAddonTotal)||magmaAddons.length===0
+    ||new Set(magmaAddons.map(x=>object(x)?x.name:null)).size!==magmaAddons.length
+    ||Math.abs(Math.round((Number(premium.odBasic)+magmaAddonTotal-Number(premium.ncb))*100)-Math.round(Number(premium.od)*100))>51
+    ||Math.round(Number(premium.cpa)*100)!==Math.round(Number(byKey.get("cpa_premium"))*100)
+    ||Number(premium.cpa)>=Number(premium.tp)))
+    throw new Error("n8n_magma_coverage_premium_split_invalid");
   const od = premium.od as number, tp = premium.tp as number;
   const net = premium.net as number, gst = premium.gst as number, gross = premium.gross as number;
   const roundingToleranceCents=insurer==="magma_private_car_package_native_pdf"?51:6;
@@ -389,7 +406,7 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
       insurer),
     warnings,
     checksPassed: expected.filter((key) => checks[key] === true).length,
-    premium: { od, tp, net, gst, gross },
+    premium: { od, tp, net, gst, gross, ...(magma?{cpa:Number(premium.cpa),odBasic:Number(premium.odBasic),odAddons:magmaAddons as {name:string;amount:number}[],ncb:Number(premium.ncb)}:{}) },
   };
 }
 
