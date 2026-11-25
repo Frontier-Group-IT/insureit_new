@@ -27,16 +27,24 @@ export function CustomerSidebarShell({ children, headerActions, breadcrumbs }: {
       const next = (event as CustomEvent<{ layout?: NavigationLayout }>).detail?.layout;
       if (next === "top" || next === "sidebar") setLayout(next);
     };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === customerNavigationPreferenceKey) {
+        try { setLayout(window.localStorage.getItem(customerNavigationPreferenceKey) === "top" ? "top" : "sidebar"); } catch { /* keep current preference */ }
+      }
+    };
+    window.addEventListener("storage", onStorage);
     window.addEventListener(customerNavigationPreferenceEvent, onLayoutChange);
     return () => {
       window.removeEventListener("insureit:customer-sidebar-toggle", onToggle);
       window.removeEventListener(customerNavigationPreferenceEvent, onLayoutChange);
+      window.removeEventListener("storage", onStorage);
     };
   }, []);
 
   function switchLayout(next: NavigationLayout) {
     setLayout(next);
     try { window.localStorage.setItem(customerNavigationPreferenceKey, next); } catch { /* preference stays for this session */ }
+    window.dispatchEvent(new CustomEvent(customerNavigationPreferenceEvent, { detail: { layout: next } }));
   }
 
   const sidebar = layout === "sidebar";
