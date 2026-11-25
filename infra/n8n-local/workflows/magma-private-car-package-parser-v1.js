@@ -7,7 +7,7 @@ const s=t.slice(0,11000),grab=(re,text=s)=>re.exec(text)?.[1]?.trim()??null;
 const money=(re,text=s)=>{const v=grab(re,text);return v==null?null:Number(v.replace(/,/g,''));};
 const date=x=>{const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(x||'');return m?m[3]+'-'+m[2]+'-'+m[1]:null;};
 const near=(a,b,tol=.51)=>a!=null&&b!=null&&Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<=tol;
-const insurer=/Magma General Insurance Limited/i.test(s),product=/PRIVATE CAR PACKAGE POLICY/i.test(s);
+const insurer=/Magma General Insurance Limited/i.test(s)&&/www\.magmainsurance\.com/i.test(s.slice(0,2500)),product=/PRIVATE CAR PACKAGE POLICY/i.test(s);
 const numbers=[...new Set(s.match(/\bP\d{10}\/\d{4}\/\d{6}\b/g)||[])];
 const policy=numbers.length===1?numbers[0]:null;
 const insured=grab(/^Name of Insured\s+([^\n]{4,100})$/im);
