@@ -30,6 +30,7 @@ export type SemiAutoIntakeRow = {
   ai_diagnostic_code?: string | null;
   /** Read-only explanation of a historical generic hold, never booking evidence. */
   ai_legacy_review_hint?: "insured_name_mismatch"|"vehicle_ownership"|"customer_identity"|null;
+  ai_source_verified?:boolean;
 };
 
 const aiIssueTitles: Record<string,string> = {
@@ -58,6 +59,7 @@ const aiIssueTitles: Record<string,string> = {
   draft_conflict:"Saved field differs from PDF",
   preflight_pending:"Canonical booking preflight pending",
   booking_review_required:"Conversion needs manual review",
+  onboarding_pending:"PDF extracted · prepare onboarding",
   stale_document:"Source PDF changed",
 };
 /** Saved OCR offers diagnostics only; source PDF and canonical checks remain authoritative. */
@@ -101,6 +103,9 @@ function canAttemptFailedSourceRecovery(row:SemiAutoIntakeRow):boolean {
 }
 function visibleReviewCodes(row:SemiAutoIntakeRow):string[] {
   const codes=row.ai_exceptions??[];
+  if(codes.length===1&&codes[0]==="booking_review_required"
+    &&row.status==="processing"&&row.ocr_status==="pending"
+    &&row.ai_source_verified)return ["onboarding_pending"];
   if(codes.length===1&&codes[0]==="booking_review_required"
     &&row.ai_legacy_review_hint)return [row.ai_legacy_review_hint];
   return codes;
