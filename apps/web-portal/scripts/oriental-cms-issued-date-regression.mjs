@@ -54,7 +54,7 @@ try{
  assert.match(a.documentSha256,/^[a-f0-9]{64}$/);
  // Raw authenticated GeneralizedTime offset must be parsed from DER, not from PDF /M.
  assert.match(fs.readFileSync(new URL("../lib/policy-oriental-cms-issuance.ts",import.meta.url),"utf8"),
-   /Buffer\\.from\\(asn\\.toBER\\(false\\)\\)/);
+   /Buffer\.from\(asn\.toBER\(false\)\)/);
  const trailing=signedPdf(false,true);
  const trailingEvidence=await verifyOrientalCmsSigningDate(Uint8Array.from(trailing));
  assert(trailingEvidence,"CMS with post-Contents ByteRange/SubFilter must be recognized");
