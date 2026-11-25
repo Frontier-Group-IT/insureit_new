@@ -483,41 +483,6 @@ function IntakeStepper({detail}:{detail:AiStudioDetail}){
     </View>)}
   </View>;
 }
-// Layout only: preserve source order, keys, values and duplicates. Long fields
-// get their own row; no guessed fields or financial calculations.
-function extractedFieldRows(fields:AiStudioDetail['fields']){
-  const rows:AiStudioDetail['fields'][]=[];
-  let short:AiStudioDetail['fields']=[];
-  for(const field of fields){
-    const wide=field.value.length>20||field.key.length>28||/^(insured_name|insurer_name|policy_number|vehicle_chassis_number|vehicle_engine_number)$/.test(field.key);
-    if(wide){if(short.length){rows.push(short);short=[];}rows.push([field]);}
-    else{short.push(field);if(short.length===3){rows.push(short);short=[];}}
-  }
-  if(short.length)rows.push(short);
-  return rows;
-}
-function extractedFieldIcon(key:string):keyof typeof Ionicons.glyphMap{
-  if(/premium|gst|tax|idv|amount|cpa/i.test(key))return 'wallet-outline';
-  if(/date|start|end|issued/i.test(key))return 'calendar-outline';
-  if(/insured|customer/i.test(key))return 'person-outline';
-  if(/insurer/i.test(key))return 'business-outline';
-  if(/vehicle|registration|chassis|engine|make|model/i.test(key))return 'car-outline';
-  return 'document-text-outline';
-}
-function ExtractedFieldTiles({fields}:{fields:AiStudioDetail['fields']}){
-  const rows=extractedFieldRows(fields);
-  return <View style={s.fieldTileGroups}>
-    {Array.from({length:Math.ceil(rows.length/2)},(_,group)=><View key={group} style={[s.fieldTileGroup,{backgroundColor:['#E9F1FC','#E5F5ED','#EFE9FD'][group%3]}]}>
-      {rows.slice(group*2,group*2+2).map((row,index)=><View key={index} style={s.fieldTileRow}>
-        {row.map((field,i)=><View key={field.key+':'+i} style={s.fieldTile}>
-          <View style={s.fieldTileLabelRow}><Ionicons name={extractedFieldIcon(field.key)} size={13} color="#315B87"/><Text style={s.fieldTileLabel}>{fieldName(field.key)}</Text></View>
-          <Text selectable style={s.fieldTileValue}>{field.value}</Text>
-        </View>)}
-      </View>)}
-    </View>)}
-  </View>;
-}
-
 // Group only returned PDF fields. Unknown keys stay visible under Additional Fields;
 // no synthesized amounts, unverified approval badges or document download URLs.
 type IntakeGroupId='policy'|'insured'|'vehicle'|'premium'|'coverage'|'dates'|'documents'|'additional';
