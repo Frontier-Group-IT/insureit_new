@@ -178,7 +178,9 @@ export function assessHeldInsurerCandidate(raw:unknown,
      return reject("held_magma_printed_gst_invalid");
  } else {
    if(get("insurer_name")!=="The Oriental Insurance Company Limited"
-     ||fields.get("policy_issuance_date")?.evidence!=="Oriental explicitly printed Policy Issue Date")
+     ||!["Oriental explicitly printed Policy Issue Date",
+       "Oriental cryptographically verified embedded PDF signature date"]
+       .includes(fields.get("policy_issuance_date")?.evidence||""))
      return reject("held_oriental_issuance_not_verified");
    if(isSaod&&(get("policy_product")!=="Standalone Own Damage - Private Car"
       ||get("vehicle_class")!=="Private Car"||od<=0||tp!==0||cpa!==0
