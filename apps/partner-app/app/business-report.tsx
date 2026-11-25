@@ -28,6 +28,7 @@ export default function BusinessReportScreen() {
   });
 
   const { motion } = useActivityMotion();
+  const currentMonth = report.data?.current_month?.slice(0, 7);
   const [productVisible, setProductVisible] = useState(false);
   const productY = useRef(Infinity);
   const viewportBottom = useRef(0);
@@ -90,7 +91,7 @@ export default function BusinessReportScreen() {
                 count={item.policies}
                 amount={formatIndianCurrency(item.premium)}
                 tone="blue"
-                motion={motion} delay={850 + index * 70} current={item.month.slice(0, 7) === report.data.current_month.slice(0, 7)}
+                motion={motion} delay={850 + index * 70} current={item.month.slice(0, 7) === currentMonth}
                 last={index === rows.length - 1}
               />
             ))}
@@ -152,16 +153,19 @@ function ReportCounter({ value, currency = false, motion, ...props }: TextProps 
   const target = Number(value);
   const [shown, setShown] = useState(target);
   const previous = useRef(0);
+  const started = useRef(false);
   const format = (n: number) => currency ? formatIndianCurrency(n) : String(Math.round(n));
   const exact = currency ? formatIndianCurrency(value) : String(value);
   useEffect(() => {
-    if (!Number.isFinite(target) || !motion) { setShown(target); return; }
+    if (!Number.isFinite(target) || !motion) { setShown(target); if (started.current) previous.current = target; return; }
+    const initial = !started.current;
+    started.current = true;
     const from = previous.current;
     if (from === target) { setShown(target); return; }
     let frame = 0, start: number | undefined, last = -Infinity;
     const tick = (now: number) => {
       start ??= now;
-      const progress = Math.max(0, Math.min(1, (now - start - 400) / 1500));
+      const progress = Math.max(0, Math.min(1, (now - start - (initial ? 400 : 0)) / 1500));
       if (now - last >= 40 || progress === 1) {
         previous.current = from + (target - from) * Easing.out(Easing.cubic)(progress);
         setShown(progress === 1 ? target : previous.current);
