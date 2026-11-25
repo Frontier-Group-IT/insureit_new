@@ -79,7 +79,7 @@ assert.match(customerDetail, /bottomNavigation=\{<PartnerStackBottomNavigation a
 assert.match(customerDetail, /bottomNavigationNavy/, 'Customer Details footer safe area remains navy on Android and iOS');
 assert.match(customerDetail, /avatar: \{ width: 64, height: 64, borderRadius: 32/, 'Customer avatar is enlarged to 64px while staying circular');
 assert.match(customerDetail, /avatarText: \{ color: '#6B28CE', fontSize: 24/, 'Customer initials scale with avatar');
-assert.match(customerDetail, /<PartnerContactActions[^>]*inlineLabeled customerDetailLayout/, 'Customer Details uses dedicated contact layout');
+assert.match(customerDetail, /<PartnerContactActions[^>]*customerDetailIconOnly/, 'Customer Details uses dedicated left-aligned icon-only contact layout');
 assert.match(contactActions, /customerDetailRow: \{ width: '100%', justifyContent: 'space-between'/, 'Call starts at customer name left edge and contact actions occupy available width');
 assert.match(contactActions, /customerDetailAction: \{ flex: 0, flexShrink: 0, width: 'auto'/, 'Individual customer contact controls retain their original compact appearance');
 assert.match(contactActions, /customerDetailLayout && styles\.customerDetailAction/, 'Other contact action layouts remain unaffected');
