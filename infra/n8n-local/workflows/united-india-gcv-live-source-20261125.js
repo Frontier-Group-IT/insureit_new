@@ -309,7 +309,98 @@ function unitedIndiaPrivateCar(t){
  return out;
 }
 
+
+/* Separate UIIC Punjab/BharatBenz GCV schedule: all four CGST/SGST tax
+ * components must be printed. Does not reuse or invent IGST components. */
+function unitedIndiaPunjabBharatBenz(t){
+ const current=t.slice(0,5500);
+ const vehicleStart=t.indexOf('Particulars of Vehicle Insured');
+ const block=vehicleStart>=0?t.slice(vehicleStart,vehicleStart+2500):'';
+ const registered=grab(block,/\b(PB\s*-\s*\d{2}\s*-\s*[A-Z]{1,3}\s*-\s*\d{3,4})\s+No\b/i);
+ const registration=registered?.replace(/[\s-]/g,'').toUpperCase()??null;
+ const maker=/DAIMLER\s+INDIA\s+COMMERCIAL\s+VEHICLES\s+PVT\.\s*LTD\s*\/\s*BHARATBENZ/i.test(block);
+ const model=grab(block,/\b(BHARATBENZ\s+2828C\s+6X4\s+BSVI)\b/i)?.replace(/\s+/g,' ')??null;
+ const chassis=grab(block,/\b(MEC[A-Z0-9]{12,22})\b/i);
+ const engine=grab(block,/\b(\d{6}[A-Z]\d{7,9})\b/i);
+ const fuel=grab(block,/\bFully\s+Built\s*\/\s*(Diesel)\s+(\d{3,5})\s+\d{4,6}/i);
+ const capacity=grab(block,/\bFully\s+Built\s*\/\s*Diesel\s+(\d{3,5})\s+\d{4,6}/i);
+ const year=grab(block,/\b(20\d{2})\s+Type of Body\b/i)
+   ||grab(block,/\b2828C\s+6X4\s+BSVI[\s\S]{0,25}?\b(20\d{2})\b/i);
+ const policy=grab(t,/\bPolicy No\.\s*:?\s*(\d{6,12}P\d{9})\b/i);
+ const certificate=grab(t,/\bCertificate Number\s+(\d{6,12}P\d{9})\b/i);
+ const insured=grab(t,/\bName of the Insured\s+(M\/S[^\n]{3,100})\s*\nAddress of the Insured/i)
+   ||grab(t,/\bName of the\s*\nInsured\s*\n(M\/S[^\n]{3,100})/i);
+ const start=validDate(grab(t,/\bFrom\s+\d{2}:\d{2}\s+Hrs\s+of\s+(\d{2}\/\d{2}\/\d{4})/i));
+ const end=validDate(grab(t,/\bTo\s+Midnight\s+of\s+(\d{2}\/\d{2}\/\d{4})/i));
+ const issue=validDate(grab(t,/\bDate of Issue:\s*(\d{2}\/\d{2}\/\d{4})/i));
+ const idv=amountAfter(t,/\b(\d{6,9})\s+0\s+0\s+0\s+0\s+0\s+\1\b/i);
+ const od=amountAfter(t,/\bGross OD\(A\)\s*([\d,.]+)/i),tp=amountAfter(t,/\bGross TP\(B\)\s*([\d,.]+)/i);
+ const net=amountAfter(t,/\bGross OD\s*&\s*TP:\s*\(A\)\s*\+\s*\(B\)\s*([\d,.]+)/i);
+ const cgstOther=amountAfter(t,/\bCGST-Others\(9%\)\s*:?\s*([\d,.]+)/i);
+ const sgstOther=amountAfter(t,/\bSGST-Others\(9%\)\s*:?\s*([\d,.]+)/i);
+ const cgstTp=amountAfter(t,/\bCGST-Basic TP\(2\.50%\)\s*:?\s*([\d,.]+)/i);
+ const sgstTp=amountAfter(t,/\bSGST-Basic TP\(2\.50%\)\s*:?\s*([\d,.]+)/i);
+ const gst=[cgstOther,sgstOther,cgstTp,sgstTp].every(v=>typeof v==='number')?cgstOther+sgstOther+cgstTp+sgstTp:null;
+ const gross=amountAfter(t,/\bTotal\(Rounded Off\)\s*:\s*([\d,.]+)/i);
+ const stamp=amountAfter(t,/\bStamp Duty\s*:\s*([\d,.]+)/i);
+ const basicTp=amountAfter(t,/\bB\.\s*Basic\s*-\s*TP\s+([\d,.]+)/i);
+ const driver=amountAfter(t,/\bLL\s+to\s+Paid\s+Driver\s+IMT\s*28\s+([\d,.]+)/i);
+ const geoTp=amountAfter(t,/\bGeographical Extension\s*-\s*TP\s+([\d,.]+)/i);
+ const cpaRemoved=/Compulsory Personal Accident\s*\(CPA\)\s*cover is removed/i.test(t);
+ const basicOd=amountAfter(t,/\bA\.\s*Basic\s*-\s*OD\s+([\d,.]+)/i);
+ const geoOd=amountAfter(t,/\bGeographical Extension\s*-\s*OD\s+([\d,.]+)/i);
+ const lamps=amountAfter(t,/\bCover for lamps,\s*tyres,\s*tubes etc\s+([\d,.]+)/i);
+ const nilDep=amountAfter(t,/\bNil Depreciation Without Excess\s+([\d,.]+)/i);
+ const ncb=amountAfter(t,/\bNo Claim Bonus 20%\s+([\d,.]+)/i);
+ const towing=amountAfter(t,/\bAdditional Towing Charge\s*\n\(SI:\s*\d+\/-\)\s*\n([\d,.]+)/i);
+ const authority=grab(block,/\bRegistration Authority[^\n]*\n[ \t]*(RTO PATHANKOT INDIA)\b/i);
+ const extra={
+   uiic_layout:/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(current)
+     &&/GCV PUBLIC CARRIER OTHER THAN 3 WHEELER/i.test(current)&&maker,
+   split_cgst_sgst_components_printed:[cgstOther,sgstOther,cgstTp,sgstTp].every(v=>typeof v==='number'),
+   stamp_accounting_disclosed:stamp!==null,
+   stamp_charge_reconciled:stamp!==null&&approx(gross,net+gst),
+ };
+ const warnings=[];
+ if(!certificate||!policy||policy!==certificate)warnings.push('Review required: certificate_policy_mismatch');
+ if(!authority||registration===null)warnings.push('Review required: Punjab authority_not_current_vehicle');
+ if(!cpaRemoved)warnings.push('Review required: CPA waiver_unverified');
+ if(![basicTp,driver,geoTp].every(v=>typeof v==='number')||!approx(tp,basicTp+driver+geoTp))
+   warnings.push('Review required: TP itemization_unreconciled');
+ if(![basicOd,geoOd,lamps,nilDep,ncb,towing].every(v=>typeof v==='number')
+   ||!approx(od,basicOd+geoOd+lamps+nilDep-ncb+towing,.5))
+   warnings.push('Review required: OD itemization_unreconciled');
+ const base={policy_number:policy,insured_name:insured,policy_product:'Goods Carrying Vehicle Package',
+  policy_start_date:start,policy_end_date:end,policy_issuance_date:issue,
+  third_party_start_date:start,third_party_end_date:end,
+  vehicle_registration_number:registration,vehicle_registration_status:registration?'registered':null,
+  vehicle_make:maker?'Daimler India Commercial Vehicles Pvt. Ltd.':null,
+  vehicle_model:model,vehicle_class:'Goods Carrying Vehicle',vehicle_fuel_type:fuel,
+  vehicle_manufacturing_year:year,vehicle_capacity:capacity,
+  vehicle_chassis_number:chassis,vehicle_engine_number:engine,
+  vehicle_rto_name:authority?'PATHANKOT':null,vehicle_rto_state:authority?'Punjab':null,
+  idv,cpa_premium:cpaRemoved?0:null};
+ const printed={od,tp,net,gst,gross,cgstOthers:cgstOther,sgstOthers:sgstOther,
+  cgstBasicTp:cgstTp,sgstBasicTp:sgstTp,stampDuty:stamp,taxRegime:'CGST_SGST'};
+ const result=output('United India Insurance Company Limited',
+   'united_india_gcv_punjab_split_gst_native_pdf',base,printed,extra,warnings);
+ result.fields=result.fields.map(f=>{
+  if(f.key==='vehicle_rto_name'&&authority)return {...f,evidence:'UIIC PDF vehicle Registration Authority: RTO PATHANKOT INDIA'};
+  if(f.key==='cpa_premium'&&cpaRemoved)return {...f,evidence:'UIIC PDF Compulsory Personal Accident (CPA) cover is removed'};
+  return f;
+ });
+ return result;
+}
+
 function unitedIndia(t){
+ // Separate exact Punjab BharatBenz plus four printed split-GST layout.
+ // Existing UIIC IGST GCV and all other insurer routes are unchanged.
+ if(/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(t.slice(0,3500))
+   &&/GCV PUBLIC CARRIER OTHER THAN 3 WHEELER/i.test(t.slice(0,8500))
+   &&/DAIMLER\s+INDIA\s+COMMERCIAL\s+VEHICLES\s+PVT\.\s*LTD\s*\/\s*BHARATBENZ/i.test(t.slice(0,6000))
+   &&/CGST-Others\(9%\)/i.test(t.slice(0,7500))
+   &&/SGST-Basic TP\(2\.50%\)/i.test(t.slice(0,7500)))
+   return unitedIndiaPunjabBharatBenz(t);
  // This is a different product with a separate booking contract; never present
  // a Private Car Package as a Goods Carrying Vehicle.
  if (/PRIVATE CAR\s*-?\s*PACKAGE POLICY/i.test(t.slice(0,2200))) return unitedIndiaPrivateCar(t);
