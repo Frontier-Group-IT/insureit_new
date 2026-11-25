@@ -7,6 +7,7 @@ import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate"
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
 import { assessNiaNamedAuthorityUnregisteredConversion } from "@/lib/policy-commercial-direct-eligibility";
+import { verifiedPolicyManufacturerBrand } from "@/lib/policy-trained-make-alias";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 
@@ -341,7 +342,15 @@ async function processClaim(item: Claimed, parserRevision: string) {
   // not a missing brand. Never infer a brand for unknown NIA models.
   const recognizedNiaTata=extraction.preview.parserId==="new_india_cv_native_pdf"
     &&rawMake==="TATA MOTOR" &&model==="1918 AZURA";
-  const make=recognizedChetak?"BAJAJ":recognizedNiaTata?"TATA":rawMake;
+  // The motor master lists marque/brands, not every insurer's legal OEM name.
+  // Only exact already-certified insurer/source combinations may use an
+  // equivalent brand; a generic unknown make still triggers review.
+  const certifiedBrand=verifiedPolicyManufacturerBrand({
+    parserId:extraction.preview.parserId,
+    checksPassed:extraction.preview.checksPassed,
+    warnings:extraction.preview.warnings,make:rawMake,model,
+  });
+  const make=recognizedChetak?"BAJAJ":recognizedNiaTata?"TATA":certifiedBrand??rawMake;
   const enabledMakes=new Set((brands??[]).map(x=>normalizedName(x.brand_name)));
   const matchedManufacturer=enabledMakes.has(make)
     || (recognizedChetak&&[...enabledMakes].some(x=>x.startsWith("BAJAJ AUTO")));
