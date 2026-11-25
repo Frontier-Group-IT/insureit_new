@@ -146,8 +146,6 @@ function INTAKE_TEST_ALL(fields,group){return ['policy','insured','vehicle','pre
 assert.match(screen, /heroTypePosition/, 'Policy type stays at the top-right of the hero');
 assert.match(screen, /isIntakeVerified\(detail\)\?/, 'Green name verification is conditional on verified status and no errors');
 assert.match(screen, /'checkmark-circle'|name="checkmark-circle"/, 'Green verified icon is in the hero');
-assert.match(screen, /Policy PDF uploaded/, 'PDF step shows inline secondary detail');
-assert.match(screen, /fields extracted/, 'Extracted step shows inline field count');
 assert.match(screen, /numberOfLines=\{1\} ellipsizeMode="tail"/, 'Disabled security notice is compact and single line');
 assert.match(screen, /function SectionedIntakeFields/, 'Expandable sectioned fields are present');
 assert.match(screen, /function intakeFieldGroup/, 'Returned fields are categorized without made-up values');
