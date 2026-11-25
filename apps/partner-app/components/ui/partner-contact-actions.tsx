@@ -10,6 +10,7 @@ export function PartnerContactActions({
   iconOnlyVertical = false,
   inlineLabeled = false,
   customerDetailLayout = false,
+  customerDetailIconOnly = false,
 }: {
   phone?: string | null;
   email?: string | null;
@@ -17,13 +18,14 @@ export function PartnerContactActions({
   iconOnlyVertical?: boolean;
   inlineLabeled?: boolean;
   customerDetailLayout?: boolean;
+  customerDetailIconOnly?: boolean;
 }) {
   const normalizedPhone = lastTen(phone || '');
 
-  const iconMode = compact || iconOnlyVertical || inlineLabeled;
+  const iconMode = compact || iconOnlyVertical || inlineLabeled || customerDetailIconOnly;
 
   return (
-    <View style={[styles.row, compact && styles.compactRow, iconOnlyVertical && styles.verticalRow, inlineLabeled && styles.inlineLabeledRow, customerDetailLayout && styles.customerDetailRow]}>
+    <View style={[styles.row, compact && styles.compactRow, iconOnlyVertical && styles.verticalRow, inlineLabeled && styles.inlineLabeledRow, customerDetailLayout && styles.customerDetailRow, customerDetailIconOnly && styles.customerIconRow]}>
       <Action
         icon="call-outline"
         label="Call"
@@ -31,6 +33,7 @@ export function PartnerContactActions({
         compact={iconMode}
         inlineLabeled={inlineLabeled}
           customerDetailLayout={customerDetailLayout}
+        customerDetailIconOnly={customerDetailIconOnly}
         onPress={() => normalizedPhone ? void Linking.openURL(`tel:+91${normalizedPhone}`) : undefined}
       />
       <Action
@@ -40,6 +43,7 @@ export function PartnerContactActions({
         compact={iconMode}
         inlineLabeled={inlineLabeled}
           customerDetailLayout={customerDetailLayout}
+        customerDetailIconOnly={customerDetailIconOnly}
         onPress={() => normalizedPhone ? void Linking.openURL(`https://wa.me/91${normalizedPhone}`) : undefined}
       />
       {!compact || iconOnlyVertical || inlineLabeled ? (
@@ -50,6 +54,7 @@ export function PartnerContactActions({
           compact={iconMode}
         inlineLabeled={inlineLabeled}
           customerDetailLayout={customerDetailLayout}
+        customerDetailIconOnly={customerDetailIconOnly}
           onPress={() => email ? void Linking.openURL(`mailto:${email}`) : undefined}
         />
       ) : null}
@@ -64,6 +69,7 @@ function Action({
   compact,
   inlineLabeled = false,
   customerDetailLayout = false,
+  customerDetailIconOnly = false,
   onPress,
 }: {
   icon: 'call-outline' | 'logo-whatsapp' | 'mail-outline';
@@ -72,6 +78,7 @@ function Action({
   compact: boolean;
   inlineLabeled?: boolean;
   customerDetailLayout?: boolean;
+  customerDetailIconOnly?: boolean;
   onPress: () => void;
 }) {
   return (
@@ -90,14 +97,18 @@ function Action({
         compact && styles.compactAction,
         inlineLabeled && styles.inlineLabeledAction,
         customerDetailLayout && styles.customerDetailAction,
+        customerDetailIconOnly && styles.customerIconButton,
+        customerDetailIconOnly && icon === 'call-outline' && styles.callIconButton,
+        customerDetailIconOnly && icon === 'logo-whatsapp' && styles.whatsappIconButton,
+        customerDetailIconOnly && icon === 'mail-outline' && styles.mailIconButton,
         pressed && !disabled && styles.pressed,
         disabled && styles.disabled,
       ]}
     >
       <Ionicons
         name={icon}
-        size={inlineLabeled ? 23 : compact ? 20 : 18}
-        color={disabled ? partnerTheme.colors.inkSubtle : partnerTheme.colors.brandStrong}
+        size={customerDetailIconOnly ? 23 : inlineLabeled ? 23 : compact ? 20 : 18}
+        color={disabled ? partnerTheme.colors.inkSubtle : customerDetailIconOnly ? (icon === 'logo-whatsapp' ? '#159D50' : icon === 'mail-outline' ? '#405B81' : '#6528CE') : partnerTheme.colors.brandStrong}
       />
       {(!compact || inlineLabeled) ? <Text style={[styles.label, inlineLabeled && styles.inlineLabeledText]}>{label === "Email" && inlineLabeled ? "Mail" : label}</Text> : null}
     </Pressable>
@@ -114,6 +125,11 @@ const styles = StyleSheet.create({
   verticalRow: { flexDirection: 'column', alignItems: 'center', gap: 2 },
   inlineLabeledRow: { justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   customerDetailRow: { width: '100%', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: 4 },
+  customerIconRow: { justifyContent: 'flex-start', gap: 10, flexWrap: 'nowrap' },
+  customerIconButton: { width: 42, height: 42, minHeight: 42, borderRadius: 21, paddingHorizontal: 0, borderWidth: 0 },
+  callIconButton: { backgroundColor: '#F1EAFB' },
+  whatsappIconButton: { backgroundColor: '#E8F8EE' },
+  mailIconButton: { backgroundColor: '#EDF2F9' },
   customerDetailAction: { flex: 0, flexShrink: 0, width: 'auto', minHeight: 42, height: 42, paddingHorizontal: 0, gap: 5, borderWidth: 0, borderRadius: 0, backgroundColor: 'transparent' },
   inlineLabeledAction: { flexDirection: 'row', width: 'auto', height: 42, minHeight: 42, gap: 4, paddingHorizontal: 3 },
   inlineLabeledText: { color: partnerTheme.colors.brandStrong, fontSize: 11, fontWeight: '700' },
