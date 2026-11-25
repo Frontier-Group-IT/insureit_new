@@ -41,7 +41,7 @@ export default async function CustomerSupportPage({
     <div className="customer-support-page flex min-h-0 min-w-0 flex-1 flex-col gap-5">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/support" />
 
-      <section className="relative isolate shrink-0 min-h-[172px] overflow-hidden rounded-xl border border-[#E3E7F4] bg-[#F4F5FF] px-5 py-5 sm:px-7">
+      <section className="customer-support-hero relative isolate shrink-0 min-h-[172px] overflow-hidden rounded-xl border border-[#E3E7F4] bg-[#F4F5FF] px-5 py-5 sm:px-7">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[url('/assets/supclaim.jpeg')] bg-cover bg-center bg-no-repeat" />
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#F5F7FF]/94 via-[#F5F7FF]/72 via-45% to-[#F5F7FF]/14" />
         <div className="relative z-10 max-w-[530px]">
@@ -93,7 +93,7 @@ export default async function CustomerSupportPage({
                 <img src={`/assets/customer-3d-icons/${/challan|e.?challan|traffic fine/i.test(item.subject+" "+item.service_type) ? "e_challan" : /quot|premium estimate|insurance price/i.test(item.subject+" "+item.service_type) ? "insurance_quote" : /claim|accident|survey/i.test(item.subject+" "+item.service_type) ? "claims" : /polic|renewal|endorsement/i.test(item.subject+" "+item.service_type) ? "policy_related" : /vehicle|registration|rc copy/i.test(item.subject+" "+item.service_type) ? "vehicle_and_policy" : "help_and_support"}.png`} alt="" aria-hidden="true" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
                 <span className="min-w-0 flex-1"><b className="block truncate text-[10.5px] text-[#252B5C]">{item.subject}</b><small className="text-[9px] text-[#7D86A5]">{item.enquiry_no}</small></span>
                 {item.status.trim().toLowerCase() === "open" ? (
-                  <span className="inline-flex shrink-0 origin-center items-center rounded-full border border-[#E8D39C] bg-white px-3 py-1 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#B88317] shadow-[0_4px_14px_rgba(184,131,23,0.14)] motion-safe:animate-[customerSupportOpenPulse_2.2s_ease-in-out_infinite]">OPEN</span>
+                  <span className="customer-support-open-status inline-flex shrink-0 origin-center items-center rounded-full border border-[#E8D39C] bg-white px-3 py-1 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#B88317] shadow-[0_4px_14px_rgba(184,131,23,0.14)] motion-safe:animate-[customerSupportOpenPulse_2.2s_ease-in-out_infinite]">OPEN</span>
                 ) : (
                   <StatusPill tone={serviceActivityTone(item.status)}>{item.status.replace("_"," ")}</StatusPill>
                 )}
