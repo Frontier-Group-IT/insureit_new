@@ -10,7 +10,7 @@ import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
-import { mapVerifiedN8nMotorPremium, mapVerifiedIffcoCommercialPremium, mapVerifiedNiaCommercialPremium, mapVerifiedUiicGcvCommercialPremium } from "@/lib/policy-n8n-onboarding-premium";
+import { mapVerifiedN8nMotorPremium, mapVerifiedIffcoCommercialPremium, mapVerifiedNiaCommercialPremium, mapVerifiedUiicGcvCommercialPremium, mapVerifiedMagmaPrivateCarPremium } from "@/lib/policy-n8n-onboarding-premium";
 import { assessProductVariantDirectConversion, mapVerifiedProductVariantPremium, PRODUCT_VARIANT_PARSERS } from "@/lib/policy-product-variant-direct-eligibility";
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
 import { assessNiaNamedAuthorityUnregisteredConversion, assessStandardCommercialDirectConversion, assessUiicGcvDirectConversion, assessUiicPrivateCarDirectConversion } from "@/lib/policy-commercial-direct-eligibility";
@@ -204,7 +204,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
         commercialPremium:commercial,
       }).eligible
       : Math.abs((commercial!.od+commercial!.tp)-commercial!.net)<0.07)
-    && Math.abs((commercial!.net+commercial!.gst)-commercial!.gross)<(PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId)?0.51:0.07);
+    && Math.abs((commercial!.net+commercial!.gst)-commercial!.gross)<(PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId)||parsed.preview.parserId==="magma_private_car_package_native_pdf"?0.51:0.07);
   const acceptableCommercialWarning=(value:string)=>
     parsed.preview.parserId==="new_india_cv_native_pdf"
     && value.startsWith("Policy prints only an RTO prefix.");
@@ -516,6 +516,8 @@ async function preparePolicyIntakeHandoffInternal(
       ?mapVerifiedNiaCommercialPremium(verified!.commercialPremium!,niaCpa)
       :uiicCertified
       ?mapVerifiedUiicGcvCommercialPremium(verified!.commercialPremium!,uiicCpa)
+      :verified?.parserId==="magma_private_car_package_native_pdf"&&verified.commercialPremium
+      ?mapVerifiedMagmaPrivateCarPremium(verified.commercialPremium)
       :verified?.commercialPremium&&PRODUCT_VARIANT_PARSERS.has(verified.parserId)
       ?mapVerifiedProductVariantPremium(verified.commercialPremium,verified.parserId)
       :verified?.commercialPremium
