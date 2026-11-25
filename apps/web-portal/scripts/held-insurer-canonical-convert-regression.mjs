@@ -37,4 +37,24 @@ for(const claim of [
  'if(confirmed!==true)'
 ])assert(source.includes(claim),"Held source direct-Convert guard missing: "+claim);
 assert(!source.includes("state:eligibleForVerifiedConversion"),"Core conversion must not directly set queue verified");
+const legacyStart=source.indexOf("let reverifiedUiicChandigarhLegacyHold=false");
+const legacyEnd=source.indexOf("if(extracted.preview.documentId!==queued.document_id",legacyStart);
+assert(legacyStart>0&&legacyEnd>legacyStart,"Exact Chandigarh source hold must remain separate");
+const legacy=source.slice(legacyStart,legacyEnd);
+for(const exact of [
+ 'queued.last_error_code==="bulk_conversion_review_required"',
+ 'extracted.preview.documentId===queued.document_id',
+ 'extracted.preview.checksPassed===18',
+ 'name?.value==="CHANDIGARH"',
+ 'make?.value==="Tata Motors"',
+ 'model?.value==="SIGNA 4832.TK BSVI 10X4 HD 29BX"',
+ 'previousMap.get("vehicle_make")==="Tata"',
+ 'freshFields.length===previous.length+1',
+ '!previousMap.has("vehicle_rto_name")',
+ 'previous.every(',
+ 'freshFields.every(',
+ 'old?.final_policy_id',
+])assert(legacy.includes(exact),"Chandigarh narrowly scoped source recovery missing: "+exact);
+assert(source.includes("&& !reverifiedUiicChandigarhLegacyHold"),
+ "An unrelated old exception must never bypass the source fingerprint");
 console.log("Held insurer explicit Convert: four source-verified canonical products, original recovery, old variants, CPA and document guards passed");
