@@ -44,7 +44,8 @@ const aiIssueTitles: Record<string,string> = {
   customer_duplicate:"Existing customer needs confirmation",
   customer_master_unverified:"Customer matching not verified",
   customer_creation_required:"Create or select customer",
-  vehicle_ownership:"Vehicle ownership conflict",
+  vehicle_ownership:"Vehicle belongs to another customer",
+  insured_name_mismatch:"PDF insured name missing in draft",
   missing_field:"Mandatory field missing",
   manufacturer_unmatched:"Vehicle make not matched",
   financial_reconciliation:"Premium mismatch",
@@ -54,7 +55,7 @@ const aiIssueTitles: Record<string,string> = {
   coverage_conflict:"Policy coverage conflict",
   draft_conflict:"Saved field differs from PDF",
   preflight_pending:"Canonical booking preflight pending",
-  booking_review_required:"Automated conversion needs attention",
+  booking_review_required:"Conversion needs manual review",
   stale_document:"Source PDF changed",
 };
 /** Saved OCR offers diagnostics only; source PDF and canonical checks remain authoritative. */
@@ -705,7 +706,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
         <div className="max-h-[72vh] overflow-auto">
           <table className="min-w-[900px] w-full border-collapse text-left text-[11px]">
             <thead className="sticky top-0 z-10 bg-[#edf4fa] text-[9px] font-bold uppercase tracking-[.07em] text-[#62748e]">
-              <tr><th className="w-10 px-3 py-3"><span className="sr-only">Select</span></th><th className="px-2 py-3">Intake</th><th className="px-3 py-3">Lead source</th><th className="px-3 py-3">Customer mobile</th>{primaryN8n ? <th className="px-3 py-3">Policy type</th> : null}<th className="px-3 py-3">{primaryN8n ? "Intake workflow" : "Status"}</th><th className="px-3 py-3">{primaryN8n ? "Saved OCR (old)" : "OCR"}</th>{primaryN8n && queueActive ? <th className="px-3 py-3">AI Exceptions</th> : null}<th className="px-3 py-3">Submitted</th></tr>
+              <tr><th className="w-10 px-3 py-3"><span className="sr-only">Select</span></th><th className="px-2 py-3">Intake</th><th className="px-3 py-3">Lead source</th><th className="px-3 py-3">Customer mobile</th>{primaryN8n ? <th className="px-3 py-3">Policy type</th> : null}<th className="px-3 py-3">{primaryN8n ? "Intake workflow" : "Status"}</th><th className="px-3 py-3">{primaryN8n ? "Legacy OCR" : "OCR"}</th>{primaryN8n && queueActive ? <th className="px-3 py-3">Current AI / Review</th> : null}<th className="px-3 py-3">Submitted</th></tr>
             </thead>
             <tbody className="divide-y divide-[#edf1f5]">
               {visible.map(row => (
