@@ -68,16 +68,16 @@ export async function verifyOrientalCmsSigningDate(
    ||dictEnd-secondStart>3000)return null;
  const beforeCms=raw.slice(dictStart,firstLen);
  const afterCms=raw.slice(secondStart,dictEnd+2);
- if(!/\\/Contents\\s*$/.test(beforeCms))return null;
+ if(!/\/Contents\s*$/.test(beforeCms))return null;
  const dictionary=beforeCms+" "+afterCms;
- if(!/\\/Type\\s*\\/Sig\\b/.test(dictionary))return null;
- const filters=[...dictionary.matchAll(/\\/SubFilter\\s*\\/([A-Za-z0-9.]+)/g)];
+ if(!/\/Type\s*\/Sig\b/.test(dictionary))return null;
+ const filters=[...dictionary.matchAll(/\/SubFilter\s*\/([A-Za-z0-9.]+)/g)];
  if(filters.length!==1||!["adbe.pkcs7.detached","ETSI.CAdES.detached"].includes(filters[0][1]))
    return null;
  const declaredRanges=[...dictionary.matchAll(RANGE)];
  if(declaredRanges.length!==1||declaredRanges[0].slice(1).join(",")!==
    [firstStart,firstLen,secondStart,secondLen].join(","))return null;
- const pdfM=[...dictionary.matchAll(/\\/M\\s*\\((D:[^)]{14,28})\\)/g)];
+ const pdfM=[...dictionary.matchAll(/\/M\s*\((D:[^)]{14,28})\)/g)];
  if(pdfM.length>1)return null;
  try{
    const padded=Buffer.from(gap.slice(1,-1),"hex");
