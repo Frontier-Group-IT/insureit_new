@@ -1715,3 +1715,6 @@ for (const marker of ['useActivityMotion()', 'opacity: 0.43', 'translateY: empty
 for (const marker of ['useHomeEntrance', 'HomeCount', 'HomeTrendBar', '500 + index * 90', 'duration={1500}', 'tabular-nums', 'if (!motion) return;', 'cancelAnimationFrame(frame)']) requireText(home, marker, 'Home motion: ' + marker);
 
 for (const marker of ['BusinessMotionContext.Provider', 'BusinessCount', 'BusinessChartBar', '850 + index * 100', 'duration: 900', 'cancelAnimationFrame(frame)', 'fontVariant: [\'tabular-nums\']', 'amount={overview?.net_premium ?? mtdCurrent?.net_premium}']) requireText(business, marker, 'Business dashboard motion: ' + marker);
+
+const networkMotionSource = read('app/network.tsx');
+for (const marker of ['LayoutAnimation.configureNext', 'NetworkChevron', 'NetworkCount', 'memo(function NetworkPartnerCard', 'setExpanded(current => current === id ? null : id)', 'collapsedSections.has(section.key)', 'getPartnerNetwork()', 'row.metrics.premium_this_month', 'row.partner_code', 'row.children.map', 'cancelAnimationFrame(frame)', 'useActivityMotion()']) requireText(networkMotionSource, marker, 'Network motion and hierarchy preservation: ' + marker);
