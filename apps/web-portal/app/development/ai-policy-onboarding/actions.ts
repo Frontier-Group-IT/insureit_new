@@ -493,7 +493,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
       &&name.evidence==="UIIC PDF vehicle Registration Authority: CHANDIGARH UT (RLA AND STA) INDIA"
       &&make?.value==="Tata Motors"
       &&model?.value==="SIGNA 4832.TK BSVI 10X4 HD 29BX"
-      &&/^CH\\d{2}[A-Z]{1,3}\\d{3,4}$/.test(plate?.value||"")){
+      &&/^CH\d{2}[A-Z]{1,3}\d{3,4}$/.test(plate?.value||"")){
       const {data:old,error:oldError}=await admin.from("policy_intake_requests")
         .select("ocr_fields,final_policy_id").eq("id",id)
         .maybeSingle<{ocr_fields:{key:string;value:string}[]|null;final_policy_id:string|null}>();
