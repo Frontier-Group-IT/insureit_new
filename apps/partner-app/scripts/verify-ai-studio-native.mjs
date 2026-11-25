@@ -114,7 +114,7 @@ for(const [row,expected] of [
   [{status:'processing',fields:[{}],ocr_status:'completed'},1],
   [{status:'in_review',fields:[{}],ocr_status:'completed'},2],
 ]) assert.equal(stageContext.stage(row),expected);
-for(const marker of ['presentationStyle="fullScreen"','<StatusBar style="light"','Clipboard.setString','style={s.sheetTop}','<IntakeStepper detail={detail}/>','style={s.detailHeroArtwork}','style={s.fieldsPill}','style={s.footerWaves}','accessibilityState={{disabled:true}}','Secure actions awaiting activation']) assert(screen.includes(marker), 'Intake details reference and safety contract: '+marker);
+for(const marker of ['presentationStyle="fullScreen"','<StatusBar style="light"','Clipboard.setString','style={s.sheetTop}','<IntakeStepper detail={detail}/>','style={s.detailHeroArtwork}','style={s.fieldsPill}','style={s.footerWaves}','accessibilityState={{disabled:true}}','Secure actions unlock after authenticated booking checks.']) assert(screen.includes(marker), 'Intake details reference and safety contract: '+marker);
 
 console.log('Partner native AI Studio read-only, auth and Vercel-independence contracts passed');
 
