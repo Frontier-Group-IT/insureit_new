@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+import ts from 'typescript';
 const file = p => readFileSync(new URL(p, import.meta.url), 'utf8');
 const menu=file('../app/(tabs)/more.tsx');
 const shell=file('../app/_layout.tsx');
@@ -31,9 +33,34 @@ assert(screen.includes('compactEmpty:{flexGrow:1,minHeight:115'));
 
 assert(screen.includes('Math.min(4,Math.max(0,count(filter)))') && screen.includes('No intakes found'));
 const artwork=file('../lib/partner-assets.ts');
-for(const asset of ['aiStudioVerified','aiStudioProcessing','aiStudioReview','aiStudioAction','aiStudioEmpty']){
+for(const asset of ['aiStudioVerified','aiStudioProcessing','aiStudioReview','aiStudioAction','aiStudioEmpty','aiStudioHeader','aiStudioOpen']){
   assert(artwork.includes(asset+': require('), 'Bundled 3D asset must be registered: '+asset);
   assert(screen.includes('PartnerAssets.actions.'+asset), 'AI Studio must display the '+asset+' artwork');
+}
+// Run the actual presentation helper against representative statuses, including
+// exception-bearing rows. The queue and conversion behavior are not modified.
+const start=screen.indexOf('const STUDIO_STATUS_ART =');
+const end=screen.indexOf('const humanize',start);
+assert(start>=0 && end>start);
+const stubAssets=Object.fromEntries(['aiStudioProcessing','aiStudioReview','aiStudioAction','aiStudioVerified'].map(name=>[name,name]));
+const context={PartnerAssets:{actions:stubAssets}};
+vm.runInNewContext(ts.transpileModule(screen.slice(start,end)+'\nthis.visual=studioRowVisual;', {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,context);
+for(const [row,expected] of [
+  [{status:'processing',ocr_status:'pending',exception_codes:['warning']},'aiStudioProcessing'],
+  [{status:'in_review',ocr_status:'failed',exception_codes:['warning']},'aiStudioReview'],
+  [{status:'processing',ocr_status:'failed'},'aiStudioAction'],
+  [{status:'ready_for_review'},'aiStudioAction'],
+  [{status:'needs_attention'},'aiStudioAction'],
+  [{status:'processing',final_policy_id:'booked'},'aiStudioVerified'],
+]) assert.equal(context.visual(row).image,expected);
+for(const key of ['processing','in_review','action']) assert(screen.includes('image:STUDIO_STATUS_ART.'+key+'.image'));
+assert(screen.includes('source={visual.image}') && screen.includes('{visual.label}'));
+assert(!screen.includes('flag?PartnerAssets.actions.aiStudioAction'));
+for(const name of ['header','processing','review','action']){
+  const bytes=readFileSync(new URL('../assets/partner/actions/ai-studio-'+name+'-premium.webp',import.meta.url));
+  assert.equal(bytes.toString('ascii',0,4),'RIFF');
+  assert.equal(bytes.toString('ascii',8,12),'WEBP');
+  assert.equal(bytes.readUInt32LE(4)+8,bytes.length);
 }
 assert(screen.includes("metricDivider:{width:1,height:39,backgroundColor:'#D5DFEC'"));
 assert(screen.includes("{index<2?<View style={s.metricDivider} accessible={false}/>:null}"));
