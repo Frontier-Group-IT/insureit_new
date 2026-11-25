@@ -191,6 +191,14 @@ export async function previewSemiAutoN8nExtraction(
       "n8n_coverage_dates_invalid","n8n_od_reference_missing",
       "n8n_fields_invalid","n8n_field_shape_invalid",
       "n8n_issuance_date_invalid",
+      // Strict, locally generated new-insurer source-admission diagnostics.
+      // A genuine 17/18 Oriental signing-date hold is NOT a webhook outage.
+      "held_source_or_identity_unverified","held_exact_check_set_invalid",
+      "held_required_source_field_missing","held_printed_premium_mismatch",
+      "held_magma_package_or_cpa_conflict","held_magma_od_addons_ncb_unreconciled",
+      "held_oriental_issuance_not_verified","held_oriental_saod_not_new_tp",
+      "held_oriental_gccv_component_invalid",
+      "n8n_nontata_identity_or_contract_invalid",
     ]);
     // The two strictly validated Tata AIG third-party products return
     // n8n_tp_* errors for a parser CONTRACT mismatch. These are not a
