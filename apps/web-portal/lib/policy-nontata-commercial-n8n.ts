@@ -148,12 +148,12 @@ export function refineUiicPunjabSplitFromSource(
   initial:string|null,fullNativeText:string,
 ):string|null {
   if(initial!=="united_india_gcv_native_pdf")return initial;
-  const normalized=fullNativeText.replace(/\\s+/g," ").slice(0,120000);
+  const normalized=fullNativeText.replace(/\s+/g," ").slice(0,120000);
   return /UNITED INDIA INSURANCE COMPANY LIMITED/i.test(normalized.slice(0,10000))
     &&/GCV PUBLIC CARRIER/i.test(normalized.slice(0,15000))
-    &&/DAIMLER\\s+INDIA\\s+COMMERCIAL\\s+VEHICLES\\s+PVT\\.\\s*LTD\\s*\\/\\s*BHARATBENZ/i.test(normalized)
-    &&/CGST-Others\\(9%\\)/i.test(normalized)
-    &&/SGST-Basic TP\\(2\\.50%\\)/i.test(normalized)
+    &&/DAIMLER\s+INDIA\s+COMMERCIAL\s+VEHICLES\s+PVT\.\s*LTD\s*\/\s*BHARATBENZ/i.test(normalized)
+    &&/CGST-Others\(9%\)/i.test(normalized)
+    &&/SGST-Basic TP\(2\.50%\)/i.test(normalized)
     ?"united_india_gcv_punjab_split_gst_native_pdf":initial;
 }
 
@@ -169,7 +169,7 @@ export async function recognizeNonTataCommercialPdf(file: File): Promise<Insurer
   // sub-profile. Never broaden other insurer classification.
   if(initial==="united_india_gcv_native_pdf")
     return refineUiicPunjabSplitFromSource(initial,
-      pages.slice(0,24).map(page=>page.text).join("\\n")) as Insurer;
+      pages.slice(0,24).map(page=>page.text).join("\n")) as Insurer;
   return initial;
 }
 
