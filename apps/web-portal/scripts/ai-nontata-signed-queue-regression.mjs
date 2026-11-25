@@ -243,7 +243,7 @@ assert.deepEqual(trainedN8nParserProfile("new_india_cv_native_pdf"),{checks:16,f
 assert.ok(insuredHelper.includes('"united_india_gcv_native_pdf"')
   && insuredHelper.includes('"oriental_gccv_native_pdf"'),
   "Only fixed native PDF evidence for the new insurers may fill an editable name");
-assert.ok(handoff.includes('"united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf","united_india_private_car_package_native_pdf","oriental_gccv_native_pdf"'),
+assert.ok(handoff.includes('"united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf","magma_private_car_package_native_pdf","united_india_private_car_package_native_pdf","oriental_gccv_native_pdf"'),
   "Both old UIIC and new Punjab insurer contracts must reach review-only canonical handoff");
 assert.match(preview,/tryReadNonTataCommercialSignedPolicy/);
 assert.ok(preview.indexOf("tryReadNonTataCommercialSignedPolicy") <

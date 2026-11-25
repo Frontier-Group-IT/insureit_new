@@ -3,7 +3,7 @@ import "server-only";
 import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
 import { enrichIffcoCertifiedMachineFamily } from "@/lib/policy-iffco-machine-family";
 
-type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "united_india_gcv_punjab_split_gst_native_pdf" | "united_india_private_car_package_native_pdf" | "oriental_gccv_native_pdf";
+type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "united_india_gcv_punjab_split_gst_native_pdf" | "magma_private_car_package_native_pdf" | "united_india_private_car_package_native_pdf" | "oriental_gccv_native_pdf";
 type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf" | "hdfc_ergo_two_wheeler_tp_native_pdf" | "sbi_general_private_car_package_native_pdf";
 type Insurer = ExistingInsurer | NewProductVariant;
 const NEW_VARIANTS = new Set<Insurer>(["zurich_kotak_private_car_tp_native_pdf","go_digit_two_wheeler_od_native_pdf","united_india_tractor_tp_native_pdf","hdfc_ergo_two_wheeler_tp_native_pdf","sbi_general_private_car_package_native_pdf"]);
@@ -14,7 +14,7 @@ export type NonTataCommercialRead = {
   fields: OcrField[];
   warnings: string[];
   checksPassed: number;
-  premium: { od: number; tp: number; net: number; gst: number; gross: number; cpa?: number; addOn?: number; odBasic?: number; ncbPercent?: number; ncbDiscount?: number; odBasicAfterNcb?: number };
+  premium: { od: number; tp: number; net: number; gst: number; gross: number; cpa?: number; addOn?: number; odBasic?: number; odAddons?: {name:string;amount:number}[]; ncb?: number; cgst?:number|null; sgst?:number|null; igst?:number|null; taxRegime?:'CGST_SGST'|'IGST'; ncbPercent?: number; ncbDiscount?: number; odBasicAfterNcb?: number };
 };
 // Use the SAME approved self-hosted webhook as the production ICICI/Tata bridge.
 // Commercial policy verification stays isolated by the insurer classifier and its
@@ -50,6 +50,7 @@ const REQUIRED_EXTRA: Record<ExistingInsurer, string[]> = {
   go_digit_cv_native_pdf: ["digit_layout", "registered_plate", "od_basic_ncb", "tp_itemization"],
   united_india_gcv_native_pdf: ["uiic_layout", "igst_components_printed", "stamp_accounting_disclosed", "stamp_charge_reconciled"],
   united_india_gcv_punjab_split_gst_native_pdf: ["uiic_layout", "split_cgst_sgst_components_printed", "stamp_accounting_disclosed", "stamp_charge_reconciled"],
+  magma_private_car_package_native_pdf: ["magma_layout","od_ncb_addons_printed","liability_cpa_itemized","tax_components_reconciled"],
   united_india_private_car_package_native_pdf: ["uiic_private_car_layout", "igst_18_printed", "cpa_disposition_verified", "ncb_premium_reconciled"],
   oriental_gccv_native_pdf: ["oicl_layout", "four_tax_components_printed", "stamp_charge_reconciled"],
 };
@@ -97,6 +98,8 @@ function insurerForText(head: string): Insurer | null {
   if (/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(issuer)
       && /PRIVATE CAR\s*-\s*PACKAGE POLICY/i.test(product))
     matches.push("united_india_private_car_package_native_pdf");
+  if (/Magma General Insurance Limited/i.test(issuer) && /www\.magmainsurance\.com/i.test(issuer.slice(0,2500)) && /PRIVATE CAR PACKAGE POLICY/i.test(product))
+    matches.push("magma_private_car_package_native_pdf");
   if (/THE ORIENTAL INSURANCE COMPANY LIMITED/i.test(issuer) && /GCCV-PUBLIC CARRIERS/i.test(product))
     matches.push("oriental_gccv_native_pdf");
   // Specific product extensions precede the old CV classifiers. They never
@@ -358,9 +361,37 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
       ||!isMoney(premium.stampDuty)||premium.stampDuty!==1)
       throw new Error("n8n_uiic_split_cgst_sgst_evidence_invalid");
   }
+  const magma=insurer==="magma_private_car_package_native_pdf";
+  const magmaAddons=Array.isArray(premium.odAddons)?premium.odAddons:[];
+  const magmaAddonTotal=magmaAddons.reduce((sum:number,item:unknown)=>{
+    if(!object(item)||typeof item.name!=="string"
+       ||!["Basic Roadside Assistance","Depreciation Re-imbursement",
+          "Consumables","Key Replacement","Loss Of Personal Belongings"].includes(item.name)
+       ||!isMoney(item.amount))return NaN;
+    return sum+Number(item.amount);
+  },0);
+  const magmaTaxVerified=!magma
+    ||(premium.taxRegime==="IGST"
+      ?isMoney(premium.igst)&&premium.cgst===null&&premium.sgst===null
+        &&Math.abs(cents(premium.igst)-cents(Number(premium.net)*.18))<=2
+        &&Math.abs(cents(premium.igst)-cents(Number(premium.gst)))<=1
+      :premium.taxRegime==="CGST_SGST"
+        &&isMoney(premium.cgst)&&isMoney(premium.sgst)&&premium.igst===null
+        &&Math.abs(cents(premium.cgst)-cents(Number(premium.net)*.09))<=2
+        &&Math.abs(cents(premium.sgst)-cents(Number(premium.net)*.09))<=2
+        &&Math.abs(cents(premium.cgst+premium.sgst)-cents(Number(premium.gst)))<=1);
+  if(magma&&(!magmaTaxVerified||!isMoney(premium.cpa)||Number(premium.cpa)<=0
+    ||!isMoney(premium.odBasic)||!isMoney(premium.ncb)
+    ||!Number.isFinite(magmaAddonTotal)||magmaAddons.length===0
+    ||new Set(magmaAddons.map(x=>object(x)?x.name:null)).size!==magmaAddons.length
+    ||Math.abs(Math.round((Number(premium.odBasic)+magmaAddonTotal-Number(premium.ncb))*100)-Math.round(Number(premium.od)*100))>51
+    ||Math.round(Number(premium.cpa)*100)!==Math.round(Number(byKey.get("cpa_premium"))*100)
+    ||Number(premium.cpa)>=Number(premium.tp)))
+    throw new Error("n8n_magma_coverage_premium_split_invalid");
   const od = premium.od as number, tp = premium.tp as number;
   const net = premium.net as number, gst = premium.gst as number, gross = premium.gross as number;
-  if (Math.abs(cents(od + tp) - cents(net)) > 6 || Math.abs(cents(net + gst) - cents(gross)) > 6
+  const roundingToleranceCents=insurer==="magma_private_car_package_native_pdf"?51:6;
+  if (Math.abs(cents(od + tp) - cents(net)) > 6 || Math.abs(cents(net + gst) - cents(gross)) > roundingToleranceCents
       || cents(Number(byKey.get("od_premium"))) !== cents(od)
       || cents(Number(byKey.get("tp_premium"))) !== cents(tp)
       || !isMoney(Number(byKey.get("idv"))))
@@ -385,7 +416,7 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
       insurer),
     warnings,
     checksPassed: expected.filter((key) => checks[key] === true).length,
-    premium: { od, tp, net, gst, gross },
+    premium: { od, tp, net, gst, gross, ...(magma?{cpa:Number(premium.cpa),odBasic:Number(premium.odBasic),odAddons:magmaAddons as {name:string;amount:number}[],ncb:Number(premium.ncb),cgst:premium.cgst as number|null,sgst:premium.sgst as number|null,igst:premium.igst as number|null,taxRegime:premium.taxRegime as 'CGST_SGST'|'IGST'}:{}) },
   };
 }
 
