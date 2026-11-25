@@ -47,7 +47,7 @@ function pdfMToIndiaDay(value:string):string|null {
 export function cmsSigningTimeIndiaDay(
   value:string, fallbackDate?:Date,
 ):string|null {
-  const offset=/^(\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})([+-])(\\d{2})(\\d{2})$/.exec(value);
+  const offset=/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})([+-])(\d{2})(\d{2})$/.exec(value);
   if(!offset)return fallbackDate?indiaDay(fallbackDate):null;
   const [,yy,mm,dd,hh,mi,ss,sign,oh,om]=offset;
   const [year,month,day,hour,minute,second,tzHour,tzMin]=[yy,mm,dd,hh,mi,ss,oh,om].map(Number);
