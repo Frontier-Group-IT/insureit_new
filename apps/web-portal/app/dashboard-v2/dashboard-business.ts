@@ -28,7 +28,7 @@ export type DashboardBusinessData = {
   topInsurers: DashboardBusinessRankRow[]; topProducers: DashboardBusinessRankRow[]; topGroups: DashboardBusinessRankRow[];
   commercial: { projectedPayin: number; tdsAmount: number; payinAfterTds: number; partnerPayout: number; retention: number; retentionRate: number; payinPolicies: number; payoutPolicies: number; needsReview: number; reconciliationExceptions: number } | null;
   warnings: string[];
-  lifeTeamProduction?: { teamPolicies: number; directPolicies: number; teamGross: number | null; directGross: number | null; rms: DashboardBusinessRankRow[] };
+  lifeTeamProduction?: { ownership: DashboardBusinessMixRow[]; rms: DashboardBusinessMixRow[] };
 };
 
 type PolicyRow = { id: string; premium_amount: number | string | null; vehicle_id: string | null; insurance_company_id: string | null; policy_type: string | null; business_line: string | null; issuance_date: string | null; created_at: string; intermediary_type: string | null; intermediary_code: string | null; lead_source: string | null; rm_employee_id: string | null; rm_name: string | null; intermediary_group_id: string | null; intermediary_group_name: string | null };
@@ -163,21 +163,31 @@ export async function getDashboardBusinessData(profile: ProfileLike | null | und
     }
   }
 
+  // Use the same filtered issued policies and net premium basis as Business Performance.
+  // Direct Business contributes to the portfolio but is never attributed to a team RM.
   const teamProduction = portfolioScope?.directEmployeeId ? (() => {
     const directId = portfolioScope.directEmployeeId;
-    const team = filteredPolicies.filter(policy => policy.rm_employee_id !== directId);
-    const direct = filteredPolicies.filter(policy => policy.rm_employee_id === directId);
-    const gross = (rows: PolicyRow[]) => commercialAccess && rows.every(row => premiumByPolicy.has(row.id))
-      ? rows.reduce((sum, row) => sum + (premiumByPolicy.get(row.id)?.gross ?? 0), 0) : null;
-    const grouped = new Map<string, DashboardBusinessRankRow>();
-    for (const policy of team) {
-      const key = policy.rm_employee_id ?? "unassigned";
-      const row = grouped.get(key) ?? {key,label:clean(policy.rm_name) || "Unassigned",detail:null,policies:0,grossPremium:0};
-      row.policies++;
-      row.grossPremium += premiumByPolicy.get(policy.id)?.gross ?? 0;
-      grouped.set(key,row);
+    const netAvailable = commercialAccess && filteredPolicies.every(row => premiumByPolicy.has(row.id));
+    const ownership = new Map<string, Accumulator>([
+      ["team", {label:"Team-generated business", policies:0, amount:0}],
+      ["direct", {label:"Sankalp Direct Business", policies:0, amount:0}],
+    ]);
+    const rms = new Map<string, Accumulator>();
+    for (const policy of filteredPolicies) {
+      const isDirect = policy.rm_employee_id === directId;
+      const net = premiumByPolicy.get(policy.id)?.net ?? 0;
+      const owner = ownership.get(isDirect ? "direct" : "team")!;
+      owner.policies++;
+      owner.amount += net;
+      if (!isDirect) {
+        const key = policy.rm_employee_id ?? "unassigned";
+        const row = rms.get(key) ?? {label:clean(policy.rm_name) || "Unassigned",policies:0,amount:0};
+        row.policies++;
+        row.amount += net;
+        rms.set(key,row);
+      }
     }
-    return {teamPolicies:team.length,directPolicies:direct.length,teamGross:gross(team),directGross:gross(direct),rms:[...grouped.values()].sort(rankByGrossPremium)};
+    return {ownership:mix(ownership, netAvailable), rms:mix(rms, netAvailable)};
   })() : undefined;
   return {
     lifeTeamProduction: teamProduction,

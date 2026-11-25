@@ -2,7 +2,6 @@ import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shel
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { accessRank, getEffectivePermissionAccessMap } from "@/lib/effective-permissions";
 import { getLifeTeamPortfolioReadFilter } from "@/lib/policy-access-scope";
-import { LifeTeamPortfolioSummary } from "@/components/life-team-portfolio-summary";
 import { loadLifeHealthCaseSummary } from "@/lib/life-health-case-summary";
 import { loadPolicyIntakeReviewSummary } from "@/lib/policy-intake-review-summary";
 import { getRmPolicyIntakePredicates, hierarchyIntakeRoles } from "@/lib/rm-policy-intake-scope";
@@ -109,7 +108,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   return (
     <ClaimManagerShell title="Operations Overview" activeNav="dashboard">
-      {portfolioFilter !== null && <LifeTeamPortfolioSummary operations={isDownlineHead} summary={proposalSummary} business={business} />}
       <DashboardFullyLoaded
         data={data}
         access={access}
@@ -117,6 +115,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         canCreatePolicy={isDownlineHead || createPolicies || editPolicies}
         canCreatePolicyIntake={createPolicyIntakes}
         intakeAttention={intakeAttention}
+        lifeTeamCases={portfolioFilter !== null ? proposalSummary : undefined}
         showRmPerformanceButton={viewReports && !isRelationshipManager}
       />
       <DashboardRegisterSync proposalPending={portfolioFilter !== null ? 0 : proposalSummary?.pending ?? 0} />
