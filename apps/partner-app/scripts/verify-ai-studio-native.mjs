@@ -146,8 +146,6 @@ function INTAKE_TEST_ALL(fields,group){return ['policy','insured','vehicle','pre
 assert.match(screen, /heroTypePosition/, 'Policy type stays at the top-right of the hero');
 assert.match(screen, /isIntakeVerified\(detail\)\?/, 'Green name verification is conditional on verified status and no errors');
 assert.match(screen, /'checkmark-circle'|name="checkmark-circle"/, 'Green verified icon is in the hero');
-assert.match(screen, /Policy PDF uploaded/, 'PDF step shows inline secondary detail');
-assert.match(screen, /fields extracted/, 'Extracted step shows inline field count');
 assert.match(screen, /numberOfLines=\{1\} ellipsizeMode="tail"/, 'Disabled security notice is compact and single line');
 assert.match(screen, /function SectionedIntakeFields/, 'Expandable sectioned fields are present');
 assert.match(screen, /function intakeFieldGroup/, 'Returned fields are categorized without made-up values');
@@ -155,3 +153,9 @@ assert.match(screen, /detail\.fields\.filter\(field=>intakeFieldGroup\(field\.ke
 assert.match(screen, /Additional Extracted Fields/, 'Unknown fields remain available');
 assert.match(screen, /accessibilityState=\{\{expanded:open\}\}/, 'Field groups have accessible toggle state');
 assert.match(screen, /Secure actions unlock after authenticated booking checks/, 'No booking permissions changed');
+
+// Restore only the circular workflow stepper; preserve actual-stage logic.
+const stepperSource=screen.slice(screen.indexOf('function IntakeStepper('),screen.indexOf('\n}',screen.indexOf('function IntakeStepper('))+2);
+for(const marker of ['style={s.stepLine}','s.stepLineFill','s.stepCircleActive','s.stepCaptionActive','active===2?\'100%\':active===1?\'50%\':\'0%\'']) assert(stepperSource.includes(marker),'Circular stepper contract: '+marker);
+for(const marker of ['stepItemActive','stepWords','stepSub','Policy PDF uploaded','Ready for review']) assert(!stepperSource.includes(marker),'Rectangular stepper must not return: '+marker);
+assert(screen.includes('stepCircle:{width:49,height:49') && screen.includes("stepItem:{flex:1,alignItems:'center',gap:5}"));
