@@ -167,9 +167,15 @@ function unitedIndiaGcvFlexible(t) {
  for(const m of t.matchAll(/\bRegistration\s+Authority\b/gi)){
   const ctx=t.slice(m.index, m.index+900).split(/Amount in words/i)[0];
   const found=ctx.match(/(?:^|\n)[ \t]*(?:[A-Z]{2}[ \t]*\d{2}[ \t]+)?([A-Z]{3,}(?:[ \t]+[A-Z]{3,}){0,3})[ \t]+INDIA(?=\s|$)/im);
-  const chandigarh=ctx.match(/(?:^|\n)[ \t]*(CHANDIGARH[ \t]+UT[ \t]*\(RLA[ \t]+AND[ \t]+STA\)[ \t]+INDIA)(?=\s|$)/im);
-  if(chandigarh && registration && /^CH\d{2}[A-Z]{1,3}\d{3,4}$/.test(registration)){
-   rto='CHANDIGARH';printedAuthority=chandigarh[1].replace(/\s+/g,' ').toUpperCase();break;
+  // Only the FIRST current-vehicle Registration Authority row within the
+  // bounded vehicle schedule may certify Chandigarh. Never use a historical,
+  // previous vehicle or unrelated later Registration Authority mention.
+  const currentRows=[...vehicleBlock.matchAll(/\bRegistration\s+Authority\b[^\n]{0,170}\n[ \t]*([^\n]{3,150})/gi)];
+  const currentAuthority=currentRows.length===1?currentRows[0][1].trim().replace(/\s+/g,' ').toUpperCase():null;
+  if(m.index===t.indexOf('Registration Authority',ix)
+   &&currentAuthority==='CHANDIGARH UT (RLA AND STA) INDIA'
+   &&registration && /^CH\d{2}[A-Z]{1,3}\d{3,4}$/.test(registration)){
+   rto='CHANDIGARH';printedAuthority=currentAuthority;break;
   }
   if(found){rto=found[1].trim().replace(/\s+ARTO$/i,'').toUpperCase();printedAuthority=found[0].trim().replace(/\s+/g,' ').toUpperCase();break;}
  }
