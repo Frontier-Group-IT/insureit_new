@@ -198,13 +198,13 @@ const premiumStart = policyDetail.indexOf('styles.premiumDisclosure', overviewSt
 const commercialStart = policyDetail.indexOf('styles.commercialRow', premiumStart);
 requireText(overviewCard, 'styles.overviewGrid', 'Existing overview fields remain visible');
 if (!(premiumStart > overviewStart && commercialStart > premiumStart)) throw new Error('Premium and Sales must follow Policy Overview');
-requireText(policyDetail, '<View style={styles.unifiedDetails}>', 'Overview, Premium and Sales share one continuous white container');
+requireText(policyDetail, '<View style={styles.separatedDetails}>', 'Overview, Premium and Sales have separate colored outer containers');
 requireText(policyDetail, "premiumDisclosure: { minHeight: 32", 'Premium section retains its pressable disclosure');
 requireText(policyDetail, "commercialRow: { minHeight: 32", 'Sales section retains its pressable disclosure');
 requireText(policyDetail, "backgroundColor: 'transparent'", 'Quick Actions use a transparent background');
-requireText(policyDetail, '<View style={styles.unifiedSection}>\n            <CardHeader iconKind="policy-overview"', 'Policy Overview heading sits within unified details');
-requireText(policyDetail, '<View style={styles.unifiedSection}>\n            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }}', 'Premium disclosure sits within unified details');
-requireText(policyDetail, '<View style={styles.unifiedSection}>\n            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }}', 'Sales disclosure sits within unified details');
+requireText(policyDetail, '<View style={[styles.policyDetailSection, styles.policyOverviewSection]}>\n            <CardHeader iconKind="policy-overview"', 'Overview has independent blue section');
+requireText(policyDetail, '<View style={[styles.policyDetailSection, styles.premiumSection]}>\n            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }}', 'Premium has independent mint section');
+requireText(policyDetail, '<View style={[styles.policyDetailSection, styles.salesSection]}>\n            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }}', 'Sales has independent lavender section');
 for (const removedTone of ['styles.quickDocument', 'styles.quickRenewal', 'styles.quickClaim', 'styles.quickCustomer', 'styles.policySectionHeaderTint']) {
   if (policyDetail.includes(removedTone)) throw new Error('Removed colored header/action style unexpectedly returned: ' + removedTone);
 }
@@ -1708,9 +1708,9 @@ if (/rotateY\s*:|perspective\s*:|opacity:\s*transition\.interpolate/.test(storie
 for (const marker of ['useActivityMotion()', 'ringSegments.map', 'pickerBusy.current', 'setPhotoSuccess(true)', 'animation.stop()', 'Haptics.ImpactFeedbackStyle.Light', 'entrance(avatarEntrance', 'entrance(iconAppear', 'onPressIn={logoutPress.onPressIn}']) requireText(profile, marker, 'Profile motion contract: ' + marker);
 if (profile.indexOf('setPhotoSuccess(true)') < profile.indexOf('if (!refreshedAvatar) throw')) throw new Error('Photo success must follow confirmed upload and refresh');
 
-requireText(policyDetail, "sectionHeaderFill: { backgroundColor: '#E6EFF9' }", 'Reference light blue section header');
-requireText(policyDetail, 'return <View style={[styles.overviewItem, tone]}>', 'Overview tiles use semantic colours');
-for (const marker of ['styles.overviewLabelRow', 'styles.tileBlue', 'styles.tileGreen', 'styles.tileAmber', 'styles.tileSlate', 'minHeight: 44, justifyContent', 'minHeight: 36, padding: 5', 'customerVehicleRow: { minHeight: 48']) requireText(policyDetail, marker, 'Compact approved design: ' + marker);
+requireText(policyDetail, "sectionHeaderFill: { backgroundColor: 'transparent' }", 'Keep original heading text colors above colored outer backgrounds');
+requireText(policyDetail, 'return <View style={styles.overviewItem}>', 'Overview tiles are white');
+for (const marker of ['styles.overviewLabelRow', "separatedDetails: { gap: 11 }", "backgroundColor: '#EAF3FF'", "backgroundColor: '#E8F7F0'", "backgroundColor: '#F0ECFF'", "miniInfo: { width: '47%', minHeight: 36, padding: 5, borderRadius: 8, backgroundColor: '#FFFFFF'", 'minHeight: 44, justifyContent', 'minHeight: 36, padding: 5', 'customerVehicleRow: { minHeight: 48']) requireText(policyDetail, marker, 'Compact approved design: ' + marker);
 
 const claimsEmptyMotionSource = read('app/(tabs)/claims.tsx');
 const claimsEmptyMotionBody = claimsEmptyMotionSource.slice(claimsEmptyMotionSource.indexOf('function ClaimsEmptyState('), claimsEmptyMotionSource.indexOf('function ClaimCard('));
@@ -1722,3 +1722,15 @@ for (const marker of ['BusinessMotionContext.Provider', 'BusinessCount', 'Busine
 
 const networkMotionSource = read('app/network.tsx');
 for (const marker of ['LayoutAnimation.configureNext', 'NetworkChevron', 'NetworkCount', 'memo(function NetworkPartnerCard', 'setExpanded(current => current === id ? null : id)', 'collapsedSections.has(section.key)', 'getPartnerNetwork()', 'row.metrics.premium_this_month', 'row.partner_code', 'row.children.map', 'cancelAnimationFrame(frame)', 'useActivityMotion()']) requireText(networkMotionSource, marker, 'Network motion and hierarchy preservation: ' + marker);
+
+// Approved final layout: independent tinted outer sections; every information tile is white.
+for (const marker of [
+  "policyOverviewSection: { backgroundColor: '#EAF3FF', borderColor: '#D6E7FC' }",
+  "premiumSection: { backgroundColor: '#E8F7F0', borderColor: '#D1ECDD' }",
+  "salesSection: { backgroundColor: '#F0ECFF', borderColor: '#DFD6FC' }",
+  "backgroundColor: '#FFFFFF', borderRadius: 9",
+  "premiumDisclosure: { minHeight: 32",
+  "commercialRow: { minHeight: 32",
+  "insurerMiniInfo: { flexDirection: 'row'"
+]) requireText(policyDetail, marker, 'Colored outer sections and white inner cards: ' + marker);
+if (/styles\.tile(?:Blue|Green|Amber|Slate)|styles\.unifiedDetails|styles\.unifiedSection/.test(policyDetail)) throw new Error('Old unified or tinted inner tiles must not return');
