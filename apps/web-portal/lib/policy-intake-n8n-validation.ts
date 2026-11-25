@@ -632,7 +632,7 @@ function validateTataAigTpResponse(
     parserVersion:value.parser_version as string,checksPassed:16,receiptDate:receiptDate as string,
     premium:{basicOd:0,odAddons:[],totalOd:0,basicTp:basic,cpa,liability,
       net,exactIgst:tax,tax,gross,tataAig:{product:"Third-Party Only",
-      postNcbOd:0,addonSubtotal:0,paidDriverLiability:paid,
+      postNcbOd:0,addonSubtotal:0,cngKitOd:0,cngKitTp:0,paidDriverLiability:paid,
       passengerPa:0,roadsideAssistance:0,printedNet:net,ncbDiscount:0}},
   };
 }
