@@ -18,13 +18,13 @@ export function mapVerifiedN8nMotorPremium(p: N8nVerifiedPremiumBreakdown): {
     const t = p.tataAig;
     const saod = t.product === "Stand-Alone Own Damage";
     const addOn = t.addonSubtotal + (saod ? t.roadsideAssistance : 0);
-    const tp = p.basicTp + t.paidDriverLiability + t.passengerPa
+    const tp = p.basicTp + t.cngKitTp + t.paidDriverLiability + t.passengerPa
       + (saod ? 0 : t.roadsideAssistance);
     const net = t.postNcbOd + addOn + tp + p.cpa;
     if (![addOn, tp, net, p.cpa, t.postNcbOd, t.printedNet].every(v => Number.isFinite(v) && v >= 0)
       || Math.abs(net - p.net) > 0.04
       || Math.abs(net - t.printedNet) > 1.01
-      || Math.abs(p.basicOd - t.ncbDiscount - t.postNcbOd) > 0.03
+      || Math.abs(p.basicOd + t.cngKitOd - t.ncbDiscount - t.postNcbOd) > 0.03
       || (saod && (p.basicTp !== 0 || p.cpa !== 0))) {
       throw new Error("n8n_motor_premium_handoff_unreconciled");
     }
