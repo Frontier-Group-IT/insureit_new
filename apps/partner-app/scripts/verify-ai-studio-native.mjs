@@ -159,3 +159,9 @@ const stepperSource=screen.slice(screen.indexOf('function IntakeStepper('),scree
 for(const marker of ['style={s.stepLine}','s.stepLineFill','s.stepCircleActive','s.stepCaptionActive','active===2?\'100%\':active===1?\'50%\':\'0%\'']) assert(stepperSource.includes(marker),'Circular stepper contract: '+marker);
 for(const marker of ['stepItemActive','stepWords','stepSub','Policy PDF uploaded','Ready for review']) assert(!stepperSource.includes(marker),'Rectangular stepper must not return: '+marker);
 assert(screen.includes('stepCircle:{width:49,height:49') && screen.includes("stepItem:{flex:1,alignItems:'center',gap:5}"));
+
+// Compact verified detail layout: preserve both enabled and disabled action variants.
+assert(screen.includes('style={s.detailName} numberOfLines={1} ellipsizeMode="tail"'));
+assert.equal((screen.match(/<View style=\{s\.actionCopy\}>/g)||[]).length,4);
+for(const card of ['reparseButton','convertButton']) assert.match(screen,new RegExp(card+":\\{[^}]*flexDirection:'row'"));
+assert(screen.includes('zIndex:1,paddingTop:8'));
