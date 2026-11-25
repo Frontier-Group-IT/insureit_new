@@ -49,7 +49,7 @@ for(const gcv of [false,true]){
  const s=sample(gcv);
  const p=parse(s);
  assert.equal(p.parser_id,gcv?'oriental_gccv_package_native_pdf':'oriental_private_car_standalone_od_native_pdf');
- assert.deepEqual(p.warnings,['Review required: printed_issuance_or_verified_image_date'],
+ assert.equal(JSON.stringify(p.warnings),JSON.stringify(['Review required: printed_issuance_or_verified_image_date']),
    'Generic certificate Date must not become issuance date');
  assert.equal(Object.keys(p.checks).length,18);
  assert.equal(Object.values(p.checks).filter(Boolean).length,17);
