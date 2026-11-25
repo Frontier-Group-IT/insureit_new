@@ -29,7 +29,7 @@ function parseNationalPrivateCarLiability(raw){
  const fuel=labelled('/ Type of Fuel','/Body Type').toUpperCase();
  const cc=labelled('/CC / KW','/Class of Vehicle');
  const year=labelled('/Year of Mfg.','/ Date of');
- const rto=labelled('/Regn.','/Geographical');
+ const rto=read(/\/Regn\.\s*\nAuthority\s*\n([^\n]{3,70})/i,schedule);
  const insuredClass=labelled('/Class of Vehicle','/ Type of Fuel');
  const printedIdvNa=/\/Vehicle IDV\s*\nNA\s*\n/i.test(schedule);
  const net=amount(/\/\s*Premium\s*\n\s*₹\s*([\d,.]+)/i,schedule);
