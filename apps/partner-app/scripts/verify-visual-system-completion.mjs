@@ -1713,3 +1713,5 @@ const claimsEmptyMotionBody = claimsEmptyMotionSource.slice(claimsEmptyMotionSou
 for (const marker of ['useActivityMotion()', 'opacity: 0.43', 'translateY: emptyFloat', 'toValue: -5, duration: 1800', 'animation.stop(); emptyFloat.setValue(0)', 'if (!motion) return;', 'isInteraction: false', 'accessibilityElementsHidden', 'Everything looks settled here']) requireText(claimsEmptyMotionBody, marker, 'Claims empty-only faded motion: ' + marker);
 
 for (const marker of ['useHomeEntrance', 'HomeCount', 'HomeTrendBar', '500 + index * 90', 'duration={1500}', 'tabular-nums', 'if (!motion) return;', 'cancelAnimationFrame(frame)']) requireText(home, marker, 'Home motion: ' + marker);
+
+for (const marker of ['BusinessMotionContext.Provider', 'BusinessCount', 'BusinessChartBar', '850 + index * 100', 'duration: 900', 'cancelAnimationFrame(frame)', 'fontVariant: [\'tabular-nums\']', 'amount={overview?.net_premium ?? mtdCurrent?.net_premium}']) requireText(business, marker, 'Business dashboard motion: ' + marker);

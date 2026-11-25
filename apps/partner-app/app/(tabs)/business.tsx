@@ -1,8 +1,10 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Animated, Image, type ImageSourcePropType, Modal, Pressable, RefreshControl, Platform, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type TextStyle } from 'react-native';
+import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, Animated, Easing, Image, type ImageSourcePropType, Modal, Pressable, RefreshControl, Platform, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type TextStyle } from 'react-native';
 
+import { useActivityMotion } from '@/components/activity-motion';
+import * as Haptics from 'expo-haptics';
 import { PartnerBusinessRangeSummaryCard } from '@/components/partner-business-range-summary';
 import { PartnerScreen, usePartnerStickyVisible } from '@/components/partner-screen';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
@@ -27,7 +29,12 @@ import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 import { isPartnerBranchSession } from '@/lib/partner-session';
 
+const BusinessMotionContext = createContext(false);
+const useBusinessMotion = () => useContext(BusinessMotionContext);
+
 type OverviewCardProps = {
+  amount?: number | string | null;
+  currency?: boolean;
   icon: PartnerBusinessOverviewIconKind;
   value: string;
   label: string;
@@ -56,6 +63,22 @@ const TREND_OPTIONS: Array<{ value: TrendRange; label: string }> = [
 
 export default function BusinessScreen() {
   const router = useRouter();
+  const { motion: permittedMotion } = useActivityMotion();
+  const [motionReady, setMotionReady] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then(() => { if (live) setMotionReady(true); }).catch(() => { if (live) setMotionReady(true); });
+    return () => { live = false; };
+  }, []);
+  const motion = motionReady && permittedMotion;
+  const heroProgress = useBusinessEntrance(motion, 0);
+  const heroGlow = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!motion) { heroGlow.setValue(0); return; }
+    const loop = Animated.loop(Animated.sequence([0.07, 0].map(toValue => Animated.timing(heroGlow, { toValue, duration: 2500, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== 'web', isInteraction: false }))));
+    loop.start();
+    return () => { loop.stop(); heroGlow.setValue(0); };
+  }, [motion, heroGlow]);
   const { height: screenHeight } = useWindowDimensions();
   const compactScreen = screenHeight < 800;
   const { context, cacheScopeKey, avatarUri } = usePartnerSession();
@@ -276,6 +299,7 @@ export default function BusinessScreen() {
   );
 
   return (
+    <BusinessMotionContext.Provider value={motion}>
     <PartnerScreen
       resetScrollOnFocus
       title=""
@@ -295,7 +319,7 @@ export default function BusinessScreen() {
         ),
       }}
     >
-      {workspace.loading && !performance ? (
+      {(!motionReady || workspace.loading && !performance) ? (
         <PartnerStateView state="loading" title="Loading business workspace" />
       ) : !performance ? (
         <PartnerStateView
@@ -314,6 +338,7 @@ export default function BusinessScreen() {
               resizeMode="cover"
             />
             <View style={styles.heroShade} />
+            <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: '#70BFFF', opacity: heroGlow }]} />
             <View style={styles.heroTopRow}>
               <View style={styles.heroBrand}>
                 <Image source={require('../../assets/insureit-partner-official.png')} style={styles.heroLogo} resizeMode="contain" />
@@ -331,7 +356,7 @@ export default function BusinessScreen() {
                 </Pressable>
               </View>
             </View>
-            <View style={styles.heroCopy}><Text style={styles.heroTitle}>Business</Text></View>
+            <Animated.View style={[styles.heroCopy, businessEntranceStyle(heroProgress)]}><Text style={styles.heroTitle}>Business</Text></Animated.View>
           </View>
 
           <BusinessSearchSlot controls={businessSearchControls} />
@@ -388,6 +413,7 @@ export default function BusinessScreen() {
           <View style={[styles.overviewGrid, compactScreen && styles.tightContainer]}>
             <OverviewCard
               icon="premium"
+              currency amount={overview?.net_premium ?? mtdCurrent?.net_premium}
               value={overview ? formatCompactCurrency(overview.net_premium) : mtdCurrent ? formatCompactCurrency(mtdCurrent.net_premium) : '—'}
               label="Net Premium"
               changeLabel={overviewChangeLabel}
@@ -396,6 +422,7 @@ export default function BusinessScreen() {
             />
             <OverviewCard
               icon="policies"
+              amount={overview?.policies ?? mtdCurrent?.policies}
               value={overview ? String(overview.policies) : mtdCurrent ? String(mtdCurrent.policies) : '—'}
               label="Policies Sold"
               changeLabel={overview ? `${overview.policies} in range` : mtdChange(mtdCurrent?.policies, mtdPrevious?.policies)}
@@ -405,6 +432,7 @@ export default function BusinessScreen() {
             {!isBranchLogin ? (
               <OverviewCard
                 icon="commission"
+                currency amount={context?.identity.actor_kind === 'employee' ? (overview ? overview.projected_retention : mtdCurrent?.projected_retention) : (overview ? overview.scoped_payout : mtdCurrent?.scoped_payout)}
                 value={context?.identity.actor_kind === 'employee'
                   ? (overview?.projected_retention != null ? formatCompactCurrency(overview.projected_retention) : !overview && mtdCurrent?.projected_retention != null ? formatCompactCurrency(mtdCurrent.projected_retention) : '—')
                   : (overview?.scoped_payout != null ? formatCompactCurrency(overview.scoped_payout) : !overview && mtdCurrent?.scoped_payout != null ? formatCompactCurrency(mtdCurrent.scoped_payout) : '—')}
@@ -420,6 +448,7 @@ export default function BusinessScreen() {
             ) : null}
             <OverviewCard
               icon="customers"
+              amount={overview?.customers ?? mtdCurrent?.customers}
               value={overview ? String(overview.customers) : mtdCurrent ? String(mtdCurrent.customers) : '—'}
               label="Customers"
               changeLabel={overview ? 'Selected range' : mtdChange(mtdCurrent?.customers, mtdPrevious?.customers)}
@@ -514,8 +543,8 @@ export default function BusinessScreen() {
             )}
           />
           <View style={[styles.productGrid, compactScreen && styles.tightContainer]}>
-            {productMix.length ? productMix.map((item) => (
-              <ProductTile key={item.label} icon={item.icon} label={humanize(item.label)} share={item.share} />
+            {productMix.length ? productMix.map((item, index) => (
+              <ProductTile index={index} key={item.label} icon={item.icon} label={humanize(item.label)} share={item.share} />
             )) : (
               <View style={styles.emptyCompact}><Text style={styles.emptyCompactText}>No product mix recorded this month.</Text></View>
             )}
@@ -528,7 +557,7 @@ export default function BusinessScreen() {
                 <View key={insurer.name} style={styles.insurerTile}>
                   <PartnerInsurerLogo name={insurer.name} style={styles.insurerLogo} />
                   <Text numberOfLines={2} style={styles.insurerName}>{shortInsurerName(insurer.name)}</Text>
-                  <Text numberOfLines={1} style={styles.insurerCount}>{insurer.policies} policies</Text>
+                  <Text numberOfLines={1} style={styles.insurerCount}><BusinessCount text={String(insurer.policies)} amount={insurer.policies} delay={1200} /> policies</Text>
                 </View>
               ))}
             </View>
@@ -578,6 +607,7 @@ export default function BusinessScreen() {
         </>
       )}
     </PartnerScreen>
+    </BusinessMotionContext.Provider>
   );
 }
 
@@ -615,7 +645,7 @@ function DropdownMenu<T extends string>({
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
             key={option.value}
-            onPress={() => onSelect(option.value)}
+            onPress={() => { if (Platform.OS !== 'web') void Haptics.selectionAsync().catch(() => {}); onSelect(option.value); }}
             style={({ pressed }) => [styles.dropdownOption, active && styles.dropdownOptionActive, pressed && styles.pressed]}
           >
             <Text style={[styles.dropdownOptionText, active && styles.dropdownOptionTextActive]}>{option.label}</Text>
@@ -636,7 +666,9 @@ function SectionHeader({ title, action }: { title: string; action?: ReactNode })
   );
 }
 
-function OverviewCard({ icon, value, label, changeLabel, compareLabel = 'vs last month', onPress }: OverviewCardProps) {
+function OverviewCard({ icon, value, amount, currency, label, changeLabel, compareLabel = 'vs last month', onPress }: OverviewCardProps) {
+  const motion = useBusinessMotion();
+  const entrance = useBusinessEntrance(motion, 250 + ['premium','policies','commission','customers'].indexOf(icon) * 90);
   const trend = overviewTrend(changeLabel);
   return (
     <Pressable
@@ -646,8 +678,8 @@ function OverviewCard({ icon, value, label, changeLabel, compareLabel = 'vs last
       onPress={onPress}
       style={({ pressed }) => [styles.overviewCard, pressed && onPress ? styles.pressed : null]}
     >
-      <PartnerBusinessOverviewIcon kind={icon} size={24} />
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={styles.overviewValue}>{value}</Text>
+      <Animated.View style={businessEntranceStyle(entrance)}><PartnerBusinessOverviewIcon kind={icon} size={24} /></Animated.View>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={styles.overviewValue}><BusinessCount text={value} amount={amount} currency={currency} delay={400} /></Text>
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={styles.overviewLabel}>{label}</Text>
       <View style={styles.growthRow}>
         {trend ? <Ionicons name={trend.icon} size={9} color={trend.color} /> : null}
@@ -658,29 +690,70 @@ function OverviewCard({ icon, value, label, changeLabel, compareLabel = 'vs last
   );
 }
 
-function ShrinkLoopText({
-  children,
-  style,
-}: {
-  children: ReactNode;
-  style?: StyleProp<TextStyle>;
-}) {
-  const scale = useRef(new Animated.Value(1)).current;
+function ShrinkLoopText({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
+  const text = typeof children === 'string' ? children : '';
+  const numeric = /^([+-])(\d+)%$/.exec(text);
+  return <Text numberOfLines={1} style={style}>{numeric ? <BusinessCount text={text} amount={Number(numeric[1] + numeric[2])} percent delay={600} /> : children}</Text>;
+}
 
+function useBusinessEntrance(motion: boolean, delay: number) {
+  const progress = useRef(new Animated.Value(motion ? 0.88 : 1)).current;
+  const played = useRef(false);
   useEffect(() => {
-    const animation = Animated.loop(Animated.sequence([
-      Animated.timing(scale, { toValue: 0.96, duration: 650, useNativeDriver: true }),
-      Animated.timing(scale, { toValue: 1, duration: 650, useNativeDriver: true }),
-    ]));
+    if (!motion) { played.current = true; progress.setValue(1); return; }
+    if (played.current) return;
+    played.current = true;
+    const animation = Animated.timing(progress, { toValue: 1, duration: 320, delay, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== 'web', isInteraction: false });
     animation.start();
-    return () => animation.stop();
-  }, [scale]);
-
-  return (
-    <Animated.Text numberOfLines={1} style={[style, { transform: [{ scale }] }]}>
-      {children}
-    </Animated.Text>
-  );
+    return () => { animation.stop(); progress.setValue(1); };
+  }, [motion, delay, progress]);
+  return progress;
+}
+function businessEntranceStyle(progress: Animated.Value) {
+  return { opacity: progress, transform: [{ translateY: progress.interpolate({ inputRange: [0.88, 1], outputRange: [4, 0] }) }, { scale: progress.interpolate({ inputRange: [0.88, 1], outputRange: [0.96, 1] }) }] };
+}
+function BusinessCount({ text, amount, currency, percent, delay = 0 }: { text: string; amount?: number | string | null; currency?: boolean; percent?: boolean; delay?: number }) {
+  const motion = useBusinessMotion();
+  const target = amount == null || text === '—' ? NaN : Number(amount);
+  const format = (n: number) => currency ? formatCompactCurrency(n) : percent ? (n >= 0 ? '+' : '-') + Math.round(Math.abs(n)) + '%' : String(Math.round(n));
+  const previous = useRef(motion && Number.isFinite(target) ? 0 : target);
+  const [shown, setShown] = useState(() => motion && Number.isFinite(target) ? format(0) : text);
+  const first = useRef(true);
+  useEffect(() => {
+    const initial = first.current; first.current = false;
+    if (!motion || !Number.isFinite(target) || !Number.isFinite(previous.current)) { previous.current = target; setShown(text); return; }
+    const from = previous.current;
+    if (from === target) { setShown(text); return; }
+    let frame = 0, started: number | undefined, last = -Infinity;
+    const tick = (now: number) => {
+      started ??= now;
+      const p = Math.min(1, Math.max(0, now - started - (initial ? delay : 0)) / 1000);
+      if (p > 0 && (now - last >= 65 || p === 1)) {
+        last = now;
+        const n = from + (target - from) * Easing.out(Easing.cubic)(p);
+        previous.current = n;
+        setShown(p === 1 ? text : currency ? formatCompactCurrency(n) : percent ? (n >= 0 ? '+' : '-') + Math.round(Math.abs(n)) + '%' : String(Math.round(n)));
+      }
+      if (p < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [motion, target, text, currency, percent, delay]);
+  return <>{motion && Number.isFinite(target) ? shown : text}</>;
+}
+function BusinessChartBar({ height, index }: { height: number; index: number }) {
+  const motion = useBusinessMotion();
+  const progress = useRef(new Animated.Value(motion ? 0 : 1)).current;
+  const played = useRef(false);
+  useEffect(() => {
+    if (!motion) { played.current = true; progress.setValue(1); return; }
+    if (played.current) return;
+    played.current = true;
+    const animation = Animated.timing(progress, { toValue: 1, delay: 850 + index * 100, duration: 900, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== 'web', isInteraction: false });
+    animation.start();
+    return () => { animation.stop(); progress.setValue(1); };
+  }, [motion, index, progress]);
+  return <Animated.View style={[styles.bar, { height, transform: [{ translateY: height / 2 }, { scaleY: progress }, { translateY: -height / 2 }] }]} />;
 }
 
 function overviewTrend(changeLabel?: string): { icon: keyof typeof Ionicons.glyphMap; color: string } | null {
@@ -732,7 +805,7 @@ function TrendChart({ data, emptyMessage, compact = false }: { data: TrendPoint[
             <View key={`${item.month}-${index}`} style={styles.barColumn}>
               <View style={[styles.barPlotSlot, compact && styles.barPlotSlotCompact]}>
                 <View style={styles.barTrack}>
-                  <View style={[styles.bar, { height }]} />
+                  <BusinessChartBar height={height} index={index} />
                 </View>
                 <Text numberOfLines={2} style={[styles.barValue, Platform.OS === 'ios' && styles.barValueIos, { bottom: height + 3, height: visiblePremiumLabel.includes('\n') ? 26 : 14 }]}>
                   {visiblePremiumLabel}
@@ -747,14 +820,16 @@ function TrendChart({ data, emptyMessage, compact = false }: { data: TrendPoint[
   );
 }
 
-function ProductTile({ icon, label, share }: { icon: keyof typeof Ionicons.glyphMap; label: string; share: number }) {
+function ProductTile({ icon, label, share, index }: { icon: keyof typeof Ionicons.glyphMap; label: string; share: number; index: number }) {
+  const motion = useBusinessMotion();
+  const entrance = useBusinessEntrance(motion, 1000 + index * 90);
   return (
     <View style={styles.productTile}>
-      <View style={styles.productIconWrap}>
+      <Animated.View style={[styles.productIconWrap, businessEntranceStyle(entrance)]}>
         <Ionicons name={icon} size={23} color="#123B83" />
-      </View>
+      </Animated.View>
       <Text numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={label} style={styles.productLabel}>{label}</Text>
-      <Text style={styles.productShare}>{share}%</Text>
+      <Text style={styles.productShare}><BusinessCount text={String(share)} amount={share} delay={1000} />%</Text>
     </View>
   );
 }
@@ -779,11 +854,13 @@ function QuickAction({
   meta: string;
   onPress: () => void;
 }) {
+  const motion = useBusinessMotion();
+  const entrance = useBusinessEntrance(motion, 1400);
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.quickTile, pressed && styles.pressed]}>
-      <View style={styles.quickIconWrap}>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} onPressIn={() => { if (motion && Platform.OS !== 'web') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }} style={({ pressed }) => [styles.quickTile, pressed && styles.pressed, pressed && motion && { transform: [{ scale: 0.97 }] }]}>
+      <Animated.View style={[styles.quickIconWrap, businessEntranceStyle(entrance)]}>
         {asset ? <Image source={asset} style={styles.quickIcon} resizeMode="contain" /> : icon ? <BlueIcon icon={icon} badge={iconBadge} size={28} /> : null}
-      </View>
+      </Animated.View>
       <Text numberOfLines={1} style={styles.quickLabel}>{label}</Text>
       <Text numberOfLines={1} style={styles.quickMeta}>{meta}</Text>
     </Pressable>
@@ -920,7 +997,7 @@ const styles = StyleSheet.create({
   inlineLoading: { marginBottom: 7, color: '#718198', ...partnerTheme.typography.caption },
   overviewGrid: { flexDirection: 'row', gap: 5, borderRadius: 16, padding: 6, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE6F1', ...partnerTheme.shadowSoft },
   overviewCard: { flex: 1, minWidth: 0, minHeight: 78, alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingHorizontal: 2, paddingVertical: 8, backgroundColor: '#F5F9FF' },
-  overviewValue: { width: '100%', marginTop: 2, color: '#112C69', textAlign: 'center', fontSize: 12, lineHeight: 15, fontWeight: Platform.OS === 'ios' ? '400' : '800' },
+  overviewValue: { fontVariant: ['tabular-nums'], width: '100%', marginTop: 2, color: '#112C69', textAlign: 'center', fontSize: 12, lineHeight: 15, fontWeight: Platform.OS === 'ios' ? '400' : '800' },
   overviewLabel: { width: '100%', marginTop: 1, color: partnerTheme.colors.inkMuted, textAlign: 'center', fontSize: 8.5, lineHeight: 12, fontWeight: Platform.OS === 'ios' ? '400' : '600' },
   growthRow: { marginTop: 1, flexDirection: 'row', alignItems: 'center', gap: 2 },
   growthText: { maxWidth: 72, color: '#16A34A', ...partnerTheme.typography.meta, fontWeight: Platform.OS === 'ios' ? '400' : '800' },
