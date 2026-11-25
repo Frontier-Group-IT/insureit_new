@@ -21,10 +21,10 @@ export default async function CustomerProfilePage({
   const { customer, documents } = await loadCustomerProfile(account.id);
 
   return (
-    <div className="space-y-4 pb-4">
+    <div className="customer-profile-page flex min-h-0 min-w-0 flex-1 flex-col gap-4">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/profile" />
 
-      <section className="customer-profile-detail-section relative flex min-w-0 flex-col items-center gap-3 rounded-[22px] border border-[#E6E0F5] bg-white p-3 shadow-[0_9px_24px_rgba(79,56,139,0.055)] sm:flex-row sm:items-center sm:gap-4 sm:p-4" aria-label="Customer profile">
+      <section className="customer-profile-detail-section relative flex shrink-0 min-w-0 flex-col items-center gap-3 rounded-[22px] border border-[#E6E0F5] bg-white p-3 shadow-[0_9px_24px_rgba(79,56,139,0.055)] sm:flex-row sm:items-center sm:gap-4 sm:p-4" aria-label="Customer profile">
         <div className="shrink-0 rounded-full bg-white/85 p-1.5 shadow-[0_8px_24px_rgba(72,45,145,0.14)] ring-1 ring-[#DBD0FF]">
           <CustomerAvatar userId={user.id} size="profile" />
         </div>
