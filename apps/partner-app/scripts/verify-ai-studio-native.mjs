@@ -95,7 +95,7 @@ assert(screen.includes("performAiStudioAction(selected.id,pendingAction)"));
 assert(screen.includes('resultUncertain') && screen.includes('Refresh intake status'));
 assert(screen.includes("aiStudioActionsEnabled&&detail.processing_lane==='automation'&&!detail.final_policy_id"));
 assert(screen.includes("(!aiStudioActionsEnabled||detail.processing_lane!=='automation')&&!detail.final_policy_id"));
-assert(screen.includes('fieldExpanded?detail.fields:detail.fields.slice(0,8)'));
+assert(screen.includes('<SectionedIntakeFields detail={detail}') && screen.includes('setExpandedIntakeGroups'), 'All PDF fields are available through expandable sections');
 assert(screen.indexOf("setPendingAction('convert')") < screen.indexOf('Extracted policy details'));
 assert(actionFile.includes("EXPO_PUBLIC_AI_STUDIO_ACTIONS_ENABLED === 'true'"));
 assert(actionFile.includes("url.hostname==='studio.nishant.uk'"));
@@ -114,7 +114,7 @@ for(const [row,expected] of [
   [{status:'processing',fields:[{}],ocr_status:'completed'},1],
   [{status:'in_review',fields:[{}],ocr_status:'completed'},2],
 ]) assert.equal(stageContext.stage(row),expected);
-for(const marker of ['presentationStyle="fullScreen"','<StatusBar style="light"','Clipboard.setString','style={s.sheetTop}','<IntakeStepper detail={detail}/>','style={s.detailHeroArtwork}','style={s.fieldsPill}','style={s.footerWaves}','accessibilityState={{disabled:true}}','Secure actions awaiting activation']) assert(screen.includes(marker), 'Intake details reference and safety contract: '+marker);
+for(const marker of ['presentationStyle="fullScreen"','<StatusBar style="light"','Clipboard.setString','style={s.sheetTop}','<IntakeStepper detail={detail}/>','style={s.detailHeroArtwork}','style={s.fieldsPill}','style={s.footerWaves}','accessibilityState={{disabled:true}}','Secure actions unlock after authenticated booking checks.']) assert(screen.includes(marker), 'Intake details reference and safety contract: '+marker);
 
 console.log('Partner native AI Studio read-only, auth and Vercel-independence contracts passed');
 
@@ -127,15 +127,31 @@ assert.match(screen, /const insets=useSafeAreaInsets\(\)/, 'Safe-area inset come
 
 assert(!screen.includes('detailMenu') && !screen.includes('More intake options'));
 assert(screen.includes('beforeNavigate={()=>{if(actionBusy)return false;closeDetail();return true;}}'));
-assert(screen.includes('<ExtractedFieldTiles fields={fieldExpanded?detail.fields:detail.fields.slice(0,8)}/>'));
-assert(screen.includes('<Text selectable style={s.fieldTileValue}>{field.value}</Text>'));
+assert(screen.includes('function SectionedIntakeFields'), 'Grouped section renderer replaces flat preview');
+assert(screen.includes('<Text style={s.groupValue} selectable>{field.value}</Text>'), 'Field values remain selectable');
 const nav=file('../components/partner-case-bottom-navigation.tsx');
 assert(nav.includes('if(beforeNavigate && !beforeNavigate())return;'));
-const rowsStart=screen.indexOf('function extractedFieldRows(');
-const rowsEnd=screen.indexOf('function extractedFieldIcon(',rowsStart);
-const tileContext={};
-vm.runInNewContext(ts.transpileModule(screen.slice(rowsStart,rowsEnd)+'\nthis.rows=extractedFieldRows;', {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,tileContext);
-const sample=[{key:'idv',value:'123'},{key:'od_premium',value:'0'},{key:'insured_name',value:'Synthetic example long name'},{key:'policy_number',value:'00001'},{key:'idv',value:'456'}];
-assert.equal(JSON.stringify(tileContext.rows(sample).flat()),JSON.stringify(sample));
-assert(tileContext.rows(sample).every(row=>row.length<=3));
-assert.equal(tileContext.rows(sample).find(row=>row.some(f=>f.key==='policy_number')).length,1);
+const groupsStart=screen.indexOf('function intakeFieldGroup(');
+const groupsEnd=screen.indexOf('function SectionedIntakeFields(',groupsStart);
+assert(groupsStart>=0 && groupsEnd>groupsStart);
+const groupContext={};
+vm.runInNewContext(ts.transpileModule(screen.slice(groupsStart,groupsEnd)+'\nthis.group=intakeFieldGroup;', {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,groupContext);
+for(const [key,group] of [['od_premium','premium'],['insured_name','insured'],['vehicle_chassis_number','vehicle'],['policy_issuance_date','dates'],['cpa_end_date','dates'],['idv','coverage'],['insurer_name','policy'],['document_number','documents'],['unknown_new_field','additional']]){
+  assert.equal(groupContext.group(key),group,'Group PDF field '+key);
+}
+const sample=[{key:'idv',value:'123'},{key:'od_premium',value:'0'},{key:'insured_name',value:'Example name'},{key:'idv',value:'456'},{key:'future_key',value:'present'}];
+assert.equal(INTAKE_TEST_ALL(sample,groupContext.group),sample.length,'Unknown and duplicate fields remain accounted for');
+function INTAKE_TEST_ALL(fields,group){return ['policy','insured','vehicle','premium','coverage','dates','documents','additional'].reduce((sum,id)=>sum+fields.filter(f=>group(f.key)===id).length,0);}
+
+assert.match(screen, /heroTypePosition/, 'Policy type stays at the top-right of the hero');
+assert.match(screen, /isIntakeVerified\(detail\)\?/, 'Green name verification is conditional on verified status and no errors');
+assert.match(screen, /'checkmark-circle'|name="checkmark-circle"/, 'Green verified icon is in the hero');
+assert.match(screen, /Policy PDF uploaded/, 'PDF step shows inline secondary detail');
+assert.match(screen, /fields extracted/, 'Extracted step shows inline field count');
+assert.match(screen, /numberOfLines=\{1\} ellipsizeMode="tail"/, 'Disabled security notice is compact and single line');
+assert.match(screen, /function SectionedIntakeFields/, 'Expandable sectioned fields are present');
+assert.match(screen, /function intakeFieldGroup/, 'Returned fields are categorized without made-up values');
+assert.match(screen, /detail\.fields\.filter\(field=>intakeFieldGroup\(field\.key\)===group\.id\)/, 'Grouping preserves all returned field values');
+assert.match(screen, /Additional Extracted Fields/, 'Unknown fields remain available');
+assert.match(screen, /accessibilityState=\{\{expanded:open\}\}/, 'Field groups have accessible toggle state');
+assert.match(screen, /Secure actions unlock after authenticated booking checks/, 'No booking permissions changed');

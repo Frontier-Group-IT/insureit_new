@@ -58,7 +58,8 @@ export default function AiPolicyStudioScreen() {
   const [actionBusy,setActionBusy]=useState(false);
   const [actionError,setActionError]=useState('');
   const [resultUncertain,setResultUncertain]=useState(false);
-  const [fieldExpanded,setFieldExpanded]=useState(false);
+  const [fieldExpanded,setFieldExpanded]=useState(true);
+  const [expandedIntakeGroups,setExpandedIntakeGroups]=useState<string[]>(()=>INTAKE_GROUPS.map(group=>group.id));
   const [copied,setCopied]=useState(false);
   useEffect(()=>{if(!copied)return;const timer=setTimeout(()=>setCopied(false),1800);return ()=>clearTimeout(timer);},[copied]);
   const sequence=useRef(0);
@@ -108,6 +109,8 @@ export default function AiPolicyStudioScreen() {
     if(!selected||!allowed){setDetail(null);return;}
     const token=++detailSequence.current;
     setDetail(null);setDetailError('');setDetailLoading(true);
+    setFieldExpanded(true);
+    setExpandedIntakeGroups(INTAKE_GROUPS.map(group=>group.id));
     void loadAiStudioDetail(selected.id).then(x=>{
       if(token===detailSequence.current)setDetail(x);
     }).catch(e=>{
@@ -385,12 +388,13 @@ export default function AiPolicyStudioScreen() {
             <View style={s.detailHero}>
               <View pointerEvents="none" style={s.heroGlow}/>
               {[0,1,2].map(i=><View key={i} pointerEvents="none" style={[s.detailWave,{right:-68+i*15,bottom:-88+i*14}]}/>)}
+              <View style={s.heroTypePosition}><View style={s.policyTypePill}><Ionicons name={detail.policy_type?.toLowerCase()==='motor'?'car-outline':'shield-outline'} size={15} color="#FFFFFF"/><Text style={s.policyTypeText}>{detail.policy_type?humanize(detail.policy_type):'Policy'}</Text></View></View>
               <View style={s.detailHeroCopy}>
-                <Text style={s.detailEyebrow}>{humanize(detail.queue_state)}</Text>
-                <Text style={s.detailName}>{detail.fields.find(x=>x.key==='insured_name')?.value||detail.lead_source_name||'Policy intake'}</Text>
+                <View style={s.heroNameRow}>
+                  <Text style={s.detailName}>{detail.fields.find(x=>x.key==='insured_name')?.value||detail.lead_source_name||'Policy intake'}</Text>
+                  {isIntakeVerified(detail)?<Ionicons name="checkmark-circle" size={25} color="#10C960" accessibilityLabel="Verified intake"/>:null}
+                </View>
                 <View style={s.detailMetaRow}>
-                  <View style={s.policyTypePill}><Ionicons name={detail.policy_type?.toLowerCase()==='motor'?'car-outline':'shield-outline'} size={15} color="#FFFFFF"/><Text style={s.policyTypeText}>{detail.policy_type?humanize(detail.policy_type):'Policy'}</Text></View>
-                  <View style={s.metaDivider}/>
                   <Ionicons name="shield-checkmark-outline" size={17} color="#FFFFFF"/><Text style={s.detailMeta}>{detail.checks_passed} verified checks</Text>
                 </View>
               </View>
@@ -406,7 +410,7 @@ export default function AiPolicyStudioScreen() {
                 <View style={[s.reparseButton,s.disabledAction]} accessibilityState={{disabled:true}}><Ionicons name="refresh-outline" color="#7F8EAB" size={30}/><Text style={s.reparseLabel}>Reparse PDF</Text><Text style={s.actionSub}>Awaiting activation</Text><View style={s.actionArrow}><Ionicons name="lock-closed-outline" size={16} color="#71809E"/></View></View>
                 <View style={[s.convertButton,s.disabledConvert]} accessibilityState={{disabled:true}}><Ionicons name="lock-closed-outline" color="#FFFFFF" size={30}/><Text style={s.convertLabel}>Verify & Convert</Text><Text style={s.convertSub}>Awaiting activation</Text><View style={s.convertArrow}><Ionicons name="lock-closed-outline" size={16} color="#6276A5"/></View></View>
               </View>
-              <View style={s.disabledNotice}><Ionicons name="lock-closed-outline" size={20} color="#8F7033"/><View style={{flex:1}}><Text style={s.disabledTitle}>Secure actions awaiting activation</Text><Text style={s.disabledText}>{detail.processing_lane==='manual'?'This intake uses the website’s manual onboarding lane. Secure AI conversion is restricted to eligible automation intakes.':'These buttons unlock after the backend passes authenticated booking checks. Your current intakes are unchanged.'}</Text></View></View>
+              <View style={s.disabledNotice}><Ionicons name="lock-closed-outline" size={18} color="#8F7033"/><Text style={s.disabledText} numberOfLines={1} ellipsizeMode="tail">{detail.processing_lane==='manual'?'Manual onboarding only — secure AI conversion unavailable.':'Secure actions unlock after authenticated booking checks.'}</Text></View>
             </View>:null}
             {aiStudioActionsEnabled&&detail.processing_lane==='automation'&&!detail.final_policy_id?<View style={s.actionsWrap}>
               {actionError?<Text style={s.actionError}>{actionError}</Text>:null}
@@ -439,9 +443,7 @@ export default function AiPolicyStudioScreen() {
             </View>:null}
 
             <Pressable style={s.fieldsHeader} accessibilityRole="button" onPress={()=>setFieldExpanded(v=>!v)}><View style={s.fieldsIcon}><Ionicons name="document-text-outline" color={C.blue} size={20}/></View><View style={{flex:1}}><Text style={s.sectionTitle}>Extracted policy details</Text><Text style={s.meta}>{detail.fields.length} PDF fields</Text></View><View style={s.fieldsPill}><Text style={s.fieldsToggle}>{fieldExpanded?'Show less':'View all'}</Text><Ionicons name={fieldExpanded?'chevron-up':'chevron-forward'} size={17} color="#0759EC"/></View></Pressable>
-            {detail.fields.length>0?<ExtractedFieldTiles fields={fieldExpanded?detail.fields:detail.fields.slice(0,8)}/>:null}
-
-            {!fieldExpanded&&detail.fields.length>8?<Pressable accessibilityRole="button" style={s.moreFields} onPress={()=>setFieldExpanded(true)}><Text style={s.moreFieldsText}>View {detail.fields.length-8} more fields</Text><Ionicons name="chevron-down" size={14} color={C.blue}/></Pressable>:null}
+            {fieldExpanded?<SectionedIntakeFields detail={detail} expanded={expandedIntakeGroups} toggle={id=>setExpandedIntakeGroups(current=>current.includes(id)?current.filter(value=>value!==id):[...current,id])}/>:null}
             <View style={s.safetyRow}><Ionicons name="shield-checkmark" color="#159B42" size={25}/><View style={s.safetyDivider}/><Text style={s.safetyText}>PDF extraction is not booking approval. Final registration always uses the protected onboarding service.</Text></View>
             <View pointerEvents="none" style={s.footerWaves}><View style={s.footerWaveOne}/><View style={s.footerWaveTwo}/></View>
           </ScrollView>:<View style={s.scroll}/>}
@@ -460,48 +462,73 @@ function intakeStage(detail: Pick<AiStudioDetail,'final_policy_id'|'status'|'fie
   if (!detail.fields.length || detail.ocr_status==='failed') return 0;
   return detail.status==='in_review'||detail.status==='ready_for_review'||detail.status==='needs_attention'?2:1;
 }
+function isIntakeVerified(detail:AiStudioDetail){
+  return (detail.queue_state.toLowerCase()==='verified'||detail.status.toLowerCase()==='verified')
+    && !detail.last_error_code && detail.exception_codes.length===0;
+}
 function IntakeStepper({detail}:{detail:AiStudioDetail}){
   const active=intakeStage(detail);
+  const steps=[
+    {label:'PDF',icon:'document-text-outline',sub:'Policy PDF uploaded'},
+    {label:'Extracted',icon:'scan-outline',sub:`${detail.fields.length} fields extracted`},
+    {label:'Review',icon:'shield-checkmark-outline',sub:detail.final_policy_id?'Policy registered':active===2?'Ready for review':'Awaiting review'},
+  ] as const;
   return <View style={s.stepper} accessibilityLabel={'Current workflow stage: '+['PDF','Extracted','Review'][active]}>
-    <View pointerEvents="none" style={s.stepLine}><View style={[s.stepLineFill,{width:active===2?'100%':active===1?'50%':'0%'}]}/></View>
-    {([{label:'PDF',icon:'document-text-outline'},{label:'Extracted',icon:'scan-outline'},{label:'Review',icon:'shield-checkmark-outline'}] as const).map((step,index)=><View key={step.label} style={s.stepItem}>
-      <View style={[s.stepCircle,index===active&&s.stepCircleActive]}><Ionicons name={step.icon} size={24} color={index===active?'#FFFFFF':'#435477'}/></View>
-      <View style={[s.stepCaption,index===active&&s.stepCaptionActive]}><Text style={[s.stepCaptionText,index===active&&s.stepCaptionTextActive]}>{step.label}</Text></View>
+    {steps.map((step,index)=><View key={step.label} style={[s.stepItem,index===active&&s.stepItemActive]}>
+      <View style={[s.stepCircle,index===active&&s.stepCircleActive]}><Ionicons name={step.icon} size={23} color={index===active?'#FFFFFF':'#24528C'}/></View>
+      <View style={s.stepWords}>
+        <Text style={[s.stepCaptionText,index===active&&s.stepCaptionTextActive]}>{step.label}</Text>
+        <Text style={s.stepSub} numberOfLines={2}>{step.sub}</Text>
+      </View>
     </View>)}
   </View>;
 }
-// Layout only: preserve source order, keys, values and duplicates. Long fields
-// get their own row; no guessed fields or financial calculations.
-function extractedFieldRows(fields:AiStudioDetail['fields']){
-  const rows:AiStudioDetail['fields'][]=[];
-  let short:AiStudioDetail['fields']=[];
-  for(const field of fields){
-    const wide=field.value.length>20||field.key.length>28||/^(insured_name|insurer_name|policy_number|vehicle_chassis_number|vehicle_engine_number)$/.test(field.key);
-    if(wide){if(short.length){rows.push(short);short=[];}rows.push([field]);}
-    else{short.push(field);if(short.length===3){rows.push(short);short=[];}}
-  }
-  if(short.length)rows.push(short);
-  return rows;
+// Group only returned PDF fields. Unknown keys stay visible under Additional Fields;
+// no synthesized amounts, unverified approval badges or document download URLs.
+type IntakeGroupId='policy'|'insured'|'vehicle'|'premium'|'coverage'|'dates'|'documents'|'additional';
+const INTAKE_GROUPS:{id:IntakeGroupId;title:string;icon:keyof typeof Ionicons.glyphMap}[]=[
+  {id:'policy',title:'Policy Details',icon:'shield-outline'},
+  {id:'insured',title:'Customer / Insured Details',icon:'person-outline'},
+  {id:'vehicle',title:'Vehicle Details',icon:'car-outline'},
+  {id:'premium',title:'Premium Details',icon:'wallet-outline'},
+  {id:'coverage',title:'Coverage & Add-ons',icon:'layers-outline'},
+  {id:'dates',title:'Validity / Important Dates',icon:'calendar-outline'},
+  {id:'documents',title:'Document Details',icon:'attach-outline'},
+  {id:'additional',title:'Additional Extracted Fields',icon:'list-outline'},
+];
+function intakeFieldGroup(key:string):IntakeGroupId{
+  const k=key.toLowerCase();
+  if(/document|file_name|pdf_|attachment|receipt_number|receipt_no/.test(k))return 'documents';
+  if(/premium|gst|tax_amount|tax_rate|payment|amount|discount|loading|own_damage|third_party|stamp_duty/.test(k))return 'premium';
+  if(/policy_issuance_date|policy_issue_date|policy_start_date|policy_end_date|policy_expiry|expiry_date|inception_date|renewal_date|coverage_start|coverage_end|cpa_end_date|previous_policy_end/.test(k))return 'dates';
+  if(/insured|customer|proposer|nominee|mobile|phone|address|email|contact|dob|birth|pan_number/.test(k))return 'insured';
+  if(/vehicle|registration|chassis|engine|rto|fuel|seating|capacity|make|model|variant|gvw|cc$|manufactur/.test(k))return 'vehicle';
+  if(/idv|ncb|addon|add_on|add-on|zero_dep|deductible|cover|cpa|sum_insured|benefit|roadside|rsa|risk|pa_/.test(k))return 'coverage';
+  if(/insurer|policy_number|policy_no|policy_type|product|plan|policy_code|business_type|broker|intermediary/.test(k))return 'policy';
+  return 'additional';
 }
-function extractedFieldIcon(key:string):keyof typeof Ionicons.glyphMap{
-  if(/premium|gst|tax|idv|amount|cpa/i.test(key))return 'wallet-outline';
-  if(/date|start|end|issued/i.test(key))return 'calendar-outline';
-  if(/insured|customer/i.test(key))return 'person-outline';
-  if(/insurer/i.test(key))return 'business-outline';
-  if(/vehicle|registration|chassis|engine|make|model/i.test(key))return 'car-outline';
-  return 'document-text-outline';
-}
-function ExtractedFieldTiles({fields}:{fields:AiStudioDetail['fields']}){
-  const rows=extractedFieldRows(fields);
-  return <View style={s.fieldTileGroups}>
-    {Array.from({length:Math.ceil(rows.length/2)},(_,group)=><View key={group} style={[s.fieldTileGroup,{backgroundColor:['#E9F1FC','#E5F5ED','#EFE9FD'][group%3]}]}>
-      {rows.slice(group*2,group*2+2).map((row,index)=><View key={index} style={s.fieldTileRow}>
-        {row.map((field,i)=><View key={field.key+':'+i} style={s.fieldTile}>
-          <View style={s.fieldTileLabelRow}><Ionicons name={extractedFieldIcon(field.key)} size={13} color="#315B87"/><Text style={s.fieldTileLabel}>{fieldName(field.key)}</Text></View>
-          <Text selectable style={s.fieldTileValue}>{field.value}</Text>
-        </View>)}
-      </View>)}
-    </View>)}
+function SectionedIntakeFields({detail,expanded,toggle}:{detail:AiStudioDetail;expanded:string[];toggle:(id:string)=>void}){
+  const groups=INTAKE_GROUPS.map(group=>({...group,fields:detail.fields.filter(field=>intakeFieldGroup(field.key)===group.id)}))
+    .filter(group=>group.fields.length>0);
+  return <View style={s.groupedFields}>
+    {groups.map(group=>{
+      const open=expanded.includes(group.id);
+      return <View key={group.id} style={s.groupCard}>
+        <Pressable style={s.groupHead} accessibilityRole="button" accessibilityLabel={group.title+' section'} accessibilityState={{expanded:open}} onPress={()=>toggle(group.id)}>
+          <Ionicons name={group.icon} size={19} color="#183E79"/>
+          <Text style={s.groupTitle} numberOfLines={2}>{group.title}</Text>
+          <Text style={s.groupCount}>{group.fields.length}</Text>
+          <Ionicons name={open?'chevron-up':'chevron-down'} size={17} color="#193963"/>
+        </Pressable>
+        {open?<View style={s.groupBody}>
+          {group.fields.map((field,index)=><View style={s.groupField} key={field.key+':'+index}>
+            <Text style={s.groupLabel}>{fieldName(field.key)}</Text>
+            <Text style={s.groupValue} selectable>{field.value}</Text>
+          </View>)}
+        </View>:null}
+      </View>;
+    })}
+    {detail.fields.length===0?<View style={s.groupEmpty}><Text style={s.meta}>No extracted PDF fields available yet.</Text></View>:null}
   </View>;
 }
 function StudioRowEnter({children,index,reduceMotion}:{children:ReactNode;index:number;reduceMotion:boolean}){
@@ -633,26 +660,31 @@ const s=StyleSheet.create({
   intakeId:{fontSize:12,fontWeight:'600',color:'#D4E3FF',flexShrink:1},
   sheetContent:{paddingHorizontal:14,paddingTop:8,paddingBottom:0,flexGrow:1},
   detailHero:{backgroundColor:'#092858',borderRadius:17,padding:17,minHeight:125,marginBottom:12,flexDirection:'row',alignItems:'center',overflow:'hidden'},
-  detailHeroCopy:{flex:1,minWidth:0,zIndex:1},
+  detailHeroCopy:{flex:1,minWidth:0,zIndex:1,paddingTop:30},
+  heroTypePosition:{position:'absolute',right:13,top:12,zIndex:3},
+  heroNameRow:{flexDirection:'row',alignItems:'center',gap:8,minWidth:0},
   heroGlow:{position:'absolute',width:280,height:220,borderRadius:140,backgroundColor:'#104783',opacity:.35,left:-85,top:-135},
   detailWave:{position:'absolute',width:255,height:160,borderRadius:120,borderWidth:9,borderColor:'#1455A5',opacity:.26,transform:[{rotate:'-24deg'}]},
   detailEyebrow:{alignSelf:'flex-start',fontSize:11,fontWeight:'800',color:'#A33D12',backgroundColor:'#FFE8C2',borderRadius:18,paddingHorizontal:10,paddingVertical:5,overflow:'hidden'},
-  detailName:{fontSize:23,color:'#FFFFFF',fontWeight:'800',marginTop:10,letterSpacing:-.5},
-  detailHeroArtwork:{width:82,height:92,marginLeft:4},
+  detailName:{fontSize:21,color:'#FFFFFF',fontWeight:'800',flexShrink:1,letterSpacing:-.5},
+  detailHeroArtwork:{width:82,height:92,marginLeft:4,marginTop:18},
   detailMetaRow:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:5,marginTop:9},
-  policyTypePill:{flexDirection:'row',alignItems:'center',gap:4,paddingHorizontal:8,paddingVertical:5,borderRadius:15,backgroundColor:'#31527E'},
+  policyTypePill:{flexDirection:'row',alignItems:'center',gap:4,paddingHorizontal:10,paddingVertical:5,borderRadius:15,backgroundColor:'#244978',borderWidth:1,borderColor:'#D7E6FF'},
   policyTypeText:{fontSize:11,color:'#FFFFFF',fontWeight:'700'},
   metaDivider:{width:1,height:15,backgroundColor:'#A7BEDF',marginHorizontal:2},
   detailMeta:{fontSize:11,color:'#FFFFFF',flexShrink:1},
-  stepper:{flexDirection:'row',alignItems:'flex-start',position:'relative',marginBottom:18,paddingTop:4},
+  stepper:{flexDirection:'row',gap:6,marginBottom:15,paddingTop:4},
   stepLine:{position:'absolute',left:'16.67%',right:'16.67%',top:28,height:3,backgroundColor:'#DCE6FA',overflow:'hidden'},
   stepLineFill:{height:3,backgroundColor:'#2268EA'},
-  stepItem:{flex:1,alignItems:'center',gap:5},
-  stepCircle:{width:49,height:49,borderRadius:26,borderWidth:1,borderColor:'#D7E1F2',backgroundColor:'#F5F8FF',alignItems:'center',justifyContent:'center',elevation:2},
-  stepCircleActive:{backgroundColor:'#075BF0',borderColor:'#9AD5FF',borderWidth:3},
+  stepItem:{flex:1,minWidth:0,minHeight:66,flexDirection:'row',alignItems:'center',gap:5,padding:5,borderWidth:1,borderColor:'#D7E3F6',borderRadius:14,backgroundColor:'#F7FAFF'},
+  stepItemActive:{backgroundColor:'#E2EDFF',borderColor:'#B4D0FA'},
+  stepWords:{flex:1,minWidth:0},
+  stepSub:{fontSize:9,lineHeight:12,color:'#516681',marginTop:2},
+  stepCircle:{width:34,height:34,borderRadius:18,borderWidth:1,borderColor:'#D7E1F2',backgroundColor:'#F5F8FF',alignItems:'center',justifyContent:'center'},
+  stepCircleActive:{backgroundColor:'#075BF0',borderColor:'#9AD5FF',borderWidth:2},
   stepCaption:{paddingHorizontal:10,paddingVertical:4,borderRadius:14},
   stepCaptionActive:{backgroundColor:'#D6E6FF'},
-  stepCaptionText:{fontSize:12,fontWeight:'700',color:'#17233B'},
+  stepCaptionText:{fontSize:11,fontWeight:'800',color:'#17233B'},
   stepCaptionTextActive:{color:'#0646BA'},
   fieldsHeader:{minHeight:69,padding:12,flexDirection:'row',alignItems:'center',gap:9,borderRadius:16,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DCE5F4',marginTop:15,marginBottom:8,elevation:2},
   fieldsIcon:{width:39,height:39,borderRadius:11,backgroundColor:'#E0EBFF',alignItems:'center',justifyContent:'center'},
@@ -660,8 +692,8 @@ const s=StyleSheet.create({
   fieldsToggle:{fontSize:11,color:'#0759EC',fontWeight:'800'},moreFields:{height:42,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:7},
   moreFieldsText:{fontSize:11,fontWeight:'700',color:C.blue},
   disabledAction:{opacity:.68},disabledConvert:{backgroundColor:'#8297C8'},
-  disabledNotice:{flexDirection:'row',gap:10,marginTop:18,padding:15,borderRadius:16,backgroundColor:'#FFF7EA',borderWidth:1,borderColor:'#F0E4C9'},
-  disabledTitle:{fontSize:12,color:'#795820',fontWeight:'800'},disabledText:{fontSize:11,lineHeight:17,color:'#926E3A',marginTop:4},
+  disabledNotice:{flexDirection:'row',alignItems:'center',gap:8,marginTop:12,paddingHorizontal:12,minHeight:42,borderRadius:13,backgroundColor:'#FFF5DC',borderWidth:1,borderColor:'#F0D49C'},
+  disabledTitle:{fontSize:12,color:'#795820',fontWeight:'800'},disabledText:{flex:1,fontSize:11,lineHeight:16,fontWeight:'700',color:'#80521D'},
   uncertain:{flexDirection:'row',gap:8,borderRadius:12,backgroundColor:'#FFF1DE',padding:12,marginBottom:10},
   uncertainText:{flex:1,fontSize:11,lineHeight:17,color:'#925A25'},
   refreshRecord:{height:45,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:C.line,borderRadius:12,marginBottom:8},
@@ -670,6 +702,16 @@ const s=StyleSheet.create({
   footerWaves:{flexGrow:1,minHeight:56,marginHorizontal:-14,marginTop:16,overflow:'hidden',justifyContent:'flex-end'},footerWaveOne:{position:'absolute',bottom:-55,left:'-12%',width:'83%',height:105,borderRadius:100,backgroundColor:'#E5EFFC',transform:[{rotate:'10deg'}]},footerWaveTwo:{position:'absolute',bottom:-65,right:'-12%',width:'90%',height:120,borderRadius:100,backgroundColor:'#D8E8FC',transform:[{rotate:'-12deg'}]},
   issue:{backgroundColor:'#FFF0DC',padding:13,borderRadius:13,borderLeftWidth:5,borderLeftColor:'#FF921B',flexDirection:'row',alignItems:'center',gap:9,marginBottom:12},
   issueText:{flex:1,fontSize:14,lineHeight:19,color:'#9C390F',fontWeight:'800'},
+  groupedFields:{gap:8,marginBottom:8},
+  groupCard:{borderWidth:1,borderColor:'#CBDDF9',borderRadius:13,backgroundColor:'#FFFFFF',overflow:'hidden'},
+  groupHead:{minHeight:39,flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:10,paddingVertical:7,backgroundColor:'#E1EDFF'},
+  groupTitle:{fontSize:12,fontWeight:'800',color:'#10254C',flex:1,minWidth:0},
+  groupCount:{fontSize:10,fontWeight:'700',color:'#46618B'},
+  groupBody:{padding:9,flexDirection:'row',flexWrap:'wrap',gap:8},
+  groupField:{width:'48%',flexGrow:1,minWidth:0,paddingVertical:3},
+  groupLabel:{color:'#5D708C',fontWeight:'600',fontSize:10,marginBottom:3},
+  groupValue:{color:'#142443',fontWeight:'700',fontSize:11},
+  groupEmpty:{padding:12,backgroundColor:'#FFFFFF',borderRadius:12},
   fieldTileGroups:{gap:8},
   fieldTileGroup:{borderRadius:13,padding:7,gap:6},
   fieldTileRow:{flexDirection:'row',gap:6},
