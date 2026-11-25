@@ -73,7 +73,7 @@ return [{json:{contract_version:'1',parser_id:'magma_private_car_package_native_
  parser_version:'non-tata-cv-v2',extraction_method:'native_pdf_text',ok,validation_passed:ok,
  review_required:true,auto_finalize_allowed:false,checks,fields,
  warnings:failed.map(key=>'Review required: '+key),
- premium_components:{od,tp,net,gst,gross,cpa,odBasic:basicOd,odAddons:addons,ncb},
+ premium_components:{od,tp,net,gst,gross,cpa,odBasic:basicOd,odAddons:addons,ncb,cgst,sgst,igst,taxRegime:igst!==null?'IGST':'CGST_SGST'},
  // The proposal's Petrol/Diesel choices are unselected in native text.
  // Do not fabricate insurer-verified fuel or declare canonical booking ready.
  fuel_verified_from_current_pdf:false,
