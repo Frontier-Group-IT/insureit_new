@@ -10,6 +10,30 @@ import { selectVerifiedN8nInsuredDraftIdentity, sameInsuredIdentity } from "../l
 import { buildPolicyOcrOnboardingUpdate, normalizeVerifiedMotorPowerKw } from "../lib/policy-ocr-onboarding-apply.ts";
 import { assessAiPolicyIntake } from "../lib/ai-policy-onboarding-eligibility.ts";
 
+// The current Oriental native-PDF adapter emits a distinct immutable
+// insured-name label; never substitute generic policy schedule evidence.
+for(const parserId of [
+  "oriental_gccv_package_native_pdf",
+  "oriental_private_car_standalone_od_native_pdf",
+]){
+  const correct={key:"insured_name",value:"Sample Transport Co",
+    page:null,evidence:"Oriental current PDF policy/vehicle/premium schedule"};
+  const named=selectVerifiedN8nInsuredDraftIdentity([correct],null,parserId);
+  assert.equal(named.name,"Sample Transport Co");
+  assert.equal(named.source,"verified_pdf");
+  assert.equal(named.matchedCustomerId,null);
+  const wrongLabel=selectVerifiedN8nInsuredDraftIdentity(
+    [{...correct,evidence:"Native PDF policy schedule"}],null,parserId);
+  assert.equal(wrongLabel.name,"");
+  assert.equal(wrongLabel.source,"missing");
+  const wrongPage=selectVerifiedN8nInsuredDraftIdentity(
+    [{...correct,page:1}],null,parserId);
+  assert.equal(wrongPage.name,"");
+  const conflict=selectVerifiedN8nInsuredDraftIdentity([correct],
+    {id:"sample-customer",name:"Different Transport Co"},parserId);
+  assert.equal(conflict.matchedCustomerId,null);
+  assert.equal(conflict.source,"conflict");
+}
 const text = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 const draft = {
   registrationMode: "registered", issuanceDate: "2026-11-10", rmName: "Sales RM",
