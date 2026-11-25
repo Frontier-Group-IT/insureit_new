@@ -187,7 +187,7 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
       ?(get("vehicle_make")!=="Daimler India Commercial Vehicles Pvt. Ltd."
         ||get("vehicle_model")!=="BHARATBENZ 2828C 6X4 BSVI"
         ||get("vehicle_fuel_type")!=="Diesel"
-        ||(get("vehicle_rto_state")!==""&&get("vehicle_rto_state")!=="Punjab"))
+)
       :(get("vehicle_make")!=="Tata Motors"
         ||!["Petrol","Diesel"].includes(get("vehicle_fuel_type")))))
     return fail("uiic_insurer_product_vehicle_conflict");
