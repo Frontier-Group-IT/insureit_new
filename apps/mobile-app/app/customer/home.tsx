@@ -1,16 +1,16 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Href } from 'expo-router';
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Alert, Animated, Image, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import { useRouter, usePathname } from 'expo-router';
+import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, AppState, Easing, Platform, Alert, Animated, Image, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { BrandLogo } from '@/components/first-look';
 import { CustomerAccountSwitcherButton } from '@/components/customer-account-switcher';
 import { GroupHomeScreen } from '@/components/group/group-home-screen';
-import { NotificationBell } from '@/components/realtime-notifications';
+import { NotificationBell, useRealtimeNotifications } from '@/components/realtime-notifications';
 import { LoadingState, UniversalBottomTabs } from '@/components/ui';
 import { getCurrentSession, getCustomerForUser, getOnboardingApplicationForUser, getProfile, isValidProfile, resetLocalAuthState, signOut } from '@/lib/auth';
 import { buildComplianceRenewals } from '@/lib/compliance-renewals';
@@ -22,6 +22,96 @@ import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Policy,
 const fleetSketch = require('../../assets/brand/dashboard/dashboard-fleet-hero.png');
 const claimsDeskPhone = '+916264911014';
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const HomeMotion = createContext(false);
+const nativeMotion = Platform.OS !== 'web';
+function useHomeMotion(){
+  const pathname=usePathname();
+  const [foreground,setForeground]=useState(AppState.currentState==='active');
+  const [reduced,setReduced]=useState(true);
+  useEffect(()=>{
+    let live=true;
+    const app=AppState.addEventListener('change',state=>setForeground(state==='active'));
+    const accessibility=AccessibilityInfo.addEventListener('reduceMotionChanged',setReduced);
+    void AccessibilityInfo.isReduceMotionEnabled().then(value=>{if(live)setReduced(value);}).catch(()=>{});
+    return ()=>{live=false;app.remove();accessibility.remove();};
+  },[]);
+  return pathname==='/customer/home'&&foreground&&!reduced;
+}
+function useReveal(delay=0){
+  const motion=useContext(HomeMotion);
+  const progress=useRef(new Animated.Value(1)).current;
+  const played=useRef(false);
+  useEffect(()=>{
+    if(!motion){progress.setValue(1);return;}
+    if(played.current)return;
+    played.current=true;progress.setValue(0);
+    const animation=Animated.timing(progress,{toValue:1,delay,duration:380,easing:Easing.out(Easing.cubic),useNativeDriver:nativeMotion,isInteraction:false});
+    animation.start();return ()=>{animation.stop();progress.setValue(1);};
+  },[motion,delay,progress]);
+  return progress;
+}
+function Reveal({children,delay=0}:{children:ReactNode;delay?:number}){
+  const p=useReveal(delay);
+  return <Animated.View style={{opacity:p.interpolate({inputRange:[0,1],outputRange:[.78,1]}),transform:[{translateY:p.interpolate({inputRange:[0,1],outputRange:[5,0]})},{scale:p.interpolate({inputRange:[0,1],outputRange:[.99,1]})}]}}>{children}</Animated.View>;
+}
+function useNumber(value:number,duration=900,delay=0){
+  const motion=useContext(HomeMotion);
+  const [shown,setShown]=useState(value);
+  const last=useRef(0);
+  const started=useRef(false);
+  useEffect(()=>{
+    if(!motion||!Number.isFinite(value)){setShown(value);if(started.current)last.current=value;return;}
+    const from=last.current,initial=!started.current;
+    started.current=true;
+    if(from===value){setShown(value);return;}
+    let frame=0,start:number|undefined,updated=-Infinity;
+    const tick=(now:number)=>{
+      start??=now;
+      const t=Math.max(0,Math.min(1,(now-start-(initial?delay:0))/duration));
+      if(now-updated>=40||t===1){last.current=from+(value-from)*Easing.out(Easing.cubic)(t);setShown(t===1?value:last.current);updated=now;}
+      if(t<1)frame=requestAnimationFrame(tick);
+    };
+    frame=requestAnimationFrame(tick);
+    return ()=>{cancelAnimationFrame(frame);last.current=value;};
+  },[motion,value,duration,delay]);
+  return motion&&Number.isFinite(value)?shown:value;
+}
+function usePulse(value:number,enabled=true){
+  const motion=useContext(HomeMotion);
+  const p=useRef(new Animated.Value(0)).current;
+  const previous=useRef(0);
+  useEffect(()=>{
+    const increased=value>previous.current;
+    if(motion||!enabled||value===0)previous.current=value;
+    if(!motion||!enabled||!increased||value<=0){p.setValue(0);return;}
+    const animation=Animated.sequence([Animated.timing(p,{toValue:1,duration:180,useNativeDriver:nativeMotion,isInteraction:false}),Animated.spring(p,{toValue:0,speed:18,bounciness:4,useNativeDriver:nativeMotion,isInteraction:false})]);
+    animation.start();return ()=>{animation.stop();p.setValue(0);};
+  },[motion,value,enabled,p]);
+  return p;
+}
+function FleetArtwork(){
+  const motion=useContext(HomeMotion);
+  const p=useRef(new Animated.Value(0)).current;
+  useEffect(()=>{
+    if(!motion)return;
+    const a=Animated.sequence([1,0,1,0].map(toValue=>Animated.timing(p,{toValue,duration:1700,easing:Easing.inOut(Easing.sin),useNativeDriver:nativeMotion,isInteraction:false})));
+    a.start();return ()=>{a.stop();p.setValue(0);};
+  },[motion,p]);
+  return <Animated.Image source={fleetSketch} style={[styles.fleetImageHero,{transform:[{translateY:p.interpolate({inputRange:[0,1],outputRange:[0,-5]})},{scale:p.interpolate({inputRange:[0,1],outputRange:[1,1.02]})}]}]} resizeMode="contain"/>;
+}
+function HomeBell(){
+  const motion=useContext(HomeMotion);
+  const {latest}=useRealtimeNotifications();
+  const previous=useRef(latest?.id);
+  const swing=useRef(new Animated.Value(0)).current;
+  useEffect(()=>{
+    const fresh=Boolean(latest?.id&&latest.id!==previous.current);previous.current=latest?.id;
+    if(!motion||!fresh)return;
+    const a=Animated.sequence([1,-1,.5,0].map(toValue=>Animated.timing(swing,{toValue,duration:95,useNativeDriver:nativeMotion,isInteraction:false})));
+    a.start();return ()=>{a.stop();swing.setValue(0);};
+  },[motion,latest?.id,swing]);
+  return <Animated.View style={{transform:[{rotate:swing.interpolate({inputRange:[-1,1],outputRange:['-12deg','12deg']})}]}}><NotificationBell color="#FFFFFF"/></Animated.View>;
+}
 
 type ExternalPolicyRow = {
   id: string;
@@ -46,6 +136,7 @@ const closedStatuses = new Set<Claim['current_status']>(['Settled', 'Closed', 'R
 
 export default function CustomerMockupHomeScreen() {
   const router = useRouter();
+  const motion=useHomeMotion();
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -62,6 +153,7 @@ export default function CustomerMockupHomeScreen() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [kycPromptDismissed, setKycPromptDismissed] = useState(true);
   const mountedRef = useRef(true);
+  const dashboardScope=useRef<string|undefined>(undefined);
 
   const loadDashboard = useCallback(async (mode: 'initial' | 'refresh' = 'initial') => {
     try {
@@ -84,11 +176,11 @@ export default function CustomerMockupHomeScreen() {
       setCustomer(nextCustomer);
       setOnboarding(nextOnboarding);
       setSelectedContext(selected);
-      setVehicles([]);
-      setPolicies([]);
-      setClaims([]);
-      setClaimFinancials([]);
-      setTasks([]);
+      // Reset only when switching customer scope, never flash fake zero during same-account refresh.
+      if (dashboardScope.current !== nextCustomer?.id) {
+        dashboardScope.current=nextCustomer?.id;
+        setVehicles([]);setPolicies([]);setClaims([]);setClaimFinancials([]);setTasks([]);
+      }
       const promptDismissed = await getKycPromptDismissed(session.user.id);
       if (mountedRef.current) setKycPromptDismissed(Boolean(promptDismissed) || Boolean(nextCustomer) || nextOnboarding?.status === 'submitted' || nextOnboarding?.status === 'under_review');
       if (nextCustomer && !isPortfolioDashboardContext(selected)) {
@@ -105,6 +197,7 @@ export default function CustomerMockupHomeScreen() {
         if (externalPolicyResult.error) console.warn('Customer external policies load failed', externalPolicyResult.error.message);
         if (claimResult.error) console.warn('Customer claims load failed', claimResult.error.message);
         if (taskResult.error) console.warn('Customer claim tasks load failed', taskResult.error.message);
+        if(vehicleResult.error||policyResult.error||externalPolicyResult.error||claimResult.error||taskResult.error) throw new Error('Customer dashboard data could not be verified.');
         const nextClaims = claimResult.data ?? [];
         const claimIds = nextClaims.map((claim) => claim.id);
         const financialResult = claimIds.length
@@ -112,6 +205,7 @@ export default function CustomerMockupHomeScreen() {
           : { data: [], error: null };
         if (!mountedRef.current) return;
         if (financialResult.error) console.warn('Customer claim financials load failed', financialResult.error.message);
+        if(financialResult.error)throw new Error('Customer claim amounts could not be verified.');
         const nextPolicies = [...(policyResult.data ?? []), ...((externalPolicyResult.data ?? []) as ExternalPolicyRow[]).map(externalToPolicy)];
         setVehicles(vehicleResult.data ?? []);
         setPolicies(nextPolicies);
@@ -181,10 +275,10 @@ export default function CustomerMockupHomeScreen() {
   if (error) return <View style={styles.loading}><Text style={styles.error}>{error}</Text><Pressable onPress={() => void loadDashboard('refresh')}><Text style={styles.retry}>Try again</Text></Pressable><Pressable onPress={() => void resetLocalAuthState(router)}><Text style={styles.retry}>Reset login</Text></Pressable><Pressable onPress={() => void signOut(router)}><Text style={styles.retry}>Sign out</Text></Pressable></View>;
   if (profile && isPortfolioDashboardContext(selectedContext)) return <GroupHomeScreen profile={profile} groupContext={selectedContext} />;
 
-  return <SafeAreaView style={styles.safeArea} edges={['top']}>
+  return <HomeMotion.Provider value={motion}><SafeAreaView style={styles.safeArea} edges={['top']}>
     <View style={styles.header}>
       <Pressable onPress={() => { console.warn('[claim-navigation] replace-caller', { source: 'customer-home-brand', destination: '/customer/home' }); router.replace('/customer/home'); }} style={styles.brand}><BrandLogo width={132} inverse /></Pressable>
-      <View style={styles.iconCircle}><NotificationBell color="#FFFFFF" /></View>
+      <View style={styles.iconCircle}><HomeBell /></View>
       <CustomerAccountSwitcherButton initial={initialFor(name)} />
     </View>
     <ScrollView
@@ -193,14 +287,14 @@ export default function CustomerMockupHomeScreen() {
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void loadDashboard('refresh')} tintColor={palette.navy} colors={[palette.navy]} />}
     >
-      <DashboardIntro firstName={firstName} lastUpdated={lastUpdated} attentionCount={attentionCount} groupName={selectedContext?.group_name} onAttentionPress={openPrimaryAction} />
-      <FleetSnapshot
+      <Reveal delay={150}><DashboardIntro firstName={firstName} lastUpdated={lastUpdated} attentionCount={attentionCount} groupName={selectedContext?.group_name} onAttentionPress={openPrimaryAction} /></Reveal>
+      <Reveal delay={350}><FleetSnapshot
         vehicles={vehicles}
         protectedVehicles={protectedVehicles}
         protectionScore={protectionScore}
         onOpen={() => router.push('/customer/vehicles')}
-      />
-      <QuickActionDock
+      /></Reveal>
+      <Reveal delay={650}><QuickActionDock
         renewalDue={renewalAttentionCount}
         claimTasks={claimAttentionCount}
         onRenewals={() => router.push('/customer/renewals' as Href)}
@@ -208,8 +302,8 @@ export default function CustomerMockupHomeScreen() {
         onChallan={() => router.push({ pathname: '/customer/e-challan', params: { source: 'customer_dashboard' } } as Href)}
         onClaim={() => router.push('/customer/start-claim')}
         onExchange={() => router.push('/customer/exchange')}
-      />
-      <ClaimsSummaryCard
+      /></Reveal>
+      <Reveal delay={1000}><ClaimsSummaryCard
         totalCount={claims.length}
         openCount={activeClaims.length}
         settledCount={settledClaims.length}
@@ -222,6 +316,7 @@ export default function CustomerMockupHomeScreen() {
         onOpenCompleted={() => router.push({ pathname: '/customer/claims', params: { filter: 'Completed' } })}
         onPendingAction={() => pendingTask ? router.push({ pathname: '/customer/upload-documents', params: { claimId: pendingTask.claim_id } }) : router.push({ pathname: '/customer/claims', params: { filter: 'All' } })}
       />
+      </Reveal>
       <SupportActionCenter onSupport={() => router.push('/customer/support')} />
     </ScrollView>
     <UniversalBottomTabs role="customer" pathname="/customer/home" bottomInset={insets.bottom} customerContext={selectedContext} />
@@ -233,11 +328,13 @@ export default function CustomerMockupHomeScreen() {
       onDismiss={() => void dismissKycPrompt()}
       onSignOut={() => void signOut(router)}
     />
-  </SafeAreaView>;
+  </SafeAreaView></HomeMotion.Provider>;
 }
 
 function DashboardIntro({ firstName, lastUpdated, attentionCount, groupName, onAttentionPress }: { firstName: string; lastUpdated: Date | null; attentionCount: number; groupName?: string | null; onAttentionPress: () => void }) {
   const hasAttention = attentionCount > 0;
+  const animatedAttention=Math.round(useNumber(attentionCount,650,250));
+  const attentionPulse=usePulse(attentionCount);
   return (
     <View style={styles.greetingBlock}>
       <View>
@@ -246,8 +343,8 @@ function DashboardIntro({ firstName, lastUpdated, attentionCount, groupName, onA
           <Pressable disabled={!hasAttention} onPress={onAttentionPress} style={({ pressed }) => [styles.attentionLink, pressed && styles.textPressed]}>
             {hasAttention ? (
               <>
-                <MaterialCommunityIcons name="alert-circle-outline" size={13} color="#C98918" />
-                <Text style={styles.attentionLinkStrong}>{attentionCount} item{attentionCount === 1 ? '' : 's'}</Text>
+                <Animated.View style={{transform:[{scale:attentionPulse.interpolate({inputRange:[0,1],outputRange:[1,1.16]})}]}}><MaterialCommunityIcons name="alert-circle-outline" size={13} color="#C98918" /></Animated.View>
+                <Text style={styles.attentionLinkStrong}>{animatedAttention} item{animatedAttention === 1 ? '' : 's'}</Text>
                 <Text style={styles.attentionLinkText}>need attention</Text>
               </>
             ) : (
@@ -272,15 +369,16 @@ function DashboardIntro({ firstName, lastUpdated, attentionCount, groupName, onA
 
 function FleetSnapshot({ vehicles, protectedVehicles, protectionScore, onOpen }: { vehicles: Vehicle[]; protectedVehicles: number; protectionScore: number; onOpen: () => void }) {
   const unprotected = Math.max(vehicles.length - protectedVehicles, 0);
+  const animatedCount=Math.round(useNumber(vehicles.length,900,450));
   return (
     <Pressable onPress={onOpen} style={({ pressed }) => [styles.fleetCard, pressed && styles.cardPressed]}>
       <Text style={styles.sectionEyebrow}>Your fleet summary</Text>
       <View style={styles.fleetMainRow}>
         <View style={styles.fleetCountBlock}>
-          <Text style={styles.fleetCount}>{vehicles.length}</Text>
+          <Text accessibilityLabel={String(vehicles.length)} style={styles.fleetCount}>{animatedCount}</Text>
           <Text style={styles.fleetCountLabel}>Vehicles</Text>
         </View>
-        <Image source={fleetSketch} style={styles.fleetImageHero} resizeMode="contain" />
+        <FleetArtwork/>
         <FleetCoverageRing score={protectionScore} hasVehicles={vehicles.length > 0} />
       </View>
       <FleetStatusTicker totalVehicles={vehicles.length} unprotectedVehicles={unprotected} />
@@ -290,13 +388,19 @@ function FleetSnapshot({ vehicles, protectedVehicles, protectionScore, onOpen }:
 
 function FleetCoverageRing({ score, hasVehicles }: { score: number; hasVehicles: boolean }) {
   const safeScore = hasVehicles ? Math.max(0, Math.min(100, score)) : 0;
+  const motion=useContext(HomeMotion);
   const progress = useRef(new Animated.Value(0)).current;
+  const [shown,setShown]=useState(safeScore);
   const radius = 26;
   const strokeWidth = 6;
   const circumference = 2 * Math.PI * radius;
   useEffect(() => {
-    Animated.timing(progress, { toValue: safeScore, duration: 850, useNativeDriver: false }).start();
-  }, [progress, safeScore]);
+    if(!motion){progress.setValue(safeScore);setShown(safeScore);return;}
+    const listener=progress.addListener(({value})=>setShown(Math.round(value)));
+    const animation=Animated.timing(progress,{toValue:safeScore,duration:1500,easing:Easing.out(Easing.cubic),useNativeDriver:false,isInteraction:false});
+    animation.start(({finished})=>{if(finished)setShown(safeScore);});
+    return ()=>{animation.stop();progress.removeListener(listener);};
+  }, [progress, safeScore,motion]);
   const strokeDashoffset = progress.interpolate({ inputRange: [0, 100], outputRange: [circumference, 0] });
   return (
     <View style={styles.scoreRing}>
@@ -318,7 +422,7 @@ function FleetCoverageRing({ score, hasVehicles }: { score: number; hasVehicles:
         />
       </Svg>
       <View style={styles.scoreCore}>
-        <Text style={styles.scoreValue}>{safeScore}%</Text>
+        <Text accessibilityLabel={safeScore+' percent covered'} style={styles.scoreValue}>{motion?shown:safeScore}%</Text>
         <Text style={styles.scoreLabel}>Covered</Text>
       </View>
     </View>
@@ -327,6 +431,7 @@ function FleetCoverageRing({ score, hasVehicles }: { score: number; hasVehicles:
 
 function FleetStatusTicker({ totalVehicles, unprotectedVehicles }: { totalVehicles: number; unprotectedVehicles: number }) {
   const fullyCovered = totalVehicles > 0 && unprotectedVehicles === 0;
+  const animatedUnprotected=Math.round(useNumber(unprotectedVehicles,650,700));
   return (
     <View style={styles.fleetTicker}>
       {fullyCovered ? (
@@ -336,8 +441,8 @@ function FleetStatusTicker({ totalVehicles, unprotectedVehicles }: { totalVehicl
         </>
       ) : (
         <>
-          <AttentionPulseIcon />
-          <Text style={styles.fleetTickerText} numberOfLines={1}><Text style={[styles.fleetTickerValue, { color: '#E5484D' }]}>{unprotectedVehicles}</Text> vehicle{unprotectedVehicles === 1 ? '' : 's'} without active policy</Text>
+          <AttentionPulseIcon count={unprotectedVehicles} />
+          <Text style={styles.fleetTickerText} numberOfLines={1}><Text style={[styles.fleetTickerValue, { color: '#E5484D' }]> {animatedUnprotected}</Text> vehicle{unprotectedVehicles === 1 ? '' : 's'} without active policy</Text>
         </>
       )}
       <MaterialCommunityIcons name="chevron-right" size={17} color="#174EA6" />
@@ -345,16 +450,8 @@ function FleetStatusTicker({ totalVehicles, unprotectedVehicles }: { totalVehicl
   );
 }
 
-function AttentionPulseIcon() {
-  const pulse = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1, duration: 760, useNativeDriver: true }),
-      Animated.timing(pulse, { toValue: 0, duration: 760, useNativeDriver: true }),
-    ]));
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
+function AttentionPulseIcon({count}:{count:number}) {
+  const pulse=usePulse(count);
   const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] });
   const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] });
   return (
@@ -383,8 +480,9 @@ function QuickActionDock({ renewalDue, claimTasks, onRenewals, onQuote, onChalla
 }
 
 function QuickAction({ icon, image, label, badge, animateBadge, tone, color, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; image?: ImageSourcePropType; label: string; badge?: number; animateBadge?: boolean; tone: string; color: string; onPress: () => void }) {
+  const p=useReveal(850+Math.max(0,['Renewal','Start claim','Exchange','Get Quote','Pay Challan'].indexOf(label))*70);
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.quickAction, pressed && styles.cardPressed]}>
+    <Animated.View style={{flex:1,minWidth:0,opacity:p.interpolate({inputRange:[0,1],outputRange:[.78,1]}),transform:[{scale:p.interpolate({inputRange:[0,1],outputRange:[.94,1]})}]}}><Pressable onPress={onPress} style={({ pressed }) => [styles.quickAction, pressed && styles.cardPressed]}>
       {badge ? <ActionBadge value={badge} animated={Boolean(animateBadge)} /> : null}
       <View style={[styles.quickIcon, { backgroundColor: tone }]}>
         {image ? <Image source={image} style={styles.quickIconArtwork} resizeMode="contain" /> : <MaterialCommunityIcons name={icon} size={22} color={color} />}
@@ -395,27 +493,19 @@ function QuickAction({ icon, image, label, badge, animateBadge, tone, color, onP
         adjustsFontSizeToFit={Platform.OS === 'ios'}
         minimumFontScale={0.65}
       >{label}</Text>
-    </Pressable>
+    </Pressable></Animated.View>
   );
 }
 
 function ActionBadge({ value, animated }: { value: number; animated: boolean }) {
-  const pulse = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (!animated) return;
-    const loop = Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
-      Animated.timing(pulse, { toValue: 0, duration: 900, useNativeDriver: true }),
-    ]));
-    loop.start();
-    return () => loop.stop();
-  }, [animated, pulse]);
+  const pulse=usePulse(value,animated);
   const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.11] });
   return <Animated.View style={[styles.actionBadge, { transform: [{ scale }] }]}><Text style={styles.actionBadgeText}>{value}</Text></Animated.View>;
 }
 
 function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, openAmount, settledAmount, pendingActionCount, onOpenAll, onOpenOpen, onOpenCompleted, onPendingAction }: { totalCount: number; openCount: number; settledCount: number; totalAmount: number; openAmount: number; settledAmount: number; pendingActionCount: number; onOpenAll: () => void; onOpenOpen: () => void; onOpenCompleted: () => void; onPendingAction: () => void }) {
   const hasPendingAction = pendingActionCount > 0;
+  const clearPulse=usePulse(!hasPendingAction&&totalCount>0?1:0);
   return (
     <View style={styles.claimSummaryCard}>
       <View style={styles.claimSummaryTop}>
@@ -424,15 +514,15 @@ function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, o
           <Pressable accessibilityRole="button" accessibilityLabel="View all claims" onPress={onOpenAll} style={({ pressed }) => [styles.claimOpenLink, pressed && styles.cardPressed]}><Text style={styles.claimOpenLinkText}>View all</Text><MaterialCommunityIcons name="arrow-right" size={15} color="#BFD4F7" /></Pressable>
         </View>
         <View style={styles.claimMetricRow}>
-          <ClaimMetric label="Total" value={totalCount} amount={formatClaimAmount(totalAmount)} accent="#6FA8FF" onPress={onOpenAll} />
+          <ClaimMetric label="Total" value={totalCount} amount={totalAmount} accent="#6FA8FF" onPress={onOpenAll} />
           <View style={styles.claimMetricDivider} />
-          <ClaimMetric label="Open" value={openCount} amount={formatClaimAmount(openAmount)} accent="#F5B94C" onPress={onOpenOpen} />
+          <ClaimMetric label="Open" value={openCount} amount={openAmount} accent="#F5B94C" onPress={onOpenOpen} />
           <View style={styles.claimMetricDivider} />
-          <ClaimMetric label="Settled" value={settledCount} amount={formatClaimAmount(settledAmount)} accent="#4FD79B" onPress={onOpenCompleted} />
+          <ClaimMetric label="Settled" value={settledCount} amount={settledAmount} accent="#4FD79B" onPress={onOpenCompleted} />
         </View>
       </View>
       <Pressable onPress={hasPendingAction ? onPendingAction : onOpenAll} style={({ pressed }) => [styles.claimTicker, hasPendingAction && styles.claimTickerHot, pressed && styles.cardPressed]}>
-        <MaterialCommunityIcons name={hasPendingAction ? 'alert-decagram' : 'check-decagram'} size={17} color={hasPendingAction ? '#C98918' : '#10A66F'} />
+        <Animated.View style={{transform:[{scale:clearPulse.interpolate({inputRange:[0,1],outputRange:[1,1.12]})}]}}><MaterialCommunityIcons name={hasPendingAction ? 'alert-decagram' : 'check-decagram'} size={17} color={hasPendingAction ? '#C98918' : '#10A66F'} /></Animated.View>
         <Text style={styles.claimTickerText} numberOfLines={1}>{hasPendingAction ? `${pendingActionCount} pending claim action${pendingActionCount === 1 ? '' : 's'}` : totalCount ? 'All claim actions are clear' : 'No claims yet'}</Text>
         <MaterialCommunityIcons name="chevron-right" size={18} color="#174EA6" />
       </Pressable>
@@ -440,12 +530,14 @@ function ClaimsSummaryCard({ totalCount, openCount, settledCount, totalAmount, o
   );
 }
 
-function ClaimMetric({ label, value, amount, accent, onPress }: { label: string; value: number; amount: string; accent: string; onPress: () => void }) {
+function ClaimMetric({ label, value, amount, accent, onPress }: { label: string; value: number; amount: number; accent: string; onPress: () => void }) {
+  const count=Math.round(useNumber(value,900,1150));
+  const displayedAmount=useNumber(amount,900,1150);
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`Open ${label} claims`} onPress={onPress} style={({ pressed }) => [styles.claimMetric, pressed && styles.cardPressed]}>
-      <Text style={[styles.claimMetricValue, { color: accent }]}>{value}</Text>
+      <Text style={[styles.claimMetricValue, { color: accent } ]}>{count}</Text>
       <Text style={styles.claimMetricLabel}>{label}</Text>
-      <Text style={styles.claimMetricAmount}>{amount}</Text>
+      <Text style={styles.claimMetricAmount}>{formatClaimAmount(displayedAmount)}</Text>
     </Pressable>
   );
 }
