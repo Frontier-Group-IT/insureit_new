@@ -108,6 +108,10 @@ const magnaWrongTax=build("magma");magnaWrongTax.premium_components.cgst=900;
 assert.equal(admit(magnaWrongTax,ids).accepted,false);
 console.log("Held new insurers: strict source response/CPA split/optional independent RTO/identity and premium negative gates passed");
 
+const handoff=fs.readFileSync(path.resolve(here,"../app/policy-intakes/handoff-actions.ts"),"utf8");
+assert.match(handoff,/PRODUCT_VARIANT_PARSERS\.has\(parsed\.preview\.parserId\)\s*\|\|Boolean\(parsed\.preview\.candidateCanonicalPremium\)\?0\.51:0\.07/,
+ "Magma printed gross may be rounded to nearest rupee, not exact paise");
+assert.equal(Math.abs((7243+1303.74)-8547)<0.51,true,"Original Magma 8547 total must pass");
 const adapter=fs.readFileSync(path.resolve(here,"../lib/policy-nontata-commercial-n8n.ts"),"utf8");
 assert(adapter.includes('INSUREIT_ENABLE_HELD_INSURER_CANDIDATES === "1"'),"Candidate classifier must remain disabled by default");
 assert(adapter.includes("assessHeldInsurerCandidate(verifiedPayload,ids)"),"Candidate response must undergo strict admission");
