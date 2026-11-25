@@ -468,18 +468,11 @@ function isIntakeVerified(detail:AiStudioDetail){
 }
 function IntakeStepper({detail}:{detail:AiStudioDetail}){
   const active=intakeStage(detail);
-  const steps=[
-    {label:'PDF',icon:'document-text-outline',sub:'Policy PDF uploaded'},
-    {label:'Extracted',icon:'scan-outline',sub:`${detail.fields.length} fields extracted`},
-    {label:'Review',icon:'shield-checkmark-outline',sub:detail.final_policy_id?'Policy registered':active===2?'Ready for review':'Awaiting review'},
-  ] as const;
   return <View style={s.stepper} accessibilityLabel={'Current workflow stage: '+['PDF','Extracted','Review'][active]}>
-    {steps.map((step,index)=><View key={step.label} style={[s.stepItem,index===active&&s.stepItemActive]}>
-      <View style={[s.stepCircle,index===active&&s.stepCircleActive]}><Ionicons name={step.icon} size={23} color={index===active?'#FFFFFF':'#24528C'}/></View>
-      <View style={s.stepWords}>
-        <Text style={[s.stepCaptionText,index===active&&s.stepCaptionTextActive]}>{step.label}</Text>
-        <Text style={s.stepSub} numberOfLines={2}>{step.sub}</Text>
-      </View>
+    <View pointerEvents="none" style={s.stepLine}><View style={[s.stepLineFill,{width:active===2?'100%':active===1?'50%':'0%'}]}/></View>
+    {([{label:'PDF',icon:'document-text-outline'},{label:'Extracted',icon:'scan-outline'},{label:'Review',icon:'shield-checkmark-outline'}] as const).map((step,index)=><View key={step.label} style={s.stepItem}>
+      <View style={[s.stepCircle,index===active&&s.stepCircleActive]}><Ionicons name={step.icon} size={24} color={index===active?'#FFFFFF':'#435477'}/></View>
+      <View style={[s.stepCaption,index===active&&s.stepCaptionActive]}><Text style={[s.stepCaptionText,index===active&&s.stepCaptionTextActive]}>{step.label}</Text></View>
     </View>)}
   </View>;
 }
@@ -673,18 +666,15 @@ const s=StyleSheet.create({
   policyTypeText:{fontSize:11,color:'#FFFFFF',fontWeight:'700'},
   metaDivider:{width:1,height:15,backgroundColor:'#A7BEDF',marginHorizontal:2},
   detailMeta:{fontSize:11,color:'#FFFFFF',flexShrink:1},
-  stepper:{flexDirection:'row',gap:6,marginBottom:15,paddingTop:4},
+  stepper:{flexDirection:'row',alignItems:'flex-start',position:'relative',marginBottom:18,paddingTop:4},
   stepLine:{position:'absolute',left:'16.67%',right:'16.67%',top:28,height:3,backgroundColor:'#DCE6FA',overflow:'hidden'},
   stepLineFill:{height:3,backgroundColor:'#2268EA'},
-  stepItem:{flex:1,minWidth:0,minHeight:66,flexDirection:'row',alignItems:'center',gap:5,padding:5,borderWidth:1,borderColor:'#D7E3F6',borderRadius:14,backgroundColor:'#F7FAFF'},
-  stepItemActive:{backgroundColor:'#E2EDFF',borderColor:'#B4D0FA'},
-  stepWords:{flex:1,minWidth:0},
-  stepSub:{fontSize:9,lineHeight:12,color:'#516681',marginTop:2},
-  stepCircle:{width:34,height:34,borderRadius:18,borderWidth:1,borderColor:'#D7E1F2',backgroundColor:'#F5F8FF',alignItems:'center',justifyContent:'center'},
-  stepCircleActive:{backgroundColor:'#075BF0',borderColor:'#9AD5FF',borderWidth:2},
+  stepItem:{flex:1,alignItems:'center',gap:5},
+  stepCircle:{width:49,height:49,borderRadius:26,borderWidth:1,borderColor:'#D7E1F2',backgroundColor:'#F5F8FF',alignItems:'center',justifyContent:'center',elevation:2},
+  stepCircleActive:{backgroundColor:'#075BF0',borderColor:'#9AD5FF',borderWidth:3},
   stepCaption:{paddingHorizontal:10,paddingVertical:4,borderRadius:14},
   stepCaptionActive:{backgroundColor:'#D6E6FF'},
-  stepCaptionText:{fontSize:11,fontWeight:'800',color:'#17233B'},
+  stepCaptionText:{fontSize:12,fontWeight:'700',color:'#17233B'},
   stepCaptionTextActive:{color:'#0646BA'},
   fieldsHeader:{minHeight:69,padding:12,flexDirection:'row',alignItems:'center',gap:9,borderRadius:16,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#DCE5F4',marginTop:15,marginBottom:8,elevation:2},
   fieldsIcon:{width:39,height:39,borderRadius:11,backgroundColor:'#E0EBFF',alignItems:'center',justifyContent:'center'},

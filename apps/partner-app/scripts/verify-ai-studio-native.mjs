@@ -155,3 +155,9 @@ assert.match(screen, /detail\.fields\.filter\(field=>intakeFieldGroup\(field\.ke
 assert.match(screen, /Additional Extracted Fields/, 'Unknown fields remain available');
 assert.match(screen, /accessibilityState=\{\{expanded:open\}\}/, 'Field groups have accessible toggle state');
 assert.match(screen, /Secure actions unlock after authenticated booking checks/, 'No booking permissions changed');
+
+// Restore only the circular workflow stepper; preserve actual-stage logic.
+const stepperSource=screen.slice(screen.indexOf('function IntakeStepper('),screen.indexOf('\n}',screen.indexOf('function IntakeStepper('))+2);
+for(const marker of ['style={s.stepLine}','s.stepLineFill','s.stepCircleActive','s.stepCaptionActive','active===2?\'100%\':active===1?\'50%\':\'0%\'']) assert(stepperSource.includes(marker),'Circular stepper contract: '+marker);
+for(const marker of ['stepItemActive','stepWords','stepSub','Policy PDF uploaded','Ready for review']) assert(!stepperSource.includes(marker),'Rectangular stepper must not return: '+marker);
+assert(screen.includes('stepCircle:{width:49,height:49') && screen.includes("stepItem:{flex:1,alignItems:'center',gap:5}"));
