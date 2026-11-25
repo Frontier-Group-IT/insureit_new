@@ -165,6 +165,13 @@ export function assessHeldInsurerCandidate(raw:unknown,
      ||!money(p.basicTp)||!money(p.paidDriver)
      ||Math.abs(cent((p.basicTp as number)+(p.paidDriver as number)+cpa)-cent(tp))>6)
      return reject("held_magma_package_or_cpa_conflict");
+   // Canonical Motor expects OD after NCB and *separate* insured OD add-ons.
+   // The insurer PDF's total OD ALREADY includes add-ons. Split once in
+   // paisa, don't drop purchased covers or charge them a second time.
+   if(!money(p.basicOd)||!money(p.odAddons)||!money(p.ncb)
+     ||(p.odAddons as number)>od
+     ||Math.abs(cent((p.basicOd as number)+(p.odAddons as number)-(p.ncb as number))-cent(od))>55)
+     return reject("held_magma_od_addons_ncb_unreconciled");
    if(p.taxRegime==="IGST"&&p.igst!==gst
      ||p.taxRegime==="CGST_SGST"&&(!money(p.cgst)||!money(p.sgst)||Math.abs(cent((p.cgst as number)+(p.sgst as number))-cent(gst))>1)
      ||!["IGST","CGST_SGST"].includes(String(p.taxRegime)))
@@ -185,8 +192,12 @@ export function assessHeldInsurerCandidate(raw:unknown,
  }
  const canonicalTp=tp-cpa;
  if(canonicalTp<0)return reject("held_cpa_double_count");
+ const addons=isMagma?(p.odAddons as number):0;
+ const canonicalOd=od-addons;
+ if(canonicalOd<0)return reject("held_od_addon_split_invalid");
  const cash=(v:number)=>String(cent(v)/100);
  return {accepted:true,reason:"",parserId,fields:x.fields,
-   canonicalPremium:{od:cash(od),tp:cash(canonicalTp),addOnPremium:"0",cpa:cash(cpa),
+   canonicalPremium:{od:cash(canonicalOd),tp:cash(canonicalTp),
+     addOnPremium:cash(addons),cpa:cash(cpa),
      cpaOpted:cpa>0?"Yes":"No"}};
 }
