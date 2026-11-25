@@ -15,7 +15,7 @@ function parseOrientalMotor(raw){
  const saod=/STANDALONE OWN DAMAGE\(OD\)-PRIVATE CAR POLICY/i.test(t.slice(0,4000));
  const gcv=/GCCV-PUBLIC CARRIERS OTHER THAN THREE WHEELERS PACKAGE\s*\n?POLICY/i.test(t.slice(0,4000));
  const product=saod?'Standalone Own Damage - Private Car':gcv?'GCCV Public Carriers Package':'';
- const policy=read(/\b(\d{6}\/\d{2}\/\d{4}\/\d{4})\b/);
+ const policy=read(/\b(\d{6}\/\d{2}\/\d{4}\/\d{4})(?=\s|Policy No\b|$)/i);
  const insured=read(/^([A-Z][A-Z .'-]{4,90})\s*\(GSTIN:\s*0\)/im);
  const period=/FROM\s+\d{2}:\d{2}\s+ON\s+(\d{2}\/\d{2}\/\d{4})\s+TO MIDNIGHT OF\s+(\d{2}\/\d{2}\/\d{4})/i.exec(t);
  const start=date(period?.[1]||''),end=date(period?.[2]||'');
