@@ -169,10 +169,11 @@ function studioOnboardingUrl(editUrl: string): string {
 }
 
 export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, primaryN8n = false,
-  queueActive = false, queueCounts, bulkCandidates = [], reprocessCandidates = [] }: {
+  queueActive = false, queueCounts, bulkCandidates = [], reprocessCandidates = [], autoBooking }: {
   rows: SemiAutoIntakeRow[]; profileId: string; initialIntakeId?: string | null;
   primaryN8n?: boolean;
   queueActive?: boolean;
+  autoBooking?: {enabled:boolean;configured:boolean;ledgerAvailable:boolean;pending:number;claimed:number;booked:number;review:number;uncertain:number};
   bulkCandidates?: Array<{id:string;intake_number:string}>;
   reprocessCandidates?: Array<{id:string;intake_number:string}>;
   queueCounts?: {eligible:number;extracted:number;duplicates:number;queued:number;extracting:number;exceptions:number;unprocessed:number;unsupported:number;failed:number};
@@ -662,12 +663,28 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                 className="min-h-9 rounded-lg border border-[#adc5e0] bg-white px-3 text-[11px] font-bold text-[#174b83] disabled:opacity-45">
                 Reprocess All Previous · {reprocessRemaining.length}
               </button>
-              <button type="button" onClick={()=>setBulkConfirmOpen(true)} disabled={isWaiting||bulkBatch.length===0}
-                className="min-h-9 rounded-lg bg-[#174b83] px-3 text-[11px] font-bold text-white disabled:opacity-45">
-                Convert Verified Candidates · {queueCounts?.eligible??0}
-              </button>
+              {autoBooking?.configured ? (
+                <div role="status" className="rounded-lg border border-[#c3dcef] bg-[#eef7ff] px-3 py-2 text-[11px] font-bold text-[#174b83]">
+                  {autoBooking.enabled
+                    ? `Automatic booking enabled · ${autoBooking.pending} awaiting claim`
+                    : "Automatic booking unavailable · ledger verification required"}
+                </div>
+              ) : (
+                <button type="button" onClick={()=>setBulkConfirmOpen(true)} disabled={isWaiting||bulkBatch.length===0}
+                  className="min-h-9 rounded-lg bg-[#174b83] px-3 text-[11px] font-bold text-white disabled:opacity-45">
+                  Convert Verified Candidates · {bulkRemaining.length}
+                </button>
+              )}
             </div>
           </div>
+          {autoBooking?.configured && autoBooking.ledgerAvailable ? (
+            <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[#345676]" aria-label="Automatic booking outcomes">
+              <span>Claimed / check outcome: <strong>{autoBooking.claimed}</strong></span>
+              <span>Auto onboarded: <strong>{autoBooking.booked}</strong></span>
+              <span>Booking review: <strong>{autoBooking.review}</strong></span>
+              <span>Uncertain (no retry): <strong>{autoBooking.uncertain}</strong></span>
+            </div>
+          ) : null}
           <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4 xl:grid-cols-8">
             {[
               ["Not yet queued",queueCounts?.unprocessed??0],

@@ -12,6 +12,7 @@ import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-r
 import { isN8nWorkbenchPrimary, semiAutoN8nEnabledForIntake } from "@/lib/policy-intake-semi-auto-n8n";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
 import { aiQueueEnabled, loadAiQueueDisplay } from "@/lib/ai-policy-onboarding-queue-server";
+import { autoBookingEnabled } from "@/lib/ai-policy-auto-booking-server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -99,9 +100,36 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   // This list is a set of CANDIDATES, not proof of booking eligibility:
   // convertVerifiedAiIntake revalidates every policy against the original PDF
   // and canonical booking engine. Includes all pages, not just current 75.
+  // A durable claim is NEVER an unattempted booking candidate. Load ledger
+  // claims separately from OCR queue state so an uncertain outcome cannot
+  // be presented as automatically retryable.
+  const autoRequested=autoBookingEnabled();
+  const attemptedIds=new Set<string>();
+  let autoLedgerAvailable=!autoRequested;
+  let autoClaimedCount=0,autoBookedCount=0,autoReviewCount=0,autoUncertainCount=0;
+  if(autoRequested){
+    const aggregate=await Promise.all(["claimed","booked","review_required","uncertain"].map(state=>
+      admin.from("policy_intake_ai_auto_booking_attempts")
+        .select("intake_id",{count:"exact",head:true}).eq("state",state)));
+    autoLedgerAvailable=aggregate.every(result=>!result.error);
+    if(autoLedgerAvailable){
+      autoClaimedCount=aggregate[0].count??0;
+      autoBookedCount=aggregate[1].count??0;
+      autoReviewCount=aggregate[2].count??0;
+      autoUncertainCount=aggregate[3].count??0;
+      for(let offset=0;offset<workspaceRows.length;offset+=100){
+        const result=await admin.from("policy_intake_ai_auto_booking_attempts")
+          .select("intake_id").in("intake_id",workspaceRows.slice(offset,offset+100).map(row=>row.id));
+        if(result.error){autoLedgerAvailable=false;break;}
+        for(const item of result.data??[])attemptedIds.add(item.intake_id);
+      }
+    }
+  }
   const bulkCandidates = workspaceRows.filter(row => {
     const q=queue.get(row.id);
     return row.policy_type==="motor" && !duplicateIds.has(row.id)
+      && (!autoRequested || row.assigned_to_profile_id===null)
+      && !attemptedIds.has(row.id)
       && q?.state==="verified" && q.exception_codes.length===0;
   }).map(row=>({id:row.id,intake_number:row.intake_number}));
   // An explicit operator action can re-queue prior failed/exceptions for fresh
@@ -267,6 +295,9 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
              </div>
              <SemiAutoPolicyWorkspace rows={pageRows} profileId={profile.id} primaryN8n={primaryN8n}
               queueActive={queueActive} queueCounts={queueCounts} bulkCandidates={bulkCandidates} reprocessCandidates={reprocessCandidates}
+              autoBooking={{enabled:autoRequested&&autoLedgerAvailable,configured:autoRequested,ledgerAvailable:autoLedgerAvailable,
+                pending:autoLedgerAvailable?bulkCandidates.length:0,claimed:autoClaimedCount,booked:autoBookedCount,
+                review:autoReviewCount,uncertain:autoUncertainCount}}
               initialIntakeId={requestedId && pageRows.some(row => row.id === requestedId) ? requestedId : null} />
                       </>
         )}
