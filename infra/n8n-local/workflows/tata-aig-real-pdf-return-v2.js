@@ -66,11 +66,14 @@ add('od_premium',money(f.od_premium),'Own damage after NCB');
 const saod = r.parser_id === 'tata_aig_private_car_saod_n8n_native_pdf';
 add('add_on_premium',money(Number(f.addon_premium||0)+(saod?Number(p.roadside_assistance||0):0)),'OD add-ons and SAOD extras');
 const legal=Number(p.paid_driver_liability||0), passenger=Number(p.unnamed_passenger_pa||0),rsa=Number(p.roadside_assistance||0);
-add('tp_premium',money(Number(p.basic_tp||0)+legal+passenger+(saod?0:rsa)),'TP and non-owner liability');
+add('tp_premium',money(Number(p.basic_tp||0)+Number(p.cng_kit_tp||0)+legal+passenger+(saod?0:rsa)),'TP and non-owner liability');
 add('cpa_premium',money(p.owner_driver_cpa||0),'Owner-driver CPA only');
 add('cpa_opted',Number(p.owner_driver_cpa||0)>0?'Yes':'No','Owner-driver CPA opted');
 const premium_components = {
  basic_od_premium:p.basic_od, ncb_deduction:p.ncb_discount,
+ // Keep IMT25 CNG/LPG OD and TP charges as separate independently
+ // printed amounts; do not disguise either as base premium.
+ cng_kit_od_premium:p.cng_kit_od, cng_kit_tp_premium:p.cng_kit_tp,
  post_ncb_od_premium:p.od_after_ncb,
  od_addons:p.addons.map(a=>({name:a.name,amount:a.amount,code:a.code})),
  addon_subtotal:p.addon_total, basic_tp_premium:p.basic_tp,
