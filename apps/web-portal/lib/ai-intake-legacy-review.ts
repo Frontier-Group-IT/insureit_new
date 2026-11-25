@@ -11,13 +11,13 @@ export function inferLegacyAiReviewReason(input:{
   hasCurrentVehicle:boolean;
 }):"insured_name_mismatch"|"vehicle_ownership"|"customer_identity"|null {
   const norm=(value:string)=>value.normalize("NFKC").trim()
-    .replace(/\\s+/g," ").toLocaleUpperCase("en-IN");
+    .replace(/\s+/g," ").toLocaleUpperCase("en-IN");
   const source=norm(input.sourceInsuredName);
   const draft=norm(input.draftInsuredName);
   if(source.length>=2 && !draft)return "insured_name_mismatch";
   if(!source||!draft||source!==draft||!input.hasCurrentVehicle)return null;
   const owner=norm(input.currentVehicleOwnerName??"");
-  const phone=(value:string)=>value.replace(/\\D/g,"").slice(-10);
+  const phone=(value:string)=>value.replace(/\D/g,"").slice(-10);
   if(owner&&owner!==source)return "vehicle_ownership";
   const prior=phone(input.currentVehicleOwnerMobile??"");
   const now=phone(input.intakeMobile);
