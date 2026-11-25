@@ -319,17 +319,38 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     &&queued.parser_id===null&&queued.checks_passed===0
     &&queued.exception_codes.length===1&&queued.exception_codes[0]==="extraction_failed"
     &&queued.last_error_code==="n8n_review_required";
+  // Source-only recovery for the five formerly unsupported layouts.
+  // Exact unchanged current document and full source verification are required.
+  const heldFailedSource=process.env.INSUREIT_ENABLE_HELD_INSURER_CANDIDATES==="1"
+    &&queued?.state==="exception"&&queued.parser_id===null
+    &&queued.checks_passed===0&&queued.exception_codes.length===1
+    &&queued.exception_codes[0]==="extraction_failed"
+    &&(queued.last_error_code==="n8n_review_required"
+      ||/^n8n_failed_checks__/.test(queued.last_error_code??""));
   const uiicFailedSource=queued?.state==="exception"
     &&queued.parser_id===null&&queued.checks_passed===0
     &&queued.exception_codes.length===1&&queued.exception_codes[0]==="extraction_failed"
     &&(/^n8n_(?:failed_checks_|nontata_verification_failed$)/.test(queued.last_error_code??"")
       ||queued.last_error_code==="n8n_review_required");
-  if(queueError||!queued||(!heldReview&&!uiicFailedSource&&!tataFailedSource
+  if(queueError||!queued||(!heldReview&&!uiicFailedSource&&!tataFailedSource&&!heldFailedSource
       &&(queued.state!=="verified"||queued.exception_codes.length>0))
-      ||(!queued.extraction_fingerprint&&!uiicFailedSource&&!tataFailedSource))
+      ||(!queued.extraction_fingerprint&&!uiicFailedSource&&!tataFailedSource&&!heldFailedSource))
     return fail("Extraction","The current Intake has other extraction or booking exceptions requiring review.");
   const extracted=await previewSemiAutoN8nExtraction(id);
   if(!extracted.ok)return fail("Extraction",extracted.error);
+  const heldParserIds=new Set([
+    "magma_private_car_package_native_pdf",
+    "national_private_car_liability_only_native_pdf",
+    "oriental_private_car_standalone_od_native_pdf",
+    "oriental_gccv_package_native_pdf",
+  ]);
+  const reverifiedHeldExtraction=Boolean(heldFailedSource
+    &&extracted.preview.documentId===queued.document_id
+    &&heldParserIds.has(extracted.preview.parserId)
+    &&extracted.preview.checksPassed===18
+    &&extracted.preview.warnings.length===0
+    &&extracted.preview.candidateCanonicalPremium
+    &&extracted.preview.commercialPremium);
   const reverifiedUiicExtraction=uiicFailedSource
     &&extracted.preview.documentId===queued.document_id
     &&(assessUiicPrivateCarDirectConversion({
@@ -444,7 +465,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
       &&/\bRTO\b/i.test(rtoFresh.evidence);
   }
   if(extracted.preview.documentId!==queued.document_id||
-     !(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction||reverifiedTataFailedSource||reverifiedTataPrintedDateHold)||
+     !(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction||reverifiedTataFailedSource||reverifiedTataPrintedDateHold||reverifiedHeldExtraction)||
      (heldReview&&extracted.preview.parserId!==queued.parser_id)||
      !hasVerifiedN8nParserEvidence(extracted.preview.parserId,
        extracted.preview.checksPassed,extracted.preview.warnings))
@@ -482,7 +503,15 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   const uiic=["united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf"].includes(extracted.preview.parserId);
   const uiicPrivateCar=extracted.preview.parserId==="united_india_private_car_package_native_pdf";
   const productVariant=PRODUCT_VARIANT_PARSERS.has(extracted.preview.parserId);
+  const heldCandidate=process.env.INSUREIT_ENABLE_HELD_INSURER_CANDIDATES==="1"
+    &&heldParserIds.has(extracted.preview.parserId)
+    &&Boolean(extracted.preview.candidateCanonicalPremium);
   if (commercial) {
+    if(heldCandidate){
+      // Exact PDF source, 18-check response, CPA and OD addon split already
+      // verified in the independent held-insurer adapter.
+      verifiedMoney=extracted.preview.candidateCanonicalPremium!;
+    }else
     if(iffco){
       const assessment=assessIffcoAutoOnboarding({
         parserId:extracted.preview.parserId,
@@ -599,12 +628,18 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   if(forwarded.draftRevision<1)return fail("Draft revision","Canonical revision is unavailable.");
   // Canonical class/product must follow the verified insurer and vehicle layout.
   const variantParser=extracted.preview.parserId;
-  const expectedCommercialClass=productVariant
+  const expectedCommercialClass=heldCandidate
+    ?pdfField("vehicle_class")==="Private Car"?"PCP"
+      :pdfField("vehicle_class")==="Goods Carrying Vehicle"?"GCV":""
+    :productVariant
     ?["zurich_kotak_private_car_tp_native_pdf","sbi_general_private_car_package_native_pdf"].includes(variantParser)?"PCP"
       :["go_digit_two_wheeler_od_native_pdf","hdfc_ergo_two_wheeler_tp_native_pdf"].includes(variantParser)?"TWP"
       :"MISD"
     :uiicPrivateCar?"PCP":/Goods Carrying/i.test(pdfField("vehicle_class"))?"GCV":"MISD";
-  const expectedCommercialProduct=productVariant
+  const expectedCommercialProduct=heldCandidate
+    ?variantParser==="national_private_car_liability_only_native_pdf"?"Third Party"
+      :variantParser==="oriental_private_car_standalone_od_native_pdf"?"SAOD":"Package"
+    :productVariant
     ?variantParser==="go_digit_two_wheeler_od_native_pdf"?"SAOD"
       :variantParser==="sbi_general_private_car_package_native_pdf"?"Package"
       :"Third Party"
