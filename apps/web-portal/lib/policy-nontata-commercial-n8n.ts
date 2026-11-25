@@ -14,7 +14,7 @@ export type NonTataCommercialRead = {
   fields: OcrField[];
   warnings: string[];
   checksPassed: number;
-  premium: { od: number; tp: number; net: number; gst: number; gross: number; cpa?: number; addOn?: number; odBasic?: number; odAddons?: {name:string;amount:number}[]; ncb?: number; ncbPercent?: number; ncbDiscount?: number; odBasicAfterNcb?: number };
+  premium: { od: number; tp: number; net: number; gst: number; gross: number; cpa?: number; addOn?: number; odBasic?: number; odAddons?: {name:string;amount:number}[]; ncb?: number; cgst?:number|null; sgst?:number|null; igst?:number|null; taxRegime?:'CGST_SGST'|'IGST'; ncbPercent?: number; ncbDiscount?: number; odBasicAfterNcb?: number };
 };
 // Use the SAME approved self-hosted webhook as the production ICICI/Tata bridge.
 // Commercial policy verification stays isolated by the insurer classifier and its
@@ -370,7 +370,17 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
        ||!isMoney(item.amount))return NaN;
     return sum+Number(item.amount);
   },0);
-  if(magma&&(!isMoney(premium.cpa)||Number(premium.cpa)<=0
+  const magmaTaxVerified=!magma
+    ||(premium.taxRegime==="IGST"
+      ?isMoney(premium.igst)&&premium.cgst===null&&premium.sgst===null
+        &&Math.abs(cents(premium.igst)-cents(Number(premium.net)*.18))<=2
+        &&Math.abs(cents(premium.igst)-cents(Number(premium.gst)))<=1
+      :premium.taxRegime==="CGST_SGST"
+        &&isMoney(premium.cgst)&&isMoney(premium.sgst)&&premium.igst===null
+        &&Math.abs(cents(premium.cgst)-cents(Number(premium.net)*.09))<=2
+        &&Math.abs(cents(premium.sgst)-cents(Number(premium.net)*.09))<=2
+        &&Math.abs(cents(premium.cgst+premium.sgst)-cents(Number(premium.gst)))<=1);
+  if(magma&&(!magmaTaxVerified||!isMoney(premium.cpa)||Number(premium.cpa)<=0
     ||!isMoney(premium.odBasic)||!isMoney(premium.ncb)
     ||!Number.isFinite(magmaAddonTotal)||magmaAddons.length===0
     ||new Set(magmaAddons.map(x=>object(x)?x.name:null)).size!==magmaAddons.length
@@ -406,7 +416,7 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
       insurer),
     warnings,
     checksPassed: expected.filter((key) => checks[key] === true).length,
-    premium: { od, tp, net, gst, gross, ...(magma?{cpa:Number(premium.cpa),odBasic:Number(premium.odBasic),odAddons:magmaAddons as {name:string;amount:number}[],ncb:Number(premium.ncb)}:{}) },
+    premium: { od, tp, net, gst, gross, ...(magma?{cpa:Number(premium.cpa),odBasic:Number(premium.odBasic),odAddons:magmaAddons as {name:string;amount:number}[],ncb:Number(premium.ncb),cgst:premium.cgst as number|null,sgst:premium.sgst as number|null,igst:premium.igst as number|null,taxRegime:premium.taxRegime as 'CGST_SGST'|'IGST'}:{}) },
   };
 }
 
