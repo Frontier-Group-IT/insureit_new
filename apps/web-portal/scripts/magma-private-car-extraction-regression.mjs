@@ -7,7 +7,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 const code=fs.readFileSync(path.resolve(root,"../../infra/n8n-local/workflows/magma-private-car-package-parser-v1.js"),"utf8");
 const parse=new Function("$input",code);
 const text=[
-"Magma General Insurance Limited","www.magmaininsurance.com","PRIVATE CAR PACKAGE POLICY",
+"Magma General Insurance Limited","www.magmainsurance.com","PRIVATE CAR PACKAGE POLICY",
 "Policy No P0027100023/4101/108063",
 "Name of Insured Mr SAMPLE POLICYHOLDER",
 "Period of Insurance 27/11/2026 TO 26/11/2027",
@@ -59,7 +59,7 @@ assert.deepEqual(split,{
  od:"1742.00",tp:"2144.00",addOnPremium:"2907.00",cpa:"450.00",cpaOpted:"Yes"
 },"The saved draft must preserve CPA and individually printed OD add-on economics");
 
-assert.equal(run(text.replace("Magma General Insurance Limited","Previous Insurer Magma General Insurance Limited").replace("www.magmaininsurance.com","unrelated-insurer.example.com")).ok,false,
+assert.equal(run(text.replace("Magma General Insurance Limited","Previous Insurer Magma General Insurance Limited").replace("www.magmainsurance.com","unrelated-insurer.example.com")).ok,false,
  "Do not misclassify a prior insurer reference as the current Magma issuer");
 for(const invalid of [
  text.replace("CGST @ 9% 651.87","CGST @ 9% 600.00"),
@@ -70,7 +70,7 @@ for(const invalid of [
  text.replace("Name of Insured Mr SAMPLE POLICYHOLDER",""),
  text.replace("Chassis No. SAMPLECHASSIS00001",""),
  text.replace("Magma General Insurance Limited","Untrained Insurer"),
- text.replace("www.magmaininsurance.com","other-insurer.example.com")
+ text.replace("www.magmainsurance.com","other-insurer.example.com")
 ]) assert.notEqual(run(invalid).ok,true,"Tampered insurer/identity/amount must fail");
 const bridge=fs.readFileSync(path.join(root,"lib/policy-nontata-commercial-n8n.ts"),"utf8");
 const handoff=fs.readFileSync(path.join(root,"app/policy-intakes/handoff-actions.ts"),"utf8");
