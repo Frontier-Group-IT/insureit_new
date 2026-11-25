@@ -12,6 +12,24 @@ type SourceResponse={
 };
 type Case="magma_private_car_package_native_pdf"|"national_private_car_liability_only_native_pdf"
  |"oriental_private_car_standalone_od_native_pdf"|"oriental_gccv_package_native_pdf";
+/** Product-specific text classifier. Caller label is never trusted. */
+export function recognizeHeldInsurerLayout(text:string):Case|null{
+ const head=String(text||"").slice(0,10000).replace(/\s+/g," ");
+ const found:Case[]=[];
+ if(/Magma General Insurance Limited/i.test(head)
+   &&/PRIVATE CAR PACKAGE POLICY/i.test(head))
+   found.push("magma_private_car_package_native_pdf");
+ if(/National Insurance Co(?:mpany)?\.?\s*(?:Ltd\.?|Limited)/i.test(head)
+   &&/Policy Schedule\s*-\s*Motor\s*-\s*Private Car\s*-\s*Liability Only/i.test(head))
+   found.push("national_private_car_liability_only_native_pdf");
+ if(/THE ORIENTAL INSURANCE COMPANY LIMITED/i.test(head)
+   &&/STANDALONE OWN DAMAGE\(OD\)-PRIVATE CAR POLICY/i.test(head))
+   found.push("oriental_private_car_standalone_od_native_pdf");
+ if(/THE ORIENTAL INSURANCE COMPANY LIMITED/i.test(head)
+   &&/GCCV-PUBLIC CARRIERS OTHER THAN THREE WHEELERS PACKAGE/i.test(head))
+   found.push("oriental_gccv_package_native_pdf");
+ return found.length===1?found[0]:null;
+}
 const CHECKS:Record<Case,readonly string[]>={
  magma_private_car_package_native_pdf:[
  "insurer_product_verified","policy_number_verified","insured_name_verified","issuance_date_printed",
