@@ -25,3 +25,15 @@ const other=enrichVerifiedN8nOnboardingFields(
 assert.equal(other.find(f=>f.key==="vehicle_make")?.value,source[0].value,
  "Unknown models must not receive a brand guess");
 console.log("UIIC Punjab: current master BharatBenz brand derived only from exact PDF marque and model");
+
+const kiaSource=[
+ {key:"vehicle_make",label:"Policy make",value:"KIA INDIA PRIVATE LIMITED"},
+ {key:"vehicle_model",label:"Policy model",value:"KIA INDIA PRIVATE LIMITED SELTOS G1.5 IMT HTK PLUS"},
+];
+const kia=enrichVerifiedN8nOnboardingFields(kiaSource,"magma_private_car_package_native_pdf");
+assert.equal(kia.find(f=>f.key==="vehicle_make")?.value,"Kia");
+assert.equal(kiaSource[0].value,"KIA INDIA PRIVATE LIMITED","Do not change source evidence");
+const unknownKia=enrichVerifiedN8nOnboardingFields(
+ kiaSource.map(f=>f.key==="vehicle_model"?{...f,value:"UNRECOGNIZED KIA"}:f),
+ "magma_private_car_package_native_pdf");
+assert.equal(unknownKia.find(f=>f.key==="vehicle_make")?.value,"KIA INDIA PRIVATE LIMITED");
