@@ -47,6 +47,8 @@ jobs:
         run: node --experimental-strip-types ../../infra/n8n-local/tests/united-india-gcv-layout-regression.mjs
       - name: UIIC Chandigarh source-evidence and MP parity regression
         run: node scripts/uiic-chandigarh-source-regression.mjs
+      - name: UIIC Punjab BharatBenz split CGST/SGST source regression
+        run: node scripts/uiic-punjab-split-gst-regression.mjs
       - name: AI queue non-Tata signed-PDF and printed premium regression
         run: node scripts/ai-nontata-signed-queue-regression.mjs
       - name: Verify Partner AI Studio Cloudflare canonical actions and bearer guard
