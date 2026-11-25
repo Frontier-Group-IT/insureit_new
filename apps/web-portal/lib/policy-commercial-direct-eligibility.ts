@@ -161,7 +161,8 @@ export function assessNiaNamedAuthorityUnregisteredConversion(input:Input):{elig
  */
 export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;reason:string}{
   const fail=(reason:string)=>({eligible:false,reason});
-  if(input.parserId!=="united_india_gcv_native_pdf"
+  const punjabSplit=input.parserId==="united_india_gcv_punjab_split_gst_native_pdf";
+  if(!["united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf"].includes(input.parserId)
     ||input.checksPassed!==18||input.warnings.length)
     return fail("uiic_pdf_parser_unverified");
   const fields=new Map<string,Field>();
@@ -182,8 +183,13 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
   if(get("insurer_name")!=="United India Insurance Company Limited"
     ||get("policy_product")!=="Goods Carrying Vehicle Package"
     ||get("vehicle_class")!=="Goods Carrying Vehicle"
-    ||get("vehicle_make")!=="Tata Motors"
-    ||!["Petrol","Diesel"].includes(get("vehicle_fuel_type")))
+    ||(punjabSplit
+      ?(get("vehicle_make")!=="Daimler India Commercial Vehicles Pvt. Ltd."
+        ||get("vehicle_model")!=="BHARATBENZ 2828C 6X4 BSVI"
+        ||get("vehicle_fuel_type")!=="Diesel"
+        ||get("vehicle_rto_state")!=="Punjab")
+      :(get("vehicle_make")!=="Tata Motors"
+        ||!["Petrol","Diesel"].includes(get("vehicle_fuel_type")))))
     return fail("uiic_insurer_product_vehicle_conflict");
   const year=Number(get("vehicle_manufacturing_year"));
   if(!/^20\d{2}$/.test(get("vehicle_manufacturing_year"))
@@ -203,6 +209,13 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
     &&fields.get("vehicle_registration_number")?.evidence==="UIIC PDF vehicle schedule: printed NEW registration reference"
     &&fields.get("vehicle_registration_status")?.evidence==="UIIC PDF vehicle schedule: printed NEW registration reference";
   const registered=/^MP\d{2}[A-Z]{1,3}\d{3,4}$/.test(reg)&&status==="registered";
+  // Separate source-labelled Punjab BharatBenz CGST/SGST identity. No other
+  // Punjab authority, manufacturer or registered plate is admitted here.
+  const registeredPunjab=punjabSplit
+    &&/^PB35[A-Z]{1,3}\d{3,4}$/.test(reg)&&status==="registered"
+    &&get("vehicle_rto_name")==="PATHANKOT"
+    &&fields.get("vehicle_rto_name")?.evidence===
+      "UIIC PDF vehicle Registration Authority: RTO PATHANKOT INDIA";
   // Separate printed Chandigarh UT vehicle schedule profile; never accept
   // arbitrary non-MP registrations without the exact insurer PDF RLA/STA
   // Registration Authority and the same current policy's CH registration.
@@ -211,7 +224,7 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
     &&get("vehicle_rto_name")==="CHANDIGARH"
     &&fields.get("vehicle_rto_name")?.evidence===
       "UIIC PDF vehicle Registration Authority: CHANDIGARH UT (RLA AND STA) INDIA";
-  if(!newPrinted&&!registered&&!registeredChandigarh)
+  if(!newPrinted&&!registered&&!registeredChandigarh&&!registeredPunjab)
     return fail("uiic_registration_status_not_source_verified");
   const dates=["policy_start_date","policy_end_date","policy_issuance_date","third_party_start_date","third_party_end_date"];
   if(dates.some(key=>! /^\d{4}-\d\d-\d\d$/.test(get(key)))
