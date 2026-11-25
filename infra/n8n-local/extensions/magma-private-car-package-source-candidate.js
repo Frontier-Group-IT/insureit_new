@@ -65,7 +65,7 @@ function parseMagmaPrivateCar(t){
  // NO make-wide/default fuel inference and no guessing from unselected forms.
  const renaultPetrol=make==='RENAULT'&&/^TRIBER RXE MT$/i.test(model)&&capacity==='999';
  const kiaPetrol=make==='KIA INDIA PRIVATE LIMITED'
-   &&/^(?:KIA INDIA PRIVATE LIMITED\\s+)?SELTOS G1\\.5 IMT HTK PLUS$/i.test(model)
+   &&/^(?:KIA INDIA PRIVATE LIMITED\s+)?SELTOS G1\.5 IMT HTK PLUS$/i.test(model)
    &&capacity==='1497';
  const modelCertifiedFuel=renaultPetrol||kiaPetrol?'Petrol':'';
  const fuelEvidence=renaultPetrol
