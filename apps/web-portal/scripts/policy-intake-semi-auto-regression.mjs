@@ -34,6 +34,12 @@ for(const parserId of [
   assert.equal(conflict.matchedCustomerId,null);
   assert.equal(conflict.source,"conflict");
 }
+// Source-only held Oriental intake retries require the exact current PDF.
+const heldAction=readFileSync(new URL("../app/development/ai-policy-onboarding/actions.ts",import.meta.url),"utf8");
+const heldWorkbench=readFileSync(new URL("../components/development/semi-auto-policy-workspace.tsx",import.meta.url),"utf8");
+assert.ok(heldAction.includes('queued.exception_codes[0]==="insured_name_mismatch"'));
+assert.ok(heldAction.includes('extracted.preview.documentId!==queued.document_id'));
+assert.ok(heldWorkbench.includes('"registration_pending_review","insured_name_mismatch"'));
 const text = path => readFileSync(new URL("../" + path, import.meta.url), "utf8");
 const draft = {
   registrationMode: "registered", issuanceDate: "2026-11-10", rmName: "Sales RM",
