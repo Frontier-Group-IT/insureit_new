@@ -240,8 +240,8 @@ const appearanceStart = customerSettings.indexOf('<section aria-labelledby="sett
 const appearanceEnd = customerSettings.indexOf("</section>", appearanceStart);
 const appearanceSection = customerSettings.slice(appearanceStart, appearanceEnd);
 assert(appearanceStart > customerSettings.indexOf("Account Settings") && appearanceEnd < customerSettings.indexOf('aria-labelledby="settings-account-title"'), "Appearance controls must sit between heading and My Account");
-assert(appearanceSection.includes("customer-appearance-panel w-full min-w-0") && appearanceSection.includes("flex-nowrap") && appearanceSection.includes("overflow-x-auto"), "Appearance must occupy full width and keep a single responsive row");
-assert(appearanceSection.includes('name: "Sidebar"') && appearanceSection.includes('name: "Top Menu"') && appearanceSection.includes("h-8 w-px shrink-0"), "Layout options require visible names and a vertical divider");
+assert(appearanceSection.includes("customer-appearance-panel w-full min-w-0") && appearanceSection.includes("customer-appearance-grid") && !appearanceSection.includes("overflow-x-auto"), "Appearance must reflow rather than scroll horizontally");
+assert(appearanceSection.includes('name: "Sidebar"') && appearanceSection.includes('name: "Top Menu"') && appearanceSection.includes("customer-theme-section"), "Layout options require visible names and a separate theme section");
 assert(appearanceSection.includes("customer-theme-segment") && appearanceSection.includes("rounded-full border") && ["Light", "Dark", "System"].every(name => appearanceSection.includes('name: "' + name + '"')), "Theme options must share one rounded container with visible labels");
 assert(appearanceSection.includes("aria-pressed={navigationLayout === value}") && appearanceSection.includes("aria-pressed={theme === value}"), "Appearance controls must expose selected state");
 assert(customerSettings.includes("window.localStorage.setItem(customerNavigationPreferenceKey, next)") && customerSettings.includes("window.localStorage.setItem(customerThemeKey, next)"), "Appearance preferences must remain persistent");
@@ -295,3 +295,16 @@ assert(sharedAuthConfig.includes('role!==\"customer\"') || read("lib/roles.ts").
 if (!process.exitCode) {
   console.log("Customer Web foundation regression passed.");
 }
+const appearanceCss = read("app/customer/(protected)/customer-theme.css");
+assert.match(appearanceCss, /\.customer-appearance-grid\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+assert.match(appearanceCss, /\.customer-appearance-panel\s*\{[^}]*container: customer-appearance \/ inline-size/);
+assert.match(appearanceCss, /\.customer-appearance-section\s*\{[^}]*flex-direction: column/);
+assert.match(appearanceCss, /@container customer-appearance \(min-width: 980px\)\s*\{\s*\.customer-appearance-section\s*\{[^}]*flex-direction: row/);
+assert.match(appearanceCss, /@container customer-appearance \(max-width: 599px\)\s*\{\s*\.customer-appearance-grid\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/);
+assert.match(appearanceCss, /\.customer-appearance-grid \.customer-appearance-option\s*\{[^}]*flex-direction: row/);
+assert.match(appearanceSection, /icon: PanelLeft.*icon: PanelTop/);
+assert.match(appearanceSection, /value: "system".*value: "light".*value: "dark"/);
+assert.match(appearanceSection, /<Icon[^>]*\/><span className="customer-option-full-label">/);
+assert.match(appearanceSection, /<Icon[^>]*\/><span>\{name\}<\/span>/);
+assert(appearanceSection.includes("customer-option-short-label"));
+console.log("Customer Settings responsive appearance regression passed.");
