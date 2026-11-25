@@ -360,9 +360,11 @@ function unitedIndiaPunjabBharatBenz(t){
  // Bind the Punjab authority to the unique CURRENT vehicle-schedule row;
  // never accept a historical or previous-vehicle authority as proof.
  const authorityRows=[...block.matchAll(/\bRegistration Authority[^\n]*\n[ \t]*([^\n]{3,110})/gi)];
+ // Extract a city only when explicitly labelled in the CURRENT vehicle schedule.
+ // No city/state allowlist: absence is allowed and other policy cities work.
  const authority=authorityRows.length===1
-   &&authorityRows[0][1].trim().toUpperCase()==='RTO PATHANKOT INDIA'
-   ?'RTO PATHANKOT INDIA':null;
+   ?authorityRows[0][1].trim().replace(/\s+/g,' ').toUpperCase():null;
+ const authorityCity=authority?.match(/^RTO ([A-Z][A-Z .'-]{2,65}) INDIA$/)?.[1]??null;
  const extra={
    uiic_layout:/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(current)
      &&/GCV PUBLIC CARRIER OTHER THAN 3 WHEELER/i.test(current)&&maker,
@@ -372,10 +374,10 @@ function unitedIndiaPunjabBharatBenz(t){
  };
  const warnings=[];
  if(!certificate||!policy||policy!==certificate)warnings.push('Review required: certificate_policy_mismatch');
- // RTO geography may be missing; reject a conflicting or ambiguous printed
- // current authority, never invent the city from a plate or address.
- if((authorityRows.length>0&&!authority)||registration===null)
-   warnings.push('Review required: Punjab authority_not_current_vehicle');
+ // Missing or unrecognized geography is not a parser exception. Multiple
+ // competing current-vehicle authority rows are a real source ambiguity.
+ if(authorityRows.length>1)
+   warnings.push('Review required: conflicting_current_vehicle_authorities');
  if(!cpaRemoved)warnings.push('Review required: CPA waiver_unverified');
  if(![basicTp,driver,geoTp].every(v=>typeof v==='number')||!approx(tp,basicTp+driver+geoTp))
    warnings.push('Review required: TP itemization_unreconciled');
@@ -390,14 +392,14 @@ function unitedIndiaPunjabBharatBenz(t){
   vehicle_model:model,vehicle_class:'Goods Carrying Vehicle',vehicle_fuel_type:fuel,
   vehicle_manufacturing_year:year,vehicle_capacity:capacity,
   vehicle_chassis_number:chassis,vehicle_engine_number:engine,
-  vehicle_rto_name:authority?'PATHANKOT':null,vehicle_rto_state:authority?'Punjab':null,
+  vehicle_rto_name:authorityCity,vehicle_rto_state:null, // Do not infer RTO state from the PB plate prefix.
   idv,cpa_premium:cpaRemoved?0:null};
  const printed={od,tp,net,gst,gross,cgstOthers:cgstOther,sgstOthers:sgstOther,
   cgstBasicTp:cgstTp,sgstBasicTp:sgstTp,stampDuty:stamp,taxRegime:'CGST_SGST'};
  const result=output('United India Insurance Company Limited',
    'united_india_gcv_punjab_split_gst_native_pdf',base,printed,extra,warnings);
  result.fields=result.fields.map(f=>{
-  if(f.key==='vehicle_rto_name'&&authority)return {...f,evidence:'UIIC PDF vehicle Registration Authority: RTO PATHANKOT INDIA'};
+  if(f.key==='vehicle_rto_name'&&authorityCity)return {...f,evidence:'UIIC PDF vehicle Registration Authority: '+authority};
   if(f.key==='cpa_premium'&&cpaRemoved)return {...f,evidence:'UIIC PDF Compulsory Personal Accident (CPA) cover is removed'};
   return f;
  });

@@ -69,8 +69,7 @@ assert(!("igstOthers" in valid.premium_components));
 for(const altered of [
   fake.replace("SGST-Basic TP(2.50%): 1,099.00","SGST-Basic TP(2.50%): 1,098.00"),
   fake.replace("B. Basic - TP 43,950.00","B. Basic - TP 43,000.00"),
-  fake.replace("RTO PATHANKOT INDIA","DELHI INDIA"),
-  fake.replace("RTO PATHANKOT INDIA","DELHI INDIA\nPrevious vehicle Registration Authority\nRTO PATHANKOT INDIA"),
+  fake.replace("RTO PATHANKOT INDIA","RTO DELHI INDIA\nPrevious vehicle Registration Authority\nRTO PATHANKOT INDIA"),
   fake.replace("MEC123456789012345","UNKNOWNCHASSIS"),
   fake.replace("DAIMLER INDIA COMMERCIAL VEHICLES PVT. LTD / BHARATBENZ","UNLISTED COMPANY / UNKNOWN"),
 ]) assert.notEqual(parseOne(altered).ok,true,"Forged or missing PDF evidence must fail");
@@ -90,8 +89,17 @@ assert.equal(withoutRto.ok,true,"Missing optional RTO must not fail otherwise ve
 assert.equal(withoutRto.fields.some(f=>f.key==="vehicle_rto_name"),false);
 assert.equal(eligible({...input,fields:withoutRto.fields}).eligible,true,
  "Missing optional RTO cannot block source-verified Punjab registration");
-assert.equal(eligible({...input,fields:valid.fields.filter(f=>f.key!=="vehicle_rto_name")}).eligible,false,
- "Conflicting RTO state with missing name must fail");
+assert.equal(eligible({...input,fields:valid.fields.filter(f=>f.key!=="vehicle_rto_name")}).eligible,true,
+ "State-only source geography must not block conversion");
+assert.equal(eligible({...input,fields:valid.fields.filter(f=>f.key!=="vehicle_rto_state")}).eligible,true,
+ "City-only source geography must not block conversion");
+assert.equal(eligible({...input,fields:valid.fields.filter(f=>!["vehicle_rto_name","vehicle_rto_state"].includes(f.key))}).eligible,true,
+ "Absent optional city and state must not block conversion");
+const differentCity=parseOne(fake.replace("RTO PATHANKOT INDIA","RTO LUDHIANA INDIA"));
+assert.equal(differentCity.ok,true,JSON.stringify(differentCity.warnings));
+assert.equal(differentCity.fields.find(f=>f.key==="vehicle_rto_name")?.value,"LUDHIANA");
+assert.equal(eligible({...input,fields:differentCity.fields}).eligible,true,
+ "Source-verified non-Pathankot city must not require a manual allowlist");
 const handoff=fs.readFileSync(path.join(root,"app/policy-intakes/handoff-actions.ts"),"utf8");
 const insuredSelector=fs.readFileSync(path.join(root,"lib/policy-n8n-onboarding-insured.ts"),"utf8");
 assert(handoff.includes('"united_india_gcv_punjab_split_gst_native_pdf"'),
