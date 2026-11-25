@@ -318,6 +318,19 @@ for (const source of [profileMenuPreferences, customerSettings]) {
 }
 assert(popupSidebar.includes("new CustomEvent(customerNavigationPreferenceEvent") && popupSidebar.includes('window.addEventListener("storage", onStorage)'), "Header navigation and other tabs synchronize with preferences");
 assert(appearanceCss.includes("customer-popup-theme-segment") && appearanceCss.includes('data-customer-theme="dark"] .customer-profile-preference-menu'), "Popup has compact light and dark styling");
+const darkSupport = read("app/customer/(protected)/support/page.tsx");
+const darkThemeScope = read("components/customer-portal/customer-theme.tsx");
+const darkEditor = read("components/customer-portal/customer-profile-editor.tsx");
+for (const token of ["surface", "inset", "text", "muted", "accent", "border", "warning-bg", "warning", "success", "danger"]) {
+  assert(appearanceCss.includes("--customer-dark-" + token + ":"), "Dark palette token: " + token);
+}
+for (const selector of ['bg-[#F8FAFF]', 'bg-[#F9FAFF]', 'text-[#29305D]', 'text-[#252B5C]', 'text-[#071D49]', 'border-[#E1E9F7]']) {
+  assert(appearanceCss.includes('[class~="' + selector + '"]'), "Missing dark color mapping: " + selector);
+}
+assert(appearanceCss.includes('input.bg-transparent { background-color: transparent !important'), "Animated search must remain transparent in dark mode");
+assert(darkSupport.includes("customer-support-hero") && darkSupport.includes("customer-support-open-status"), "Support banner and open status have scoped dark styles");
+assert(darkThemeScope.includes("prefers-color-scheme: dark") && darkThemeScope.includes("customer-theme-portal"), "System theme and portal dialogs use the same palette");
+assert(darkEditor.includes("<CustomerThemeScope portal>"), "Profile edit modal inherits Customer theme");
 if (!process.exitCode) {
   console.log("Customer Web foundation and Settings responsive appearance regression passed.");
 }
