@@ -129,8 +129,9 @@ function digit(t){
  // RAJ and HAR are separate printed JCB 3DX chassis prefix variants.
  // The unlabeled-order fallback must be unambiguous in the vehicle block.
  const chassisCandidates=[...new Set([...section.matchAll(/\b((?:HAR|RAJ)3DX[A-Z0-9]{9,18})\b/gi)].map(m=>m[1].toUpperCase()))];
- const chassis=grab(t,/Chassis No\.\s*((?:HAR|RAJ)3DX[A-Z0-9]{9,18})/i)
-   ||(chassisCandidates.length===1?chassisCandidates[0]:null);
+ const chassis=chassisCandidates.length>1?null:
+   (grab(t,/Chassis No\.\s*((?:HAR|RAJ)3DX[A-Z0-9]{9,18})/i)
+    ||(chassisCandidates.length===1?chassisCandidates[0]:null));
  const idvSection=t.match(/YOUR VEHICLE IDV([\s\S]{0,1500}?)(?:OWN DAMAGE PREMIUM|LIABILITY PREMIUM)/i)?.[1]||'';
  const idv=amount(grab(idvSection,/\b(\d{6,9})\s+--/i))||amount(grab(idvSection,/\b(\d{6,9})\s+\d{6,9}\.00/i));
  let od=amountAfter(t,/Total\s+OD\s*\(?[^\n)]*\)?\s*(\d{2,8}(?:\.\d{2})?)/i);
