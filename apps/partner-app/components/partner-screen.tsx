@@ -49,6 +49,7 @@ export function PartnerScreen({
   resetScrollOnFocus = true,
   heroSearch,
   homeMotionScrollY,
+  homeMotionEnabled,
   stickyHeading,
   stickyControls,
   stickyHeaderNavy = false,
@@ -76,6 +77,7 @@ export function PartnerScreen({
   resetScrollOnFocus?: boolean;
   /** Optional native-driven parallax on Home only; does not alter other tabs. */
   homeMotionScrollY?: Animated.Value;
+  homeMotionEnabled?: boolean;
   stickyHeading?: string;
   stickyControls?: ReactNode;
   stickyHeaderNavy?: boolean;
@@ -115,7 +117,7 @@ export function PartnerScreen({
   const [unreadActivityCount, setUnreadActivityCount] = useState(0);
   const [homeSearchFocused, setHomeSearchFocused] = useState(false);
   const { motion: screenMotion } = useActivityMotion();
-  const homeMotion = isHomeHero && screenMotion;
+  const homeMotion = isHomeHero && screenMotion && (homeMotionEnabled ?? true);
   const heroGlow = useRef(new Animated.Value(0)).current;
   const homeReveal = useRef(new Animated.Value(1)).current;
   const bellMotion = useRef(new Animated.Value(0)).current;
