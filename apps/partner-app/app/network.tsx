@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Easing, LayoutAnimation, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
+import { useActivityMotion } from '@/components/activity-motion';
+import * as Haptics from 'expo-haptics';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStackBottomNavigation } from '@/components/partner-stack-bottom-navigation';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
@@ -22,6 +24,15 @@ const metricVisuals = {
 
 export default function NetworkScreen() {
   const router = useRouter();
+  const { motion } = useActivityMotion();
+  const [searchFocused, setSearchFocused] = useState(false);
+  const headerPulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!motion) { headerPulse.setValue(1); return; }
+    const animation = Animated.loop(Animated.sequence([0.7, 1].map(toValue => Animated.timing(headerPulse, { toValue, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== 'web', isInteraction: false }))));
+    animation.start();
+    return () => { animation.stop(); headerPulse.setValue(1); };
+  }, [motion, headerPulse]);
   const [data, setData] = useState<PartnerNetworkData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -74,7 +85,16 @@ export default function NetworkScreen() {
     return [...map.entries()].map(([key, value]) => ({ key, ...value }));
   }, [data, filter, query]);
 
+  const animateAccordion = useCallback(() => {
+    if (!motion || Platform.OS === 'web') return;
+    LayoutAnimation.configureNext({ duration: 250, create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity }, update: { type: LayoutAnimation.Types.easeInEaseOut }, delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity } });
+  }, [motion]);
+  const togglePartner = useCallback((id: string) => {
+    animateAccordion();
+    setExpanded(current => current === id ? null : id);
+  }, [animateAccordion]);
   const toggleSection = (sectionKey: string) => {
+    animateAccordion();
     setCollapsedSections((current) => {
       const next = new Set(current);
       if (next.has(sectionKey)) next.delete(sectionKey);
@@ -87,8 +107,8 @@ export default function NetworkScreen() {
     <PartnerScreen title="Commercial relationships" hideTopBar navyStatusBar bottomNavigationNavy bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />}>
       <View style={styles.pageCanvas}>
       <View style={styles.header}>
-        <View style={styles.headerAccentOne} />
-        <View style={styles.headerAccentTwo} />
+        <Animated.View pointerEvents="none" style={[styles.headerAccentOne, { opacity: headerPulse }]} />
+        <Animated.View pointerEvents="none" style={[styles.headerAccentTwo, { opacity: headerPulse }]} />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
@@ -132,7 +152,7 @@ export default function NetworkScreen() {
         <>
           <View style={styles.freshnessRow}>
             <Text style={styles.scope}>{humanize(data.scope_mode)} scope</Text>
-            <Text style={styles.updated}>{formatUpdatedAt(data.generated_at)}</Text>
+            <NetworkTimestamp value={data.generated_at} motion={motion} />
           </View>
 
           <View style={styles.summaryRow}>
@@ -141,6 +161,7 @@ export default function NetworkScreen() {
               iconColor="#5B35F5"
               iconBackground="#F0ECFF"
               value={data.total_partners}
+              motion={motion}
               label="Partner families"
             />
             <SummaryCard
@@ -148,6 +169,7 @@ export default function NetworkScreen() {
               iconColor="#0788E8"
               iconBackground="#EAF6FF"
               value={data.total_groups}
+              motion={motion}
               label="Groups"
             />
             <SummaryCard
@@ -155,15 +177,18 @@ export default function NetworkScreen() {
               iconColor="#1677FF"
               iconBackground="#EEF4FF"
               value={data.partners.reduce((sum, row) => sum + row.child_count, 0)}
+              motion={motion}
               label="POSP / MISP"
             />
           </View>
 
           <View style={styles.searchRow}>
-            <View style={styles.searchBox}>
+            <View style={[styles.searchBox, searchFocused && { borderColor: '#3986D7' }]}>
               <Ionicons name="search-outline" size={18} color="#60708B" />
               <TextInput
                 value={query}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
                 onChangeText={setQuery}
                 placeholder="Search partner by name or code..."
                 placeholderTextColor="#7D8799"
@@ -202,7 +227,7 @@ export default function NetworkScreen() {
               >
                 <Ionicons name="filter-outline" size={18} color="#17244A" />
                 <Text style={styles.filterText}>Filter</Text>
-                <Ionicons name={filterOpen ? 'chevron-up' : 'chevron-down'} size={15} color="#17244A" />
+                <NetworkChevron open={filterOpen} motion={motion} size={15} color="#17244A" />
               </Pressable>
             </PartnerAnchoredDropdown>
           </View>
@@ -233,20 +258,41 @@ export default function NetworkScreen() {
                         {section.owner ? ` · ${section.owner}` : ''}
                       </Text>
                     </View>
-                    <Ionicons name={sectionCollapsed ? 'chevron-down' : 'chevron-up'} size={16} color="#23486F" />
+                    <NetworkChevron open={!sectionCollapsed} motion={motion} size={16} color="#23486F" />
                   </Pressable>
 
                   {!sectionCollapsed ? (
                     <View style={styles.partnerList}>
-                      {section.rows.map((row) => {
-                        const isOpen = expanded === row.partner_id;
-                        return (
-                          <View key={row.partner_id} style={styles.partnerCard}>
+                      {section.rows.map((row) => (
+                        <NetworkPartnerCard key={row.partner_id} row={row} isOpen={expanded === row.partner_id} motion={motion} onToggle={togglePartner} />
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })
+          ) : (
+            <View style={styles.noResults}>
+              <Ionicons name="search-outline" size={22} color="#74829A" />
+              <Text style={styles.noResultsTitle}>No matching partners</Text>
+              <Text style={styles.noResultsText}>Try another name, partner code or filter.</Text>
+            </View>
+          )}
+        </>
+      )}
+      </View>
+    </PartnerScreen>
+  );
+}
+
+const NetworkPartnerCard = memo(function NetworkPartnerCard({ row, isOpen, motion, onToggle }: { row: PartnerNetworkRow; isOpen: boolean; motion: boolean; onToggle: (id: string) => void }) {
+  return (
+    <View style={styles.partnerCard}>
                             <Pressable
                               accessibilityRole="button"
                               accessibilityState={{ expanded: isOpen }}
                               accessibilityLabel={`${isOpen ? 'Collapse' : 'Expand'} ${row.partner_name} network`}
-                              onPress={() => setExpanded(isOpen ? null : row.partner_id)}
+                              onPress={() => onToggle(row.partner_id)}
                               style={({ pressed }) => [styles.partnerTop, pressed && styles.pressed]}
                             >
                               <View style={styles.partnerNode}>
@@ -257,20 +303,20 @@ export default function NetworkScreen() {
                                 <Text style={styles.partnerCode}>{row.partner_code}</Text>
                               </View>
                               <View style={styles.partnerRight}>
-                                <Text style={styles.partnerPremium}>{formatIndianCurrency(row.metrics.premium_this_month)}</Text>
+                                <Text style={styles.partnerPremium}><NetworkCount value={row.metrics.premium_this_month} currency motion={motion} /></Text>
                                 <Text style={styles.partnerPremiumLabel}>this month</Text>
                               </View>
-                              <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#3F6288" />
+                              <NetworkChevron open={isOpen} motion={motion} size={16} color="#3F6288" />
                             </Pressable>
 
                             <View style={styles.partnerMetrics}>
-                              <MetricStat visual={metricVisuals.policies} value={row.metrics.total_policies} label="Policies" />
+                              <MetricStat motion={motion} visual={metricVisuals.policies} value={row.metrics.total_policies} label="Policies" />
                               <View style={styles.metricDivider} />
-                              <MetricStat visual={metricVisuals.customers} value={row.metrics.total_customers} label="Customers" />
+                              <MetricStat motion={motion} visual={metricVisuals.customers} value={row.metrics.total_customers} label="Customers" />
                               <View style={styles.metricDivider} />
-                              <MetricStat visual={metricVisuals.renewals} value={row.metrics.renewals_30_days} label="Renewals" />
+                              <MetricStat motion={motion} visual={metricVisuals.renewals} value={row.metrics.renewals_30_days} label="Renewals" />
                               <View style={styles.metricDivider} />
-                              <MetricStat visual={metricVisuals.claims} value={row.metrics.active_claims} label="Claims" />
+                              <MetricStat motion={motion} visual={metricVisuals.claims} value={row.metrics.active_claims} label="Claims" />
                             </View>
 
                             {isOpen ? (
@@ -304,37 +350,73 @@ export default function NetworkScreen() {
                               </View>
                             ) : null}
                           </View>
-                        );
-                      })}
-                    </View>
-                  ) : null}
-                </View>
-              );
-            })
-          ) : (
-            <View style={styles.noResults}>
-              <Ionicons name="search-outline" size={22} color="#74829A" />
-              <Text style={styles.noResultsTitle}>No matching partners</Text>
-              <Text style={styles.noResultsText}>Try another name, partner code or filter.</Text>
-            </View>
-          )}
-        </>
-      )}
-      </View>
-    </PartnerScreen>
   );
+});
+
+function NetworkChevron({ open, motion, size, color }: { open: boolean; motion: boolean; size: number; color: string }) {
+  const progress = useRef(new Animated.Value(open ? 1 : 0)).current;
+  useEffect(() => {
+    if (!motion) { progress.setValue(open ? 1 : 0); return; }
+    const animation = Animated.spring(progress, { toValue: open ? 1 : 0, stiffness: 210, damping: 23, mass: 0.8, overshootClamping: true, useNativeDriver: Platform.OS !== 'web', isInteraction: false });
+    animation.start();
+    return () => animation.stop();
+  }, [open, motion, progress]);
+  return <Animated.View style={{ transform: [{ rotate: progress.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }] }}><Ionicons name="chevron-down" size={size} color={color} /></Animated.View>;
+}
+
+// Initial values remain accurate; only successful changes animate. No per-row loops.
+function NetworkCount({ value, currency, motion }: { value: number | string; currency?: boolean; motion: boolean }) {
+  const target = Number(value);
+  const previous = useRef(target);
+  const [shown, setShown] = useState(target);
+  useEffect(() => {
+    if (!motion || !Number.isFinite(target) || !Number.isFinite(previous.current)) { previous.current = target; setShown(target); return; }
+    const start = previous.current;
+    if (start === target) return;
+    let frame = 0, first: number | undefined, last = -Infinity;
+    const tick = (now: number) => {
+      first ??= now;
+      const progress = Math.min(1, (now - first) / 650);
+      if (now - last >= 80 || progress === 1) {
+        last = now;
+        const next = start + (target - start) * Easing.out(Easing.cubic)(progress);
+        previous.current = next; setShown(next);
+      }
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target, motion]);
+  const display = motion && Number.isFinite(shown) ? shown : target;
+  return <>{!Number.isFinite(target) ? '—' : currency ? formatIndianCurrency(display) : String(Math.round(display))}</>;
+}
+function NetworkTimestamp({ value, motion }: { value: string; motion: boolean }) {
+  const opacity = useRef(new Animated.Value(1)).current;
+  const previous = useRef(value);
+  useEffect(() => {
+    if (previous.current === value) return;
+    previous.current = value;
+    if (!motion) { opacity.setValue(1); return; }
+    opacity.setValue(0.6);
+    const animation = Animated.timing(opacity, { toValue: 1, duration: 350, useNativeDriver: Platform.OS !== 'web', isInteraction: false });
+    animation.start();
+    return () => { animation.stop(); opacity.setValue(1); };
+  }, [value, motion, opacity]);
+  return <Animated.Text style={[styles.updated, { opacity }]}>{formatUpdatedAt(value)}</Animated.Text>;
 }
 
 function SummaryCard({
   icon,
   iconColor,
   iconBackground,
+  motion,
   value,
   label,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   iconColor: string;
   iconBackground: string;
+  motion: boolean;
   value: number;
   label: string;
 }) {
@@ -344,18 +426,20 @@ function SummaryCard({
         <Ionicons name={icon} size={18} color={iconColor} />
       </View>
       <View style={styles.summaryCopy}>
-        <Text style={styles.summaryValue}>{value}</Text>
+        <Text style={styles.summaryValue}><NetworkCount value={value} motion={motion} /></Text>
         <Text numberOfLines={1} style={styles.summaryLabel}>{label}</Text>
       </View>
     </View>
   );
 }
 
-function MetricStat({
+const MetricStat = memo(function MetricStat({
+  motion,
   visual,
   value,
   label,
 }: {
+  motion: boolean;
   visual: { icon: keyof typeof Ionicons.glyphMap; color: string; background: string };
   value: number;
   label: string;
@@ -366,16 +450,16 @@ function MetricStat({
         <Ionicons name={visual.icon} size={14} color={visual.color} />
       </View>
       <View style={styles.metricCopy}>
-        <Text style={styles.metricValue}>{value}</Text>
+        <Text style={styles.metricValue}><NetworkCount value={value} motion={motion} /></Text>
         <Text style={styles.metricLabel}>{label}</Text>
       </View>
     </View>
   );
-}
+});
 
 function FilterOption({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.filterOption, pressed && styles.pressed]}>
+    <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={() => { if (Platform.OS !== 'web') void Haptics.selectionAsync().catch(() => {}); onPress(); }} style={({ pressed }) => [styles.filterOption, pressed && styles.pressed]}>
       <Text style={[styles.filterOptionText, selected && styles.filterOptionSelected]}>{label}</Text>
       {selected ? <Ionicons name="checkmark" size={16} color="#0C67D8" /> : null}
     </Pressable>
@@ -458,7 +542,7 @@ const styles = StyleSheet.create({
   },
   summaryIcon: { width: 31, height: 31, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   summaryCopy: { flex: 1, minWidth: 0 },
-  summaryValue: { color: '#101828', fontSize: 20, lineHeight: 22, fontWeight: '700' },
+  summaryValue: { fontVariant: ['tabular-nums'], color: '#101828', fontSize: 20, lineHeight: 22, fontWeight: '700' },
   summaryLabel: { marginTop: 2, color: '#59677B', fontSize: 9, lineHeight: 11 },
 
   searchRow: { position: 'relative', zIndex: 5, flexDirection: 'row', gap: 8, marginBottom: 9 },
@@ -541,14 +625,14 @@ const styles = StyleSheet.create({
   partnerName: { color: '#161D2A', fontSize: 11, lineHeight: 14, fontWeight: '700' },
   partnerCode: { marginTop: 2, color: '#617086', fontSize: 9, lineHeight: 11 },
   partnerRight: { alignItems: 'flex-end' },
-  partnerPremium: { color: '#101828', fontSize: 11, lineHeight: 14, fontWeight: '700' },
+  partnerPremium: { fontVariant: ['tabular-nums'], color: '#101828', fontSize: 11, lineHeight: 14, fontWeight: '700' },
   partnerPremiumLabel: { marginTop: 1, color: '#69788E', fontSize: 8, lineHeight: 10 },
 
   partnerMetrics: { minHeight: 50, paddingHorizontal: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E6EBF2', flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF' },
   metricStat: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   metricIcon: { width: 25, height: 25, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   metricCopy: { minWidth: 0 },
-  metricValue: { color: '#111827', fontSize: 11, lineHeight: 12, fontWeight: '700' },
+  metricValue: { fontVariant: ['tabular-nums'], color: '#111827', fontSize: 11, lineHeight: 12, fontWeight: '700' },
   metricLabel: { marginTop: 2, color: '#69778B', fontSize: 7.5, lineHeight: 9 },
   metricDivider: { width: StyleSheet.hairlineWidth, height: 30, backgroundColor: '#E4EAF2' },
 
