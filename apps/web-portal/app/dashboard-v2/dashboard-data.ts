@@ -540,19 +540,21 @@ export async function getDashboardCurrentData(
 
   const portfolio = access.viewPolicies && !policyResult.error
     ? (() => {
-        const normalized = policies.map((row) => (row.business_line ?? "").trim().toLowerCase().replaceAll("-", " "));
+        // Use the same existing end-date rule for both the headline and its breakdown.
+        const activePolicies = policies.filter((row) => row.end_date >= todayKey);
+        const normalized = activePolicies.map((row) => (row.business_line ?? "").trim().toLowerCase().replaceAll("-", " "));
         const motor = normalized.filter((value) => value === "motor").length;
         const life = normalized.filter((value) => value === "life").length;
         const nonMotor = normalized.filter((value) => value === "non motor").length;
         const health = normalized.filter((value) => value === "health").length;
         return {
           total: policies.length,
-          active: policies.filter((row) => row.end_date >= todayKey).length,
+          active: activePolicies.length,
           motor,
           life,
           nonMotor,
           health,
-          other: Math.max(policies.length - motor - life - nonMotor - health, 0),
+          other: Math.max(activePolicies.length - motor - life - nonMotor - health, 0),
         };
       })()
     : null;

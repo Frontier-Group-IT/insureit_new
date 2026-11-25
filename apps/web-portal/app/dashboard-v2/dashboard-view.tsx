@@ -14,6 +14,7 @@ import type {
   DashboardBusinessRankRow,
 } from "./dashboard-business";
 import { BusinessFilterPopover } from "./dashboard-business-filter-popover";
+import type { LifeHealthCaseSummary } from "@/lib/life-health-case-summary";
 import type { PolicyIntakeReviewSummary } from "@/lib/policy-intake-review-summary";
 
 type Props = {
@@ -24,6 +25,7 @@ type Props = {
   canCreatePolicyIntake: boolean;
   showRmPerformanceButton: boolean;
   intakeAttention?: PolicyIntakeReviewSummary | null;
+  lifeTeamCases?: LifeHealthCaseSummary | null;
 };
 
 type AttentionSignal = {
@@ -50,8 +52,9 @@ type RailMetric = {
   icon: string;
 };
 
-export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, canCreatePolicyIntake, showRmPerformanceButton, intakeAttention = null }: Props) {
-  const attention = buildAttention(data, access, business, intakeAttention);
+export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, canCreatePolicyIntake, showRmPerformanceButton, intakeAttention = null, lifeTeamCases }: Props) {
+  const attention = buildAttention(data, access, business, intakeAttention, lifeTeamCases);
+  const warnings = [...data.warnings, ...business.warnings, ...(lifeTeamCases === null ? ["Life / Health case counts could not be refreshed."] : [])];
   const rail = buildMetricRail(data, access, business);
   const renewalTotal = data.renewals
     ? data.renewals.expired + data.renewals.due0to7 + data.renewals.due8to15 + data.renewals.due16to30 + data.renewals.due31to45
@@ -114,9 +117,9 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
         </div>
       </header>
 
-      {[...data.warnings, ...business.warnings].length ? (
+      {warnings.length ? (
         <div className="mt-4 border-l-2 border-amber-400 bg-amber-50 px-4 py-2.5 text-[9px] font-semibold text-amber-900">
-          {[...data.warnings, ...business.warnings].join(" ")}
+          {warnings.join(" ")}
         </div>
       ) : null}
 
@@ -212,7 +215,7 @@ function buildMetricRail(data: DashboardCurrentData, access: DashboardAccess, _b
   return metrics.slice(0, 6);
 }
 
-function buildAttention(data: DashboardCurrentData, access: DashboardAccess, business: DashboardBusinessData, intakeAttention: PolicyIntakeReviewSummary | null): AttentionSignal[] {
+function buildAttention(data: DashboardCurrentData, access: DashboardAccess, business: DashboardBusinessData, intakeAttention: PolicyIntakeReviewSummary | null, lifeTeamCases?: LifeHealthCaseSummary | null): AttentionSignal[] {
   const rows: AttentionSignal[] = [];
   if (data.intermediaries?.pendingApplications) {
     rows.push({
@@ -275,6 +278,17 @@ function buildAttention(data: DashboardCurrentData, access: DashboardAccess, bus
       icon: DASHBOARD_ICON_ASSETS.policyIntakeReview,
       tone: "violet",
       intakeCounts: { actionRequired: intakeAttention.actionRequired, inReview: intakeAttention.inReview },
+    });
+  }
+
+  if (access.viewPolicies && lifeTeamCases) {
+    rows.push({
+      label: "Life / Health pending",
+      value: lifeTeamCases.pending,
+      detail: `All time: ${lifeTeamCases.all.toLocaleString("en-IN")} total · ${lifeTeamCases.issued.toLocaleString("en-IN")} issued · ${lifeTeamCases.rejected.toLocaleString("en-IN")} rejected`,
+      href: "/policies/life-health-cases?status=pending",
+      icon: DASHBOARD_ICON_ASSETS.policyIntake,
+      tone: lifeTeamCases.pending > 0 ? "amber" : "slate",
     });
   }
 
@@ -405,6 +419,13 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
             <MixColumn title={business.businessLineMix.length > 1 ? "Business line" : "Business mix"} rows={business.businessLineMix} divided />
           )}
         </div>
+
+        {business.lifeTeamProduction ? (
+          <div className="grid border-t border-[#E7ECF2] md:grid-cols-2">
+            <MixColumn title="Business ownership" rows={business.lifeTeamProduction.ownership} divided={false} />
+            <MixColumn title="Team RM contribution" rows={business.lifeTeamProduction.rms} divided />
+          </div>
+        ) : null}
 
         {commercial && business.topProducers.length ? (
           <div className={`grid border-t border-[#DDE4EC] ${business.topGroups.length ? "xl:grid-cols-[1.35fr_.65fr]" : "grid-cols-1"}`}>
