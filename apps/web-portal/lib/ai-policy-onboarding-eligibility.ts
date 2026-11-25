@@ -216,8 +216,12 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
     const fields = new Map(input.fields.map(field => [field.key, field.value.trim()]));
     // The old kW-only requirement is valid for ICICI 3005 and electric
     // two-wheelers, but not for petrol/diesel Tata AIG private cars.
-    const saod = parser?.family==="tata_private_car"
-      && fields.get("policy_product")?.toLowerCase()==="stand-alone own damage";
+    const saod = (parser?.family==="tata_private_car"
+      && fields.get("policy_product")?.toLowerCase()==="stand-alone own damage")
+      // Oriental SAOD is a new OD policy, never a new TP issue. Its verified
+      // product-specific parser deliberately emits no new TP dates.
+      || (input.parserId==="oriental_private_car_standalone_od_native_pdf"
+        && fields.get("policy_product")==="Standalone Own Damage - Private Car");
     const thirdPartyOnly = parser?.family==="tata_private_car"
       && fields.get("policy_product")?.toLowerCase()==="third-party only";
     const required: string[]=[...requiredFields].filter(key =>
