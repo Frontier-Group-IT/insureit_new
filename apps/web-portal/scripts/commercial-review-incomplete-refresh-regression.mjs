@@ -7,7 +7,7 @@ const actions = await readFile(new URL("../app/policies/commercial-review/action
 assert.match(client, /const incompleteStatuses = new Set<LedgerStatus>\(\["not_entered", "needs_review"\]\)/, "Incomplete is status-based, not amount-based.");
 assert.match(client, /const \[savedStatuses, setSavedStatuses\]/, "Successful saves must update visible statuses immediately.");
 assert.match(client, /useEffect\(\(\) => \{[\s\S]*?setSavedStatuses\(\{\}\);[\s\S]*?\}, \[rows\]\)/, "Server refresh must replace optimistic status.");
-assert.match(client, /displayedRows\.reduce<Record<LedgerStatus, number>>/, "Counters must use the displayed statuses.");
+assert.match(client, /scopedRows\.reduce<Record<LedgerStatus, number>>/, "Counters must use the displayed statuses.");
 assert.match(client, /return displayedRows\.filter\(\(row\) =>/, "Filters must use the displayed statuses.");
 assert.match(client, /reflectSavedStatus\(\[row\.id\], side, "entered"\);/, "Row save must leave incomplete immediately.");
 assert.match(client, /if \(result\.updated === policyIds\.length/, "Bulk optimistic status must be restricted to fully updated batches.");
@@ -48,3 +48,34 @@ assert.ok(client.includes('${filterStyles.compactFilter}'));
 assert.equal((client.match(/className=\{compactFilterClass\}/g) ?? []).length, 6);
 assert.match(filterCss, /select\.compactFilter:focus\s*\{[^}]*border-color: #D8DEE9;[^}]*box-shadow: none;[^}]*outline: none;/);
 assert.match(filterCss, /select\.compactFilter:focus-visible\s*\{[^}]*border-color: #315B9A;[^}]*box-shadow: inset/);
+
+assert.match(client, /const scopedRows = useMemo\([\s\S]*?return displayedRows\.filter/);
+assert.match(client, /const filteredRows = useMemo\(\(\) => scopedRows\.filter/);
+assert.match(client, /const completeCount = scopedRows\.length - incompleteCount/);
+assert.match(client, /amountPendingReviewCount = useMemo\(\(\) => scopedRows\.filter/);
+// Execute the actual classifier with the shared registration validator, using the
+// existing TypeScript dependency to support extensionless imports in this JS test.
+const { default: ts } = await import("typescript");
+const validatorSource = await readFile(new URL("../lib/vehicle-registration.ts", import.meta.url), "utf8");
+const asModule = (source) => "data:text/javascript;base64," + Buffer.from(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText).toString("base64");
+const { classifyCommercialRegistration, matchesCommercialRegistration } = await import(asModule(registrationSource.replace("../../../lib/vehicle-registration", asModule(validatorSource))));
+for (const [status, number, expected] of [
+  ["ACTIVE", "MP20AB1234", "rollover"],
+  [" Active ", "MP20AB1234", "rollover"],
+  ["registered", "MP20AB1234", "rollover"],
+  [null, "MP20AB1234", "rollover"],
+  ["Na", "USK5073", "rollover"],
+  [null, "24BH3275H", "rollover"],
+  ["registration_pending", "MP20AB1234", "new"],
+  ["ACTIVE", "NEW-MAT123", "new"],
+  [null, "PENDING-MAT123", "new"],
+  [null, "", null],
+  [null, "UNKNOWN", null],
+  ["suspended", "MP20AB1234", null],
+]) {
+  assert.equal(classifyCommercialRegistration({ registration_status: status, vehicle_no: number }), expected);
+}
+assert.equal(matchesCommercialRegistration(null, "rollover"), false);
+assert.equal(matchesCommercialRegistration("rollover", "rollover"), true);
+assert.equal(matchesCommercialRegistration("new", "rollover"), false);
+console.log("Commercial registration and scoped counter regression passed.");
