@@ -106,7 +106,13 @@ function insurerForText(head: string): Insurer | null {
   if (/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(issuer)
       && /PRIVATE CAR\s*-\s*PACKAGE POLICY/i.test(product))
     matches.push("united_india_private_car_package_native_pdf");
-  if (/THE ORIENTAL INSURANCE COMPANY LIMITED/i.test(issuer) && /GCCV-PUBLIC CARRIERS/i.test(product))
+  // When the exact new GCCV product is enabled, it must not compete
+  // with the legacy Oriental GCCV classifier and fall through to ICICI.
+  // Preserve the legacy route for every other Oriental policy layout.
+  const heldOriental=process.env.INSUREIT_ENABLE_HELD_INSURER_CANDIDATES==="1"
+    ?recognizeHeldInsurerLayout(head):null;
+  if (/THE ORIENTAL INSURANCE COMPANY LIMITED/i.test(issuer) && /GCCV-PUBLIC CARRIERS/i.test(product)
+      &&heldOriental!=="oriental_gccv_package_native_pdf")
     matches.push("oriental_gccv_native_pdf");
   // Specific product extensions precede the old CV classifiers. They never
   // route an existing Digit Commercial Vehicle or United GCV layout here.
@@ -129,8 +135,7 @@ function insurerForText(head: string): Insurer | null {
   // An explicit disabled-by-default switch keeps old insurer routes intact
   // until isolated n8n branches and downstream handoff pass original-PDF tests.
   if (process.env.INSUREIT_ENABLE_HELD_INSURER_CANDIDATES === "1") {
-    const held=recognizeHeldInsurerLayout(head);
-    if(held)matches.push(held);
+    if(heldOriental)matches.push(heldOriental);
   }
   return matches.length === 1 ? matches[0] : null;
 }
