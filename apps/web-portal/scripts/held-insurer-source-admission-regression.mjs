@@ -110,5 +110,6 @@ console.log("Held new insurers: strict source response/CPA split/optional indepe
 
 const adapter=fs.readFileSync(path.resolve(here,"../lib/policy-nontata-commercial-n8n.ts"),"utf8");
 assert(adapter.includes('INSUREIT_ENABLE_HELD_INSURER_CANDIDATES === "1"'),"Candidate classifier must remain disabled by default");
-assert(adapter.includes("assessHeldInsurerCandidate(payload,ids)"),"Candidate response must undergo strict admission");
+assert(adapter.includes("assessHeldInsurerCandidate(verifiedPayload,ids)"),"Candidate response must undergo strict admission");
+assert(adapter.includes("verifyOrientalCmsSigningDate(new Uint8Array(await file.arrayBuffer()))"),"Oriental date must be verified from exact source bytes");
 assert(adapter.includes("candidateCanonicalPremium:decision.canonicalPremium"),"Source-certified CPA split must survive adapter");
