@@ -15,7 +15,7 @@ export function readCustomerTheme(): CustomerTheme {
   catch { return "light"; }
 }
 
-export function CustomerThemeScope({ children }: { children: ReactNode }) {
+export function CustomerThemeScope({ children, portal = false }: { children: ReactNode; portal?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
@@ -40,5 +40,5 @@ export function CustomerThemeScope({ children }: { children: ReactNode }) {
       media.removeEventListener("change", apply);
     };
   }, []);
-  return <div ref={ref} data-customer-theme="light" className="customer-compact min-h-screen bg-[#F6F8FB] text-[#10213D]">{children}</div>;
+  return <div ref={ref} data-customer-theme="light" className={portal ? "customer-compact customer-theme-portal" : "customer-compact min-h-screen bg-[#F6F8FB] text-[#10213D]"}>{children}</div>;
 }
