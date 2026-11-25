@@ -21,9 +21,9 @@ assert.ok(asset.includes(Buffer.from('tRNS')), 'Insurer header 3D icon must have
 assert.doesNotMatch(screen, /source=\{PartnerAssets\.actions\.businessPerformance\}/, 'Do not reuse opaque white-tile performance PNG');
 
 assert.match(screen, /accessibilityLabel="Date Range"/, 'Calendar button remains accessible inside search');
-assert.match(screen, /<View style=\{styles\.dateSection\}>\s*<View style=\{styles\.headerSearch\}>/, 'Search is in the reporting filter area');
+assert.ok(screen.includes('styles.dateSection') && screen.includes('styles.headerSearch, searchFocused'), 'Search remains in reporting filter area');
 assert.match(screen, /<TextInput value=\{search\}[\s\S]*?style=\{styles\.headerSearchInput\}/, 'Existing insurer search state and input remain');
-assert.match(screen, /style=\{styles\.calendarTrigger\}>\s*<Ionicons name="calendar-outline"/, 'Right-side calendar button is inside the search field');
+assert.ok(screen.includes('style={styles.calendarTrigger}') && screen.includes('pressCalendar(0.92)'), 'Calendar remains inside search with press feedback');
 assert.match(screen, /<View style=\{styles\.selectedRangeRow\}>[\s\S]*?formatRange\(from, to\)/, 'Selected dates appear beneath search');
 assert.match(screen, /headerSearch: \{ width: '100%', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD8E7', borderRadius: 999/, 'Search is a full-width rounded pill');
 assert.match(screen, /dateSection: \{ marginHorizontal: 14, marginTop: 14/, 'Search has equal left and right margins');
@@ -72,3 +72,18 @@ assert.match(screen, /if \(sortKey === 'retention_desc' && canViewCommercials\)/
 assert.match(screen, /accessibilityLabel=\{\`Sort by \$\{column\.label\}\`\}/, 'Column header sorting preserved');
 assert.doesNotMatch(screen, /arrow-forward|summaryCard/, 'No row navigation or summary card');
 console.log('Partner insurer combined search/date filter and compact portrait register regression passed.');
+
+assert.match(screen, /useActivityMotion\(\)/, 'Respect reduced motion and focus');
+assert.match(screen, /const ENTRANCE_ROWS = 6/, 'Bound initial animations');
+assert.match(screen, /initialRows\.current = new Map/, 'Stable insurer identity controls both halves');
+assert.match(screen, /nestedScrollEnabled/, 'Native nested horizontal scroll');
+assert.match(screen, /scrollMetrics\.current\.content = width/, 'Measure horizontal overflow');
+assert.match(screen, /pointerEvents="none" accessibilityElementsHidden/, 'Edge decoration does not intercept taps');
+assert.match(screen, /initialLoading \? "Loading insurers…"/, 'Loading does not display a false zero count');
+assert.match(screen, /<ReportValue text=\{amount == null \? '—' : formatInsurerCompactRupees\(amount\)\}/, 'Financial reveal preserves exact display formatter');
+
+assert.match(screen, /fixedHeader=\{stickyTableHeader\}/, 'Sticky heading is overlaid without changing the parent scroll layout');
+assert.match(screen, /stickyMetricsOffset\.setValue\(scrollMetrics\.current\.x\)/, 'Sticky metric headings track horizontal scroll');
+assert.match(screen, /stickyTableVisible \?/, 'Sticky heading only renders while the table extends beneath the viewport');
+assert.match(screen, /style=\{styles\.stickyHeaderOverlay\}/, 'Sticky header has a fixed visual layer');
+assert.match(screen, /resetScrollOnFocus=\{false\}/, 'Preserve report scroll position on tab focus');
