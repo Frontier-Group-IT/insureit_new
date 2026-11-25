@@ -71,16 +71,20 @@ export async function runAutoBookingBatch():Promise<{
   const operatorToken=await verifiedOperatorToken();
   // Fail closed BEFORE acquiring any irreversible ledger claims if the
   // dedicated actor's live IT permissions were revoked or misconfigured.
-  await withVerifiedPartnerApiToken(operatorToken,async()=>{
+  const operatorId=await withVerifiedPartnerApiToken(operatorToken,async()=>{
     const actor=await requireCapability("manage_system","approve");
     if(actor.role!=="it_super_user"&&actor.role!=="super_admin")
       throw Error("auto_booking_operator_role_invalid");
     await requirePolicyIntakeReviewer();
     await requirePolicyIntakeFinalizer();
     await requirePolicyCreator();
+    if(!UUID.test(actor.id))throw Error("auto_booking_operator_id_invalid");
+    return actor.id;
   });
   const admin=createSupabaseAdminClient();
-  const {data,error}=await admin.rpc("claim_ai_auto_booking_v1",{p_limit:3});
+  const {data,error}=await admin.rpc("claim_ai_auto_booking_v1",{
+    p_operator_profile_id:operatorId,p_limit:3,
+  });
   if(error)throw Error("auto_booking_claim_unavailable");
   const claims=(data??[]) as Claim[];
   let booked=0,review=0,uncertain=0;
