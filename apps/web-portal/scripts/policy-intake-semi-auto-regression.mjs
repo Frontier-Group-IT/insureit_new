@@ -665,14 +665,19 @@ assert(workbenchText.includes("Resolve policy exceptions")
   && workbenchText.includes("Confirm bulk Policy registration")
   && workbenchText.includes("convertVerifiedAiIntake(item.id,true)")
   && workbenchText.includes("queueActive)"),
-  "Queue UI must show an operator-confirmed, bounded bulk conversion that reuses canonical per-Intake preflight");
+  "Queue UI must retain operator-confirmed fallback bulk conversion when automatic booking is disabled");
+assert(workbenchText.includes("Automatic booking enabled")
+  && workbenchText.includes("autoBooking?.configured")
+  && workbenchText.includes("Convert Verified Candidates"),
+  "Enabled automation must replace the manual button, retaining an explicit fallback only when disabled");
 assert(actionsText.includes("reprocessAiPolicyIntake")
   && actionsText.includes("requireDevelopmentPolicyOperator(id)"),
   "Each manual background reprocess request must require the current authorized reviewer");
 const vercelConfig=JSON.parse(text("vercel.json"));
 assert.deepEqual(vercelConfig.crons,[
   {path:"/api/internal/ai-policy-onboarding/process",schedule:"* * * * *"},
-], "Vercel Pro should provide a one-minute durable fallback, separate from immediate Intake hooks");
+  {path:"/api/internal/ai-policy-onboarding/auto-book",schedule:"* * * * *"},
+], "Vercel Pro must schedule extraction and guarded canonical booking separately");
 assert(routeText.includes("export async function GET(request: NextRequest)")
   && routeText.includes("authorized(request, process.env.CRON_SECRET??")
   && routeText.includes("secret.length < 32")
