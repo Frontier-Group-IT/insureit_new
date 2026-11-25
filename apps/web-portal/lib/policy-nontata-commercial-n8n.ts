@@ -2,19 +2,28 @@ import "server-only";
 
 import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
 import { enrichIffcoCertifiedMachineFamily } from "@/lib/policy-iffco-machine-family";
+import { assessHeldInsurerCandidate, recognizeHeldInsurerLayout } from "@/lib/policy-held-insurer-candidate-admission";
+import { verifyOrientalCmsSigningDate, type OrientalSignedIssuanceEvidence } from "@/lib/policy-oriental-cms-issuance";
 
 type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "united_india_gcv_punjab_split_gst_native_pdf" | "united_india_private_car_package_native_pdf" | "oriental_gccv_native_pdf";
 type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf" | "hdfc_ergo_two_wheeler_tp_native_pdf" | "sbi_general_private_car_package_native_pdf";
-type Insurer = ExistingInsurer | NewProductVariant;
+type HeldInsurer = "magma_private_car_package_native_pdf" | "national_private_car_liability_only_native_pdf"
+  | "oriental_private_car_standalone_od_native_pdf" | "oriental_gccv_package_native_pdf";
+type Insurer = ExistingInsurer | NewProductVariant | HeldInsurer;
+const HELD_INSURERS = new Set<string>([
+  "magma_private_car_package_native_pdf","national_private_car_liability_only_native_pdf",
+  "oriental_private_car_standalone_od_native_pdf","oriental_gccv_package_native_pdf",
+]);
 const NEW_VARIANTS = new Set<Insurer>(["zurich_kotak_private_car_tp_native_pdf","go_digit_two_wheeler_od_native_pdf","united_india_tractor_tp_native_pdf","hdfc_ergo_two_wheeler_tp_native_pdf","sbi_general_private_car_package_native_pdf"]);
 type OcrField = { key: string; label: string; value: string; confidence: null; page: number | null; evidence: string };
 export type NonTataCommercialRead = {
   parserId: Insurer;
-  parserVersion: "non-tata-cv-v2" | "insureit-product-extension-v1";
+  parserVersion: "non-tata-cv-v2" | "insureit-product-extension-v1" | "source-candidate-1";
   fields: OcrField[];
   warnings: string[];
   checksPassed: number;
   premium: { od: number; tp: number; net: number; gst: number; gross: number; cpa?: number; addOn?: number; odBasic?: number; ncbPercent?: number; ncbDiscount?: number; odBasicAfterNcb?: number };
+  candidateCanonicalPremium?: {od:string;tp:string;addOnPremium:string;cpa:string;cpaOpted:"Yes"|"No"};
 };
 // Use the SAME approved self-hosted webhook as the production ICICI/Tata bridge.
 // Commercial policy verification stays isolated by the insurer classifier and its
@@ -117,6 +126,12 @@ function insurerForText(head: string): Insurer | null {
   if (/SBI General Insurance Company Limited/i.test(issuer)
       && /Private Car Insurance Policy\s*-\s*Package/i.test(product))
     matches.push("sbi_general_private_car_package_native_pdf");
+  // An explicit disabled-by-default switch keeps old insurer routes intact
+  // until isolated n8n branches and downstream handoff pass original-PDF tests.
+  if (process.env.INSUREIT_ENABLE_HELD_INSURER_CANDIDATES === "1") {
+    const held=recognizeHeldInsurerLayout(head);
+    if(held)matches.push(held);
+  }
   return matches.length === 1 ? matches[0] : null;
 }
 
@@ -266,7 +281,60 @@ function validateNewVariant(
       ncbDiscount:ncbDiscount as number,odBasicAfterNcb:effectiveOd as number}:{})}};
 }
 
-function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | "document_id" | "request_id", string>): NonTataCommercialRead {
+function validate(payload: unknown, insurer: Insurer,
+  ids: Record<"intake_id" | "document_id" | "request_id", string>,
+  orientalSignature?:OrientalSignedIssuanceEvidence|null,
+): NonTataCommercialRead {
+  if(HELD_INSURERS.has(insurer)){
+    // Oriental's PDF-native text can expose an issue date only through an
+    // actual, integrity-verified, full-document detached CMS signature.
+    // A 'Policy Printed On' timestamp or /M without valid CMS is never enough.
+    const oriental=insurer==="oriental_private_car_standalone_od_native_pdf"
+      ||insurer==="oriental_gccv_package_native_pdf";
+    let verifiedPayload=payload;
+    if(oriental&&orientalSignature&&object(payload)
+      &&payload.parser_id===insurer
+      &&payload.ok===false&&payload.validation_passed===false
+      &&object(payload.checks)&&Object.keys(payload.checks).length===18
+      &&payload.checks.printed_issuance_or_verified_image_date===false
+      &&Object.entries(payload.checks).every(([key,value])=>
+        key==="printed_issuance_or_verified_image_date"?value===false:value===true)
+      &&Array.isArray(payload.warnings)&&payload.warnings.length===1
+      &&payload.warnings[0]==="Review required: printed_issuance_or_verified_image_date"
+      &&Array.isArray(payload.fields)
+      &&!payload.fields.some((field:unknown)=>object(field)&&field.key==="policy_issuance_date")){
+      verifiedPayload={...payload,ok:true,validation_passed:true,
+        checks:{...payload.checks,printed_issuance_or_verified_image_date:true},
+        warnings:[],
+        fields:[...payload.fields,{key:"policy_issuance_date",label:"policy_issuance_date",
+          value:orientalSignature.date,confidence:null,page:null,
+          evidence:"Oriental cryptographically verified embedded PDF signature date"}]};
+    }
+    // No new response may cross the established source, identity and
+    // premium barrier merely because its n8n parser returned ok:true.
+    const decision=assessHeldInsurerCandidate(verifiedPayload,ids);
+    if(!decision.accepted||decision.parserId!==insurer||!decision.canonicalPremium)
+      throw new Error(decision.reason||"n8n_held_candidate_unverified");
+    if(!object(verifiedPayload)||!Array.isArray(verifiedPayload.fields)
+      ||!object(verifiedPayload.premium_components))
+      throw new Error("n8n_held_candidate_response_invalid");
+    const fields:OcrField[]=verifiedPayload.fields.map((raw:unknown)=>{
+      if(!object(raw)||typeof raw.key!=="string"||!ALLOWED_FIELDS.has(raw.key)
+        ||typeof raw.label!=="string"||raw.label.length>100
+        ||typeof raw.value!=="string"||raw.value.length>300
+        ||raw.confidence!==null||(raw.page!==null&&(!Number.isInteger(raw.page)||(raw.page as number)<1||(raw.page as number)>10))
+        ||typeof raw.evidence!=="string"||raw.evidence.length>180)
+        throw new Error("n8n_held_candidate_field_shape_invalid");
+      return {key:raw.key,label:raw.label,value:raw.value,confidence:null,
+        page:raw.page as number|null,evidence:raw.evidence};
+    });
+    const p=verifiedPayload.premium_components;
+    return {parserId:insurer as HeldInsurer,parserVersion:"source-candidate-1",
+      fields,warnings:[],checksPassed:18,
+      premium:{od:p.od as number,tp:p.tp as number,net:p.net as number,
+        gst:p.gst as number,gross:p.gross as number,cpa:p.cpa as number},
+      candidateCanonicalPremium:decision.canonicalPremium};
+  }
   if(NEW_VARIANTS.has(insurer))return validateNewVariant(payload,insurer as NewProductVariant,ids);
   if (!object(payload) || payload.contract_version !== "1"
       || payload.parser_id !== insurer || payload.parser_version !== "non-tata-cv-v2"
@@ -418,7 +486,14 @@ export async function tryReadNonTataCommercialPolicy(
     });
     if (!response.ok) throw new Error("n8n_nontata_http_" + response.status);
     const payload: unknown = await response.json();
-    return validate(payload, insurer, requestIds);
+    // Signature must be verified against the EXACT File bytes sent to n8n.
+    // No decoded text, PDF print date, receipt, or caller-supplied date can
+    // authorize this fallback. Unverifiable originals remain in review.
+    const signature=(insurer==="oriental_private_car_standalone_od_native_pdf"
+      ||insurer==="oriental_gccv_package_native_pdf")
+      ?await verifyOrientalCmsSigningDate(new Uint8Array(await file.arrayBuffer()))
+      :null;
+    return validate(payload, insurer, requestIds, signature);
   } finally { clearTimeout(timeout); }
 }
 
