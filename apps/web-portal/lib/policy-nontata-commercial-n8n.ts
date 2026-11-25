@@ -172,9 +172,16 @@ export async function recognizeNonTataCommercialPdf(file: File): Promise<Insurer
   const initial=insurerForText(text);
   // Only UIIC GCV needs late-page financial labels for the split-GST
   // sub-profile. Never broaden other insurer classification.
-  if(initial==="united_india_gcv_native_pdf")
+  if(initial==="united_india_gcv_native_pdf"){
+    // ExtractNativePdfTextPages normally returns two pages, irrespective of
+    // pages.slice(0,24). The original Punjab PDFs print the split GST later.
+    // Only generic UIIC GCV gets a bounded full-document source-evidence scan.
+    const extended=await extractNativePdfTextPages(bytes,{
+      maxTextPages:16,extendedTimeout:true,
+    });
     return refineUiicPunjabSplitFromSource(initial,
-      pages.slice(0,24).map(page=>page.text).join("\n")) as Insurer;
+      extended.map(page=>page.text).join("\n")) as Insurer;
+  }
   return initial;
 }
 
