@@ -145,44 +145,49 @@ export function CommercialReviewClient({ rows }: { rows: CommercialReviewRow[] }
   const intermediaryTypes = useMemo(() => Array.from(new Set(rows.map((row) => row.intermediaryType).filter((value): value is string => Boolean(value)))).sort(), [rows]);
   const vehicleClasses = useMemo(() => Array.from(new Set(rows.map((row) => row.vehicleClass).filter((value): value is string => Boolean(value)))).sort((a, b) => (vehicleClassLabels[a] ?? a).localeCompare(vehicleClassLabels[b] ?? b)), [rows]);
   const statusKey = side === "insurer" ? "insurerStatus" : "partnerStatus";
-  const counts = useMemo(() => displayedRows.reduce<Record<LedgerStatus, number>>((acc, row) => {
-    acc[row[statusKey]] += 1;
-    return acc;
-  }, { not_entered: 0, needs_review: 0, entered: 0, reviewed: 0, not_applicable: 0 }), [displayedRows, statusKey]);
-  const incompleteCount = counts.not_entered + counts.needs_review;
-  const completeCount = displayedRows.length - incompleteCount;
-  // Amounts alone do not constitute approval; make these status mismatches visible for review.
-  const amountPendingReviewCount = useMemo(() => displayedRows.filter((row) => {
-    const ratesEntered = side === "insurer"
-      ? row.projectedOdPercent !== 0 || row.projectedTpPercent !== 0 || row.schemeAmount !== 0
-      : row.payoutOdPercent !== 0 || row.payoutTpPercent !== 0;
-    return incompleteStatuses.has(row[statusKey]) && ratesEntered;
-  }).length, [displayedRows, side, statusKey]);
-
-  const filteredRows = useMemo(() => {
+  const scopedRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return displayedRows.filter((row) => {
       const rowStatus = row[statusKey];
-      const odValue = side === "insurer" ? row.projectedOdPercent : row.payoutOdPercent;
-      const tpValue = side === "insurer" ? row.projectedTpPercent : row.payoutTpPercent;
-      const totalValue = side === "insurer" ? row.projectedTotal : row.payoutTotal;
       if (status !== "all" && rowStatus !== status) return false;
       if (insurer !== "all" && row.insurerName !== insurer) return false;
       if (intermediary !== "all" && row.intermediaryCode !== intermediary) return false;
       if (intermediaryType !== "all" && row.intermediaryType !== intermediaryType) return false;
       if (vehicleClass !== "all" && row.vehicleClass !== vehicleClass) return false;
       if (!matchesCommercialRegistration(row.registrationType, registrationType)) return false;
-      if (backfill === "incomplete" && !incompleteStatuses.has(rowStatus)) return false;
-      if (backfill === "complete" && incompleteStatuses.has(rowStatus)) return false;
-      if (backfill === "zero_od" && odValue !== 0) return false;
-      if (backfill === "zero_tp" && tpValue !== 0) return false;
-      if (backfill === "zero_total" && totalValue !== 0) return false;
       if (dateFrom && row.issuanceDate < dateFrom) return false;
       if (dateTo && row.issuanceDate > dateTo) return false;
       if (!normalizedQuery) return true;
       return [row.policyNo, row.insurerName, row.intermediaryName, row.intermediaryCode ?? "", row.intermediaryType ?? "", row.vehicleClass ?? "", row.vehicleClass ? (vehicleClassLabels[row.vehicleClass] ?? row.vehicleClass) : ""].some((value) => value.toLowerCase().includes(normalizedQuery));
     });
-  }, [displayedRows, statusKey, status, insurer, intermediary, intermediaryType, vehicleClass, registrationType, backfill, dateFrom, dateTo, query, side]);
+  }, [displayedRows, statusKey, status, insurer, intermediary, intermediaryType, vehicleClass, registrationType, dateFrom, dateTo, query]);
+
+  const counts = useMemo(() => scopedRows.reduce<Record<LedgerStatus, number>>((acc, row) => {
+    acc[row[statusKey]] += 1;
+    return acc;
+  }, { not_entered: 0, needs_review: 0, entered: 0, reviewed: 0, not_applicable: 0 }), [scopedRows, statusKey]);
+  const incompleteCount = counts.not_entered + counts.needs_review;
+  const completeCount = scopedRows.length - incompleteCount;
+  // Amounts alone do not constitute approval; make these status mismatches visible for review.
+  const amountPendingReviewCount = useMemo(() => scopedRows.filter((row) => {
+    const ratesEntered = side === "insurer"
+      ? row.projectedOdPercent !== 0 || row.projectedTpPercent !== 0 || row.schemeAmount !== 0
+      : row.payoutOdPercent !== 0 || row.payoutTpPercent !== 0;
+    return incompleteStatuses.has(row[statusKey]) && ratesEntered;
+  }).length, [scopedRows, side, statusKey]);
+
+  const filteredRows = useMemo(() => scopedRows.filter((row) => {
+    const rowStatus = row[statusKey];
+    const odValue = side === "insurer" ? row.projectedOdPercent : row.payoutOdPercent;
+    const tpValue = side === "insurer" ? row.projectedTpPercent : row.payoutTpPercent;
+    const totalValue = side === "insurer" ? row.projectedTotal : row.payoutTotal;
+    if (backfill === "incomplete" && !incompleteStatuses.has(rowStatus)) return false;
+    if (backfill === "complete" && incompleteStatuses.has(rowStatus)) return false;
+    if (backfill === "zero_od" && odValue !== 0) return false;
+    if (backfill === "zero_tp" && tpValue !== 0) return false;
+    if (backfill === "zero_total" && totalValue !== 0) return false;
+    return true;
+  }), [scopedRows, statusKey, side, backfill]);
 
   // Give the table body a fresh DOM identity whenever the visible filter changes.
   // This prevents recycled/stale table rows from a previous intermediary remaining
