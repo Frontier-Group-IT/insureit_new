@@ -39,7 +39,7 @@ export async function extractNativePdfTextPages(
   if (!bytes.byteLength) return [];
 
   return withTimeout(async () => {
-    const { getDocumentProxy } = await import("unpdf");
+    const { getDocumentProxy, extractText } = await import("unpdf");
     const document = await getDocumentProxy(bytes, {
       disableFontFace: true,
       maxImageSize: MAX_IMAGE_SIZE,
@@ -59,10 +59,33 @@ export async function extractNativePdfTextPages(
         try {
           const content = await page.getTextContent();
           const rows = buildRows(content.items as unknown[]);
-          const text = rows.map((row) => row.items.map((item) => item.text).join(" ")).join("\n").trim();
+          // Some valid PDF.js text items omit position transforms. The
+          // position-aware OCR path can then silently produce empty rows.
+          // Retain their literal source strings for classification only;
+          // never fabricate row coordinates or policy field evidence.
+          const positioned=rows.map((row) => row.items.map((item) => item.text).join(" ")).join("\n").trim();
+          const fragments=(content.items as unknown[])
+            .filter((item):item is {str:string}=>Boolean(item&&typeof item==="object"
+              &&typeof (item as {str?:unknown}).str==="string"))
+            .map(item=>item.str.trim()).filter(Boolean);
+          const text=positioned||fragments.join(" ");
           pages.push({ text, rows });
         } finally {
           page.cleanup();
+        }
+      }
+      // The original 14-page United India GCV PDFs extract correctly in the
+      // independent n8n PDF reader but sometimes produce ZERO positioned
+      // strings in the portal. Retry only explicitly requested late-source
+      // reads through unpdf's supported page-text API, never OCR guesses or
+      // the remote webhook parser label. A still-empty document fails closed.
+      if(options?.maxTextPages && pages.every(page=>!page.text.trim())){
+        const fallback=await extractText(document,{mergePages:false});
+        if(Array.isArray(fallback.text)&&fallback.totalPages===document.numPages){
+          return pages.map((page,index)=>({
+            ...page,text:typeof fallback.text[index]==="string"
+              ?fallback.text[index].trim().slice(0,80_000):"",
+          }));
         }
       }
       return pages;
