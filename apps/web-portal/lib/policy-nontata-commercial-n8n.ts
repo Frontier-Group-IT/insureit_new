@@ -155,9 +155,9 @@ export function refineUiicPunjabSplitFromSource(
   // split-GST rows. Require BOTH printed tax lines and the exact OEM marker.
   const sourceIssuer=/UNITED\s+INDIA\s+INSURANCE\s+COMPANY\s+LIMITED/i.test(normalized.slice(0,10000));
   const sourceProduct=/GCV\s+PUBLIC\s+CARRIER/i.test(normalized.slice(0,15000));
-  const makerIndex=normalized.search(/DAIMLER\\s+INDIA\\s+COMMERCIAL\\s+VEHICLES/i);
+  const makerIndex=normalized.search(/DAIMLER\s+INDIA\s+COMMERCIAL\s+VEHICLES/i);
   const makerRow=makerIndex>=0?normalized.slice(makerIndex,makerIndex+200):"";
-  const sourceMaker=makerIndex>=0 && /PVT\\.?\\s*LTD/i.test(makerRow)
+  const sourceMaker=makerIndex>=0 && /PVT\.?\s*LTD/i.test(makerRow)
     && /BHARATBENZ/i.test(makerRow);
   const cgst=/CGST\s*[-–—:]?\s*Others\s*\(\s*9\s*%\s*\)/i.test(normalized);
   const sgst=/SGST\s*[-–—:]?\s*Basic\s*TP\s*\(\s*2\.50\s*%\s*\)/i.test(normalized);
