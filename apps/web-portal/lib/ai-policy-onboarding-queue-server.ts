@@ -20,6 +20,8 @@ export type AiQueueDisplay = {
   processed_at: string | null;
   document_id: string;
   diagnostic_code: string | null;
+  /** Source evidence only, never canonical booking authorization. */
+  source_verified: boolean;
 };
 
 type Claimed = { intake_id: string; document_id: string; lease_id: string };
@@ -82,7 +84,7 @@ export async function loadAiQueueDisplay(ids: readonly string[]): Promise<Map<st
   // first 75/100 visible rows. Partial reads must not invent eligibility.
   for(let offset=0;offset<ids.length;offset+=100){
     const {data,error} = await admin.from("policy_intake_ai_processing_queue")
-      .select("intake_id,document_id,state,exception_codes,processed_at,last_error_code")
+      .select("intake_id,document_id,state,exception_codes,processed_at,last_error_code,parser_id,checks_passed,extraction_fingerprint")
       .in("intake_id",ids.slice(offset,offset+100));
     if (error) return new Map<string,AiQueueDisplay>(); // Migration not applied.
     for (const r of data??[]) {
@@ -92,6 +94,9 @@ export async function loadAiQueueDisplay(ids: readonly string[]): Promise<Map<st
         exception_codes:safeCodes(Array.isArray(r.exception_codes)?r.exception_codes:[]),
         processed_at:r.processed_at??null,
         document_id:r.document_id,
+        source_verified:typeof r.parser_id==="string"
+          &&Boolean(r.extraction_fingerprint)
+          &&hasVerifiedN8nParserEvidence(r.parser_id,Number(r.checks_passed),[]),
         diagnostic_code:typeof r.last_error_code==="string" && (/^n8n_[a-z0-9_]{1,240}$/.test(r.last_error_code) || r.last_error_code==="existing_active_policy_overlap") ? r.last_error_code : null,
       });
     }
