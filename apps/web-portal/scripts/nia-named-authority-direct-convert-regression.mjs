@@ -104,8 +104,14 @@ assert.match(action,/\.lte\("start_date",pdfField\("policy_end_date"\)\)/,
   "Only coverage overlapping the verified policy period should block conversion");
 assert.match(action,/\.gte\("end_date",pdfField\("policy_start_date"\)\)/);
 assert.match(action,/return fail\("Existing active policy"/);
-assert.match(action,/activeOverlap\?\["coverage_conflict"\]/,
+assert.match(action,/reviewCode=activeOverlap\?"coverage_conflict"/,
   "Real overlapping cover must survive queue hold as an explicit exception");
+assert.match(action,/exception_codes:\[reviewCode\]/,
+  "Queue hold must preserve the selected specific review code");
+assert.match(action,/ownershipConflict\?"vehicle_ownership"/,
+  "A vehicle ownership conflict must retain its exact reason");
+assert.match(action,/insuredMismatch\?"insured_name_mismatch"/,
+  "Source insured-name mismatch must retain its exact reason");
 assert.match(action,/activeOverlap\?"existing_active_policy_overlap"/);
 
 assert.match(action,/prepareVerifiedN8nIntakeHandoff\(id,queued\.document_id,\s*extracted\.preview\.fingerprint,true,false,undefined,undefined,true\)/,
