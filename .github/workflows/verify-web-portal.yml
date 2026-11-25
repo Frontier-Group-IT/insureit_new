@@ -51,6 +51,14 @@ jobs:
         run: node ../../infra/n8n-local/tests/national-private-car-liability-regression.mjs
       - name: Oriental SAOD and GCCV product-specific source contract
         run: node ../../infra/n8n-local/tests/oriental-saod-gccv-source-regression.mjs
+      - name: UIIC Punjab BharatBenz and Magma Kia canonical make mapping regression
+        run: node --experimental-strip-types scripts/uiic-bharatbenz-onboarding-brand-regression.mjs
+      - name: Oriental embedded CMS issuance integrity regression
+        run: node scripts/oriental-cms-issued-date-regression.mjs
+      - name: Held insurer canonical Convert current-source and four product regression
+        run: node scripts/held-insurer-canonical-convert-regression.mjs
+      - name: Held Magma National Oriental source admission strict regression
+        run: node scripts/held-insurer-source-admission-regression.mjs
       - name: UIIC Chandigarh source-evidence and MP parity regression
         run: node scripts/uiic-chandigarh-source-regression.mjs
       - name: UIIC Punjab BharatBenz split CGST/SGST source regression

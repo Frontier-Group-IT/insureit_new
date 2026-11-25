@@ -319,17 +319,38 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     &&queued.parser_id===null&&queued.checks_passed===0
     &&queued.exception_codes.length===1&&queued.exception_codes[0]==="extraction_failed"
     &&queued.last_error_code==="n8n_review_required";
+  // Source-only recovery for the five formerly unsupported layouts.
+  // Exact unchanged current document and full source verification are required.
+  const heldFailedSource=process.env.INSUREIT_ENABLE_HELD_INSURER_CANDIDATES==="1"
+    &&queued?.state==="exception"&&queued.parser_id===null
+    &&queued.checks_passed===0&&queued.exception_codes.length===1
+    &&queued.exception_codes[0]==="extraction_failed"
+    &&(queued.last_error_code==="n8n_review_required"
+      ||/^n8n_failed_checks__/.test(queued.last_error_code??""));
   const uiicFailedSource=queued?.state==="exception"
     &&queued.parser_id===null&&queued.checks_passed===0
     &&queued.exception_codes.length===1&&queued.exception_codes[0]==="extraction_failed"
     &&(/^n8n_(?:failed_checks_|nontata_verification_failed$)/.test(queued.last_error_code??"")
       ||queued.last_error_code==="n8n_review_required");
-  if(queueError||!queued||(!heldReview&&!uiicFailedSource&&!tataFailedSource
+  if(queueError||!queued||(!heldReview&&!uiicFailedSource&&!tataFailedSource&&!heldFailedSource
       &&(queued.state!=="verified"||queued.exception_codes.length>0))
-      ||(!queued.extraction_fingerprint&&!uiicFailedSource&&!tataFailedSource))
+      ||(!queued.extraction_fingerprint&&!uiicFailedSource&&!tataFailedSource&&!heldFailedSource))
     return fail("Extraction","The current Intake has other extraction or booking exceptions requiring review.");
   const extracted=await previewSemiAutoN8nExtraction(id);
   if(!extracted.ok)return fail("Extraction",extracted.error);
+  const heldParserIds=new Set([
+    "magma_private_car_package_native_pdf",
+    "national_private_car_liability_only_native_pdf",
+    "oriental_private_car_standalone_od_native_pdf",
+    "oriental_gccv_package_native_pdf",
+  ]);
+  const reverifiedHeldExtraction=Boolean(heldFailedSource
+    &&extracted.preview.documentId===queued.document_id
+    &&heldParserIds.has(extracted.preview.parserId)
+    &&extracted.preview.checksPassed===18
+    &&extracted.preview.warnings.length===0
+    &&extracted.preview.candidateCanonicalPremium
+    &&extracted.preview.commercialPremium);
   const reverifiedUiicExtraction=uiicFailedSource
     &&extracted.preview.documentId===queued.document_id
     &&(assessUiicPrivateCarDirectConversion({
@@ -443,8 +464,55 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
       &&/\bRegistration Authority\b/i.test(rtoFresh.evidence)
       &&/\bRTO\b/i.test(rtoFresh.evidence);
   }
+  // One original Chandigarh UIIC hold was saved before current-vehicle RTO
+  // enrichment and canonical Tata Motors make normalization. It is recoverable
+  // only when every other persisted PDF field matches the CURRENT document
+  // exactly, the newly sourced city is CHANDIGARH, and the official source
+  // profile independently passes all 18 checks. No older generic exception
+  // or arbitrary RTO/make substitution can enter this narrow path.
+  let reverifiedUiicChandigarhLegacyHold=false;
+  if(heldReview&&queued.parser_id==="united_india_gcv_native_pdf"
+    &&queued.last_error_code==="bulk_conversion_review_required"
+    &&extracted.preview.documentId===queued.document_id
+    &&extracted.preview.parserId===queued.parser_id
+    &&extracted.preview.checksPassed===18
+    &&extracted.preview.warnings.length===0
+    &&assessUiicGcvDirectConversion({
+      parserId:extracted.preview.parserId,checksPassed:extracted.preview.checksPassed,
+      warnings:extracted.preview.warnings,fields:extracted.preview.fields,
+      commercialPremium:extracted.preview.commercialPremium,
+    }).eligible){
+    const freshFields=extracted.preview.fields;
+    const fresh=new Map(freshFields.map(f=>[f.key,f]));
+    const name=fresh.get("vehicle_rto_name");
+    const make=fresh.get("vehicle_make");
+    const model=fresh.get("vehicle_model");
+    const plate=fresh.get("vehicle_registration_number");
+    if(fresh.size===freshFields.length
+      &&name?.value==="CHANDIGARH"
+      &&name.evidence==="UIIC PDF vehicle Registration Authority: CHANDIGARH UT (RLA AND STA) INDIA"
+      &&make?.value==="Tata Motors"
+      &&model?.value==="SIGNA 4832.TK BSVI 10X4 HD 29BX"
+      &&/^CH\d{2}[A-Z]{1,3}\d{3,4}$/.test(plate?.value||"")){
+      const {data:old,error:oldError}=await admin.from("policy_intake_requests")
+        .select("ocr_fields,final_policy_id").eq("id",id)
+        .maybeSingle<{ocr_fields:{key:string;value:string}[]|null;final_policy_id:string|null}>();
+      const previous=old?.ocr_fields??[];
+      const previousMap=new Map(previous.map(f=>[f.key,f.value.trim()]));
+      reverifiedUiicChandigarhLegacyHold=!oldError&&!old?.final_policy_id
+        &&previous.length>=20&&previousMap.size===previous.length
+        &&freshFields.length===previous.length+1
+        &&!previousMap.has("vehicle_rto_name")
+        &&!previousMap.has("vehicle_rto_state")
+        &&previousMap.get("vehicle_make")==="Tata"
+        &&previous.every(f=>f.key==="vehicle_make"
+          ?make.value==="Tata Motors"
+          :fresh.get(f.key)?.value?.trim()===f.value.trim())
+        &&freshFields.every(f=>previousMap.has(f.key)||f.key==="vehicle_rto_name");
+    }
+  }
   if(extracted.preview.documentId!==queued.document_id||
-     !(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction||reverifiedTataFailedSource||reverifiedTataPrintedDateHold)||
+     (!(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction||reverifiedTataFailedSource||reverifiedTataPrintedDateHold) && !reverifiedHeldExtraction && !reverifiedUiicChandigarhLegacyHold)||
      (heldReview&&extracted.preview.parserId!==queued.parser_id)||
      !hasVerifiedN8nParserEvidence(extracted.preview.parserId,
        extracted.preview.checksPassed,extracted.preview.warnings))
@@ -482,7 +550,15 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   const uiic=["united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf"].includes(extracted.preview.parserId);
   const uiicPrivateCar=extracted.preview.parserId==="united_india_private_car_package_native_pdf";
   const productVariant=PRODUCT_VARIANT_PARSERS.has(extracted.preview.parserId);
+  const heldCandidate=process.env.INSUREIT_ENABLE_HELD_INSURER_CANDIDATES==="1"
+    &&heldParserIds.has(extracted.preview.parserId)
+    &&Boolean(extracted.preview.candidateCanonicalPremium);
   if (commercial) {
+    if(heldCandidate){
+      // Exact PDF source, 18-check response, CPA and OD addon split already
+      // verified in the independent held-insurer adapter.
+      verifiedMoney=extracted.preview.candidateCanonicalPremium!;
+    }else
     if(iffco){
       const assessment=assessIffcoAutoOnboarding({
         parserId:extracted.preview.parserId,
@@ -603,12 +679,18 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     ?["zurich_kotak_private_car_tp_native_pdf","sbi_general_private_car_package_native_pdf"].includes(variantParser)?"PCP"
       :["go_digit_two_wheeler_od_native_pdf","hdfc_ergo_two_wheeler_tp_native_pdf"].includes(variantParser)?"TWP"
       :"MISD"
-    :uiicPrivateCar?"PCP":/Goods Carrying/i.test(pdfField("vehicle_class"))?"GCV":"MISD";
+    :heldCandidate
+      ?pdfField("vehicle_class")==="Private Car"?"PCP"
+        :pdfField("vehicle_class")==="Goods Carrying Vehicle"?"GCV":""
+      :uiicPrivateCar?"PCP":/Goods Carrying/i.test(pdfField("vehicle_class"))?"GCV":"MISD";
   const expectedCommercialProduct=productVariant
     ?variantParser==="go_digit_two_wheeler_od_native_pdf"?"SAOD"
       :variantParser==="sbi_general_private_car_package_native_pdf"?"Package"
       :"Third Party"
-    :"Package";
+    :heldCandidate
+      ?variantParser==="national_private_car_liability_only_native_pdf"?"Third Party"
+        :variantParser==="oriental_private_car_standalone_od_native_pdf"?"SAOD":"Package"
+      :"Package";
   if(commercial && (forwarded.draft.policyProduct!==expectedCommercialProduct
     || forwarded.draft.vehicleClass!==expectedCommercialClass
     || forwarded.draft.manufacturingYear!==manufacturingEvidence.year
