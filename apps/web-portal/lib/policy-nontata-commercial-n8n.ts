@@ -197,7 +197,7 @@ function validateNewVariant(
  if(byKey.size!==fields.length)throw new Error("n8n_extension_duplicate_field");
  const required=["insurer_name","policy_product","insured_name","policy_number","policy_start_date",
  "policy_end_date","policy_issuance_date","vehicle_class","vehicle_make","vehicle_model",
- "vehicle_registration_status","vehicle_registration_number","vehicle_rto_name","vehicle_rto_state",
+ "vehicle_registration_status","vehicle_registration_number",
  "vehicle_chassis_number","vehicle_engine_number","vehicle_capacity","vehicle_fuel_type",
  "idv","od_premium","tp_premium","cpa_premium"];
  if(required.some(k=>!byKey.get(k))
