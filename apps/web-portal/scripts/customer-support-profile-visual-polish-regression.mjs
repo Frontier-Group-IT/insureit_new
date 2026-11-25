@@ -47,8 +47,8 @@ assert.match(vaultControls, /fetch\("\/api\/customer\/documents"/, "Preserve upl
 assert.doesNotMatch(profile, />Your Details</, "Customer name replaces the generic heading");
 assert.match(profile, /<section className="customer-profile-detail-section[\s\S]*?<CustomerAvatar[\s\S]*?<h1[\s\S]*?customer\.contact_name[\s\S]*?<CustomerProfileEditor/, "Avatar, name and summaries share one card");
 assert.match(editor, /customer-profile-joined-details mt-3/, "Compact summary spacing");
-assert.match(vaultControls, /const \[vaultOpen, setVaultOpen\] = useState\(false\)/, "Entire vault initially collapsed");
+assert.doesNotMatch(vaultControls, /vaultOpen|setVaultOpen|Collapse Document Vault|Expand Document Vault/, "Outer vault must always remain expanded");
 assert.match(vaultControls, /Document Vault<\/span><span aria-label=[\s\S]*?\{documents\.length\}<\/span>/, "Count badge beside title");
-assert.match(vaultControls, /Upload Document<\/button>[\s\S]*?id="customer-profile-vault-body" hidden=\{!vaultOpen\}/, "Upload remains outside collapsed content");
-assert.match(vaultControls, /setVaultOpen\(true\); setPicked\(null\)/, "Successful upload reveals its category");
+assert.match(vaultControls, /Upload Document<\/button>[\s\S]*?id="customer-profile-vault-body" className="customer-profile-vault-content flex-1/, "Upload stays in header above always-visible content");
+assert.match(vaultControls, /setPicked\(null\); setExpanded\(old => Array\.from\(new Set\(\[\.\.\.old, documentGroup\(type\)\]\)\)\)/, "Successful upload reveals its category");
 console.log("Customer Support and Profile visual-polish regression passed.");
