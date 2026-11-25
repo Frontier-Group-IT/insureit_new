@@ -15,7 +15,7 @@ Once a Motor Intake has verified current-document n8n evidence, automatically at
 
 ## Production release order (requires separate approval)
 1. Review and merge code only after full Web CI and static auto-booking regression pass.
-2. Apply reviewed `20261125190000_ai_policy_auto_booking_attempts.sql` to the correct production database; verify RLS, service-role-only RPC privileges, no old rows modified and zero auto-attempts.
+2. Apply reviewed `20261125123144_ai_policy_auto_booking_attempts.sql` to the correct production database; verify RLS, service-role-only RPC privileges, no old rows modified and zero auto-attempts.
 3. Provision dedicated least-privilege-in-practice IT actor with the **existing** required capabilities and secure server-only credentials. Never reuse a personal account. Store credentials only in Vercel encrypted environment variables; do not commit secrets.
 4. Deploy the compatible website with `INSUREIT_AI_AUTO_BOOKING_ENABLED=false`; confirm unauthorized scheduler 401 and disabled scheduler 503, and that normal manual conversion still works.
 5. Run a controlled non-production/sandbox verification using synthetic or approved test PDFs: valid signed source, duplicate, conflicting customer/ownership, OTP approval, stale document, concurrent cron, crash/uncertain, same-mobile/different-name, and backlog. Compare canonical policy ID and ledger state.
