@@ -12,7 +12,7 @@ export type PartnerPolicyDocument = {
 async function get<T>(policyId: string, params: URLSearchParams = new URLSearchParams()): Promise<T> {
   const session = await getCurrentSession();
   if (!session?.access_token) throw new Error('Sign in again to view policy documents.');
-  const url = BASE + '/api/partner/policies/' + encodeURIComponent(policyId) + '/documents' + (params.size ? '?' + params.toString() : '');
+  const url = BASE + '/api/partner/policies/' + encodeURIComponent(policyId) + '/documents' + (params.toString() ? '?' + params.toString() : '');
   const response = await fetch(url, { headers: { Authorization: 'Bearer ' + session.access_token, Accept: 'application/json' } });
   const result = await response.json() as T & { ok?: boolean; error?: string };
   if (!response.ok || !result.ok) throw new Error(result.error || 'Policy documents could not be loaded.');
