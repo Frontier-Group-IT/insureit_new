@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { createClient } from "@/lib/supabase";
+import { safePortalReturnPath } from "@/lib/portal-routes";
 
 export default function AuthCallbackPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -143,7 +144,8 @@ export default function AuthCallbackPage() {
       return;
     }
 
-    window.location.replace("/partner");
+    const destination = new URLSearchParams(window.location.search).get("next");
+    window.location.replace(destination ? safePortalReturnPath(destination) : "/partner");
   }
 
   return (
