@@ -79,6 +79,8 @@ type VerifiedN8nHandoff = {
   parserId:string; parserVersion:string; checksPassed:number; fingerprint:string; warnings:string[];
   premium:N8nVerifiedPremiumBreakdown | null;
   commercialPremium?: { od:number; tp:number; net:number; gst:number; gross:number; cpa?:number; addOn?:number; odBasic?:number };
+  /** Strict insurer source preflight result. Only passed from server-side n8n read. */
+  candidateCanonicalPremium?: {od:string;tp:string;addOnPremium:string;cpa:string;cpaOpted:"Yes"|"No"};
   fillEmptyFields?:boolean;
   /** Explicit IT action: rebuild the saved, unbooked Intake draft from this fresh parse. */
   replaceExistingDraft?:boolean;
@@ -126,6 +128,12 @@ export async function prepareVerifiedN8nIntakeHandoff(
     return{ok:false,error:"The n8n extraction changed after review. Run n8n again and check the new fields before continuing."};
   }
   const commercial=parsed.preview.commercialPremium;
+  const heldCandidate=Boolean(commercial)&&Boolean(parsed.preview.candidateCanonicalPremium)
+    &&parsed.preview.checksPassed===18&&parsed.preview.warnings.length===0
+    &&["magma_private_car_package_native_pdf","national_private_car_liability_only_native_pdf",
+      "oriental_private_car_standalone_od_native_pdf","oriental_gccv_package_native_pdf"]
+      .includes(parsed.preview.parserId)
+    &&process.env.INSUREIT_ENABLE_HELD_INSURER_CANDIDATES==="1";
   const goDigitVerifiedFill = Boolean(commercial) && fillEmptyFields
     && parsed.preview.parserId==="go_digit_cv_native_pdf"
     && parsed.preview.checksPassed===18 && parsed.preview.warnings.length===0;
@@ -166,7 +174,8 @@ export async function prepareVerifiedN8nIntakeHandoff(
       commercialPremium:commercial,
     }).eligible;
   if (commercial && !replaceExistingDraft && !goDigitVerifiedFill
-      && !iffcoVerifiedFill && !standardCommercialVerifiedFill && !productVariantVerifiedFill) {
+      && !iffcoVerifiedFill && !standardCommercialVerifiedFill && !productVariantVerifiedFill
+      && !(heldCandidate&&fillEmptyFields)) {
     return {ok:false,error:"This commercial PDF is not eligible for direct verified handoff; check its insurer-specific evidence before booking."};
   }
   if (!commercial && !parsed.preview.premium) {
@@ -190,9 +199,9 @@ export async function prepareVerifiedN8nIntakeHandoff(
   // set and its printed OD + TP = net, net + GST = gross contract.
   // Never attempt to pass its commercial totals through ICICI/Tata rules.
   const commercialChecksOk=Boolean(commercial)
-    && (["go_digit_cv_native_pdf","iffco_tokio_cv_native_pdf","new_india_cv_native_pdf",
+    && (heldCandidate||["go_digit_cv_native_pdf","iffco_tokio_cv_native_pdf","new_india_cv_native_pdf",
         "united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf","united_india_private_car_package_native_pdf","oriental_gccv_native_pdf"].includes(parsed.preview.parserId)
-       || PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId))
+       || PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId)))
     && parsed.preview.checksPassed === (trainedN8nParserProfile(parsed.preview.parserId)?.checks ?? 0)
     // SBI Package prints owner-driver CPA separately from TP. Reuse its
     // certified product assessor (including NCB, add-ons, CPA and GST)
@@ -240,7 +249,9 @@ export async function prepareVerifiedN8nIntakeHandoff(
     parserId:parsed.preview.parserId,parserVersion:parsed.preview.parserVersion,
     checksPassed:parsed.preview.checksPassed,fingerprint:parsed.preview.fingerprint,
     warnings:parsed.preview.warnings,premium:parsed.preview.premium,
-    ...(commercial?{commercialPremium:commercial}:{}),fillEmptyFields,
+    ...(commercial?{commercialPremium:commercial}:{}),
+    ...(heldCandidate&&parsed.preview.candidateCanonicalPremium
+      ?{candidateCanonicalPremium:parsed.preview.candidateCanonicalPremium}:{}),fillEmptyFields,
     replaceExistingDraft,
     reviewedIssueDateReplacement,
     ...(autoAcceptedIssuanceDate?{autoAcceptedIssuanceDate}:{}),
@@ -390,6 +401,12 @@ async function preparePolicyIntakeHandoffInternal(
       warnings:verified.warnings,fields:verified.fields,
       commercialPremium:verified.commercialPremium,
     });
+    const heldReady=process.env.INSUREIT_ENABLE_HELD_INSURER_CANDIDATES==="1"
+      &&verified.checksPassed===18&&verified.warnings.length===0
+      &&Boolean(verified.candidateCanonicalPremium)
+      &&["magma_private_car_package_native_pdf","national_private_car_liability_only_native_pdf",
+        "oriental_private_car_standalone_od_native_pdf","oriental_gccv_package_native_pdf"]
+       .includes(verified.parserId);
     // Tata AIG 18-check families must not be returned to a generic review hold
     // solely because the draft was rebuilt. This is readiness to run the
     // *explicit* canonical Convert action, never permission to book directly.
@@ -412,7 +429,7 @@ async function preparePolicyIntakeHandoffInternal(
       && policyDateDecision(
         verified.fields.find(field=>field.key==="policy_issuance_date")?.value
           ||verified.autoAcceptedIssuanceDate?.date||"")==="allowed";
-    const eligibleForVerifiedConversion=tata18Ready||verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible
+    const eligibleForVerifiedConversion=heldReady||tata18Ready||verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible
       ||standardReview.eligible||niaReview.eligible||uiicReview.eligible||uiicPrivateCarReview.eligible||productVariantReview.eligible;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
     const{error}=await admin.from("policy_intake_ai_processing_queue").update({
@@ -432,6 +449,9 @@ async function preparePolicyIntakeHandoffInternal(
           :["united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf"].includes(verified.parserId)?uiicReview.reason
           :verified.parserId==="united_india_private_car_package_native_pdf"?uiicPrivateCarReview.reason
           :PRODUCT_VARIANT_PARSERS.has(verified.parserId)?productVariantReview.reason
+           :["magma_private_car_package_native_pdf","national_private_car_liability_only_native_pdf",
+              "oriental_private_car_standalone_od_native_pdf","oriental_gccv_package_native_pdf"]
+              .includes(verified.parserId)?"held_insurer_source_or_date_unverified"
            :["united_india_gcv_native_pdf","oriental_gccv_native_pdf"].includes(verified.parserId)?standardReview.reason
           :"bulk_conversion_review_required"),
       processed_at:new Date().toISOString(),
@@ -509,8 +529,13 @@ async function preparePolicyIntakeHandoffInternal(
     }).eligible;
   const uiicCpa=uiicCertified?Number(verified.fields.find(f=>f.key==="cpa_premium")?.value):NaN;
   let verifiedPremium:ReturnType<typeof mapVerifiedN8nMotorPremium>|null=null;
+  const candidatePremium=verified?.candidateCanonicalPremium;
+  // Strictly admitted source breakdown is already CPA-split in the adapter;
+  // never re-add a CPA already printed inside insurer TP.
   try{
-    verifiedPremium=verified?.parserId==="iffco_tokio_cv_native_pdf"
+    verifiedPremium=candidatePremium
+      ?candidatePremium
+      :verified?.parserId==="iffco_tokio_cv_native_pdf"
       ?mapVerifiedIffcoCommercialPremium(verified.commercialPremium!,iffcoCpa)
       :niaCertified
       ?mapVerifiedNiaCommercialPremium(verified!.commercialPremium!,niaCpa)
@@ -600,7 +625,8 @@ async function preparePolicyIntakeHandoffInternal(
     cpa:verifiedPremium?.cpa??mapped.next.cpa,
     policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified?.commercialPremium
-      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. ${verified.parserId==="iffco_tokio_cv_native_pdf" ? `IFFCO source Net(B) ${verified.commercialPremium.tp} includes owner-driver CPA ${iffcoCpa}. Canonical TP ${verifiedPremium?.tp} excludes that CPA, and CPA is entered separately as ${verifiedPremium?.cpa}; their sum equals printed Net(B).` : niaCertified ? `New India separately verified owner-driver CPA ${niaCpa} is excluded from canonical TP ${verifiedPremium?.tp}; paid-driver LL stays within TP. Printed mixed 18%/5% GST ${verified.commercialPremium.gst} is not recalculated at 18% of net.` :PRODUCT_VARIANT_PARSERS.has(verified.parserId) ? (verified.parserId==="sbi_general_private_car_package_native_pdf"
+      ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. ${verified.parserId==="iffco_tokio_cv_native_pdf" ? `IFFCO source Net(B) ${verified.commercialPremium.tp} includes owner-driver CPA ${iffcoCpa}. Canonical TP ${verifiedPremium?.tp} excludes that CPA, and CPA is entered separately as ${verifiedPremium?.cpa}; their sum equals printed Net(B).` : niaCertified ? `New India separately verified owner-driver CPA ${niaCpa} is excluded from canonical TP ${verifiedPremium?.tp}; paid-driver LL stays within TP. Printed mixed 18%/5% GST ${verified.commercialPremium.gst} is not recalculated at 18% of net.` :candidatePremium ? `Verified held-insurer source: canonical TP ${verifiedPremium?.tp} excludes source-certified CPA ${verifiedPremium?.cpa}; OD and add-ons remain in the insurer-verified form buckets. RTO geography is optional.`
+        :PRODUCT_VARIANT_PARSERS.has(verified.parserId) ? (verified.parserId==="sbi_general_private_car_package_native_pdf"
         ? "SBI General Private Car Package: printed basic OD, NCB discount (if applicable), itemized OD add-ons, third-party basic and separate owner-driver CPA are independently reconciled. Canonical Motor uses basic OD after NCB so discounts and add-ons are not double-counted. Net, GST and rounded payable are checked against the insurer PDF."
         : verified.parserId==="hdfc_ergo_two_wheeler_tp_native_pdf"
         ? "HDFC ERGO two-wheeler liability-only: printed TP ₹ total, rounded IGST and CPA waiver validated. Petrol was resolved from the certified Honda Activa-3G 109cc model family; the policy does not print fuel."
