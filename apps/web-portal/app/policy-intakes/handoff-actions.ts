@@ -429,8 +429,9 @@ async function preparePolicyIntakeHandoffInternal(
       && policyDateDecision(
         verified.fields.find(field=>field.key==="policy_issuance_date")?.value
           ||verified.autoAcceptedIssuanceDate?.date||"")==="allowed";
-    const eligibleForVerifiedConversion=heldReady||tata18Ready||verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible
-      ||standardReview.eligible||niaReview.eligible||uiicReview.eligible||uiicPrivateCarReview.eligible||productVariantReview.eligible;
+    const eligibleForVerifiedConversion=tata18Ready||verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible
+      ||standardReview.eligible||niaReview.eligible||uiicReview.eligible||uiicPrivateCarReview.eligible||productVariantReview.eligible
+      ||heldReady;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
     const{error}=await admin.from("policy_intake_ai_processing_queue").update({
       // Only previously certified Go Digit and new narrowly evidenced IFFCO
