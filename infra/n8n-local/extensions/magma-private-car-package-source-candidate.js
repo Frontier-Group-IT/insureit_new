@@ -59,6 +59,20 @@ function parseMagmaPrivateCar(t){
   if(/^([A-Za-z].*)/.test(line)&&n!==null){addons+=n;continue;}
   if(/(?:discount|deduct)/i.test(line)&&n===null)unknownOd=true;
  }
+ // Two separately documented manufacturer/model/capacity families.
+ // Renault Triber RXE MT 999 cc: Renault India Triber official brochure.
+ // Kia Seltos G1.5 iMT HTK Plus 1497 cc: Kia India 2021 Seltos brochure.
+ // NO make-wide/default fuel inference and no guessing from unselected forms.
+ const renaultPetrol=make==='RENAULT'&&/^TRIBER RXE MT$/i.test(model)&&capacity==='999';
+ const kiaPetrol=make==='KIA INDIA PRIVATE LIMITED'
+   &&/^(?:KIA INDIA PRIVATE LIMITED\\s+)?SELTOS G1\\.5 IMT HTK PLUS$/i.test(model)
+   &&capacity==='1497';
+ const modelCertifiedFuel=renaultPetrol||kiaPetrol?'Petrol':'';
+ const fuelEvidence=renaultPetrol
+   ?'Manufacturer model-family: Renault Triber RXE MT 999 cc Petrol (Renault India official Triber brochure)'
+   :kiaPetrol
+   ?'Manufacturer model-family: Kia Seltos G1.5 iMT HTK Plus 1497 cc Petrol (Kia India 2021 Seltos brochure)'
+   :'';
  const checks={
   insurer_product_verified:identified,
   policy_number_verified:!!policy,
@@ -71,7 +85,7 @@ function parseMagmaPrivateCar(t){
   vehicle_year_printed:!!year,
   vehicle_capacity_printed:!!capacity,
   vehicle_idv_printed:idv!==null&&idv>0,
-  vehicle_fuel_source_verified:false,
+  vehicle_fuel_source_verified:!!modelCertifiedFuel,
   od_premium_reconciled:od!==null&&basicOd!==null&&!unknownOd&&approx(od,basicOd+addons-ncb),
   tp_cpa_paid_driver_reconciled:tp!==null&&basicTp!==null&&cpa!==null&&paidDriver!==null&&approx(tp,basicTp+cpa+paidDriver),
   net_premium_reconciled:approx(net,(od??NaN)+(tp??NaN)),
@@ -87,11 +101,13 @@ function parseMagmaPrivateCar(t){
   vehicle_registration_status:registration?'registered':'',vehicle_registration_number:registration,
   vehicle_make:make,vehicle_model:model,vehicle_manufacturing_year:year,vehicle_capacity:capacity,
   vehicle_chassis_number:chassis,vehicle_engine_number:engine,vehicle_class:'Private Car',
+  vehicle_fuel_type:modelCertifiedFuel,
   vehicle_rto_name:rtoCity,vehicle_rto_state:rtoState,idv,cpa_premium:cpa,
  };
  const fields=Object.entries(values).filter(([,v])=>v!==null&&v!=='').map(([key,value])=>({
   key,label:key,value:String(value),confidence:null,page:null,
-  evidence:key==='policy_issuance_date'?'Magma PDF printed Date of Issue':
+  evidence:key==='vehicle_fuel_type'?fuelEvidence:
+   key==='policy_issuance_date'?'Magma PDF printed Date of Issue':
    key.startsWith('vehicle_rto_')?'Magma PDF optional RTO line':'Magma PDF labelled policy schedule',
  }));
  return {contract_version:'1',ok:missing.length===0,validation_passed:missing.length===0,
