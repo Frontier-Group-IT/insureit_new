@@ -83,7 +83,7 @@ export function CustomerDocumentVault({ customerId, documents, profileMode = fal
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <img src="/assets/Custom-Icons/optimized-128/documents.png" alt="" aria-hidden="true" width={44} height={44} className="h-10 w-10 shrink-0 object-contain" />
           <span className="min-w-0 flex-1">
-            <span className="flex flex-wrap items-center gap-2"><span className="text-[17px] font-black text-[#2E2358]">Document Vault</span><span aria-label={`${documents.length} files`} className="rounded-full bg-[#EEE7FF] px-2 py-0.5 text-[11px] font-bold tabular-nums text-[#6241B5]">{documents.length}</span></span>
+            <span className="flex flex-wrap items-center gap-2"><span id="customer-profile-vault-title" role="heading" aria-level={2} className="text-[17px] font-black text-[#2E2358]">Document Vault</span><span aria-label={`${documents.length} files`} className="rounded-full bg-[#EEE7FF] px-2 py-0.5 text-[11px] font-bold tabular-nums text-[#6241B5]">{documents.length}</span></span>
             <span className="mt-0.5 block text-[10.5px] font-medium text-[#81739B]">Access and manage your important documents.</span>
           </span>
         </div>
