@@ -156,6 +156,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
         : queue.get(row.id)?.exception_codes??[],
       ai_processed_at: queue.get(row.id)?.processed_at ?? null,
       ai_diagnostic_code: queue.get(row.id)?.diagnostic_code ?? null,
+      ai_source_verified: queue.get(row.id)?.source_verified ?? false,
     }));
   // Historical bulk conversion failures stored only a generic code.
   // Explain a hold from verified current-document OCR, saved draft and
