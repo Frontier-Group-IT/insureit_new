@@ -140,6 +140,23 @@ function insurerForText(head: string): Insurer | null {
   return matches.length === 1 ? matches[0] : null;
 }
 
+/** Strict insurer/product refinement when the required split-tax rows are
+ * printed AFTER the website's bounded first-three-page header scan.
+ * Other insurer routes and ordinary UIIC IGST cases remain unchanged.
+ */
+export function refineUiicPunjabSplitFromSource(
+  initial:string|null,fullNativeText:string,
+):string|null {
+  if(initial!=="united_india_gcv_native_pdf")return initial;
+  const normalized=fullNativeText.replace(/\s+/g," ").slice(0,120000);
+  return /UNITED INDIA INSURANCE COMPANY LIMITED/i.test(normalized.slice(0,10000))
+    &&/GCV PUBLIC CARRIER/i.test(normalized.slice(0,15000))
+    &&/DAIMLER\s+INDIA\s+COMMERCIAL\s+VEHICLES\s+PVT\.\s*LTD\s*\/\s*BHARATBENZ/i.test(normalized)
+    &&/CGST-Others\(9%\)/i.test(normalized)
+    &&/SGST-Basic TP\(2\.50%\)/i.test(normalized)
+    ?"united_india_gcv_punjab_split_gst_native_pdf":initial;
+}
+
 /** Recognize only printed, trained native-PDF layouts. Never accept insurer names from caller input. */
 export async function recognizeNonTataCommercialPdf(file: File): Promise<Insurer | null> {
   if (file.type !== "application/pdf" || file.size < 128) return null;
@@ -147,7 +164,13 @@ export async function recognizeNonTataCommercialPdf(file: File): Promise<Insurer
   if (new TextDecoder("ascii").decode(bytes.subarray(0, 5)) !== PDF) return null;
   const pages = await extractNativePdfTextPages(bytes);
   const text = pages.slice(0, 3).map((page) => page.text).join("\n");
-  return insurerForText(text);
+  const initial=insurerForText(text);
+  // Only UIIC GCV needs late-page financial labels for the split-GST
+  // sub-profile. Never broaden other insurer classification.
+  if(initial==="united_india_gcv_native_pdf")
+    return refineUiicPunjabSplitFromSource(initial,
+      pages.slice(0,24).map(page=>page.text).join("\n")) as Insurer;
+  return initial;
 }
 
 

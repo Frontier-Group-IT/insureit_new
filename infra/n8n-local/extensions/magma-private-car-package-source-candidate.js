@@ -103,6 +103,8 @@ function parseMagmaPrivateCar(t){
   vehicle_chassis_number:chassis,vehicle_engine_number:engine,vehicle_class:'Private Car',
   vehicle_fuel_type:modelCertifiedFuel,
   vehicle_rto_name:rtoCity,vehicle_rto_state:rtoState,idv,cpa_premium:cpa,
+  // Required source-labelled financial fields in addition to reconciled totals.
+  od_premium:od,tp_premium:tp,
  };
  const fields=Object.entries(values).filter(([,v])=>v!==null&&v!=='').map(([key,value])=>({
   key,label:key,value:String(value),confidence:null,page:null,

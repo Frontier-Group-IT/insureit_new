@@ -60,6 +60,10 @@ for(const kia of [false,true]){
  assert.equal(Object.keys(good.checks).length,18);
  assert.equal(Object.values(good.checks).filter(Boolean).length,18);
  assert.equal(good.fields.find(f=>f.key==='vehicle_fuel_type')?.value,'Petrol');
+ assert.equal(good.fields.find(f=>f.key==='od_premium')?.value,String(good.premium_components.od));
+ assert.equal(good.fields.find(f=>f.key==='tp_premium')?.value,String(good.premium_components.tp));
+ assert.equal(good.fields.filter(f=>f.key==='od_premium').length,1);
+ assert.equal(good.fields.filter(f=>f.key==='tp_premium').length,1);
  assert.equal(good.fields.find(f=>f.key==='vehicle_rto_name')?.value,kia?'GHAZIABAD':'PALWAL');
  assert.equal(good.premium_components.taxRegime,kia?'IGST':'CGST_SGST');
  for(const manipulated of [
