@@ -246,12 +246,18 @@ async function holdFailedAiConversion(id:string,issues:readonly SemiAutoIssue[]=
   const admin=createSupabaseAdminClient();
   const now=new Date().toISOString();
   const activeOverlap=issues.some(item=>item.field==="Existing active policy");
+  const insuredMismatch=issues.some(item=>item.field==="Insured name");
+  const ownershipConflict=issues.some(item=>item.field==="Vehicle ownership");
+  const reviewCode=activeOverlap?"coverage_conflict"
+    :ownershipConflict?"vehicle_ownership"
+    :insuredMismatch?"insured_name_mismatch"
+    :"booking_review_required";
   // A certified NIA review hold is not a parsing failure. Preserve a real
   // vehicle-history conflict rather than overwriting it with the generic
   // bulk booking review code. Keep all other insurer holds unchanged.
   let update=admin.from("policy_intake_ai_processing_queue")
     .update({state:"exception",
-      exception_codes:activeOverlap?["coverage_conflict"]:["booking_review_required"],
+      exception_codes:[reviewCode],
       last_error_code:activeOverlap?"existing_active_policy_overlap":"bulk_conversion_review_required",
       updated_at:now})
     .eq("intake_id",id);
