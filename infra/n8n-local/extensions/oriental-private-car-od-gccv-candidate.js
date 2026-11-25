@@ -64,10 +64,7 @@ function parseOrientalMotor(raw){
  if(saod&&vals.length===5){
   [net,stamp]=vals;gst=vals[2]+vals[3];gross=vals[4];
   od=net;tp=0;cpa=0;taxRegime='CGST_SGST';
-  const rsa=amount(read(/MOTOR TOTAL OD[\s\S]{0,300}?\bADD\s*:Add on cover RSA[\s\S]{0,260}?\n([\d,.]+)\s*$/im));
   const excludedTpPa=/excludes any loss\/liability arising out of Third Party or personal accident/i.test(t);
-  financialProof=near(net,od)&&near(gross,net+gst)&&excludedTpPa
-     &&near(gst,1094,0.01)===false?false:true;
   // Recalculate without fixture totals: use only printed OD+Tax+Gross.
   financialProof=near(gross,net+gst)&&excludedTpPa&&stamp!==null
     &&vals[2]>=0&&vals[3]>=0;
