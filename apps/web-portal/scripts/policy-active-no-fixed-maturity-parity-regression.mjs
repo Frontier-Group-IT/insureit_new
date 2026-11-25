@@ -19,6 +19,8 @@ const register=read("app/policies/policy-workspace.tsx");
 const registerPage=read("app/policies/page.tsx");
 assert.match(dashboard,/activePolicies = policies\.filter\(\(row\) => isPolicyCurrentlyActive\(row, todayKey\)\)/);
 assert.match(dashboard,/policy_product,status,issuance_date,created_at,start_date,end_date/);
+assert.match(dashboard,/expired: rows\.filter\(\(row\) => row\.end_date !== null && row\.end_date < today\)/,"Unknown maturity must not appear as expired");
+assert.match(dashboard,/due0to7: rows\.filter\(\(row\) => row\.end_date !== null && row\.end_date >= today/,"Unknown maturity must not appear as renewal due");
 assert.match(register,/status: policyStatus\(row\.end_date\), isActive: isPolicyCurrentlyActive\(row,/);
 assert.match(register,/if \(!endDate\) return "No fixed maturity"/,"No-fixed-maturity badge must remain neutral while verified active records count toward Active");
 assert.match(register,/const active = baseFiltered\.filter\(\(row\) => row\.isActive\)\.length/);
