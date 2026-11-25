@@ -675,22 +675,22 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   if(forwarded.draftRevision<1)return fail("Draft revision","Canonical revision is unavailable.");
   // Canonical class/product must follow the verified insurer and vehicle layout.
   const variantParser=extracted.preview.parserId;
-  const expectedCommercialClass=heldCandidate
-    ?pdfField("vehicle_class")==="Private Car"?"PCP"
-      :pdfField("vehicle_class")==="Goods Carrying Vehicle"?"GCV":""
-    :productVariant
+  const expectedCommercialClass=productVariant
     ?["zurich_kotak_private_car_tp_native_pdf","sbi_general_private_car_package_native_pdf"].includes(variantParser)?"PCP"
       :["go_digit_two_wheeler_od_native_pdf","hdfc_ergo_two_wheeler_tp_native_pdf"].includes(variantParser)?"TWP"
       :"MISD"
-    :uiicPrivateCar?"PCP":/Goods Carrying/i.test(pdfField("vehicle_class"))?"GCV":"MISD";
-  const expectedCommercialProduct=heldCandidate
-    ?variantParser==="national_private_car_liability_only_native_pdf"?"Third Party"
-      :variantParser==="oriental_private_car_standalone_od_native_pdf"?"SAOD":"Package"
-    :productVariant
+    :heldCandidate
+      ?pdfField("vehicle_class")==="Private Car"?"PCP"
+        :pdfField("vehicle_class")==="Goods Carrying Vehicle"?"GCV":""
+      :uiicPrivateCar?"PCP":/Goods Carrying/i.test(pdfField("vehicle_class"))?"GCV":"MISD";
+  const expectedCommercialProduct=productVariant
     ?variantParser==="go_digit_two_wheeler_od_native_pdf"?"SAOD"
       :variantParser==="sbi_general_private_car_package_native_pdf"?"Package"
       :"Third Party"
-    :"Package";
+    :heldCandidate
+      ?variantParser==="national_private_car_liability_only_native_pdf"?"Third Party"
+        :variantParser==="oriental_private_car_standalone_od_native_pdf"?"SAOD":"Package"
+      :"Package";
   if(commercial && (forwarded.draft.policyProduct!==expectedCommercialProduct
     || forwarded.draft.vehicleClass!==expectedCommercialClass
     || forwarded.draft.manufacturingYear!==manufacturingEvidence.year
