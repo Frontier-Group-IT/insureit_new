@@ -479,7 +479,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   const commercial=extracted.preview.commercialPremium;
   const iffco=extracted.preview.parserId==="iffco_tokio_cv_native_pdf";
   const nia=extracted.preview.parserId==="new_india_cv_native_pdf";
-  const uiic=extracted.preview.parserId==="united_india_gcv_native_pdf";
+  const uiic=["united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf"].includes(extracted.preview.parserId);
   const uiicPrivateCar=extracted.preview.parserId==="united_india_private_car_package_native_pdf";
   const productVariant=PRODUCT_VARIANT_PARSERS.has(extracted.preview.parserId);
   if (commercial) {
