@@ -83,25 +83,25 @@ export function CustomerProfileEditor({
             {message ? <p className="mt-2 text-right text-[10px] font-bold text-[#0B7A54]">{message}</p> : null}
           </div>
 
-          <div className="customer-profile-joined-details mt-5 grid overflow-hidden rounded-2xl border border-[#E6E0F5] bg-white sm:grid-cols-2 xl:grid-cols-4">
-            <div className="customer-profile-detail-card flex min-w-0 items-center gap-2.5 border-b border-[#E6E0F5] bg-white px-3.5 py-3.5 sm:border-r xl:border-b-0 xl:last:border-r-0">
-              <img src="/assets/customer-3d-icons/mobile.png" width={40} height={40} alt="" aria-hidden="true" className="h-10 w-10 shrink-0 object-contain" />
+          <div className="customer-profile-joined-details mt-3 grid overflow-hidden rounded-2xl border border-[#E6E0F5] bg-white sm:grid-cols-2 xl:grid-cols-4">
+            <div className="customer-profile-detail-card flex min-w-0 items-center gap-2 border-b border-[#E6E0F5] bg-white px-2.5 py-2.5 sm:border-r xl:border-b-0 xl:last:border-r-0">
+              <img src="/assets/customer-3d-icons/mobile.png" width={32} height={32} alt="" aria-hidden="true" className="h-8 w-8 shrink-0 object-contain" />
               <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#81739B]">Mobile Number</p><p className="mt-0.5 break-all text-[11px] font-black text-[#2D2352]">{phone || "—"}</p></div>
             </div>
-            <div className="customer-profile-detail-card flex min-w-0 items-center gap-2.5 border-b border-[#E6E0F5] bg-white px-3.5 py-3.5 sm:border-r xl:border-b-0 xl:last:border-r-0">
-              <img src="/assets/customer-3d-icons/email.png" width={40} height={40} alt="" aria-hidden="true" className="h-10 w-10 shrink-0 object-contain" />
+            <div className="customer-profile-detail-card flex min-w-0 items-center gap-2 border-b border-[#E6E0F5] bg-white px-2.5 py-2.5 sm:border-r xl:border-b-0 xl:last:border-r-0">
+              <img src="/assets/customer-3d-icons/email.png" width={32} height={32} alt="" aria-hidden="true" className="h-8 w-8 shrink-0 object-contain" />
               <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#81739B]">Email Address</p><p className="mt-0.5 break-all text-[11px] font-black text-[#2D2352]">{email || "—"}</p></div>
             </div>
-            <div className="customer-profile-detail-card flex min-w-0 items-start gap-2.5 border-b border-[#E6E0F5] bg-white px-3.5 py-3.5 sm:border-r xl:border-b-0">
-              <img src="/assets/customer-3d-icons/location.png" width={40} height={40} alt="" aria-hidden="true" className="h-10 w-10 shrink-0 object-contain" />
+            <div className="customer-profile-detail-card flex min-w-0 items-start gap-2 border-b border-[#E6E0F5] bg-white px-2.5 py-2.5 sm:border-r xl:border-b-0">
+              <img src="/assets/customer-3d-icons/location.png" width={32} height={32} alt="" aria-hidden="true" className="h-8 w-8 shrink-0 object-contain" />
               <div className="min-w-0">
                 <p className="text-[9.5px] font-bold text-[#81739B]">Location</p>
                 <p className="mt-0.5 text-[11px] font-black text-[#2D2352]">{[city, state].filter(Boolean).join(", ") || "—"}</p>
                 {address ? <p className="mt-0.5 text-[9.5px] font-bold leading-4 text-[#81739B]">{address}{postalCode ? ` · ${postalCode}` : ""}</p> : null}
               </div>
             </div>
-            <div className="customer-profile-detail-card flex min-w-0 items-center gap-2.5 border-b border-[#E6E0F5] bg-white px-3.5 py-3.5 sm:border-r xl:border-b-0 xl:last:border-r-0">
-              <img src="/assets/customer-3d-icons/total_documents.png" width={40} height={40} alt="" aria-hidden="true" className="h-10 w-10 shrink-0 object-contain" />
+            <div className="customer-profile-detail-card flex min-w-0 items-center gap-2 border-b border-[#E6E0F5] bg-white px-2.5 py-2.5 sm:border-r xl:border-b-0 xl:last:border-r-0">
+              <img src="/assets/customer-3d-icons/total_documents.png" width={32} height={32} alt="" aria-hidden="true" className="h-8 w-8 shrink-0 object-contain" />
               <div className="min-w-0"><p className="text-[9.5px] font-bold text-[#81739B]">Total Documents</p><p className="mt-0.5 text-[11px] font-black text-[#2D2352]">{documentsCount}</p></div>
             </div>
           </div>
