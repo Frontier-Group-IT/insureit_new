@@ -95,6 +95,11 @@ const variant=assessProductVariantDirectConversion({
  warnings:[],fields:common,commercialPremium:premium,
 });
 assert.doesNotMatch(variant.reason,/(?:missing_vehicle_rto|rto_or_plate)/);
+const n8nAdmission=file("apps/web-portal/lib/policy-nontata-commercial-n8n.ts");
+const variantAdmission=n8nAdmission.slice(n8nAdmission.indexOf("function validateNewVariant("),
+  n8nAdmission.indexOf("function validate(payload:"));
+assert.doesNotMatch(variantAdmission,/"vehicle_registration_number","vehicle_rto_name","vehicle_rto_state"/,
+  "Existing product variant adapter must never require optional RTO geography");
 const engine=file("apps/web-portal/lib/policy-onboarding-engine.ts");
 assert.doesNotMatch(engine,/if\s*\(vehicleClass\s*!==\s*"CPM"\s*&&\s*\(!rtoState\s*\|\|\s*!rtoName\)\)/);
 assert.match(engine,/RTO city\/state are optional/);
