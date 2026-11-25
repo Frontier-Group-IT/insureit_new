@@ -55,6 +55,8 @@ jobs:
         run: node --experimental-strip-types scripts/uiic-bharatbenz-onboarding-brand-regression.mjs
       - name: Oriental embedded CMS issuance integrity regression
         run: node scripts/oriental-cms-issued-date-regression.mjs
+      - name: Held insurer canonical Convert current-source and four product regression
+        run: node scripts/held-insurer-canonical-convert-regression.mjs
       - name: Held Magma National Oriental source admission strict regression
         run: node scripts/held-insurer-source-admission-regression.mjs
       - name: UIIC Chandigarh source-evidence and MP parity regression
