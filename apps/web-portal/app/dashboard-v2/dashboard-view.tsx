@@ -26,6 +26,7 @@ type Props = {
   showRmPerformanceButton: boolean;
   intakeAttention?: PolicyIntakeReviewSummary | null;
   lifeTeamCases?: LifeHealthCaseSummary | null;
+  hideLowerDashboardSections?: boolean;
 };
 
 type AttentionSignal = {
@@ -52,7 +53,7 @@ type RailMetric = {
   icon: string;
 };
 
-export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, canCreatePolicyIntake, showRmPerformanceButton, intakeAttention = null, lifeTeamCases }: Props) {
+export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, canCreatePolicyIntake, showRmPerformanceButton, intakeAttention = null, lifeTeamCases, hideLowerDashboardSections = false }: Props) {
   const attention = buildAttention(data, access, business, intakeAttention, lifeTeamCases);
   const warnings = [...data.warnings, ...business.warnings, ...(lifeTeamCases === null ? ["Life / Health case counts could not be refreshed."] : [])];
   const rail = buildMetricRail(data, access, business);
@@ -137,9 +138,9 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
 
       {business.commercial ? <CommercialOperations business={business} canOpenControl={access.viewAccounts} /> : null}
 
-      {showHealth ? <PortfolioHealth data={data} renewalTotal={renewalTotal} /> : null}
+      {!hideLowerDashboardSections && showHealth ? <PortfolioHealth data={data} renewalTotal={renewalTotal} /> : null}
 
-      {hasWork ? <WorkMovement data={data} access={access} /> : null}
+      {!hideLowerDashboardSections && hasWork ? <WorkMovement data={data} access={access} /> : null}
     </div>
   );
 }
