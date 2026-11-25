@@ -151,6 +151,47 @@ assert.equal(digitNoName.checks.insured_name_verified,false);
 assert.equal(digitNoName.ok,false);
 
 assert.deepEqual([d.premium_components.od,d.premium_components.tp,d.premium_components.net,d.premium_components.gst,d.premium_components.gross],[2415.46,7647,10062.46,1811.24,11873.7]);
+// Reproduces the four failed JCB/Go Digit 3 DX 2WD native-PDF layouts
+// with synthetic values only. Other insurer branches and ECO XPERT must
+// retain their existing outputs.
+const digitJcb=digitText
+  .replace('Name MR SAMPLE POLICYHOLDER             Vehicle Registration No.',
+    'Name\\nEXAMPLE CONTRACTORS\\nVehicle Registration No.')
+  .replace('3 DX ECO XPERT / BACKHOE LOADER','3 DX 2WD / BACKHOE\\nLOADER')
+  .replace('HAR3DXINH01234567','RAJ3DXS5T03577700')
+  .replace('7647.00','7317.00')
+  .replace('10062.46','9732.46')
+  .replace('1811.24','1751.84')
+  .replace('11873.70','11484.30')
+  +'\\nBasic Third-Party Liability (`'+') 7267.00'
+  +'\\nPA cover for Owner-Driver (`'+')\\n--'
+  +'\\nLegal Liability to Paid (`'+') Driver (Persons:1) 50.00';
+const jcb=parseNonTata(digitJcb);
+assert.equal(jcb.ok,true,JSON.stringify(jcb.warnings));
+assert.equal(field(jcb,'insured_name'),'EXAMPLE CONTRACTORS');
+assert.equal(field(jcb,'vehicle_model'),'3 DX 2WD / BACKHOE LOADER');
+assert.equal(field(jcb,'vehicle_chassis_number'),'RAJ3DXS5T03577700');
+assert.deepEqual([jcb.premium_components.od,jcb.premium_components.tp,jcb.premium_components.gross],[2415.46,7317,11484.3]);
+assert.equal(jcb.checks.tp_itemization,true);
+const titledJcb=parseNonTata(digitJcb.replace('Name\\nEXAMPLE CONTRACTORS\\n',
+  'Name MS EXAMPLE DRIVER '));
+assert.equal(titledJcb.ok,true);
+assert.equal(field(titledJcb,'insured_name'),'MS EXAMPLE DRIVER');
+const missingOwnerPa=digitJcb.replace('PA cover for Owner-Driver (`'+')\\n--\\n','');
+assert.equal(parseNonTata(missingOwnerPa).checks.tp_itemization,false,
+  'Missing owner PA cannot be silently zeroed');
+assert.equal(parseNonTata(missingOwnerPa).ok,false);
+const changedTp=digitJcb.replace('TotalPremiumAct () 7317.00','TotalPremiumAct () 7647.00');
+assert.equal(parseNonTata(changedTp).ok,false,'Incorrect TP fails independent net reconciliation');
+assert.equal(parseNonTata(digitJcb.replace('EXAMPLE CONTRACTORS','')).ok,false,
+  'No insured must not be inferred from registration or broker name');
+assert.equal(parseNonTata(digitJcb.replace('RAJ3DXS5T03577700',
+  'RAJ3DXS5T03577700\\nRAJ3DXS5T03577701')).checks.vehicle_identification_verified,false,
+  'Conflicting chassis identities must fail closed');
+assert.equal(parseNonTata(digitJcb.replace('RAJ3DXS5T03577700',
+  'ZZZ3DXS5T03577700')).ok,false,
+  'Unverified JCB chassis prefixes must not be accepted');
+
 const unknown=parseNonTata('UNTRAINED LIFE INSURER DOCUMENT 12345');
 assert.equal(unknown.ok,false);assert.equal(unknown.auto_finalize_allowed,false);
 const altered=parseNonTata(iffcoText.replace('Gross Premium Payable Rs. 15592.52','Gross Premium Payable Rs. 16592.52'));
