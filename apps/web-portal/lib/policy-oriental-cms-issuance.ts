@@ -59,10 +59,25 @@ export async function verifyOrientalCmsSigningDate(
    return null;
  const gap=raw.slice(firstLen,secondStart);
  if(!/^<[0-9A-Fa-f]{1024,65536}>$/.test(gap))return null;
- const prelude=raw.slice(Math.max(0,firstLen-1800),firstLen);
- if(!/\/SubFilter\s*\/(?:adbe\.pkcs7\.detached|ETSI\.CAdES\.detached)\b/.test(prelude))
+ // /Contents can precede /ByteRange, /SubFilter and /M inside the SAME
+ // signature dictionary. Inspect the signed dictionary around the CMS slot,
+ // never an unrelated earlier PDF object or the unsigned gap itself.
+ const dictStart=raw.lastIndexOf("<<",firstLen);
+ const dictEnd=raw.indexOf(">>",secondStart);
+ if(dictStart<0||dictEnd<0||firstLen-dictStart>2000
+   ||dictEnd-secondStart>3000)return null;
+ const beforeCms=raw.slice(dictStart,firstLen);
+ const afterCms=raw.slice(secondStart,dictEnd+2);
+ if(!/\/Contents\s*$/.test(beforeCms))return null;
+ const dictionary=beforeCms+" "+afterCms;
+ if(!/\/Type\s*\/Sig\b/.test(dictionary))return null;
+ const filters=[...dictionary.matchAll(/\/SubFilter\s*\/([A-Za-z0-9.]+)/g)];
+ if(filters.length!==1||!["adbe.pkcs7.detached","ETSI.CAdES.detached"].includes(filters[0][1]))
    return null;
- const pdfM=[...prelude.matchAll(/\/M\s*\((D:[^)]{14,28})\)/g)];
+ const declaredRanges=[...dictionary.matchAll(RANGE)];
+ if(declaredRanges.length!==1||declaredRanges[0].slice(1).map(Number).join(",")!==
+   [firstStart,firstLen,secondStart,secondLen].join(","))return null;
+ const pdfM=[...dictionary.matchAll(/\/M\s*\((D:[^)]{14,28})\)/g)];
  if(pdfM.length>1)return null;
  try{
    const padded=Buffer.from(gap.slice(1,-1),"hex");
