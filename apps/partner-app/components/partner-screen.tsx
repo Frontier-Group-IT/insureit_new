@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useRef, useState, type ComponentProps, type PropsWithChildren, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ComponentProps, type PropsWithChildren, type ReactNode } from 'react';
 import {
   Animated,
+  Easing,
   Platform,
   Image,
   Pressable,
@@ -18,6 +19,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useActivityMotion } from '@/components/activity-motion';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerRotatingSearchPlaceholder } from '@/components/ui/partner-search-field';
 import { PartnerTopBar } from '@/components/ui/partner-top-bar';
@@ -112,6 +114,25 @@ export function PartnerScreen({
   const hasHeroSearchValue = heroSearchValue.trim().length > 0;
   const [unreadActivityCount, setUnreadActivityCount] = useState(0);
   const [homeSearchFocused, setHomeSearchFocused] = useState(false);
+  const { motion: screenMotion } = useActivityMotion();
+  const homeMotion = isHomeHero && screenMotion;
+  const heroGlow = useRef(new Animated.Value(0)).current;
+  const homeReveal = useRef(new Animated.Value(1)).current;
+  const bellMotion = useRef(new Animated.Value(0)).current;
+  const badgeScale = useRef(new Animated.Value(1)).current;
+  const previousUnread = useRef<number | null>(null);
+  const revealed = useRef(false);
+  useEffect(() => {
+    if (!homeMotion) { heroGlow.setValue(0); homeReveal.setValue(1); return; }
+    if (!revealed.current) { revealed.current = true; homeReveal.setValue(0.85); }
+    const reveal = Animated.timing(homeReveal, { toValue: 1, duration: 350, useNativeDriver: Platform.OS !== 'web', isInteraction: false });
+    const glow = Animated.loop(Animated.sequence([Animated.timing(heroGlow, { toValue: 1, duration: 2400, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== 'web', isInteraction: false }), Animated.timing(heroGlow, { toValue: 0, duration: 2400, easing: Easing.inOut(Easing.sin), useNativeDriver: Platform.OS !== 'web', isInteraction: false })]));
+    reveal.start(); glow.start();
+    return () => { reveal.stop(); glow.stop(); heroGlow.setValue(0); homeReveal.setValue(1); };
+  }, [homeMotion, heroGlow, homeReveal]);
+  const homeMotionRef = useRef(homeMotion);
+  homeMotionRef.current = homeMotion;
+  useEffect(() => { if (!homeMotion) { bellMotion.stopAnimation(); badgeScale.stopAnimation(); bellMotion.setValue(0); badgeScale.setValue(1); } return () => { bellMotion.stopAnimation(); badgeScale.stopAnimation(); }; }, [homeMotion, bellMotion, badgeScale]);
   const scrollRef = useRef<ScrollView>(null);
   const latestScrollY = useRef(0);
   const [showFixedHeader, setShowFixedHeader] = useState(false);
@@ -127,7 +148,17 @@ export function PartnerScreen({
     let cancelled = false;
     void getPartnerUnreadActivityCount(100)
       .then((count) => {
-        if (!cancelled) setUnreadActivityCount(count);
+        if (!cancelled) {
+          const prior = previousUnread.current;
+          previousUnread.current = count;
+          setUnreadActivityCount(count);
+          if (prior !== null && count > prior && homeMotionRef.current) {
+            bellMotion.stopAnimation(); badgeScale.stopAnimation();
+            bellMotion.setValue(0); badgeScale.setValue(0.85);
+            Animated.sequence([12, -10, 6, 0].map(toValue => Animated.timing(bellMotion, { toValue, duration: 110, useNativeDriver: Platform.OS !== 'web', isInteraction: false }))).start();
+            Animated.spring(badgeScale, { toValue: 1, useNativeDriver: Platform.OS !== 'web', isInteraction: false }).start();
+          }
+        }
       })
       .catch(() => {
         if (!cancelled) setUnreadActivityCount(0);
@@ -136,7 +167,7 @@ export function PartnerScreen({
     return () => {
       cancelled = true;
     };
-  }, [isHomeHero]));
+  }, [isHomeHero, bellMotion, badgeScale]));
 
   // Reset on focus by default, but preserve position for detail screens with open modals.
   useFocusEffect(useCallback(() => {
@@ -174,7 +205,7 @@ export function PartnerScreen({
   };
 
   const homeSearchControl = (
-            <View style={styles.homeSearchCard}>
+            <View style={[styles.homeSearchCard, homeSearchFocused && { borderColor: '#3986D7' }]}>
               <Ionicons name="search-outline" size={22} color="#3E269B" />
               {!homeSearchFocused && !heroSearchValue ? (
                 <PartnerRotatingSearchPlaceholder
@@ -258,7 +289,7 @@ export function PartnerScreen({
       >
         {!hideTopBar && isHomeHero ? (
           <View style={styles.homeHeroWrap}>
-            <Animated.View style={[styles.homeHero, homeMotionScrollY ? {
+            <Animated.View style={[styles.homeHero, homeMotionScrollY && homeMotion ? {
               transform: [{ translateY: homeMotionScrollY.interpolate({
                 inputRange: [0, 140], outputRange: [0, -22], extrapolate: 'clamp',
               }) }],
@@ -269,9 +300,10 @@ export function PartnerScreen({
                 resizeMode="cover"
               />
               <View pointerEvents="none" style={styles.homeHeroShade} />
+              <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFillObject, { backgroundColor: '#70BFFF', opacity: heroGlow.interpolate({ inputRange: [0, 1], outputRange: [0, 0.07] }) }]} />
 
               <View style={styles.homeHeroTopRow}>
-                <View style={styles.homeBrand} accessibilityLabel="INSUREIT Partner">
+                <Animated.View style={[styles.homeBrand, { opacity: homeReveal }]} accessibilityLabel="INSUREIT Partner">
                   <Image
                     source={require('../assets/insureit-partner-official.png')}
                     style={styles.homeBrandLogo}
@@ -281,7 +313,7 @@ export function PartnerScreen({
                     <Text style={styles.homeBrandName}>insureit</Text>
                     <Text style={styles.homeBrandPartner}>Partner</Text>
                   </View>
-                </View>
+                </Animated.View>
                 <View style={styles.homeHeroActions}>
                   <Pressable
                     accessibilityRole="button"
@@ -289,13 +321,13 @@ export function PartnerScreen({
                     onPress={() => router.push('/activity')}
                     style={({ pressed }) => [styles.homeHeroIconButton, pressed && styles.homeSearchPressed]}
                   >
-                    <Feather name="bell" size={20} color="#FFFFFF" />
+                    <Animated.View style={{ transform: [{ rotate: bellMotion.interpolate({ inputRange: [-12, 12], outputRange: ['-12deg', '12deg'] }) }] }}><Feather name="bell" size={20} color="#FFFFFF" /></Animated.View>
                     {unreadActivityCount > 0 ? (
-                      <View style={styles.homeHeroBellBadge}>
+                      <Animated.View style={[styles.homeHeroBellBadge, { transform: [{ scale: badgeScale }] }]}>
                         <Text style={styles.homeHeroBellBadgeText}>
                           {unreadActivityCount > 99 ? '99+' : unreadActivityCount}
                         </Text>
-                      </View>
+                      </Animated.View>
                     ) : null}
                   </Pressable>
                   <Pressable
@@ -315,9 +347,9 @@ export function PartnerScreen({
                 </View>
               </View>
 
-              <Text numberOfLines={1} style={styles.homeHeroGreeting}>
+              <Animated.Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[styles.homeHeroGreeting, { opacity: homeReveal, transform: [{ translateY: homeReveal.interpolate({ inputRange: [0.85, 1], outputRange: [3, 0] }) }] }]}>
                 {title}
-              </Text>
+              </Animated.Text>
             </Animated.View>
 
           </View>

@@ -1,8 +1,10 @@
 import { useCallback, useRef, useState, useEffect, type ReactNode } from 'react';
-import { Animated, Image, ImageBackground, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, Platform, type StyleProp, type TextStyle } from 'react-native';
+import { Animated, Easing, Image, ImageBackground, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, Platform, type StyleProp, type TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
+import { useActivityMotion } from '@/components/activity-motion';
+import * as Haptics from 'expo-haptics';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
@@ -41,6 +43,8 @@ export default function PartnerHomeScreen() {
   const [periodOpen, setPeriodOpen] = useState(false);
   const [filterSkeletonVisible, setFilterSkeletonVisible] = useState(false);
   const homeScrollY = useRef(new Animated.Value(0)).current;
+  const { motion } = useActivityMotion();
+  const businessEntrance = useHomeEntrance(motion, 250);
 
   const fetchHomeWorkspace = useCallback(async (): Promise<{
     home: PartnerHomeData;
@@ -199,7 +203,7 @@ export default function PartnerHomeScreen() {
             </View>
           ) : null}
 
-          <View style={styles.businessCard}>
+          <Animated.View style={[styles.businessCard, homeEntranceStyle(businessEntrance)]}>
               <View style={styles.businessTopRow}>
                 <View style={styles.periodWrap}>
                   <PartnerAnchoredDropdown
@@ -213,6 +217,7 @@ export default function PartnerHomeScreen() {
                             key={item.key}
                             onPress={() => {
                               if (item.key !== businessPeriod) {
+                                if (motion && Platform.OS !== 'web') void Haptics.selectionAsync().catch(() => {});
                                 setFilterSkeletonVisible(true);
                                 setBusinessPeriod(item.key);
                               }
@@ -272,7 +277,7 @@ export default function PartnerHomeScreen() {
               {showBusinessFilterSkeleton ? <BusinessFilterSkeleton /> : (<>
               <View style={styles.businessMainRow}>
                 <View style={styles.businessMainCopy}>
-                  <Text style={styles.businessPremium}>{rangeData ? formatWholeIndianCurrency(rangeData.net_premium) : '—'}</Text>
+                  <Text style={styles.businessPremium}><HomeCount text={rangeData ? formatWholeIndianCurrency(rangeData.net_premium) : '—'} delay={400} duration={1500} /></Text>
                   <Text style={styles.businessCaption}>Business Generated (Net Premium)</Text>
                   {business.loading && !rangeData ? (
                     <Text style={styles.trendNeutral}>Updating business figures…</Text>
@@ -328,7 +333,7 @@ export default function PartnerHomeScreen() {
                 ) : null}
               </View>
               </>)}
-          </View>
+          </Animated.View>
 
           <PartnerEnter delay={70}>
             <View style={styles.quickCard}>
@@ -449,6 +454,8 @@ function PendingTasksCard({
   onOpenIntakes: () => void;
   onViewAll: () => void;
 }) {
+  const { motion } = useActivityMotion();
+  const pendingGlow = useHomeEntrance(motion, 1000);
   const tasks = [
     { key: 'renewal', count: data.business.renewals_30_days, label: 'Renewals due', icon: PartnerAssets.actions.quickRenewals, open: onOpenRenewals },
     { key: 'intakes', count: data.service.intakes_need_attention, label: 'Policy intakes needing attention', icon: PartnerAssets.actions.quickPolicyIntake, open: onOpenIntakes },
@@ -461,7 +468,7 @@ function PendingTasksCard({
       imageStyle={styles.pendingBackgroundImage}
       style={styles.pendingCard}
     >
-      <View pointerEvents="none" style={styles.pendingBackgroundOverlay} />
+      <Animated.View pointerEvents="none" style={[styles.pendingBackgroundOverlay, { opacity: pendingGlow }]} />
       <View style={styles.pendingHeadingRow}>
         <View style={styles.pendingHeadingCopy}>
           <Text style={styles.pendingTitle}>Pending Tasks</Text>
@@ -482,7 +489,7 @@ function PendingTasksCard({
           >
             <Image source={task.icon} style={styles.pendingTaskIcon} resizeMode="contain" />
             <Text style={[styles.pendingTaskCount, task.key === 'renewal' && task.count > 0 && styles.pendingTaskUrgent]}>
-              {task.count}
+              <HomeCount text={String(task.count)} delay={1000} />
             </Text>
             <Text numberOfLines={1} style={styles.pendingTaskLabel}>{task.label}</Text>
             <Ionicons name="chevron-forward" size={13} color="#193D91" />
@@ -499,12 +506,74 @@ function MiniBusinessTrend({ values }: { values: number[] }) {
   return (
     <View style={styles.miniChart} accessibilityLabel="Recent premium trend">
       {recent.length ? recent.map((value, index) => (
-        <View key={index} style={[styles.miniBar, {
-          height: Math.max(4, Math.round(Math.max(0, value) / max * 43)),
-        }]} />
+        <HomeTrendBar key={index} index={index} height={Math.max(4, Math.round(Math.max(0, value) / max * 43))} />
       )) : <Text style={styles.chartUnavailable}>Trend unavailable</Text>}
     </View>
   );
+}
+
+
+// Home-only finite motion; keep content usable while reduced-motion state resolves.
+function useHomeEntrance(motion: boolean, delay: number) {
+  const value = useRef(new Animated.Value(1)).current;
+  const played = useRef(false);
+  useEffect(() => {
+    if (!motion || played.current) { value.setValue(1); return; }
+    played.current = true;
+    value.setValue(0.88);
+    const animation = Animated.timing(value, { toValue: 1, delay, duration: 330, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== 'web', isInteraction: false });
+    animation.start();
+    return () => { animation.stop(); value.setValue(1); };
+  }, [motion, delay, value]);
+  return value;
+}
+function homeEntranceStyle(value: Animated.Value) {
+  return { opacity: value, transform: [{ translateY: value.interpolate({ inputRange: [0.88, 1], outputRange: [5, 0] }) }, { scale: value.interpolate({ inputRange: [0.88, 1], outputRange: [0.99, 1] }) }] };
+}
+function HomeCount({ text, delay = 0, duration = 900 }: { text: string; delay?: number; duration?: number }) {
+  const match = /^([₹]?)(-?[\d,]+)(?:\.(\d+))?$/.exec(text);
+  const target = match ? Number(match[2].replace(/,/g, '') + (match[3] ? '.' + match[3] : '')) : NaN;
+  const decimals = match?.[3]?.length ?? 0;
+  const prefix = match?.[1] ?? '';
+  const grouped = text.includes(',') || prefix === '₹';
+  const { motion } = useActivityMotion();
+  const [shown, setShown] = useState(text);
+  const previous = useRef<number | null>(null);
+  useEffect(() => {
+    if (!Number.isFinite(target)) { previous.current = null; setShown(text); return; }
+    if (!motion) { setShown(text); return; }
+    const start = previous.current ?? 0;
+    if (start === target) { setShown(text); return; }
+    let frame = 0, first: number | undefined, last = -Infinity;
+    const tick = (now: number) => {
+      first ??= now;
+      const progress = Math.min(1, Math.max(0, now - first - delay) / duration);
+      if (progress > 0 && (now - last >= 65 || progress === 1)) {
+        last = now;
+        const next = start + (target - start) * Easing.out(Easing.cubic)(progress);
+        previous.current = next;
+        setShown(progress === 1 ? text : prefix + next.toLocaleString('en-IN', { useGrouping: grouped, minimumFractionDigits: decimals, maximumFractionDigits: decimals }));
+      }
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [text, target, motion, delay, duration, decimals, prefix, grouped]);
+  return <>{motion ? shown : text}</>;
+}
+function HomeTrendBar({ height, index }: { height: number; index: number }) {
+  const { motion } = useActivityMotion();
+  const progress = useRef(new Animated.Value(1)).current;
+  const played = useRef(false);
+  useEffect(() => {
+    if (!motion || played.current) { progress.setValue(1); return; }
+    played.current = true;
+    progress.setValue(0.05);
+    const animation = Animated.timing(progress, { toValue: 1, delay: 500 + index * 90, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== 'web', isInteraction: false });
+    animation.start();
+    return () => { animation.stop(); progress.setValue(1); };
+  }, [motion, progress, index]);
+  return <Animated.View style={[styles.miniBar, { height, transform: [{ translateY: height / 2 }, { scaleY: progress }, { translateY: -height / 2 }] }]} />;
 }
 
 function formatActivityTime(value: string) {
@@ -524,13 +593,15 @@ function MetricCell({
   value: string;
   label: string;
 }) {
+  const { motion } = useActivityMotion();
+  const entrance = useHomeEntrance(motion, 650);
   return (
     <View style={styles.metricCell}>
-      <View style={styles.metricIconBox}>
+      <Animated.View style={[styles.metricIconBox, homeEntranceStyle(entrance)]}>
         {icon ?? (asset ? <Image source={asset} style={styles.metricImage} resizeMode="contain" /> : null)}
-      </View>
+      </Animated.View>
       <View style={styles.metricCopy}>
-        <Text numberOfLines={1} style={styles.metricValue}>{value}</Text>
+        <Text numberOfLines={1} style={styles.metricValue}><HomeCount text={value} delay={650} /></Text>
         <Text style={styles.metricLabel}>{label}</Text>
       </View>
     </View>
@@ -547,11 +618,17 @@ function QuickAction({
   asset: number; label: string; onPress: () => void;
   index: number; scrollX: Animated.Value; viewportWidth: number;
 }) {
+  const { motion } = useActivityMotion();
+  const entrance = useHomeEntrance(motion && index < 4, 800 + index * 85);
   const pressScale = useRef(new Animated.Value(1)).current;
+  useEffect(() => () => pressScale.stopAnimation(), [pressScale]);
+  useEffect(() => { if (!motion) { pressScale.stopAnimation(); pressScale.setValue(1); } }, [motion, pressScale]);
   const animatePress = (pressed: boolean) => {
+    if (!motion) return;
+    if (pressed && Platform.OS !== 'web') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     Animated.spring(pressScale, {
       toValue: pressed ? 0.96 : 1, useNativeDriver: true,
-      speed: 28, bounciness: 5,
+      speed: 28, bounciness: 5, isInteraction: false,
     }).start();
   };
   // Only the icon gains focus as it crosses the carousel's fixed center point.
@@ -580,9 +657,9 @@ function QuickAction({
       style={styles.quickActionTouch}
     >
       <View style={styles.quickAction}>
-        <Animated.View style={{ alignItems: 'center', transform: [{ scale: pressScale }] }}>
-          <Animated.View style={[styles.quickIcon, { transform: [{ scale: iconScale }] }]}>
-            <Animated.View pointerEvents="none" style={[styles.quickIconFocus, { opacity: highlightOpacity }]} />
+        <Animated.View style={{ alignItems: 'center', opacity: entrance, transform: [{ scale: pressScale }] }}>
+          <Animated.View style={[styles.quickIcon, { transform: [{ scale: motion ? iconScale : 1 }] }]}>
+            <Animated.View pointerEvents="none" style={[styles.quickIconFocus, { opacity: motion ? highlightOpacity : 0 }]} />
             <Image source={asset} style={styles.quickImage} resizeMode="contain" />
           </Animated.View>
           <Text numberOfLines={2} style={styles.quickLabel}>{label}</Text>
@@ -597,6 +674,7 @@ function QuickActionsCarousel({
 }: {
   actions: Array<{ key: string; asset: number; label: string; onPress: () => void }>;
 }) {
+  const { motion } = useActivityMotion();
   const scrollRef = useRef<ScrollView>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
   const [viewportWidth, setViewportWidth] = useState(0);
@@ -607,6 +685,7 @@ function QuickActionsCarousel({
   const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (!motion) return;
     const timer = setInterval(() => {
       // Keep iOS carousel stationary between user gestures so its moving
       // native scroll surface cannot compete with Home button presses.
@@ -621,7 +700,7 @@ function QuickActionsCarousel({
       clearInterval(timer);
       if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
     };
-  }, []);
+  }, [motion]);
 
   const pauseForTouch = () => {
     touchingRef.current = true;
@@ -692,7 +771,7 @@ function Trend({ value, hasPrevious, comparisonLabel = 'previous period' }: { va
         color={positive ? '#1D9C60' : '#C27A11'}
       />
       <ShrinkLoopText style={[styles.trendText, { color: positive ? '#1D9C60' : '#C27A11' }]}>
-        {Math.round(Math.abs(value))}% {positive ? 'above' : 'below'} {comparisonLabel}
+        <HomeCount text={String(Math.round(Math.abs(value)))} />% {positive ? 'above' : 'below'} {comparisonLabel}
       </ShrinkLoopText>
     </View>
   );
@@ -705,16 +784,15 @@ function ShrinkLoopText({
   children: ReactNode;
   style?: StyleProp<TextStyle>;
 }) {
+  const { motion } = useActivityMotion();
   const scale = useRef(new Animated.Value(1)).current;
-
   useEffect(() => {
-    const animation = Animated.loop(Animated.sequence([
-      Animated.timing(scale, { toValue: 0.96, duration: 650, useNativeDriver: true }),
-      Animated.timing(scale, { toValue: 1, duration: 650, useNativeDriver: true }),
-    ]));
+    scale.setValue(1);
+    if (!motion) return;
+    const animation = Animated.sequence([Animated.timing(scale, { toValue: 0.97, duration: 220, useNativeDriver: Platform.OS !== 'web', isInteraction: false }), Animated.timing(scale, { toValue: 1, duration: 300, useNativeDriver: Platform.OS !== 'web', isInteraction: false })]);
     animation.start();
-    return () => animation.stop();
-  }, [scale]);
+    return () => { animation.stop(); scale.setValue(1); };
+  }, [motion, scale]);
 
   return (
     <Animated.Text style={[style, { transform: [{ scale }] }]}>
@@ -781,16 +859,18 @@ function formatCacheTime(value: number | null) {
 // Show only when a newly selected period has no cached figures.
 // The business-card header stays interactive and all other Home content stays visible.
 function BusinessFilterSkeleton() {
+  const { motion } = useActivityMotion();
   const opacity = useRef(new Animated.Value(0.55)).current;
 
   useEffect(() => {
+    if (!motion) { opacity.setValue(1); return; }
     const pulse = Animated.loop(Animated.sequence([
       Animated.timing(opacity, { toValue: 1, duration: 650, useNativeDriver: true }),
       Animated.timing(opacity, { toValue: 0.55, duration: 650, useNativeDriver: true }),
     ]));
     pulse.start();
     return () => pulse.stop();
-  }, [opacity]);
+  }, [motion, opacity]);
 
   return (
     <Animated.View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ opacity }}>
@@ -921,6 +1001,7 @@ const styles = StyleSheet.create({
     lineHeight: 29,
     fontWeight: Platform.OS === 'ios' ? '400' : '800',
     letterSpacing: -0.7,
+    fontVariant: ['tabular-nums'],
   },
   businessCaption: { marginTop: 1, color: '#4F5D71', fontSize: 10.5, fontWeight: Platform.OS === 'ios' ? '400' : '600' },
   trend: { marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -943,7 +1024,7 @@ const styles = StyleSheet.create({
   },
   metricImage: { width: 29, height: 29 },
   metricCopy: { flex: 1, minWidth: 0 },
-  metricValue: { color: '#17366C', fontSize: 15, fontWeight: Platform.OS === 'ios' ? '400' : '800' },
+  metricValue: { fontVariant: ['tabular-nums'], color: '#17366C', fontSize: 15, fontWeight: Platform.OS === 'ios' ? '400' : '800' },
   metricLabel: { marginTop: 1, color: '#7B8799', fontSize: 8.5, fontWeight: Platform.OS === 'ios' ? '400' : '600' },
 
   quickCard: {
