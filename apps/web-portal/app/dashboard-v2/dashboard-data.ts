@@ -933,11 +933,11 @@ function buildRenewalHorizon(rows: PolicyRow[], now: Date) {
   const plus30 = addDaysKey(now, 30);
   const plus45 = addDaysKey(now, 45);
   return {
-    expired: rows.filter((row) => row.end_date < today).length,
-    due0to7: rows.filter((row) => row.end_date >= today && row.end_date <= plus7).length,
-    due8to15: rows.filter((row) => row.end_date > plus7 && row.end_date <= plus15).length,
-    due16to30: rows.filter((row) => row.end_date > plus15 && row.end_date <= plus30).length,
-    due31to45: rows.filter((row) => row.end_date > plus30 && row.end_date <= plus45).length,
+    expired: rows.filter((row) => row.end_date !== null && row.end_date < today).length,
+    due0to7: rows.filter((row) => row.end_date !== null && row.end_date >= today && row.end_date <= plus7).length,
+    due8to15: rows.filter((row) => row.end_date !== null && row.end_date > plus7 && row.end_date <= plus15).length,
+    due16to30: rows.filter((row) => row.end_date !== null && row.end_date > plus15 && row.end_date <= plus30).length,
+    due31to45: rows.filter((row) => row.end_date !== null && row.end_date > plus30 && row.end_date <= plus45).length,
   };
 }
 
