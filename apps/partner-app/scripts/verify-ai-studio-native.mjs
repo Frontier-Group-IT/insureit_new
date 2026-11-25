@@ -117,3 +117,10 @@ for(const [row,expected] of [
 for(const marker of ['presentationStyle="fullScreen"','<StatusBar style="dark"','Clipboard.setString','accessibilityLabel="More intake options"','<IntakeStepper detail={detail}/>','style={s.detailHeroArtwork}','style={s.fieldsPill}','style={s.footerWaves}','accessibilityState={{disabled:true}}','Secure actions awaiting activation']) assert(screen.includes(marker), 'Intake details reference and safety contract: '+marker);
 
 console.log('Partner native AI Studio read-only, auth and Vercel-independence contracts passed');
+
+// The full-screen intake detail modal must not rely on its own transient top
+// safe-area measurement; opening/reopening on iPhone must keep the header below
+// the status bar while only the bottom edge is handled by SafeAreaView.
+assert.match(screen, /<SafeAreaView style=\{s\.sheet\} edges=\{\['bottom'\]\}>/, 'Intake modal does not double-apply its own top inset');
+assert.match(screen, /<View style=\{\[s\.sheetTop,\{paddingTop:insets\.top\}\]\}>/, 'Intake header applies parent safe-area top inset on first frame');
+assert.match(screen, /const insets=useSafeAreaInsets\(\)/, 'Safe-area inset comes from the existing parent provider');
