@@ -375,9 +375,6 @@ export default function AiPolicyStudioScreen() {
             <Ionicons name="shield-checkmark" color="#9BC7FF" size={25}/>
             <View style={s.detailHeaderCopy}>
               <Text style={s.sheetTitle} accessibilityRole="header" numberOfLines={1}>Verified Intake</Text>
-              <View style={s.intakeIdRow}><Text style={s.intakeId} selectable numberOfLines={1}>{selected?.intake_number.replace('PIR-','')}</Text>
-                <Pressable accessibilityRole="button" accessibilityLabel={copied?'Intake number copied':'Copy intake number'} hitSlop={8} onPress={()=>{if(selected){Clipboard.setString(selected.intake_number.replace('PIR-',''));setCopied(true);}}}><Ionicons name={copied?'checkmark':'copy-outline'} color="#D4E3FF" size={17}/></Pressable>
-              </View>
             </View>
             <Pressable style={s.detailCircle} onPress={closeDetail} disabled={actionBusy} accessibilityRole="button" accessibilityLabel="Close details"><Ionicons name="close" color="#FFFFFF" size={23}/></Pressable>
           </View>
@@ -388,17 +385,16 @@ export default function AiPolicyStudioScreen() {
             <View style={s.detailHero}>
               <View pointerEvents="none" style={s.heroGlow}/>
               {[0,1,2].map(i=><View key={i} pointerEvents="none" style={[s.detailWave,{right:-68+i*15,bottom:-88+i*14}]}/>)}
+              <View style={s.heroTypePosition}><View style={s.policyTypePill}><Ionicons name={detail.policy_type?.toLowerCase()==='motor'?'car-outline':'shield-outline'} size={12} color="#FFFFFF"/><Text style={s.policyTypeText}>{detail.policy_type?humanize(detail.policy_type):'Policy'}</Text></View></View>
               <View style={s.detailHeroCopy}>
                 <View style={s.heroNameRow}>
                   <Text style={s.detailName} numberOfLines={1} ellipsizeMode="tail">{detail.fields.find(x=>x.key==='insured_name')?.value||detail.lead_source_name||'Policy intake'}</Text>
                   {isIntakeVerified(detail)?<Ionicons name="checkmark-circle" size={25} color="#10C960" accessibilityLabel="Verified intake"/>:null}
                 </View>
-                <View style={s.detailMetaRow}>
-                  <Ionicons name="shield-checkmark-outline" size={17} color="#FFFFFF"/><Text style={s.detailMeta}>{detail.checks_passed} verified checks</Text>
-                  <View style={s.policyTypePill}><Ionicons name={detail.policy_type?.toLowerCase()==='motor'?'car-outline':'shield-outline'} size={12} color="#FFFFFF"/><Text style={s.policyTypeText}>{detail.policy_type?humanize(detail.policy_type):'Policy'}</Text></View>
+                <View style={s.intakeIdRow}><Text style={s.intakeId} selectable numberOfLines={1}>{selected?.intake_number.replace('PIR-','')}</Text>
+                  <Pressable accessibilityRole="button" accessibilityLabel={copied?'Intake number copied':'Copy intake number'} hitSlop={8} onPress={()=>{if(selected){Clipboard.setString(selected.intake_number.replace('PIR-',''));setCopied(true);}}}><Ionicons name={copied?'checkmark':'copy-outline'} color="#D4E3FF" size={17}/></Pressable>
                 </View>
               </View>
-              <Image source={PartnerAssets.actions.aiStudioVerified} style={s.detailHeroArtwork} resizeMode="contain" accessible={false}/>
             </View>
             <IntakeStepper detail={detail}/>
             {detail.last_error_code||detail.exception_codes.length?<View style={s.issue}>
@@ -653,18 +649,16 @@ const s=StyleSheet.create({
   intakeId:{fontSize:12,fontWeight:'600',color:'#D4E3FF',flexShrink:1},
   sheetContent:{paddingHorizontal:14,paddingTop:8,paddingBottom:0,flexGrow:1},
   detailHero:{backgroundColor:'#092858',borderRadius:17,padding:12,minHeight:86,marginBottom:12,flexDirection:'row',alignItems:'center',overflow:'hidden'},
-  detailHeroCopy:{flex:1,minWidth:0,zIndex:1},
+  detailHeroCopy:{flex:1,minWidth:0,zIndex:1,paddingRight:88},
+  heroTypePosition:{position:'absolute',right:12,top:10,zIndex:3},
   heroNameRow:{flexDirection:'row',alignItems:'center',gap:8,minWidth:0},
   heroGlow:{position:'absolute',width:280,height:220,borderRadius:140,backgroundColor:'#104783',opacity:.35,left:-85,top:-135},
   detailWave:{position:'absolute',width:255,height:160,borderRadius:120,borderWidth:9,borderColor:'#1455A5',opacity:.26,transform:[{rotate:'-24deg'}]},
   detailEyebrow:{alignSelf:'flex-start',fontSize:11,fontWeight:'800',color:'#A33D12',backgroundColor:'#FFE8C2',borderRadius:18,paddingHorizontal:10,paddingVertical:5,overflow:'hidden'},
   detailName:{fontSize:21,color:'#FFFFFF',fontWeight:'800',flexShrink:1,letterSpacing:-.5},
-  detailHeroArtwork:{width:64,height:62,marginLeft:4},
-  detailMetaRow:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:5,marginTop:6},
   policyTypePill:{flexDirection:'row',alignItems:'center',flexShrink:0,gap:3,paddingHorizontal:7,paddingVertical:3,borderRadius:12,backgroundColor:'#244978',borderWidth:1,borderColor:'#D7E6FF'},
   policyTypeText:{fontSize:10,color:'#FFFFFF',fontWeight:'700'},
   metaDivider:{width:1,height:15,backgroundColor:'#A7BEDF',marginHorizontal:2},
-  detailMeta:{fontSize:11,color:'#FFFFFF',flexShrink:1},
   stepper:{flexDirection:'row',alignItems:'flex-start',position:'relative',marginBottom:18,paddingTop:4},
   stepLine:{position:'absolute',left:'16.67%',right:'16.67%',top:28,height:3,backgroundColor:'#DCE6FA',overflow:'hidden'},
   stepLineFill:{height:3,backgroundColor:'#2268EA'},

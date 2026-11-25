@@ -114,7 +114,7 @@ for(const [row,expected] of [
   [{status:'processing',fields:[{}],ocr_status:'completed'},1],
   [{status:'in_review',fields:[{}],ocr_status:'completed'},2],
 ]) assert.equal(stageContext.stage(row),expected);
-for(const marker of ['presentationStyle="fullScreen"','<StatusBar style="light"','Clipboard.setString','style={s.sheetTop}','<IntakeStepper detail={detail}/>','style={s.detailHeroArtwork}','style={s.fieldsPill}','style={s.footerWaves}','accessibilityState={{disabled:true}}','Secure actions unlock after authenticated booking checks.']) assert(screen.includes(marker), 'Intake details reference and safety contract: '+marker);
+for(const marker of ['presentationStyle="fullScreen"','<StatusBar style="light"','Clipboard.setString','style={s.sheetTop}','<IntakeStepper detail={detail}/>','style={s.fieldsPill}','style={s.footerWaves}','accessibilityState={{disabled:true}}','Secure actions unlock after authenticated booking checks.']) assert(screen.includes(marker), 'Intake details reference and safety contract: '+marker);
 
 console.log('Partner native AI Studio read-only, auth and Vercel-independence contracts passed');
 
@@ -143,8 +143,12 @@ const sample=[{key:'idv',value:'123'},{key:'od_premium',value:'0'},{key:'insured
 assert.equal(INTAKE_TEST_ALL(sample,groupContext.group),sample.length,'Unknown and duplicate fields remain accounted for');
 function INTAKE_TEST_ALL(fields,group){return ['policy','insured','vehicle','premium','coverage','dates','documents','additional'].reduce((sum,id)=>sum+fields.filter(f=>group(f.key)===id).length,0);}
 
-assert.match(screen, /<View style=\{s\.detailMetaRow\}>\s*<Ionicons[^\n]*verified checks<\/Text>\s*<View style=\{s\.policyTypePill\}>/, 'Policy type follows verified checks in the same row');
-assert(!screen.includes('heroTypePosition'), 'Remove floating top-right badge');
+assert.match(screen, /<View style=\{s\.heroTypePosition\}><View style=\{s\.policyTypePill\}>/, 'Policy badge returns to top-right');
+assert(!screen.includes('style={s.detailHeroArtwork}'), 'Remove hero illustration only');
+const identityHero=screen.slice(screen.indexOf('<View style={s.detailHero}>'),screen.indexOf('<IntakeStepper detail={detail}/>'));
+assert(identityHero.indexOf('style={s.intakeIdRow}')>identityHero.indexOf('style={s.detailName}'));
+assert(identityHero.includes('Clipboard.setString') && !identityHero.includes('verified checks'));
+assert(!screen.slice(screen.indexOf('<View style={s.sheetTop}>'),screen.indexOf('<View style={s.detailHero}>')).includes('style={s.intakeIdRow}'));
 assert.match(screen, /isIntakeVerified\(detail\)\?/, 'Green name verification is conditional on verified status and no errors');
 assert.match(screen, /'checkmark-circle'|name="checkmark-circle"/, 'Green verified icon is in the hero');
 assert.match(screen, /numberOfLines=\{1\} ellipsizeMode="tail"/, 'Disabled security notice is compact and single line');
@@ -165,6 +169,6 @@ assert(screen.includes('stepCircle:{width:49,height:49') && screen.includes("ste
 assert(screen.includes('style={s.detailName} numberOfLines={1} ellipsizeMode="tail"'));
 assert.equal((screen.match(/<View style=\{s\.actionCopy\}>/g)||[]).length,4);
 for(const card of ['reparseButton','convertButton']) assert.match(screen,new RegExp(card+":\\{[^}]*flexDirection:'row'"));
-assert(screen.includes('detailHeroCopy:{flex:1,minWidth:0,zIndex:1}'));
+assert(screen.includes('detailHeroCopy:{flex:1,minWidth:0,zIndex:1,paddingRight:88}'));
 assert(screen.includes('padding:12,minHeight:86,marginBottom:12'));
-assert(screen.includes('detailHeroArtwork:{width:64,height:62,marginLeft:4}'));
+assert(screen.includes("heroTypePosition:{position:'absolute',right:12,top:10"));
