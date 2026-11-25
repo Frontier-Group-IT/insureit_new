@@ -59,4 +59,11 @@ assert.match(vehicles, /<td className="px-2 py-2 text-\[12px\]/, "Insurer logo h
 assert.doesNotMatch(vehicles, /p\.status ===|Insurer not specified/, "Vehicle register must not render policy status or insurer names");
 assert.match(vehicles, /Showing \{rows\.length/, "Vehicle pagination data must remain unchanged");
 assert.match(policies, /Showing \{sourceFilteredRows\.length\}/, "Policy record counts must remain unchanged");
+const profilePage = read("../app/customer/(protected)/profile/page.tsx");
+const profileVault = read("../components/customer-portal/customer-profile-documents.tsx");
+const vaultControls = read("../components/customer-portal/customer-document-vault.tsx");
+assert.match(profilePage, /customer-profile-page flex min-h-0 min-w-0 flex-1 flex-col gap-4/, "Profile page consumes remaining viewport");
+assert.match(profilePage, /customer-profile-detail-section relative flex shrink-0/, "Profile summary retains natural height");
+assert.match(profileVault, /customer-profile-vault flex min-w-0 flex-1 flex-col/, "Vault consumes remaining space");
+assert.match(vaultControls, /customer-profile-vault-content flex-1/, "Vault content grows without fixed height");
 console.log("Customer Portal full-height layout regression passed.");
