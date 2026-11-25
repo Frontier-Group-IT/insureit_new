@@ -1,13 +1,13 @@
 Partner production OTA trigger
-release=partner-customer-details-compact-overview
+release=partner-universal-policy-documents
 source=verified-merged-main
-source_pr=5253
-source_merge=5c0df398cfad83afd4703d544f4730b545895f0d
-reason=publish-approved-customer-details-icon-only-actions-and-overview-ui
+source_pr=5271
+source_merge=8b3b501a6dc013c5b03e4752460ad6f7ed32abaa
+reason=explicit-reviewed-release-after-backend-api-path-blocked-auto-publish
 channel=production
 runtime=0.2.0
 requested=2026-11-25
-backend_changes=false
+backend_changes=true
 no_native_build=true
 no_apk=true
 no_aab=true
