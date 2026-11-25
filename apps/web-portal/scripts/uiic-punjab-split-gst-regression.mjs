@@ -70,6 +70,7 @@ for(const altered of [
   fake.replace("SGST-Basic TP(2.50%): 1,099.00","SGST-Basic TP(2.50%): 1,098.00"),
   fake.replace("B. Basic - TP 43,950.00","B. Basic - TP 43,000.00"),
   fake.replace("RTO PATHANKOT INDIA","DELHI INDIA"),
+  fake.replace("RTO PATHANKOT INDIA","DELHI INDIA\nPrevious vehicle Registration Authority\nRTO PATHANKOT INDIA"),
   fake.replace("MEC123456789012345","UNKNOWNCHASSIS"),
   fake.replace("DAIMLER INDIA COMMERCIAL VEHICLES PVT. LTD / BHARATBENZ","UNLISTED COMPANY / UNKNOWN"),
 ]) assert.notEqual(parseOne(altered).ok,true,"Forged or missing PDF evidence must fail");
