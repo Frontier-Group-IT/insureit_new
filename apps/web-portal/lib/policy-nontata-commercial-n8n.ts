@@ -147,13 +147,18 @@ function insurerForText(head: string): Insurer | null {
 export function refineUiicPunjabSplitFromSource(
   initial:string|null,fullNativeText:string,
 ):string|null {
+  // Never infer an insurer from a webhook label. The only supported
+  // promotion is from the already recognized UIIC GCV source layout.
   if(initial!=="united_india_gcv_native_pdf")return initial;
   const normalized=fullNativeText.replace(/\s+/g," ").slice(0,120000);
-  return /UNITED INDIA INSURANCE COMPANY LIMITED/i.test(normalized.slice(0,10000))
-    &&/GCV PUBLIC CARRIER/i.test(normalized.slice(0,15000))
-    &&/DAIMLER\s+INDIA\s+COMMERCIAL\s+VEHICLES\s+PVT\.\s*LTD\s*\/\s*BHARATBENZ/i.test(normalized)
-    &&/CGST-Others\(9%\)/i.test(normalized)
-    &&/SGST-Basic TP\(2\.50%\)/i.test(normalized)
+  // PDF text engines may insert whitespace around punctuation inside the
+  // split-GST rows. Require BOTH printed tax lines and the exact OEM marker.
+  const sourceIssuer=/UNITED\s+INDIA\s+INSURANCE\s+COMPANY\s+LIMITED/i.test(normalized.slice(0,10000));
+  const sourceProduct=/GCV\s+PUBLIC\s+CARRIER/i.test(normalized.slice(0,15000));
+  const sourceMaker=/DAIMLER\s+INDIA\s+COMMERCIAL\s+VEHICLES\s+PVT\.?\s*LTD\.?\s*\/\s*BHARATBENZ/i.test(normalized);
+  const cgst=/CGST\s*-\s*Others\s*\(\s*9\s*%\s*\)/i.test(normalized);
+  const sgst=/SGST\s*-\s*Basic\s*TP\s*\(\s*2\.50\s*%\s*\)/i.test(normalized);
+  return sourceIssuer&&sourceProduct&&sourceMaker&&cgst&&sgst
     ?"united_india_gcv_punjab_split_gst_native_pdf":initial;
 }
 
