@@ -465,7 +465,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
       &&/\bRTO\b/i.test(rtoFresh.evidence);
   }
   if(extracted.preview.documentId!==queued.document_id||
-     !(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction||reverifiedTataFailedSource||reverifiedTataPrintedDateHold||reverifiedHeldExtraction)||
+     (!(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction||reverifiedTataFailedSource||reverifiedTataPrintedDateHold) && !reverifiedHeldExtraction)||
      (heldReview&&extracted.preview.parserId!==queued.parser_id)||
      !hasVerifiedN8nParserEvidence(extracted.preview.parserId,
        extracted.preview.checksPassed,extracted.preview.warnings))
