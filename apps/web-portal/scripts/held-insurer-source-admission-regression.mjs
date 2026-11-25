@@ -116,7 +116,7 @@ assert(adapter.includes("candidateCanonicalPremium:decision.canonicalPremium"),"
 
 const classifierSource=adapter.slice(adapter.indexOf("function insurerForText("),
   adapter.indexOf("/** Recognize only printed, trained native-PDF layouts."));
-const callable=ts.transpileModule(classifierSource+"\\nexports.classifier=insurerForText;",{
+const callable=ts.transpileModule(classifierSource+";exports.classifier=insurerForText;",{
   compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 function routePdf(head,enabled){
   const scope={};
