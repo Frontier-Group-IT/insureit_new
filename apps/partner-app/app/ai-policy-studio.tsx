@@ -388,10 +388,10 @@ export default function AiPolicyStudioScreen() {
             <View style={s.detailHero}>
               <View pointerEvents="none" style={s.heroGlow}/>
               {[0,1,2].map(i=><View key={i} pointerEvents="none" style={[s.detailWave,{right:-68+i*15,bottom:-88+i*14}]}/>)}
-              <View style={s.heroTypePosition}><View style={s.policyTypePill}><Ionicons name={detail.policy_type?.toLowerCase()==='motor'?'car-outline':'shield-outline'} size={15} color="#FFFFFF"/><Text style={s.policyTypeText}>{detail.policy_type?humanize(detail.policy_type):'Policy'}</Text></View></View>
+              <View style={s.heroTypePosition}><View style={s.policyTypePill}><Ionicons name={detail.policy_type?.toLowerCase()==='motor'?'car-outline':'shield-outline'} size={12} color="#FFFFFF"/><Text style={s.policyTypeText}>{detail.policy_type?humanize(detail.policy_type):'Policy'}</Text></View></View>
               <View style={s.detailHeroCopy}>
                 <View style={s.heroNameRow}>
-                  <Text style={s.detailName}>{detail.fields.find(x=>x.key==='insured_name')?.value||detail.lead_source_name||'Policy intake'}</Text>
+                  <Text style={s.detailName} numberOfLines={1} ellipsizeMode="tail">{detail.fields.find(x=>x.key==='insured_name')?.value||detail.lead_source_name||'Policy intake'}</Text>
                   {isIntakeVerified(detail)?<Ionicons name="checkmark-circle" size={25} color="#10C960" accessibilityLabel="Verified intake"/>:null}
                 </View>
                 <View style={s.detailMetaRow}>
@@ -407,8 +407,8 @@ export default function AiPolicyStudioScreen() {
             </View>:null}
             {(!aiStudioActionsEnabled||detail.processing_lane!=='automation')&&!detail.final_policy_id?<View style={s.actionsWrap}>
               <View style={s.actionsRow}>
-                <View style={[s.reparseButton,s.disabledAction]} accessibilityState={{disabled:true}}><Ionicons name="refresh-outline" color="#7F8EAB" size={30}/><Text style={s.reparseLabel}>Reparse PDF</Text><Text style={s.actionSub}>Awaiting activation</Text><View style={s.actionArrow}><Ionicons name="lock-closed-outline" size={16} color="#71809E"/></View></View>
-                <View style={[s.convertButton,s.disabledConvert]} accessibilityState={{disabled:true}}><Ionicons name="lock-closed-outline" color="#FFFFFF" size={30}/><Text style={s.convertLabel}>Verify & Convert</Text><Text style={s.convertSub}>Awaiting activation</Text><View style={s.convertArrow}><Ionicons name="lock-closed-outline" size={16} color="#6276A5"/></View></View>
+                <View style={[s.reparseButton,s.disabledAction]} accessibilityState={{disabled:true}}><Ionicons name="refresh-outline" color="#7F8EAB" size={23}/><View style={s.actionCopy}><Text style={s.reparseLabel}>Reparse PDF</Text><Text style={s.actionSub}>Awaiting activation</Text></View><View style={s.actionArrow}><Ionicons name="lock-closed-outline" size={16} color="#71809E"/></View></View>
+                <View style={[s.convertButton,s.disabledConvert]} accessibilityState={{disabled:true}}><Ionicons name="lock-closed-outline" color="#FFFFFF" size={23}/><View style={s.actionCopy}><Text style={s.convertLabel}>Verify & Convert</Text><Text style={s.convertSub}>Awaiting activation</Text></View><View style={s.convertArrow}><Ionicons name="lock-closed-outline" size={16} color="#6276A5"/></View></View>
               </View>
               <View style={s.disabledNotice}><Ionicons name="lock-closed-outline" size={18} color="#8F7033"/><Text style={s.disabledText} numberOfLines={1} ellipsizeMode="tail">{detail.processing_lane==='manual'?'Manual onboarding only — secure AI conversion unavailable.':'Secure actions unlock after authenticated booking checks.'}</Text></View>
             </View>:null}
@@ -419,11 +419,11 @@ export default function AiPolicyStudioScreen() {
               {!pendingAction&&!resultUncertain?<View style={s.actionsRow}>
                 <Pressable accessibilityRole="button" accessibilityLabel="Reparse current PDF and replace draft"
                   style={s.reparseButton} onPress={()=>setPendingAction('reparse')} disabled={actionBusy}>
-                  <Ionicons name="refresh-outline" color="#5635F4" size={31}/><Text style={s.reparseLabel}>Reparse PDF</Text><Text style={s.actionSub}>Analyze again & extract data</Text><View style={s.actionArrow}><Ionicons name="chevron-forward" size={18} color="#5635F4"/></View>
+                  <Ionicons name="refresh-outline" color="#5635F4" size={23}/><View style={s.actionCopy}><Text style={s.reparseLabel}>Reparse PDF</Text><Text style={s.actionSub}>Analyze again & extract data</Text></View><View style={s.actionArrow}><Ionicons name="chevron-forward" size={18} color="#5635F4"/></View>
                 </Pressable>
                 <Pressable accessibilityRole="button" accessibilityLabel="Verify PDF and convert to policy"
                   style={s.convertButton} onPress={()=>setPendingAction('convert')} disabled={actionBusy}>
-                  <View pointerEvents="none" style={s.convertGlow}/><Ionicons name="layers-outline" color="#FFFFFF" size={31}/><Text style={s.convertLabel}>Verify & Convert</Text><Text style={s.convertSub}>Analyze, validate & convert to policy</Text><View style={s.convertArrow}><Ionicons name="chevron-forward" size={18} color="#0759EC"/></View>
+                  <View pointerEvents="none" style={s.convertGlow}/><Ionicons name="layers-outline" color="#FFFFFF" size={23}/><View style={s.actionCopy}><Text style={s.convertLabel}>Verify & Convert</Text><Text style={s.convertSub}>Analyze, validate & convert to policy</Text></View><View style={s.convertArrow}><Ionicons name="chevron-forward" size={18} color="#0759EC"/></View>
                 </Pressable>
               </View>:null}
               {pendingAction?<View style={s.confirmPanel}>
@@ -652,18 +652,18 @@ const s=StyleSheet.create({
   intakeIdRow:{flexDirection:'row',alignItems:'center',gap:7,marginTop:4},
   intakeId:{fontSize:12,fontWeight:'600',color:'#D4E3FF',flexShrink:1},
   sheetContent:{paddingHorizontal:14,paddingTop:8,paddingBottom:0,flexGrow:1},
-  detailHero:{backgroundColor:'#092858',borderRadius:17,padding:17,minHeight:125,marginBottom:12,flexDirection:'row',alignItems:'center',overflow:'hidden'},
-  detailHeroCopy:{flex:1,minWidth:0,zIndex:1,paddingTop:30},
+  detailHero:{backgroundColor:'#092858',borderRadius:17,padding:14,minHeight:112,marginBottom:12,flexDirection:'row',alignItems:'center',overflow:'hidden'},
+  detailHeroCopy:{flex:1,minWidth:0,zIndex:1,paddingTop:8},
   heroTypePosition:{position:'absolute',right:13,top:12,zIndex:3},
   heroNameRow:{flexDirection:'row',alignItems:'center',gap:8,minWidth:0},
   heroGlow:{position:'absolute',width:280,height:220,borderRadius:140,backgroundColor:'#104783',opacity:.35,left:-85,top:-135},
   detailWave:{position:'absolute',width:255,height:160,borderRadius:120,borderWidth:9,borderColor:'#1455A5',opacity:.26,transform:[{rotate:'-24deg'}]},
   detailEyebrow:{alignSelf:'flex-start',fontSize:11,fontWeight:'800',color:'#A33D12',backgroundColor:'#FFE8C2',borderRadius:18,paddingHorizontal:10,paddingVertical:5,overflow:'hidden'},
   detailName:{fontSize:21,color:'#FFFFFF',fontWeight:'800',flexShrink:1,letterSpacing:-.5},
-  detailHeroArtwork:{width:82,height:92,marginLeft:4,marginTop:18},
-  detailMetaRow:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:5,marginTop:9},
-  policyTypePill:{flexDirection:'row',alignItems:'center',gap:4,paddingHorizontal:10,paddingVertical:5,borderRadius:15,backgroundColor:'#244978',borderWidth:1,borderColor:'#D7E6FF'},
-  policyTypeText:{fontSize:11,color:'#FFFFFF',fontWeight:'700'},
+  detailHeroArtwork:{width:72,height:76,marginLeft:4,marginTop:8},
+  detailMetaRow:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:5,marginTop:6},
+  policyTypePill:{flexDirection:'row',alignItems:'center',gap:3,paddingHorizontal:7,paddingVertical:3,borderRadius:12,backgroundColor:'#244978',borderWidth:1,borderColor:'#D7E6FF'},
+  policyTypeText:{fontSize:10,color:'#FFFFFF',fontWeight:'700'},
   metaDivider:{width:1,height:15,backgroundColor:'#A7BEDF',marginHorizontal:2},
   detailMeta:{fontSize:11,color:'#FFFFFF',flexShrink:1},
   stepper:{flexDirection:'row',alignItems:'flex-start',position:'relative',marginBottom:18,paddingTop:4},
@@ -712,10 +712,11 @@ const s=StyleSheet.create({
   note:{fontSize:10.5,lineHeight:17,color:C.faint,marginTop:19,textAlign:'center'},
   actionsWrap:{marginTop:4},
   actionsRow:{flexDirection:'row',gap:10},
-  reparseButton:{flex:1,minWidth:0,minHeight:112,borderRadius:16,borderWidth:1,borderColor:'#D7E1F4',backgroundColor:'#F8FAFF',padding:13,alignItems:'flex-start',justifyContent:'flex-start',elevation:2},
-  reparseLabel:{fontSize:15,fontWeight:'800',color:'#101A35',marginTop:8},actionSub:{fontSize:12,lineHeight:17,color:'#435477',marginTop:4,paddingRight:19},
-  convertButton:{flex:1,minWidth:0,minHeight:112,borderRadius:16,backgroundColor:'#0751DB',padding:13,alignItems:'flex-start',justifyContent:'flex-start',overflow:'hidden',elevation:2},convertGlow:{position:'absolute',width:210,height:180,borderRadius:90,backgroundColor:'#179DFF',opacity:.35,top:-100,left:-85},actionArrow:{position:'absolute',right:10,bottom:12,width:27,height:27,borderRadius:15,backgroundColor:'#E6E9FF',alignItems:'center',justifyContent:'center'},convertArrow:{position:'absolute',right:10,bottom:12,width:27,height:27,borderRadius:15,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center'},
-  convertLabel:{fontSize:15,fontWeight:'800',color:'#FFFFFF',marginTop:8},convertSub:{fontSize:12,lineHeight:17,color:'#FFFFFF',marginTop:4,paddingRight:19},
+  actionCopy:{flex:1,minWidth:0,gap:3},
+  reparseButton:{flex:1,minWidth:0,minHeight:68,borderRadius:16,borderWidth:1,borderColor:'#D7E1F4',backgroundColor:'#F8FAFF',padding:9,flexDirection:'row',gap:6,alignItems:'center',justifyContent:'flex-start',elevation:2},
+  reparseLabel:{fontSize:13,fontWeight:'800',color:'#101A35'},actionSub:{fontSize:11,lineHeight:15,color:'#435477'},
+  convertButton:{flex:1,minWidth:0,minHeight:68,borderRadius:16,backgroundColor:'#0751DB',padding:9,flexDirection:'row',gap:6,alignItems:'center',justifyContent:'flex-start',overflow:'hidden',elevation:2},convertGlow:{position:'absolute',width:210,height:180,borderRadius:90,backgroundColor:'#179DFF',opacity:.35,top:-100,left:-85},actionArrow:{width:19,height:19,borderRadius:10,backgroundColor:'#E6E9FF',alignItems:'center',justifyContent:'center'},convertArrow:{width:19,height:19,borderRadius:10,backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center'},
+  convertLabel:{fontSize:13,fontWeight:'800',color:'#FFFFFF'},convertSub:{fontSize:11,lineHeight:15,color:'#FFFFFF'},
   actionError:{color:'#B04A3B',fontSize:11,lineHeight:16,marginBottom:10},
   confirmPanel:{borderRadius:17,borderColor:'#C8D8F5',borderWidth:1,padding:16,backgroundColor:'#FFFFFF'},
   confirmHeading:{flexDirection:'row',alignItems:'center',gap:8},
