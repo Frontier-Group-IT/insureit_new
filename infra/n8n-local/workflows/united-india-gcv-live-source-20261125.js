@@ -316,7 +316,11 @@ function unitedIndiaPunjabBharatBenz(t){
  const current=t.slice(0,5500);
  const vehicleStart=t.indexOf('Particulars of Vehicle Insured');
  const block=vehicleStart>=0?t.slice(vehicleStart,vehicleStart+2500):'';
- const registered=grab(block,/\b(PB\s*-\s*\d{2}\s*-\s*[A-Z]{1,3}\s*-\s*\d{3,4})\s+No\b/i);
+ // Registration may only come from this current vehicle row, not a
+ // history paragraph following the schedule and its authority.
+ const vehicleRow=block.split(/\bRegistration Authority\b/i)[0];
+ const registrations=[...vehicleRow.matchAll(/\b(PB\s*-\s*\d{2}\s*-\s*[A-Z]{1,3}\s*-\s*\d{3,4})\s+No\b/gi)];
+ const registered=registrations.length===1?registrations[0][1]:null;
  const registration=registered?.replace(/[\s-]/g,'').toUpperCase()??null;
  const maker=/DAIMLER\s+INDIA\s+COMMERCIAL\s+VEHICLES\s+PVT\.\s*LTD\s*\/\s*BHARATBENZ/i.test(block);
  const model=grab(block,/\b(BHARATBENZ\s+2828C\s+6X4\s+BSVI)\b/i)?.replace(/\s+/g,' ')??null;
@@ -353,7 +357,12 @@ function unitedIndiaPunjabBharatBenz(t){
  const nilDep=amountAfter(t,/\bNil Depreciation Without Excess\s+([\d,.]+)/i);
  const ncb=amountAfter(t,/\bNo Claim Bonus 20%\s+([\d,.]+)/i);
  const towing=amountAfter(t,/\bAdditional Towing Charge\s*\n\(SI:\s*\d+\/-\)\s*\n([\d,.]+)/i);
- const authority=grab(block,/\bRegistration Authority[^\n]*\n[ \t]*(RTO PATHANKOT INDIA)\b/i);
+ // Bind the Punjab authority to the unique CURRENT vehicle-schedule row;
+ // never accept a historical or previous-vehicle authority as proof.
+ const authorityRows=[...block.matchAll(/\bRegistration Authority[^\n]*\n[ \t]*([^\n]{3,110})/gi)];
+ const authority=authorityRows.length===1
+   &&authorityRows[0][1].trim().toUpperCase()==='RTO PATHANKOT INDIA'
+   ?'RTO PATHANKOT INDIA':null;
  const extra={
    uiic_layout:/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(current)
      &&/GCV PUBLIC CARRIER OTHER THAN 3 WHEELER/i.test(current)&&maker,
