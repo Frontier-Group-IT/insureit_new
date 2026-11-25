@@ -98,7 +98,7 @@ function insurerForText(head: string): Insurer | null {
   if (/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(issuer)
       && /PRIVATE CAR\s*-\s*PACKAGE POLICY/i.test(product))
     matches.push("united_india_private_car_package_native_pdf");
-  if (/Magma General Insurance Limited/i.test(issuer) && /PRIVATE CAR PACKAGE POLICY/i.test(product))
+  if (/Magma General Insurance Limited/i.test(issuer) && /www\.magmainsurance\.com/i.test(issuer.slice(0,2500)) && /PRIVATE CAR PACKAGE POLICY/i.test(product))
     matches.push("magma_private_car_package_native_pdf");
   if (/THE ORIENTAL INSURANCE COMPANY LIMITED/i.test(issuer) && /GCCV-PUBLIC CARRIERS/i.test(product))
     matches.push("oriental_gccv_native_pdf");
