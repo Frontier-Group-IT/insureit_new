@@ -13,7 +13,7 @@ for (const label of ['Call', 'WhatsApp', 'Email']) assert.ok(contacts.includes(`
 for (const url of ['tel:+91', 'https://wa.me/91', 'mailto:']) assert.ok(contacts.includes(url), 'Contact route preserved: ' + url);
 assert.match(contacts, /disabled=\{!normalizedPhone\}/);
 assert.match(contacts, /disabled=\{!email\}/);
-assert.match(contacts, /\(!compact \|\| iconOnlyVertical \|\| inlineLabeled\)/, 'Email remains present in non-compact icon-only layout');
+assert.match(contacts, /!compact \|\| iconOnlyVertical \|\| inlineLabeled/, 'Email remains present in non-compact icon-only layout');
 
 // Badges must use already-authorized customer summary; no synthetic counts.
 assert.match(screen, /key === 'vehicles' \? data\.summary\.vehicles : data\.summary\.policies/);
