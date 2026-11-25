@@ -116,6 +116,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         canCreatePolicyIntake={createPolicyIntakes}
         intakeAttention={intakeAttention}
         lifeTeamCases={portfolioFilter !== null ? proposalSummary : undefined}
+        hideLowerDashboardSections={profile?.id === "7bda6ffc-340e-48aa-bd3d-4f1f62cf85d9" && profile.role === "sales_head"}
         showRmPerformanceButton={viewReports && !isRelationshipManager}
       />
       <DashboardRegisterSync proposalPending={portfolioFilter !== null ? 0 : proposalSummary?.pending ?? 0} />
