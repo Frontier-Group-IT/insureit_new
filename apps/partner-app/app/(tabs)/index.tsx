@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, useRef, useState, useEffect, type ReactNode } from 'react';
 import { Animated, Easing, Image, ImageBackground, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, Platform, type StyleProp, type TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -9,7 +9,7 @@ import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerAnchoredDropdown } from '@/components/ui/partner-anchored-dropdown';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerCommissionEarnedIcon, PartnerPoliciesSoldIcon } from '@/components/ui/partner-home-metric-icons';
-import { PartnerEnter } from '@/components/ui/partner-enter';
+import { usePartnerBiometricLock } from '@/providers/partner-biometric-lock-provider';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerProfileAvatar } from '@/components/ui/partner-profile-avatar';
 import { PartnerSkeleton } from '@/components/ui/partner-skeleton';
@@ -27,6 +27,9 @@ import { signedInPersonName } from '@/lib/signed-in-person';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 import { isPartnerBranchSession } from '@/lib/partner-session';
 
+const HomeSequenceContext = createContext({ motion: false, animateOnMount: false });
+function useHomeSequence() { return useContext(HomeSequenceContext); }
+
 type BusinessPeriod = 'all' | 'last6' | 'last_month' | 'mtd';
 
 const BUSINESS_PERIODS: { key: BusinessPeriod; label: string }[] = [
@@ -43,8 +46,18 @@ export default function PartnerHomeScreen() {
   const [periodOpen, setPeriodOpen] = useState(false);
   const [filterSkeletonVisible, setFilterSkeletonVisible] = useState(false);
   const homeScrollY = useRef(new Animated.Value(0)).current;
-  const { motion } = useActivityMotion();
+  const { motion: permittedMotion, motionReady, visible } = useActivityMotion();
+  const { ready: biometricReady, locked, startupPending } = usePartnerBiometricLock();
+  const sequenceReady = motionReady && biometricReady && !startupPending && !locked && visible;
+  const [sequenceStarted, setSequenceStarted] = useState(false);
+  const [animateOnMount, setAnimateOnMount] = useState(false);
+  const motion = sequenceStarted && permittedMotion && biometricReady && !startupPending && !locked;
   const businessEntrance = useHomeEntrance(motion, 250);
+  useEffect(() => {
+    if (!sequenceReady || sequenceStarted) return;
+    setAnimateOnMount(permittedMotion);
+    setSequenceStarted(true);
+  }, [sequenceReady, sequenceStarted, permittedMotion]);
 
   const fetchHomeWorkspace = useCallback(async (): Promise<{
     home: PartnerHomeData;
@@ -132,9 +145,11 @@ export default function PartnerHomeScreen() {
   const showBusinessFilterSkeleton = filterSkeletonVisible || (!rangeData && (business.loading || !business.error));
 
   return (
+    <HomeSequenceContext.Provider value={{ motion, animateOnMount }}>
     <PartnerScreen
       resetScrollOnFocus
       homeMotionScrollY={homeScrollY}
+      homeMotionEnabled={motion}
       stickyHeaderNavy
       eyebrow="INSUREIT PARTNER"
       title={greeting(signedInPersonName(identity))}
@@ -177,7 +192,7 @@ export default function PartnerHomeScreen() {
         ),
       }}
     >
-      {workspace.loading && !data ? (
+      {!sequenceStarted || !biometricReady || startupPending || locked || (workspace.loading && !data) ? (
         <HomeSkeleton />
       ) : !data ? (
         <PartnerStateView
@@ -335,7 +350,7 @@ export default function PartnerHomeScreen() {
               </>)}
           </Animated.View>
 
-          <PartnerEnter delay={70}>
+          <HomeSequenceEnter delay={800}>
             <View style={styles.quickCard}>
               <View style={styles.sectionHeading}>
                 <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -378,9 +393,9 @@ export default function PartnerHomeScreen() {
                 ))}
               />
             </View>
-          </PartnerEnter>
+          </HomeSequenceEnter>
 
-          <PartnerEnter delay={120}>
+          <HomeSequenceEnter delay={1000}>
             <PendingTasksCard
               data={data}
               onOpenRenewals={() => router.push('/renewals')}
@@ -388,9 +403,9 @@ export default function PartnerHomeScreen() {
               onOpenIntakes={() => router.push('/policy-intakes')}
               onViewAll={() => router.push('/activity')}
             />
-          </PartnerEnter>
+          </HomeSequenceEnter>
 
-          <PartnerEnter delay={155}>
+          <HomeSequenceEnter delay={1150}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={`View renewals due soon, ${data.business.renewals_30_days} policies in 30 days`}
@@ -406,9 +421,9 @@ export default function PartnerHomeScreen() {
               </View>
               <Text style={styles.sectionLink}>View Renewals  ›</Text>
             </Pressable>
-          </PartnerEnter>
+          </HomeSequenceEnter>
 
-          <PartnerEnter delay={185}>
+          <HomeSequenceEnter delay={1250}>
             <View style={styles.activityCard}>
               <View style={styles.sectionHeading}>
                 <Text style={styles.sectionTitle}>Recent Activity</Text>
@@ -438,10 +453,11 @@ export default function PartnerHomeScreen() {
                 </Text>
               )}
             </View>
-          </PartnerEnter>
+          </HomeSequenceEnter>
         </>
       )}
     </PartnerScreen>
+    </HomeSequenceContext.Provider>
   );
 }
 
@@ -454,8 +470,8 @@ function PendingTasksCard({
   onOpenIntakes: () => void;
   onViewAll: () => void;
 }) {
-  const { motion } = useActivityMotion();
-  const pendingGlow = useHomeEntrance(motion, 1000);
+  const { motion } = useHomeSequence();
+  const pendingGlow = useHomeEntrance(motion, 1000, true);
   const tasks = [
     { key: 'renewal', count: data.business.renewals_30_days, label: 'Renewals due', icon: PartnerAssets.actions.quickRenewals, open: onOpenRenewals },
     { key: 'intakes', count: data.service.intakes_need_attention, label: 'Policy intakes needing attention', icon: PartnerAssets.actions.quickPolicyIntake, open: onOpenIntakes },
@@ -513,12 +529,14 @@ function MiniBusinessTrend({ values }: { values: number[] }) {
 }
 
 
-// Home-only finite motion; keep content usable while reduced-motion state resolves.
-function useHomeEntrance(motion: boolean, delay: number) {
-  const value = useRef(new Animated.Value(1)).current;
+// One Home startup gate resolves biometric state and motion preference before
+// mounting the numeric content. A settled value must never rewind on focus.
+function useHomeEntrance(motion: boolean, delay: number, animateOnMount = false) {
+  const value = useRef(new Animated.Value(motion && animateOnMount ? 0.88 : 1)).current;
   const played = useRef(false);
   useEffect(() => {
-    if (!motion || played.current) { value.setValue(1); return; }
+    if (!motion) { value.setValue(1); played.current = true; return; }
+    if (played.current) return;
     played.current = true;
     value.setValue(0.88);
     const animation = Animated.timing(value, { toValue: 1, delay, duration: 330, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== 'web', isInteraction: false });
@@ -530,24 +548,36 @@ function useHomeEntrance(motion: boolean, delay: number) {
 function homeEntranceStyle(value: Animated.Value) {
   return { opacity: value, transform: [{ translateY: value.interpolate({ inputRange: [0.88, 1], outputRange: [5, 0] }) }, { scale: value.interpolate({ inputRange: [0.88, 1], outputRange: [0.99, 1] }) }] };
 }
+function HomeSequenceEnter({ children, delay }: { children: ReactNode; delay: number }) {
+  const { motion, animateOnMount } = useHomeSequence();
+  const entrance = useHomeEntrance(motion, delay, animateOnMount);
+  return <Animated.View pointerEvents="box-none" style={homeEntranceStyle(entrance)}>{children}</Animated.View>;
+}
 function HomeCount({ text, delay = 0, duration = 900 }: { text: string; delay?: number; duration?: number }) {
   const match = /^([₹]?)(-?[\d,]+)(?:\.(\d+))?$/.exec(text);
   const target = match ? Number(match[2].replace(/,/g, '') + (match[3] ? '.' + match[3] : '')) : NaN;
   const decimals = match?.[3]?.length ?? 0;
   const prefix = match?.[1] ?? '';
   const grouped = text.includes(',') || prefix === '₹';
-  const { motion } = useActivityMotion();
-  const [shown, setShown] = useState(text);
-  const previous = useRef<number | null>(null);
+  const { motion, animateOnMount } = useHomeSequence();
+  const format = (value: number) => prefix + value.toLocaleString('en-IN', { useGrouping: grouped, minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  const firstValue = Number.isFinite(target) && motion && animateOnMount ? 0 : target;
+  const [shown, setShown] = useState(() => Number.isFinite(firstValue) && firstValue !== target ? format(firstValue) : text);
+  const previous = useRef(firstValue);
+  const lastTarget = useRef<number | null>(null);
   useEffect(() => {
-    if (!Number.isFinite(target)) { previous.current = null; setShown(text); return; }
-    if (!motion) { setShown(text); return; }
-    const start = previous.current ?? 0;
+    const initial = lastTarget.current === null;
+    lastTarget.current = target;
+    if (!Number.isFinite(target) || !motion || !Number.isFinite(previous.current)) {
+      previous.current = target; setShown(text); return;
+    }
+    const start = previous.current;
     if (start === target) { setShown(text); return; }
     let frame = 0, first: number | undefined, last = -Infinity;
+    const wait = initial ? delay : 0;
     const tick = (now: number) => {
       first ??= now;
-      const progress = Math.min(1, Math.max(0, now - first - delay) / duration);
+      const progress = Math.min(1, Math.max(0, now - first - wait) / duration);
       if (progress > 0 && (now - last >= 65 || progress === 1)) {
         last = now;
         const next = start + (target - start) * Easing.out(Easing.cubic)(progress);
@@ -559,20 +589,20 @@ function HomeCount({ text, delay = 0, duration = 900 }: { text: string; delay?: 
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [text, target, motion, delay, duration, decimals, prefix, grouped]);
-  return <>{motion ? shown : text}</>;
+  return <>{motion && Number.isFinite(target) ? shown : text}</>;
 }
 function HomeTrendBar({ height, index }: { height: number; index: number }) {
-  const { motion } = useActivityMotion();
-  const progress = useRef(new Animated.Value(1)).current;
+  const { motion, animateOnMount } = useHomeSequence();
+  const progress = useRef(new Animated.Value(motion && animateOnMount ? 0 : 1)).current;
   const played = useRef(false);
   useEffect(() => {
-    if (!motion || played.current) { progress.setValue(1); return; }
+    if (!motion || !animateOnMount) { played.current = true; progress.setValue(1); return; }
+    if (played.current) return;
     played.current = true;
-    progress.setValue(0.05);
-    const animation = Animated.timing(progress, { toValue: 1, delay: 500 + index * 90, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== 'web', isInteraction: false });
+    const animation = Animated.timing(progress, { toValue: 1, delay: 400 + index * 90, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== 'web', isInteraction: false });
     animation.start();
     return () => { animation.stop(); progress.setValue(1); };
-  }, [motion, progress, index]);
+  }, [motion, animateOnMount, progress, index]);
   return <Animated.View style={[styles.miniBar, { height, transform: [{ translateY: height / 2 }, { scaleY: progress }, { translateY: -height / 2 }] }]} />;
 }
 
@@ -593,15 +623,15 @@ function MetricCell({
   value: string;
   label: string;
 }) {
-  const { motion } = useActivityMotion();
-  const entrance = useHomeEntrance(motion, 650);
+  const { motion } = useHomeSequence();
+  const entrance = useHomeEntrance(motion, 400, true);
   return (
     <View style={styles.metricCell}>
       <Animated.View style={[styles.metricIconBox, homeEntranceStyle(entrance)]}>
         {icon ?? (asset ? <Image source={asset} style={styles.metricImage} resizeMode="contain" /> : null)}
       </Animated.View>
       <View style={styles.metricCopy}>
-        <Text numberOfLines={1} style={styles.metricValue}><HomeCount text={value} delay={650} /></Text>
+        <Text numberOfLines={1} style={styles.metricValue}><HomeCount text={value} delay={400} /></Text>
         <Text style={styles.metricLabel}>{label}</Text>
       </View>
     </View>
@@ -618,8 +648,8 @@ function QuickAction({
   asset: number; label: string; onPress: () => void;
   index: number; scrollX: Animated.Value; viewportWidth: number;
 }) {
-  const { motion } = useActivityMotion();
-  const entrance = useHomeEntrance(motion && index < 4, 800 + index * 85);
+  const { motion } = useHomeSequence();
+  const entrance = useHomeEntrance(motion && index < 4, 800 + index * 85, true);
   const pressScale = useRef(new Animated.Value(1)).current;
   useEffect(() => () => pressScale.stopAnimation(), [pressScale]);
   useEffect(() => { if (!motion) { pressScale.stopAnimation(); pressScale.setValue(1); } }, [motion, pressScale]);
@@ -674,7 +704,7 @@ function QuickActionsCarousel({
 }: {
   actions: Array<{ key: string; asset: number; label: string; onPress: () => void }>;
 }) {
-  const { motion } = useActivityMotion();
+  const { motion } = useHomeSequence();
   const scrollRef = useRef<ScrollView>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
   const [viewportWidth, setViewportWidth] = useState(0);
@@ -784,7 +814,7 @@ function ShrinkLoopText({
   children: ReactNode;
   style?: StyleProp<TextStyle>;
 }) {
-  const { motion } = useActivityMotion();
+  const { motion } = useHomeSequence();
   const scale = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     scale.setValue(1);
@@ -859,7 +889,7 @@ function formatCacheTime(value: number | null) {
 // Show only when a newly selected period has no cached figures.
 // The business-card header stays interactive and all other Home content stays visible.
 function BusinessFilterSkeleton() {
-  const { motion } = useActivityMotion();
+  const { motion } = useHomeSequence();
   const opacity = useRef(new Animated.Value(0.55)).current;
 
   useEffect(() => {
