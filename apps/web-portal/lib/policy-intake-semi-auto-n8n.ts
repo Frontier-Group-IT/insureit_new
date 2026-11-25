@@ -49,6 +49,8 @@ export type SemiAutoN8nPreview = {
   premium: N8nVerifiedPremiumBreakdown | null;
   /** Non-Tata only: verified printed OD/TP/net/GST/gross; not an ICICI component breakdown. */
   commercialPremium?: NonTataCommercialRead["premium"];
+  /** Exact source-certified canonical split; included in the review hash. */
+  candidateCanonicalPremium?: NonTataCommercialRead["candidateCanonicalPremium"];
   checksPassed: number;
   warnings: string[];
   canApply: boolean;
@@ -120,6 +122,7 @@ function fingerprint(
   premium: N8nVerifiedPremiumBreakdown | null,
   issuanceEvidence?: PolicyIssuanceDateEvidence, acceptedIssuanceDate?:string|null,
   commercialPremium?: NonTataCommercialRead["premium"],
+  candidateCanonicalPremium?: NonTataCommercialRead["candidateCanonicalPremium"],
 ): string {
   // Bind the review token to the exact signed-PDF hash, even if metadata
   // changes without altering the 18 extracted insurance fields.
@@ -129,7 +132,8 @@ function fingerprint(
         documentSha256:issuanceEvidence.documentSha256,
         proposedDate:issuanceEvidence.proposedDate,
       }:null,
-      acceptedIssuanceDate:acceptedIssuanceDate??null, commercialPremium:commercialPremium??null }))
+      acceptedIssuanceDate:acceptedIssuanceDate??null, commercialPremium:commercialPremium??null,
+       candidateCanonicalPremium:candidateCanonicalPremium??null }))
     .digest("hex");
 }
 
@@ -146,6 +150,7 @@ export async function previewSemiAutoN8nExtraction(
   const admin = createSupabaseAdminClient();
   let extraction: Omit<N8nOcrBridgeResponse, "premium"> & { premium: N8nVerifiedPremiumBreakdown | null };
   let commercialPremium: NonTataCommercialRead["premium"] | undefined;
+  let candidateCanonicalPremium: NonTataCommercialRead["candidateCanonicalPremium"];
   try {
     const source = await createCurrentIntakePdfSignedSource(
       id, snapshot.document.id, snapshot.document.storage_path,
@@ -156,6 +161,7 @@ export async function previewSemiAutoN8nExtraction(
     });
     if (commercial) {
       commercialPremium = commercial.premium;
+      candidateCanonicalPremium = commercial.candidateCanonicalPremium;
       // Never fabricate an ICICI basic-OD/CPA breakdown for commercial policies.
       extraction = {
         ok: true, fields: commercial.fields, warnings: commercial.warnings,
@@ -302,7 +308,8 @@ export async function previewSemiAutoN8nExtraction(
   return { ok: true, preview: {
     documentId: current.document.id,
     fingerprint: fingerprint(id, current.document.id, extraction.fields, visibleWarnings,
-      extraction.premium, extraction.issuanceEvidence,acceptedIssuanceDate, commercialPremium),
+      extraction.premium, extraction.issuanceEvidence,acceptedIssuanceDate,
+       commercialPremium,candidateCanonicalPremium),
     // Older versions filtered the MP/NEW internal reference from the
     // signed-output fields before hashing. Match old queue fingerprints only
     // for the exact same current document and verified IFFCO new-vehicle
@@ -371,6 +378,7 @@ export async function previewSemiAutoN8nExtraction(
     changedFields,
     premium: extraction.premium,
     ...(commercialPremium ? {commercialPremium} : {}),
+    ...(candidateCanonicalPremium?{candidateCanonicalPremium}:{}),
     checksPassed: extraction.checksPassed,
     warnings: visibleWarnings,
     ...(extraction.issuanceEvidence?{issuanceEvidence:extraction.issuanceEvidence}:{}),
