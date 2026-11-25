@@ -3,7 +3,7 @@ import "server-only";
 import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
 import { enrichIffcoCertifiedMachineFamily } from "@/lib/policy-iffco-machine-family";
 
-type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "united_india_private_car_package_native_pdf" | "oriental_gccv_native_pdf";
+type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "united_india_gcv_punjab_split_gst_native_pdf" | "united_india_private_car_package_native_pdf" | "oriental_gccv_native_pdf";
 type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf" | "hdfc_ergo_two_wheeler_tp_native_pdf" | "sbi_general_private_car_package_native_pdf";
 type Insurer = ExistingInsurer | NewProductVariant;
 const NEW_VARIANTS = new Set<Insurer>(["zurich_kotak_private_car_tp_native_pdf","go_digit_two_wheeler_od_native_pdf","united_india_tractor_tp_native_pdf","hdfc_ergo_two_wheeler_tp_native_pdf","sbi_general_private_car_package_native_pdf"]);
@@ -49,6 +49,7 @@ const REQUIRED_EXTRA: Record<ExistingInsurer, string[]> = {
   iffco_tokio_cv_native_pdf: ["iffco_layout", "printed_tax_table", "invoice_taxable_matches", "invoice_gross_matches"],
   go_digit_cv_native_pdf: ["digit_layout", "registered_plate", "od_basic_ncb", "tp_itemization"],
   united_india_gcv_native_pdf: ["uiic_layout", "igst_components_printed", "stamp_accounting_disclosed", "stamp_charge_reconciled"],
+  united_india_gcv_punjab_split_gst_native_pdf: ["uiic_layout", "split_cgst_sgst_components_printed", "stamp_accounting_disclosed", "stamp_charge_reconciled"],
   united_india_private_car_package_native_pdf: ["uiic_private_car_layout", "igst_18_printed", "cpa_disposition_verified", "ncb_premium_reconciled"],
   oriental_gccv_native_pdf: ["oicl_layout", "four_tax_components_printed", "stamp_charge_reconciled"],
 };
@@ -86,8 +87,13 @@ function insurerForText(head: string): Insurer | null {
     matches.push("iffco_tokio_cv_native_pdf");
   if (/Go Digit General Insurance/i.test(issuer) && /Digit Commercial Vehicle Insurance/i.test(product))
     matches.push("go_digit_cv_native_pdf");
-  if (/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(issuer) && /GCV PUBLIC CARRIER/i.test(product))
-    matches.push("united_india_gcv_native_pdf");
+  if (/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(issuer) && /GCV PUBLIC CARRIER/i.test(product)){
+    // Exact source-certified Punjab/BharatBenz four-component split tax.
+    // Keep existing IGST-based UIIC classifications untouched.
+    const split=/DAIMLER\s+INDIA\s+COMMERCIAL\s+VEHICLES\s+PVT\.\s*LTD\s*\/\s*BHARATBENZ/i.test(product)
+      &&/CGST-Others\(9%\)/i.test(product)&&/SGST-Basic TP\(2\.50%\)/i.test(product);
+    matches.push(split?"united_india_gcv_punjab_split_gst_native_pdf":"united_india_gcv_native_pdf");
+  }
   if (/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(issuer)
       && /PRIVATE CAR\s*-\s*PACKAGE POLICY/i.test(product))
     matches.push("united_india_private_car_package_native_pdf");
@@ -343,6 +349,15 @@ function validate(payload: unknown, insurer: Insurer, ids: Record<"intake_id" | 
   const premium = payload.premium_components;
   if (!object(premium) || ![premium.od, premium.tp, premium.net, premium.gst, premium.gross].every(isMoney))
     throw new Error("n8n_nontata_premium_components_invalid");
+  if(insurer==="united_india_gcv_punjab_split_gst_native_pdf"){
+    // Never represent split CGST/SGST as IGST or trust a remote total.
+    if(premium.taxRegime!=="CGST_SGST"
+      ||![premium.cgstOthers,premium.sgstOthers,premium.cgstBasicTp,premium.sgstBasicTp].every(isMoney)
+      ||Math.round((Number(premium.cgstOthers)+Number(premium.sgstOthers)
+        +Number(premium.cgstBasicTp)+Number(premium.sgstBasicTp))*100)!==Math.round(Number(premium.gst)*100)
+      ||!isMoney(premium.stampDuty)||premium.stampDuty!==1)
+      throw new Error("n8n_uiic_split_cgst_sgst_evidence_invalid");
+  }
   const od = premium.od as number, tp = premium.tp as number;
   const net = premium.net as number, gst = premium.gst as number, gross = premium.gross as number;
   if (Math.abs(cents(od + tp) - cents(net)) > 6 || Math.abs(cents(net + gst) - cents(gross)) > 6
