@@ -1,0 +1,27 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { isPolicyCurrentlyActive } from "../lib/policy-active-status.ts";
+
+const today = "2026-11-25";
+const p = (business_line, status, start_date, end_date) => ({business_line,status,start_date,end_date});
+assert.equal(isPolicyCurrentlyActive(p("Life","active","2026-11-20",null),today),true,"Issued Life with no fixed maturity is active");
+assert.equal(isPolicyCurrentlyActive(p("Health","ACTIVE","2026-10-01",null),today),true,"Health without fixed maturity can be active");
+assert.equal(isPolicyCurrentlyActive(p("Life","cancelled","2026-10-01",null),today),false,"Cancelled life case must not count");
+assert.equal(isPolicyCurrentlyActive(p("Life","active","2026-12-01",null),today),false,"Future-start no-maturity case must not count");
+assert.equal(isPolicyCurrentlyActive(p("Motor","active","2026-10-01",null),today),false,"Unknown Motor expiry must not be automatically active");
+assert.equal(isPolicyCurrentlyActive(p("Life","active","2025-01-01","2026-11-24"),today),false,"Explicit expired maturity must remain expired");
+assert.equal(isPolicyCurrentlyActive(p("Life","active","2025-01-01","2026-11-25"),today),true,"Today is still in force");
+assert.equal(isPolicyCurrentlyActive(p("Motor",null,"2026-01-01","2026-12-01"),today),true,"Preserve old fixed-term check");
+assert.equal(isPolicyCurrentlyActive(p("Life","active",null,null),today),false,"Unknown start and end must fail closed");
+const read = path => readFileSync(new URL("../"+path,import.meta.url),"utf8");
+const dashboard=read("app/dashboard-v2/dashboard-data.ts");
+const register=read("app/policies/policy-workspace.tsx");
+const registerPage=read("app/policies/page.tsx");
+assert.match(dashboard,/activePolicies = policies\.filter\(\(row\) => isPolicyCurrentlyActive\(row, todayKey\)\)/);
+assert.match(dashboard,/policy_product,status,issuance_date,created_at,start_date,end_date/);
+assert.match(register,/status: policyStatus\(row\), isActive: isPolicyCurrentlyActive\(row,/);
+assert.match(register,/const active = baseFiltered\.filter\(\(row\) => row\.isActive\)\.length/);
+assert.match(register,/view === "active" && row\.isActive/);
+assert.match(registerPage,/start_date, end_date, status, insured_declared_value/);
+assert.match(register,/No fixed maturity date/,"Keep missing-maturity information visible");
+console.log("Dashboard and Policy Register active-policy parity regression passed.");

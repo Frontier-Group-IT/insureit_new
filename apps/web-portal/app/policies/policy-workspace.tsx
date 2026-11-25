@@ -6,6 +6,7 @@ import { CalendarDays, ChevronDown, Files, FileText, Plus, RotateCcw, Search, Sh
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getInsurerLogo } from "@/lib/insurer-logo";
+import { isPolicyCurrentlyActive } from "@/lib/policy-active-status";
 import { filterPolicyRegisterPeriod } from "@/lib/policy-register-period";
 import {
   RegisterEmpty,
@@ -33,6 +34,7 @@ type PolicyRow = {
   created_at: string;
   start_date: string;
   end_date: string | null;
+  status: string | null;
   insured_declared_value: number | null;
   gross_premium: number | null;
   intermediary_type: string | null;
@@ -298,7 +300,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
     }
   }, [isRelationshipManager]);
 
-  const enriched = useMemo(() => rows.map((row) => ({ ...row, status: policyStatus(row.end_date), daysLeft: daysUntil(row.end_date) })), [rows]);
+  const enriched = useMemo(() => rows.map((row) => ({ ...row, status: policyStatus(row), isActive: isPolicyCurrentlyActive(row, formatLocalDate(new Date())), daysLeft: daysUntil(row.end_date) })), [rows]);
   const rms = useMemo(() => Array.from(new Set(rows.map((row) => row.rm_name?.trim()).filter((item): item is string => Boolean(item)))).sort((a, b) => a.localeCompare(b)), [rows]);
   const visibleSourceOptions = useMemo(() => {
     if (rm === "all") return sourceOptions;
@@ -350,7 +352,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
   );
 
   const stats = useMemo(() => {
-    const active = baseFiltered.filter((row) => row.status === "Active").length;
+    const active = baseFiltered.filter((row) => row.isActive).length;
     const expiring = baseFiltered.filter((row) => row.status === "Expiring soon").length;
     const expired = baseFiltered.filter((row) => row.status === "Expired").length;
     const claims = baseFiltered.filter((row) => claimCount(row) > 0).length;
@@ -359,7 +361,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
 
   const filtered = useMemo(() => baseFiltered.filter((row) =>
     view === "all" ||
-    (view === "active" && row.status === "Active") ||
+    (view === "active" && row.isActive) ||
     (view === "expiring" && row.status === "Expiring soon") ||
     (view === "expired" && row.status === "Expired") ||
     (view === "claims" && claimCount(row) > 0)
@@ -618,7 +620,7 @@ function PolicyMobileCard({ policy }: { policy: PolicyRow & { status: string; da
 }
 
 function PolicyStatus({ policy }: { policy: PolicyRow & { status?: string; daysLeft?: number | null } }) {
-  const status = policy.status ?? policyStatus(policy.end_date);
+  const status = policy.status ?? policyStatus(policy);
   if (status === "No fixed maturity") return <RegisterStatusPill tone="slate">No fixed maturity</RegisterStatusPill>;
   if (status === "Expired") return <RegisterStatusPill tone="red">Expired</RegisterStatusPill>;
   if (status === "Expiring soon") return <RegisterStatusPill tone="amber">Due</RegisterStatusPill>;
@@ -779,8 +781,9 @@ function quickDateRangeKey(fromDate: string, toDate: string): QuickDateRange | n
   }) ?? null;
 }
 
-function policyStatus(endDate: string | null) {
-  if (!endDate) return "No fixed maturity";
+function policyStatus(policy: PolicyRow) {
+  const endDate = policy.end_date;
+  if (!endDate) return isPolicyCurrentlyActive(policy, formatLocalDate(new Date())) ? "Active" : "No fixed maturity";
   const days = daysUntil(endDate);
   if (days === null) return "No fixed maturity";
   return days < 0 ? "Expired" : days <= 30 ? "Expiring soon" : "Active";

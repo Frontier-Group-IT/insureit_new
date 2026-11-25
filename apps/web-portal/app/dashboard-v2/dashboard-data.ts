@@ -1,3 +1,4 @@
+import { isPolicyCurrentlyActive } from "@/lib/policy-active-status";
 import type { OperationsDashboardData } from "@/lib/operations-dashboard";
 import { getLifeTeamPortfolioReadFilter, getAccessiblePolicyRmEmployeeIds, getOperationsHeadDownlinePolicyScope, operationsHeadVisiblePolicyFilter } from "@/lib/policy-access-scope";
 import {
@@ -40,7 +41,8 @@ type PolicyRow = {
   status: string | null;
   issuance_date: string | null;
   created_at: string;
-  end_date: string;
+  start_date: string | null;
+  end_date: string | null;
   intermediary_type: string | null;
   intermediary_code: string | null;
   lead_source: string | null;
@@ -541,7 +543,7 @@ export async function getDashboardCurrentData(
   const portfolio = access.viewPolicies && !policyResult.error
     ? (() => {
         // Use the same existing end-date rule for both the headline and its breakdown.
-        const activePolicies = policies.filter((row) => row.end_date >= todayKey);
+        const activePolicies = policies.filter((row) => isPolicyCurrentlyActive(row, todayKey));
         const normalized = activePolicies.map((row) => (row.business_line ?? "").trim().toLowerCase().replaceAll("-", " "));
         const motor = normalized.filter((value) => value === "motor").length;
         const life = normalized.filter((value) => value === "life").length;
@@ -859,7 +861,7 @@ async function loadDashboardPolicies(
   for (let from = 0; ; from += dashboardPageSize) {
     let query = admin
       .from("policies")
-      .select("id,customer_id,vehicle_id,insurance_company_id,policy_type,business_line,business_type,policy_product,status,issuance_date,created_at,end_date,intermediary_type,intermediary_code,lead_source,intermediary_group_id,intermediary_group_name")
+      .select("id,customer_id,vehicle_id,insurance_company_id,policy_type,business_line,business_type,policy_product,status,issuance_date,created_at,start_date,end_date,intermediary_type,intermediary_code,lead_source,intermediary_group_id,intermediary_group_name")
       .order("id", { ascending: true })
       .range(from, from + dashboardPageSize - 1);
     if (downlineFilter) query = query.or(downlineFilter);
