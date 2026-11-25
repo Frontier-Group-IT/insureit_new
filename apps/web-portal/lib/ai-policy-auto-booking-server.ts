@@ -4,6 +4,9 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseWithAccessToken } from "@/lib/auth";
 import { withVerifiedPartnerApiToken } from "@/lib/partner-ai-studio-api-context";
 import { convertVerifiedAiIntake } from "@/app/development/ai-policy-onboarding/actions";
+import { requireCapability } from "@/lib/master-data-server";
+import { requirePolicyIntakeReviewer,requirePolicyIntakeFinalizer } from "@/lib/policy-intake-server";
+import { requirePolicyCreator } from "@/lib/policy-access-server";
 
 type Claim={intake_id:string;document_id:string;extraction_fingerprint:string};
 type FinalState="booked"|"review_required"|"uncertain";
@@ -66,6 +69,16 @@ export async function runAutoBookingBatch():Promise<{
   if(!autoBookingEnabled())return{enabled:false,claimed:0,booked:0,review:0,uncertain:0};
   // Authenticate BEFORE claiming so missing credentials never strand records.
   const operatorToken=await verifiedOperatorToken();
+  // Fail closed BEFORE acquiring any irreversible ledger claims if the
+  // dedicated actor's live IT permissions were revoked or misconfigured.
+  await withVerifiedPartnerApiToken(operatorToken,async()=>{
+    const actor=await requireCapability("manage_system","approve");
+    if(actor.role!=="it_super_user"&&actor.role!=="super_admin")
+      throw Error("auto_booking_operator_role_invalid");
+    await requirePolicyIntakeReviewer();
+    await requirePolicyIntakeFinalizer();
+    await requirePolicyCreator();
+  });
   const admin=createSupabaseAdminClient();
   const {data,error}=await admin.rpc("claim_ai_auto_booking_v1",{p_limit:3});
   if(error)throw Error("auto_booking_claim_unavailable");
