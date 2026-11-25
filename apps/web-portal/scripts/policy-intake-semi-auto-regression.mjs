@@ -998,7 +998,8 @@ assert(actionsText.includes("async function holdFailedAiConversion(id:string,iss
    && actionsText.includes('ownershipConflict?"vehicle_ownership"')
    && actionsText.includes('insuredMismatch?"insured_name_mismatch"')
   && actionsText.includes('activeOverlap?"existing_active_policy_overlap":"bulk_conversion_review_required"')
-  && actionsText.includes(':update.eq("state","verified")')
+  && actionsText.includes('last_error_code.eq.bulk_conversion_review_required')
+  && actionsText.includes('not("extraction_fingerprint","is",null)')
   && actionsText.includes("if(!result.ok)await holdFailedAiConversion(id,result.issues)")
   && actionsText.includes("await holdFailedAiConversion(id);"),
   "Failed and uncertain conversions must hold previously verified queue rows; certified NIA coverage conflicts retain their exact reason");
