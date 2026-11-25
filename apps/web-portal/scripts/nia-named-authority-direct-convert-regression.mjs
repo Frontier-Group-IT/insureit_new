@@ -108,6 +108,10 @@ assert.match(action,/reviewCode=activeOverlap\?"coverage_conflict"/,
   "Real overlapping cover must survive queue hold as an explicit exception");
 assert.match(action,/exception_codes:\[reviewCode\]/,
   "Queue hold must preserve the selected specific review code");
+assert.match(action,/customerIdentity\?"customer_identity"/,
+  "Customer identity conflicts must be preserved as an actual reason");
+assert.match(action,/fields\\.has\\("Date approval"\\)\\?"date_approval"/,
+  "Date approval cannot be collapsed into a generic booking hold");
 assert.match(action,/ownershipConflict\?"vehicle_ownership"/,
   "A vehicle ownership conflict must retain its exact reason");
 assert.match(action,/insuredMismatch\?"insured_name_mismatch"/,
