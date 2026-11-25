@@ -32,7 +32,10 @@ export type NativePdfTextPage = {
   rows: NativePdfTextRow[];
 };
 
-export async function extractNativePdfTextPages(bytes: Uint8Array): Promise<NativePdfTextPage[]> {
+export async function extractNativePdfTextPages(
+  bytes: Uint8Array,
+  options?: { maxTextPages?: number; extendedTimeout?: boolean },
+): Promise<NativePdfTextPage[]> {
   if (!bytes.byteLength) return [];
 
   return withTimeout(async () => {
@@ -45,7 +48,13 @@ export async function extractNativePdfTextPages(bytes: Uint8Array): Promise<Nati
     try {
       if (document.numPages < 1 || document.numPages > MAX_NATIVE_PDF_PAGES) return [];
       const pages: NativePdfTextPage[] = [];
-      for (let pageNumber = 1; pageNumber <= Math.min(document.numPages, MAX_NATIVE_TEXT_PAGES); pageNumber += 1) {
+      // The ordinary OCR fast path remains at two pages. A caller must
+      // explicitly request the bounded late-source scan for UIIC split tax.
+      const maxRequested = options?.maxTextPages;
+      const pageLimit = Number.isInteger(maxRequested) && maxRequested! >= 1
+        ? Math.min(MAX_NATIVE_PDF_PAGES, maxRequested!)
+        : MAX_NATIVE_TEXT_PAGES;
+      for (let pageNumber = 1; pageNumber <= Math.min(document.numPages, pageLimit); pageNumber += 1) {
         const page = await document.getPage(pageNumber);
         try {
           const content = await page.getTextContent();
@@ -61,7 +70,7 @@ export async function extractNativePdfTextPages(bytes: Uint8Array): Promise<Nati
       const destroy = (document as unknown as { destroy?: () => void | Promise<void> }).destroy;
       if (typeof destroy === "function") await destroy.call(document);
     }
-  }, NATIVE_PDF_TIMEOUT_MS);
+  }, options?.extendedTimeout === true ? 20_000 : NATIVE_PDF_TIMEOUT_MS);
 }
 
 export function refineNewIndiaNativePdfVehicleEvidence(

@@ -52,6 +52,15 @@ export function selectVerifiedN8nInsuredDraftIdentity(
     hdfc_ergo_two_wheeler_tp_native_pdf: "Native PDF: Policy Schedule Insured Name",
     sbi_general_private_car_package_native_pdf: "Native PDF: Premium Receipt Policy Holder Name",
   };
+  // Held insurers only become eligible after their current-PDF source and
+  // product-specific 18-check contract has been independently verified.
+  // Draft names require the insurer's exact immutable source evidence label.
+  const heldNameEvidence: Record<string,string> = {
+    magma_private_car_package_native_pdf: "Magma PDF labelled policy schedule",
+    national_private_car_liability_only_native_pdf:
+      "NIA bilingual source-labelled policy and vehicle schedule",
+  };
+  const heldEvidence = heldNameEvidence[parserId ?? ""];
   const variantEvidence = variantNameEvidence[parserId ?? ""];
   // Strictly validated Tata AIG third-party parsers emit a dedicated
   // insurer evidence label, not the legacy ICICI "Name of Insured" label.
@@ -59,7 +68,9 @@ export function selectVerifiedN8nInsuredDraftIdentity(
   const tataTp = parserId === "tata_aig_private_car_liability_only_n8n_native_pdf"
     || parserId === "tata_aig_private_car_three_year_tp_n8n_native_pdf";
   const candidates = fields.filter(field => field.key === "insured_name"
-    && (variantEvidence
+    && (heldEvidence
+      ? field.page === null && field.evidence === heldEvidence
+      : variantEvidence
       ? field.page === null && field.evidence === variantEvidence
       : commercial
       ? field.page === null && field.evidence === "Native PDF policy schedule"
@@ -74,7 +85,7 @@ export function selectVerifiedN8nInsuredDraftIdentity(
     && !/^(?:NA|N\/A|NAME|UNKNOWN|INSURED|CUSTOMER)$/i.test(candidate)
     ? candidate : "";
 
-  if ((commercial || variantEvidence) && !pdfName) {
+  if ((commercial || variantEvidence || heldEvidence) && !pdfName) {
     return { name: "", matchedCustomerId: null, needsManualReview: true, source: "missing" };
   }
   if (linkedCustomer?.id && normalizedName(linkedCustomer.name)) {

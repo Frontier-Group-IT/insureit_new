@@ -40,6 +40,16 @@ assert.equal(refine("united_india_gcv_native_pdf",brokenSpacing.replace("DAIMLER
 assert.equal(refine("united_india_gcv_native_pdf",brokenSpacing.replace("SGST - Basic TP","IGST - Basic TP")),
  "united_india_gcv_native_pdf","No split tax means no promotion");
 
+const nativeReader=fs.readFileSync(path.resolve(here,"../lib/policy-ocr-native-pdf.ts"),"utf8");
+const nativeClassifier=fs.readFileSync(path.resolve(here,"../lib/policy-nontata-commercial-n8n.ts"),"utf8");
+assert.match(nativeReader,/maxTextPages\?: number/, "Reader must offer a bounded late-page request");
+assert.match(nativeReader,/Math\.min\(MAX_NATIVE_PDF_PAGES, maxRequested!\)/,
+  "Extended scan must not exceed the existing PDF page safety cap");
+assert.match(nativeClassifier,/maxTextPages:16,extendedTimeout:true/,
+  "UIIC classifier must actually request later pages, not slice two pages");
+assert.match(nativeClassifier,/if\(initial==="united_india_gcv_native_pdf"\)/,
+  "Expanded PDF decoding must remain isolated to generic UIIC GCV");
+
 const bridge=fs.readFileSync(path.resolve(here,"../lib/policy-intake-semi-auto-n8n.ts"),"utf8");
 assert.match(bridge,/"held_source_or_identity_unverified"/,
  "Genuine Oriental issuance hold must be reported as source verification, not n8n outage");

@@ -3,7 +3,7 @@ import {tmpdir} from "node:os";
 import fs from "node:fs";
 import path from "node:path";
 import {execFileSync} from "node:child_process";
-import {verifyOrientalCmsSigningDate} from "../lib/policy-oriental-cms-issuance.ts";
+import {verifyOrientalCmsSigningDate,cmsSigningTimeIndiaDay} from "../lib/policy-oriental-cms-issuance.ts";
 const scratch=fs.mkdtempSync(path.join(tmpdir(),"insureit-oriental-cms-"));
 function signedPdf(withM=false,trailingDictionary=false){
  const openssl=(args)=>execFileSync("openssl",args,{cwd:scratch,stdio:"pipe"});
@@ -39,6 +39,13 @@ function signedPdf(withM=false,trailingDictionary=false){
    +updated.slice(b-1),"latin1");
 }
 try{
+ // The original two Oriental PDFs encode authenticated GeneralizedTime as
+ // YYYYMMDDHHMMSS+0530, not a Zulu-formatted UTCTime.
+ assert.equal(cmsSigningTimeIndiaDay("20261114094729+0530"),"2026-11-14");
+ assert.equal(cmsSigningTimeIndiaDay("20261119144515+0530"),"2026-11-19");
+ assert.equal(cmsSigningTimeIndiaDay("20261114094729-0530"),"2026-11-14");
+ assert.equal(cmsSigningTimeIndiaDay("20261131234500+0530"),null);
+ assert.equal(cmsSigningTimeIndiaDay("20261114094729+1460"),null);
  const good=signedPdf();
  const a=await verifyOrientalCmsSigningDate(Uint8Array.from(good));
  assert(a,"Valid full-cover detached CMS signingTime should be accepted");
