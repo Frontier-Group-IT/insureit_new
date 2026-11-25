@@ -115,7 +115,7 @@ export function enrichVerifiedN8nOnboardingFields<T extends N8nPrefillField>(
   // source+model family alias only to the reviewed Magma package.
   if(parserId==="magma_private_car_package_native_pdf"
     && get("vehicle_make")==="KIA INDIA PRIVATE LIMITED"
-    && /^(?:KIA INDIA PRIVATE LIMITED\\s+)?SELTOS G1\\.5 IMT HTK PLUS$/i
+    && /^(?:KIA INDIA PRIVATE LIMITED\s+)?SELTOS G1\.5 IMT HTK PLUS$/i
       .test(get("vehicle_model"))) {
     const make=fields.find(f=>f.key==="vehicle_make");
     if(make){make.value="Kia";make.label="Kia — verified printed Kia India vehicle";}
