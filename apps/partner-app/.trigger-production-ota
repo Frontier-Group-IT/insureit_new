@@ -1,13 +1,13 @@
 Partner production OTA trigger
-release=partner-ai-studio-open-intake-parity
+release=partner-insurer-ui-motion-sticky-header
 source=verified-merged-main
-source_pr=5180
-source_merge=8e9de8a5701ffdafdb3d63e78b7cca28246ae1fe
-reason=align-ai-studio-all-open-list-with-policy-intakes-register
+source_pr=5244
+source_merge=cb0159c4e9758933d2c46f46d329440e5abd2e91
+reason=publish-insurer-performance-ui-only-animations
 channel=production
 runtime=0.2.0
-requested=2026-11-24
-backend_conversion_enabled=false
+requested=2026-11-25
+backend_changes=false
 no_native_build=true
 no_apk=true
 no_aab=true
