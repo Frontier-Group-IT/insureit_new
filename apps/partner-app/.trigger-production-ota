@@ -1,14 +1,13 @@
 Partner production OTA trigger
-release=partner-policy-documents-direct-supabase
+release=partner-verified-intake-sectioned-ui
 source=verified-merged-main
-source_pr=5285
-source_merge=fc9fac244c1a7e93a702eb02d423a35bcb502b7e
-reason=release-verified-direct-supabase-policy-documents-after-secure-schema-migration
+source_pr=5292
+source_merge=de5af5d15073c296718325421d086570dcc54ef2
+reason=publish-approved-verified-intake-sectioned-details-UI
 channel=production
 runtime=0.2.0
 requested=2026-11-25
 backend_changes=false
-supabase_schema_applied=true
 no_native_build=true
 no_apk=true
 no_aab=true
