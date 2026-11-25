@@ -223,7 +223,7 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
   // Separate printed Chandigarh UT vehicle schedule profile; never accept
   // arbitrary non-MP registrations without the exact insurer PDF RLA/STA
   // Registration Authority and the same current policy's CH registration.
-  const registeredChandigarh=/^CH\\d{2}[A-Z]{1,3}\\d{3,4}$/.test(reg)
+  const registeredChandigarh=/^CH\d{2}[A-Z]{1,3}\d{3,4}$/.test(reg)
     &&status==="registered"
     // Missing RTO city/state alone is never an exception.
     &&(!get("vehicle_rto_name")
