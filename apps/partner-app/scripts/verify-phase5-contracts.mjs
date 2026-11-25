@@ -275,7 +275,7 @@ expectAll('app/customer/[id].tsx', [
   [/profileNameWrap: \{ flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'center', gap: 5, minWidth: 0 \}/, 'customer name and verification icon never wrap'],
   [/profileName: \{[^\n]*flexShrink: 1, minWidth: 0/, 'only the name shrinks inside its row'],
   [/name="checkmark-circle" size=\{19\} color="#0CB76B"/, 'existing verified customer icon remains visible'],
-  [/<PartnerContactActions phone=\{data\.customer\.phone\} email=\{data\.customer\.email\} inlineLabeled customerDetailLayout/, 'contact actions remain in place'],
+  [/<PartnerContactActions phone=\{data\.customer\.phone\} email=\{data\.customer\.email\} customerDetailIconOnly/, 'contact actions remain below the name in an icon-only accessible row'],
 ]);
 
 // Renewal Work Queue: flat edge-to-edge summary directly beneath the header.
