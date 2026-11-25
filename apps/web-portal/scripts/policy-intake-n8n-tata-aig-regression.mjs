@@ -41,11 +41,55 @@ invalid(saodWithoutTp, v=>v.fields.push(
 // native PDF verified DIESEL, but the website previously hard-coded PETROL.
 const packageDiesel=read("package");
 packageDiesel.fields.find(field=>field.key==="vehicle_fuel_type").value="DIESEL";
+// Regression from real Tata AIG Package CNG policy (premium amounts only).
+// Page 5 prints IMT25 kit OD ₹137.94 and kit TP ₹60 separately.
+// They must NOT be silently omitted or relabelled as base TP/OD.
+const cngPolicy=copy(packageDiesel);
+const cng={basicOd:2758.85,kitOd:137.94,ncb:724.20,od:2172.59,
+  addons:[3601.63,135,315,1160.52,0],addonTotal:5212.15,
+  basicTp:3416,kitTp:60,cpa:375,passenger:250,paid:50,liability:4151,
+  net:11535.74,printedNet:11536,tax:2076,gross:13612};
+const cm=cngPolicy.premium_components;
+Object.assign(cm,{
+  basic_od_premium:cng.basicOd,cng_kit_od_premium:cng.kitOd,
+  ncb_deduction:cng.ncb,post_ncb_od_premium:cng.od,
+  od_addons:cng.addons.map((amount,i)=>({name:["Depreciation Reimbursement",
+    "Loss of personal belongings","Key Replacement","Consumable expenses",
+    "Repair of Glass Rubber and Plastic Parts"][i],code:["TA01","TA09","TA15","TA18","TA08"][i],amount})),
+  addon_subtotal:cng.addonTotal,basic_tp_premium:cng.basicTp,
+  cng_kit_tp_premium:cng.kitTp,owner_driver_cpa:cng.cpa,
+  passenger_pa:cng.passenger,paid_driver_liability:cng.paid,
+  roadside_assistance:0,total_liability_premium:cng.liability,
+  component_net_premium:cng.net,printed_net_premium:cng.printedNet,
+  printed_total_tax:cng.tax,gross_premium:cng.gross,
+});
+for(const [key,value] of Object.entries({
+  vehicle_fuel_type:"CNG",od_premium:"2172.59",
+  add_on_premium:"5212.15",tp_premium:"3776",cpa_premium:"375"
+}))cngPolicy.fields.find(f=>f.key===key).value=value;
+const checkedCng=validateTataAigN8nResponse(cngPolicy,IDS);
+assert.equal(checkedCng.ok,true,"Printed CNG policy must pass strict 18-check portal reconciliation");
+assert.equal(checkedCng.premium.tataAig.cngKitOd,137.94);
+assert.equal(checkedCng.premium.tataAig.cngKitTp,60);
+assert.deepEqual(mapVerifiedN8nMotorPremium(checkedCng.premium),{
+  od:"2172.59",addOnPremium:"5212.15",tp:"3776",cpa:"375",cpaOpted:"Yes",
+});
+invalid(cngPolicy,x=>{delete x.premium_components.cng_kit_od_premium;},
+  "n8n_premium_reconciliation_failed");
+invalid(cngPolicy,x=>{delete x.premium_components.cng_kit_tp_premium;},
+  "n8n_premium_reconciliation_failed");
+invalid(cngPolicy,x=>{x.premium_components.cng_kit_tp_premium=0;},
+  "n8n_premium_reconciliation_failed");
+invalid(cngPolicy,x=>{x.fields.find(f=>f.key==="tp_premium").value="3716";},
+  "n8n_premium_reconciliation_failed");
+invalid(cngPolicy,x=>{x.fields.find(f=>f.key==="vehicle_fuel_type").value="PETROL";},
+  "n8n_premium_reconciliation_failed");
+
 const verifiedDiesel=validateTataAigN8nResponse(packageDiesel,IDS);
 assert.equal(verifiedDiesel.ok,true,"Diesel Tata AIG Package must pass after 18 signed-source checks");
 assert.equal(get(verifiedDiesel.fields,"vehicle_fuel_type"),"DIESEL");
 for(const permitted of ["CNG","LPG","ELECTRIC"]){
-  const fuelVariant=copy(packageDiesel);
+  const fuelVariant=copy(permitted==="ELECTRIC"?packageDiesel:cngPolicy);
   fuelVariant.fields.find(field=>field.key==="vehicle_fuel_type").value=permitted;
   assert.equal(validateTataAigN8nResponse(fuelVariant,IDS).ok,true,"Supported printed fuel: "+permitted);
 }

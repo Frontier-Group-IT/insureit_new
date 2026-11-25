@@ -48,6 +48,7 @@ export type N8nVerifiedPremiumBreakdown = {
   /** Tata AIG's separate OD, RSA and non-owner-liability components. */
   tataAig?: {
     product: string; postNcbOd: number; addonSubtotal: number;
+    cngKitOd: number; cngKitTp: number;
     paidDriverLiability: number; passengerPa: number;
     roadsideAssistance: number; printedNet: number; ncbDiscount: number;
   };
@@ -427,6 +428,8 @@ export function validateTataAigN8nResponse(
   const postNcbOd = amount(money.post_ncb_od_premium);
   const addonSubtotal = amount(money.addon_subtotal);
   const basicTp = amount(money.basic_tp_premium);
+  const cngKitOd = amount(money.cng_kit_od_premium ?? 0);
+  const cngKitTp = amount(money.cng_kit_tp_premium ?? 0);
   const cpa = amount(money.owner_driver_cpa);
   const paidDriver = amount(money.paid_driver_liability);
   const passengerPa = amount(money.passenger_pa);
@@ -444,10 +447,15 @@ export function validateTataAigN8nResponse(
     return { name: item.name, amount: amount(item.amount) };
   });
   const addonSum = odAddons.reduce((sum, item) => sum + item.amount, 0);
-  const projectedTp = basicTp + paidDriver + passengerPa + (product === "Stand-Alone Own Damage" ? 0 : roadside);
+  const projectedTp = basicTp + cngKitTp + paidDriver + passengerPa + (product === "Stand-Alone Own Damage" ? 0 : roadside);
   const projectedAddons = addonSubtotal + (product === "Stand-Alone Own Damage" ? roadside : 0);
-  if (!near(basicOd - ncb, postNcbOd, 0.03) || !near(addonSum, addonSubtotal, 0.04)
-    || !near(basicTp + cpa + paidDriver + passengerPa, liability, 0.02)
+  // Verify separately printed IMT25 OD/TP charges rather than silently
+  // reclassifying the extra premiums as basic OD, TP, add-on or CPA.
+  const cngFuel = ["CNG", "LPG"].includes(get("vehicle_fuel_type").toUpperCase());
+  if ((cngFuel && (cngKitOd <= 0 || cngKitTp <= 0))
+    || (!cngFuel && (cngKitOd !== 0 || cngKitTp !== 0))
+    || !near(basicOd + cngKitOd - ncb, postNcbOd, 0.03) || !near(addonSum, addonSubtotal, 0.04)
+    || !near(basicTp + cngKitTp + cpa + paidDriver + passengerPa, liability, 0.02)
     || !near(postNcbOd + addonSubtotal + liability + roadside, net, 0.04)
     || !near(net, printedNet, 1.01) || cents(printedNet + tax) !== cents(gross)
     || !eq("od_premium", postNcbOd) || !eq("add_on_premium", projectedAddons)
@@ -475,7 +483,7 @@ export function validateTataAigN8nResponse(
       cpa, liability, net, exactIgst:tax, tax, gross,
       odSubtotal:basicOd + addonSubtotal, odDeductions:ncb,
       tataAig:{
-        product, postNcbOd, addonSubtotal, paidDriverLiability:paidDriver,
+        product, postNcbOd, addonSubtotal, cngKitOd, cngKitTp, paidDriverLiability:paidDriver,
         passengerPa, roadsideAssistance:roadside, printedNet, ncbDiscount:ncb,
       },
     },
@@ -624,7 +632,7 @@ function validateTataAigTpResponse(
     parserVersion:value.parser_version as string,checksPassed:16,receiptDate:receiptDate as string,
     premium:{basicOd:0,odAddons:[],totalOd:0,basicTp:basic,cpa,liability,
       net,exactIgst:tax,tax,gross,tataAig:{product:"Third-Party Only",
-      postNcbOd:0,addonSubtotal:0,paidDriverLiability:paid,
+      postNcbOd:0,addonSubtotal:0,cngKitOd:0,cngKitTp:0,paidDriverLiability:paid,
       passengerPa:0,roadsideAssistance:0,printedNet:net,ncbDiscount:0}},
   };
 }
