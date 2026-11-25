@@ -45,6 +45,8 @@ jobs:
         run: node ../../infra/n8n-local/tests/tata-aig-private-car-source-variants-regression.mjs
       - name: United India GCV native PDF layout and false-positive regression
         run: node --experimental-strip-types ../../infra/n8n-local/tests/united-india-gcv-layout-regression.mjs
+      - name: Held Magma National Oriental source admission strict regression
+        run: node scripts/held-insurer-source-admission-regression.mjs
       - name: UIIC Chandigarh source-evidence and MP parity regression
         run: node scripts/uiic-chandigarh-source-regression.mjs
       - name: UIIC Punjab BharatBenz split CGST/SGST source regression
