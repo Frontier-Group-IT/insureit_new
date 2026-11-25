@@ -1,0 +1,77 @@
+name: Verify Cloudflare backend compatibility
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web-portal/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/verify-cloudflare-backend-compatibility.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-backend-compatibility-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: OpenNext compatibility build (NO DEPLOY)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-public-anon-key
+      NEXT_PUBLIC_PORTAL_URL: https://portal.insureit.in
+    defaults:
+      run:
+        working-directory: apps/web-portal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/web-portal/package.json
+      - name: Install Portal dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install PINNED OpenNext build tools (test-only)
+        shell: bash
+        run: |
+          # Add to this runner's workspace manifest so the OpenNext config
+          # resolves the adapter. No source or lockfile changes are committed.
+          npm pkg set --workspace @insureit/web-portal 'dependencies.next=15.5.29' 'devDependencies.eslint-config-next=15.5.29' 'devDependencies.@opennextjs/cloudflare=1.20.18' 'devDependencies.wrangler=4.166.0'
+          npm install --no-audit --no-fund
+      # Next 15.5.29 has a separate MUI/React type-ref incompatibility in
+      # external-policy-form.tsx. Keep the canonical web CI typecheck required.
+      # This packaging-only probe bypasses Next's duplicate type-check to
+      # isolate Cloudflare bundling, never to certify a production release.
+      - name: Isolate Cloudflare bundling from existing upgraded-Next type conflict (CI only)
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const file = 'next.config.mjs';
+          const body = fs.readFileSync(file,'utf8');
+          const marker = 'const nextConfig = {';
+          if(!body.includes(marker)) throw new Error('Next config shape changed');
+          fs.writeFileSync(file,body.replace(marker,marker+'\n  typescript: { ignoreBuildErrors: true },'));
+          NODE
+      - name: Verify OpenNext Worker packaging without deploying
+        env:
+          INSUREIT_CLOUDFLARE_BUILD: '1'
+        run: npx --no-install opennextjs-cloudflare build
+      - name: Inspect worker bundle size and generated artifacts
+        if: success()
+        shell: bash
+        run: |
+          test -f .open-next/worker.js
+          node -e 'const fs=require("fs"); const f=".open-next/worker.js"; const s=fs.statSync(f).size; console.log("Worker main bundle:",(s/1024/1024).toFixed(2),"MiB");'
+      - name: Explicit non-deployment summary
+        if: always()
+        shell: bash
+        run: |
+          echo "This workflow only tests Cloudflare compatibility." >> "$GITHUB_STEP_SUMMARY"
+          echo "No Cloudflare API token, production secrets, DNS mutation, Worker deployment or Partner OTA is performed." >> "$GITHUB_STEP_SUMMARY"

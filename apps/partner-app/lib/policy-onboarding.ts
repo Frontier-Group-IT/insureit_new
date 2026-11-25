@@ -72,13 +72,11 @@ export type NativeMotorPolicyCopy = {uri:string;name:string;size:number;mimeType
 export async function attachNewNativeMotorPolicyCopy(policyId:string,file:NativeMotorPolicyCopy){
   const session=await getCurrentSession();
   if(!session?.access_token)throw new Error('Partner session expired. Sign in again.');
-  const endpoint=portal+'/api/partner/policy-intakes/native-onboarding/policy-copy';
   const send=async(body:Record<string,unknown>)=>{
-    const response=await fetch(endpoint,{method:'POST',cache:'no-store',
-      headers:{Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const data=await response.json().catch(()=>null) as {ok?:boolean;error?:string;path?:string;token?:string;document_id?:string;attached?:boolean}|null;
-    if(!response.ok||!data?.ok)throw new Error(data?.error||'Policy-copy service is unavailable.');
-    return data;
+    const {data,error}=await supabase.functions.invoke('partner-policy-copy',{body});
+    const result=data as {ok?:boolean;error?:string;path?:string;token?:string;document_id?:string;attached?:boolean}|null;
+    if(error||!result?.ok)throw new Error(result?.error||'Policy-copy service is unavailable. Please retry without creating another policy.');
+    return result;
   };
   const metadata={policy_id:policyId,name:file.name,size:file.size,type:file.mimeType};
   const prepared=await send({action:'prepare',...metadata});
@@ -123,32 +121,46 @@ export async function lookupNativePolicyRc(intakeId:string,registrationNumber:st
 
 export type NativeOnboardingDocumentType = 'policy_copy'|'proposal_form'|'kyc'|'other_document';
 export type NativeOnboardingDocument = {type:NativeOnboardingDocumentType;fileName:string};
-async function documentRequest<T>(intakeId:string,line:NativeProductType,method:'GET'|'POST'|'DELETE',type?:NativeOnboardingDocumentType,file?:{uri:string;name:string;mimeType?:string}):Promise<T>{
+async function documentRequest<T>(
+  intakeId:string,
+  line:NativeProductType,
+  method:'GET'|'POST'|'DELETE',
+  type?:NativeOnboardingDocumentType,
+  file?:{uri:string;name:string;mimeType?:string},
+):Promise<T>{
   const session=await getCurrentSession();
   if(!session?.access_token)throw new Error('Partner session expired. Sign in again.');
-  const endpoint=`${portal}/api/partner/policy-intakes/native-onboarding/documents`;
-  const query=`?intake_id=${encodeURIComponent(intakeId)}&business_line=${encodeURIComponent(line)}`;
-  const headers:Record<string,string>={Authorization:`Bearer ${session.access_token}`};
-  let body:FormData|string|undefined;
-  if(method==='POST'&&type&&file){
-    const multipart=new FormData();
-    multipart.append('intake_id',intakeId);
-    multipart.append('business_line',line);
-    multipart.append('document_type',type);
-    // React Native FormData accepts file URIs; the browser/OS supplies the binary body.
-    multipart.append('file',{uri:file.uri,name:file.name,type:file.mimeType||'application/octet-stream'} as unknown as Blob);
-    body=multipart;
-  }else if(method==='DELETE'){
-    headers['Content-Type']='application/json';
-    body=JSON.stringify({intake_id:intakeId,business_line:line,document_type:type});
+  const invoke=async(body:Record<string,unknown>)=>{
+    const {data,error}=await supabase.functions.invoke('partner-onboarding-documents',{body});
+    const value=data as ({ok?:boolean;error?:string;path?:string;token?:string}&Partial<T>)|null;
+    if(error||!value?.ok)throw new Error(value?.error||'Onboarding documents service is unavailable.');
+    return value;
+  };
+  const scope={intake_id:intakeId,business_line:line};
+  if(method==='GET')return await invoke({...scope,action:'list'}) as T;
+  if(!type)throw new Error('Choose a document type.');
+  if(method==='DELETE')return await invoke({...scope,action:'delete',document_type:type}) as T;
+  if(!file?.uri||!file.name)throw new Error('Select a document to upload.');
+  const mime=file.mimeType||'application/octet-stream';
+  let bytes:ArrayBuffer;
+  try{
+    const local=await fetch(file.uri);
+    if(!local.ok)throw new Error('File could not be read');
+    bytes=await local.arrayBuffer();
+  }catch{
+    throw new Error('Selected document could not be read. Select it again.');
   }
-  let response:Response;
-  try{response=await fetch(endpoint+(method==='GET'?query:''),{method,headers,body,cache:'no-store'});}
-  catch{throw new Error('Document service is unavailable. Check your connection.');}
-  const value=await response.json().catch(()=>null) as ({ok?:boolean;error?:string}&Partial<T>)|null;
-  if(!response.ok||!value?.ok)throw new Error(value?.error||'Document could not be saved.');
-  return value as T;
+  if(bytes.byteLength<1||bytes.byteLength>4*1024*1024)
+    throw new Error('Documents must be 4 MB or smaller.');
+  const fileDetails={...scope,document_type:type,name:file.name,mime_type:mime,size:bytes.byteLength};
+  const prepared=await invoke({action:'prepare_upload',...fileDetails});
+  if(!prepared.path||!prepared.token)throw new Error('Secure upload token was not issued.');
+  const {error:storageError}=await supabase.storage.from('policy-documents')
+    .uploadToSignedUrl(prepared.path,prepared.token,bytes,{contentType:mime,upsert:false});
+  if(storageError)throw new Error('Document could not be uploaded. '+storageError.message);
+  return await invoke({action:'finalize_upload',...fileDetails,path:prepared.path}) as T;
 }
+
 export async function listNativeOnboardingDocuments(intakeId:string,line:NativeProductType){
   return documentRequest<{documents:NativeOnboardingDocument[]}>(intakeId,line,'GET');
 }

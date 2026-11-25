@@ -78,21 +78,23 @@ export async function requirePartnerWritePermission(
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error('Sign in again to continue.');
-  const url = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
-  const response = await fetch(`${url}/api/partner/effective-permissions`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  });
-  if (!response.ok) throw new Error('Permission verification failed. Refresh your session and retry.');
-  const { actor_kind, capabilities } = await response.json() as {
-    actor_kind?: string;
-    capabilities?: PartnerPermissionMap;
-  };
+  // Use the same authenticated Supabase permission authority as Partner login.
+  // Never depend on a website deployment or trust a cached navigation grant.
+  const { data: access, error } = await supabase.rpc('partner_app_effective_permissions');
+  if (error) throw new Error('Permission service is temporarily unavailable. Retry shortly.');
+  const actor_kind = access?.actor_kind as string | undefined;
+  const capabilities = access?.capabilities as PartnerPermissionMap | undefined;
+  const allowedLevels = new Set(['none', 'view', 'edit', 'approve']);
+  if (!access || (actor_kind !== 'employee' && actor_kind !== 'intermediary')
+    || !capabilities || typeof capabilities !== 'object' || Array.isArray(capabilities)
+    || !Object.values(capabilities).every(level => typeof level === 'string' && allowedLevels.has(level))) {
+    throw new Error('Permission verification could not establish your account access.');
+  }
   if (actor_kind === 'intermediary' && allowPartnerScoped) {
     // Existing Partner-scoped write RPCs still enforce business ownership.
     if (rank[capabilities?.view_claims ?? 'none'] >= rank.view) return;
   }
   if (!capabilities || rank[capabilities[capability] ?? 'none'] < rank[minimum]) {
-    throw new Error('Your website permission does not allow this action.');
+    throw new Error('Your Partner account permission does not allow this action.');
   }
 }

@@ -3,11 +3,11 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { getCurrentSession } from '@/lib/partner-session';
+import { supabase } from '@/lib/supabase';
 
 const PARTNER_CHANNEL_ID = 'partner-updates';
 const PARTNER_PROJECT_ID = '8ade82c1-4c96-4f09-b90b-802270fb406d';
 const PARTNER_APP_VERSION = '0.2.0';
-const portalUrl = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
 const ALLOWED_NOTIFICATION_PREFIXES = [
   '/(tabs)/claims',
   '/(tabs)/policies',
@@ -137,19 +137,12 @@ async function partnerPushDeviceRequest(body: Record<string, unknown>, timeoutMs
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(`${portalUrl}/api/partner/push-devices`, {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-    const payload = await response.json().catch(() => null) as { ok?: boolean; error?: string } | null;
-    if (!response.ok || !payload?.ok) {
-      throw new Error(payload?.error || 'Partner notification registration failed.');
-    }
+    const { data, error } = await Promise.race([
+      supabase.functions.invoke('partner-push-devices', { body }),
+      new Promise<never>((_, reject) => controller.signal.addEventListener('abort', () => reject(new Error('Push registration timed out.')), { once: true })),
+    ]);
+    const payload = data as { ok?: boolean; error?: string } | null;
+    if (error || !payload?.ok) throw new Error(payload?.error || 'Partner notification registration failed.');
   } finally {
     clearTimeout(timeout);
   }

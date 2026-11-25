@@ -204,6 +204,12 @@ jobs:
       - name: Verify Phase 6 native foundation
         run: npm --workspace apps/partner-app run verify:phase6
 
+      - name: Verify Partner Intake reporting-chain security
+        run: node --experimental-strip-types apps/partner-app/scripts/verify-intake-reporting-chain.mjs
+
+      - name: Verify Partner Intake Partner-family scope security
+        run: node --experimental-strip-types apps/partner-app/scripts/verify-intake-partner-family.mjs
+
       - name: Verify pre-APK UAT and security contracts
         run: npm --workspace apps/partner-app run verify:uat
 
@@ -238,6 +244,9 @@ jobs:
         run: node apps/partner-app/scripts/verify-insurer-list-whole-rupees.mjs
       - name: Verify Insurer List mobile financial scrolling
         run: node apps/partner-app/scripts/verify-insurer-list-mobile-scroll.mjs
+
+      - name: Audit remaining Vercel calls (informational until full cutover)
+        run: node apps/partner-app/scripts/audit-vercel-dependencies.mjs
 
       - name: Partner app typecheck
         run: npm run typecheck:partner

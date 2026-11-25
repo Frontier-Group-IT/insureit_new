@@ -20,8 +20,12 @@ function requireText(source, needle, message) {
 }
 
 requireText(service, 'listPartnerPolicyIntakeSources()', 'Policy Intake service must expose a dedicated source loader.');
-requireText(service, "'/api/partner/policy-intakes?view=sources'", 'Policy Intake source loader must call the dedicated ?view=sources endpoint.');
-requireText(service, 'Array.isArray(result.sources) ? result.sources : []', 'Policy Intake source response must be normalized defensively.');
+requireText(service, "functions.invoke('partner-intake-sources'", 'Policy Intake source loader must call authenticated Supabase Edge.');
+requireText(service, 'Array.isArray(result.sources)', 'Policy Intake source response must be normalized defensively.');
+const sourceBackend=fs.readFileSync(path.resolve(root, '../../supabase/functions/partner-intake-sources/index.ts'), 'utf8');
+requireText(sourceBackend, 'partner_app_current_identity', 'Policy Intake source backend verifies canonical identity.');
+requireText(sourceBackend, 'partner_app_commercial_scope', 'Policy Intake source backend verifies canonical intermediary scope.');
+requireText(sourceBackend, 'scope.partner_ids.includes(identity.portal_access_entity_id)', 'Branch parent-source selection must stay scoped.');
 requireText(service, 'Array.isArray(page.intakes)', 'Each requested Policy Intake page must be validated as an array.');
 requireText(service, 'export async function listPartnerPolicyIntakesPage(', 'Policy Intake list must load authorized pages independently.');
 requireText(service, 'offset = 0,', 'Keep default offset at the first authorized page.');

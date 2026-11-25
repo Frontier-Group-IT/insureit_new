@@ -181,6 +181,17 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      # The zero-Vercel migration can have green TypeScript/CI while native screens
+      # still call suspended Vercel APIs. Prevent a partial migration from becoming
+      # a production OTA, including via automatic main-branch publishing.
+      - name: Require completed Partner zero-Vercel migration before production OTA
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f docs/PARTNER_ZERO_VERCEL_MIGRATION_20261123.md ]; then
+            node apps/partner-app/scripts/audit-vercel-dependencies.mjs --enforce
+          fi
+
       - name: Typecheck Partner app
         run: npm --workspace apps/partner-app run typecheck
 
