@@ -334,6 +334,9 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     &&hasVerifiedN8nParserEvidence(queued.parser_id,queued.checks_passed,[])
     &&queued.exception_codes.length===1
     &&(queued.exception_codes[0]==="booking_review_required"
+      ||(["oriental_private_car_standalone_od_native_pdf",
+           "oriental_gccv_package_native_pdf"].includes(queued.parser_id)
+         &&queued.exception_codes[0]==="insured_name_mismatch")
       ||(queued.parser_id==="iffco_tokio_cv_native_pdf"
          &&queued.exception_codes[0]==="registration_pending_review"));
   // Prior UIIC extraction_failed rows stored no fingerprint or parser result.

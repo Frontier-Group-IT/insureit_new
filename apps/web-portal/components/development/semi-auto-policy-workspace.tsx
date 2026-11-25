@@ -95,7 +95,7 @@ function canRetryReviewHeldPolicy(row:SemiAutoIntakeRow):boolean {
     &&!["vehicle_ownership","customer_identity"].includes(row.ai_legacy_review_hint??"")
     &&row.ai_state==="exception"
     &&row.ai_exceptions?.length===1
-    &&["booking_review_required","registration_pending_review"].includes(row.ai_exceptions[0]);
+    &&["booking_review_required","registration_pending_review","insured_name_mismatch"].includes(row.ai_exceptions[0]);
 }
 /** An explicit source-recovery attempt is not a green booking assessment.
  * Only the server can determine whether the current original PDF now has a

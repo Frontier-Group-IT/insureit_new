@@ -40,7 +40,7 @@ export function selectVerifiedN8nInsuredDraftIdentity(
   // ICICI page-1 "Name of Insured" field. Never accept an unrecognized parser.
   const commercial = new Set([
     "go_digit_cv_native_pdf", "iffco_tokio_cv_native_pdf", "new_india_cv_native_pdf",
-    "united_india_gcv_native_pdf", "united_india_gcv_punjab_split_gst_native_pdf", "united_india_private_car_package_native_pdf", "oriental_gccv_native_pdf",
+    "united_india_gcv_native_pdf", "united_india_gcv_punjab_split_gst_native_pdf", "united_india_private_car_package_native_pdf",
   ]).has(parserId ?? "");
   // Only the three independently validated product-variant parsers may supply
   // a draft identity from their exact native-PDF label. Keep other insurer
@@ -59,6 +59,10 @@ export function selectVerifiedN8nInsuredDraftIdentity(
     magma_private_car_package_native_pdf: "Magma PDF labelled policy schedule",
     national_private_car_liability_only_native_pdf:
       "NIA bilingual source-labelled policy and vehicle schedule",
+    oriental_private_car_standalone_od_native_pdf:
+      "Oriental current PDF policy/vehicle/premium schedule",
+    oriental_gccv_package_native_pdf:
+      "Oriental current PDF policy/vehicle/premium schedule",
   };
   const heldEvidence = heldNameEvidence[parserId ?? ""];
   const variantEvidence = variantNameEvidence[parserId ?? ""];
