@@ -40,6 +40,13 @@ assert.equal(refine("united_india_gcv_native_pdf",brokenSpacing.replace("DAIMLER
 assert.equal(refine("united_india_gcv_native_pdf",brokenSpacing.replace("SGST - Basic TP","IGST - Basic TP")),
  "united_india_gcv_native_pdf","No split tax means no promotion");
 
+// A row-based native PDF reader must not silently drop valid no-transform
+// fragments; its late-page source-only fallback must stay document-bound.
+const readerSource=fs.readFileSync(path.resolve(here,"../lib/policy-ocr-native-pdf.ts"),"utf8");
+assert.match(readerSource,/const fragments=\(content\.items as unknown\[\]\)/);
+assert.match(readerSource,/const text=positioned\|\|fragments\.join\(" "\)/);
+assert.match(readerSource,/extractText\(document,\{mergePages:false\}\)/);
+assert.match(readerSource,/pages\.every\(page=>!page\.text\.trim\(\)\)/);
 const nativeReader=fs.readFileSync(path.resolve(here,"../lib/policy-ocr-native-pdf.ts"),"utf8");
 const nativeClassifier=fs.readFileSync(path.resolve(here,"../lib/policy-nontata-commercial-n8n.ts"),"utf8");
 assert.match(nativeReader,/maxTextPages\?: number/, "Reader must offer a bounded late-page request");
