@@ -55,7 +55,7 @@ const customers = read('app/customers.tsx');
 requireText(businessReport, 'hideTopBar', 'Business Report must hide its default light header.');
 requireText(businessReport, 'navyStatusBar', 'Business Report must render the navy status area.');
 for (const marker of [
-  '<PartnerCasePageHeader title="Business Report" icon="business-outline" onBack={() => router.back()} />',
+  '<PartnerCasePageHeader title="Business Report" icon="business-outline" onBack={() => router.back()} titleOpacity={header} />',
   "artwork={require('../assets/partner/business-report/premium-wallet-3d.png')}",
   "artwork={require('../assets/partner/business-report/policies-approved-3d.png')}",
   "artwork={require('../assets/partner/business-report/customers-shield-3d.png')}",
@@ -75,6 +75,10 @@ if (businessReport.includes('EATD Net Premium')) {
 }
 requireText(businessReport, 'getPartnerBusinessReportNet()', 'Business Report data source must remain unchanged.');
 requireText(businessReport, 'bottomNavigation={<PartnerStackBottomNavigation activeTab="business" />}', 'Business Report must retain its existing bottom navigation.');
+
+const reportHeader = read('components/partner-case-page-header.tsx');
+for (const marker of ['titleOpacity?: Animated.Value', 'titleOpacity ? <>', 'onPress={onBack}', 'height: 52', "backgroundColor: '#0A234A'", 'accessibilityRole="header"']) requireText(reportHeader, marker, 'Shared report header must preserve layout, back navigation and opt-in motion: ' + marker);
+for (const marker of ['useActivityMotion()', 'cancelAnimationFrame(frame)', 'animation.stop()', 'report.data?.current_month', 'formatIndianCurrency(value)', 'report.data.trend.slice(-6)', 'report.data.business_mix.map', 'accessibilityLabel={exact}', "fontVariant: ['tabular-nums']"]) requireText(businessReport, marker, 'Business report motion must preserve data and lifecycle: ' + marker);
 
 const policies = read('app/(tabs)/policies.tsx');
 const datePicker = read('components/ui/partner-date-picker.tsx');
