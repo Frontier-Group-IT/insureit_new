@@ -58,7 +58,7 @@ assert.ok(details.includes('title="Business ownership"') && details.includes('ti
 assert.ok(dashboardBusiness.includes("Team-generated business") && dashboardBusiness.includes("Sankalp Direct Business"));
 assert.ok(dashboardBusiness.includes("const net = premiumByPolicy.get(policy.id)?.net ?? 0"));
 assert.ok(dashboardBusiness.includes("if (!isDirect)"),"Direct Business must never be included in team RM contribution");
-assert.ok(dashboardData.includes("const activePolicies = policies.filter((row) => row.end_date >= todayKey)"));
+assert.ok(dashboardData.includes("const activePolicies = policies.filter((row) => isPolicyCurrentlyActive(row, todayKey))"));
 assert.ok(dashboardData.includes("const normalized = activePolicies.map("));
 assert.ok(dashboardData.includes("active: activePolicies.length"));
 assert.ok(dashboardData.includes("other: Math.max(activePolicies.length - motor - life - nonMotor - health, 0)"));
