@@ -145,6 +145,20 @@ const rawNameResult=parseNonTata(digitRawName);
 assert.equal(rawNameResult.ok,true,JSON.stringify(rawNameResult.warnings));
 assert.equal(field(rawNameResult,'insured_name'),'MR SAMPLE POLICYHOLDER');
 assert.equal(rawNameResult.checks.insured_name_verified,true);
+// Existing titled Go Digit schedules may have indentation, or place the
+// registration label on the next line. Keep the original permissive titled
+// match exactly, even while new untitled cases require adjacent provenance.
+for(const titledVariant of [
+  digitText.replace('Name MR SAMPLE POLICYHOLDER             Vehicle Registration No.',
+    'Name MR SAMPLE POLICYHOLDER\nVehicle Registration No.'),
+  digitText.replace('Name MR SAMPLE POLICYHOLDER             Vehicle Registration No.',
+    '    Name MR SAMPLE POLICYHOLDER             Vehicle Registration No.'),
+]){
+  const parsed=parseNonTata(titledVariant);
+  assert.equal(parsed.ok,true,'Previously supported titled layout must remain accepted');
+  assert.equal(field(parsed,'insured_name'),'MR SAMPLE POLICYHOLDER');
+}
+
 // An absent identity must still be rejected rather than guessed.
 const digitNoName=parseNonTata(digitRawName.replace('Name MR SAMPLE POLICYHOLDER ', ''));
 assert.equal(digitNoName.checks.insured_name_verified,false);
