@@ -31,6 +31,7 @@ export function CustomerDocumentVault({ customerId, documents, profileMode = fal
   const [picked, setPicked] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState("");
   const [expanded, setExpanded] = useState<number[]>([]);
+  const [vaultOpen, setVaultOpen] = useState(false);
 
   async function upload(file?: File) {
     if (!file || busy) return;
@@ -44,7 +45,7 @@ export function CustomerDocumentVault({ customerId, documents, profileMode = fal
       const body = await response.json() as { error?: string };
       if (!response.ok) { setUploadError(body.error || "Document upload failed."); return setMessage(body.error || "Document upload failed."); }
       if (inputRef.current) inputRef.current.value = "";
-      if (profileMode) { setPicked(null); setExpanded(old => Array.from(new Set([...old, documentGroup(type)]))); dialogRef.current?.close(); }
+      if (profileMode) { setVaultOpen(true); setPicked(null); setExpanded(old => Array.from(new Set([...old, documentGroup(type)]))); dialogRef.current?.close(); }
       router.refresh();
     } catch { setUploadError("Document upload failed."); setMessage("Document upload failed."); }
     finally { setBusy(false); }
@@ -78,12 +79,20 @@ export function CustomerDocumentVault({ customerId, documents, profileMode = fal
   }
 
   if (profileMode) return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[11px] font-bold text-[#6241B5]">{documents.length} files</span>
-        <button type="button" disabled={busy} onClick={() => { setType("Other"); setPicked(null); setUploadError(""); if (inputRef.current) inputRef.current.value = ""; dialogRef.current?.showModal(); }} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#6742BB] px-4 py-2 text-[12px] font-bold text-white shadow-sm hover:bg-[#53329E] focus-visible:ring-2 focus-visible:ring-[#8D6BD6] disabled:opacity-60"><UploadCloud className="h-4 w-4" /> Upload Document</button>
+    <div>
+      <div className="flex flex-wrap items-center gap-2 px-3 py-3 sm:flex-nowrap sm:gap-3 sm:px-4">
+        <button type="button" aria-expanded={vaultOpen} aria-controls="customer-profile-vault-body" onClick={() => setVaultOpen(old => !old)} className="flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8D6BD6]">
+          <img src="/assets/Custom-Icons/optimized-128/documents.png" alt="" aria-hidden="true" width={44} height={44} className="h-10 w-10 shrink-0 object-contain" />
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-center gap-2"><span className="text-[17px] font-black text-[#2E2358]">Document Vault</span><span aria-label={`${documents.length} files`} className="rounded-full bg-[#EEE7FF] px-2 py-0.5 text-[11px] font-bold tabular-nums text-[#6241B5]">{documents.length}</span></span>
+            <span className="mt-0.5 block text-[10.5px] font-medium text-[#81739B]">Access and manage your important documents.</span>
+          </span>
+        </button>
+        <button type="button" disabled={busy} onClick={() => { setType("Other"); setPicked(null); setUploadError(""); if (inputRef.current) inputRef.current.value = ""; dialogRef.current?.showModal(); }} className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-xl bg-[#6742BB] px-3 py-2 text-[11px] font-bold text-white shadow-sm hover:bg-[#53329E] focus-visible:ring-2 focus-visible:ring-[#8D6BD6] disabled:opacity-60"><UploadCloud className="h-4 w-4" /> Upload Document</button>
+        <button type="button" aria-label={vaultOpen ? "Collapse Document Vault" : "Expand Document Vault"} aria-expanded={vaultOpen} aria-controls="customer-profile-vault-body" onClick={() => setVaultOpen(old => !old)} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[#6742BB] hover:bg-[#F4EEFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8D6BD6]"><ChevronDown className={`h-5 w-5 motion-safe:transition-transform ${vaultOpen ? "rotate-180" : ""}`} /></button>
       </div>
-      {message ? <p role="status" className="rounded-lg bg-[#F3F7FD] px-3 py-2 text-[11px] font-bold text-[#45617E]">{message}</p> : null}
+      {message ? <p role="status" className="mx-3 mb-3 rounded-lg bg-[#F3F7FD] px-3 py-2 text-[11px] font-bold text-[#45617E]">{message}</p> : null}
+      <div id="customer-profile-vault-body" hidden={!vaultOpen} className={vaultOpen ? "customer-profile-vault-content space-y-3 px-3 pb-3 sm:px-4" : "hidden"}>
       {groups.map(({ label, Icon }, index) => {
         const items = documents.filter(doc => documentGroup(doc.document_type) === index);
         const open = expanded.includes(index);
@@ -96,6 +105,7 @@ export function CustomerDocumentVault({ customerId, documents, profileMode = fal
           </div>
         </div>;
       })}
+      </div>
       <dialog ref={dialogRef} onCancel={event => { if (busy) event.preventDefault(); }} className="m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-[#E6DDF9] bg-white p-5 text-[#2E2358] shadow-xl backdrop:bg-black/40" aria-labelledby="customer-upload-title">
         <div className="flex items-center justify-between gap-2"><h3 id="customer-upload-title" className="text-base font-bold">Upload Document</h3><button type="button" disabled={busy} aria-label="Close upload dialog" onClick={() => dialogRef.current?.close()} className="rounded-lg p-2 hover:bg-[#F4EEFF]"><X className="h-5 w-5" /></button></div>
         <label className="mt-4 block text-[12px] font-bold">Document type<select value={type} onChange={event => setType(event.target.value)} disabled={busy} className="mt-1 block h-10 w-full rounded-lg border border-[#D8E1EC] bg-white px-3 text-[12px]">{groups.map(group => <optgroup key={group.label} label={group.label}>{group.types.map(value => <option key={value}>{value}</option>)}</optgroup>)}</select></label>
