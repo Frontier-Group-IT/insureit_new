@@ -1743,3 +1743,13 @@ for (const marker of ['No documents available for this policy.', 'Policy attachm
 for (const marker of ['getCurrentSession()', "Authorization: 'Bearer ' + session.access_token", "source: document.source", "params.set('download', 'true')"]) requireText(policyDocumentsClient, marker, 'Policy document bearer API client: ' + marker);
 for (const marker of ['scoped.auth.getUser(bearer)', 'scoped.rpc("partner_app_policy_detail"', 'detail.policy?.id !== policyId', '.eq("policy_id", policyId)', '.eq("final_policy_id", policyId)', '.in("case_id", caseIds)', 'row.source === source', 'createSignedUrl(', '120, download ?', 'Cache-Control', 'private, no-store']) requireText(policyDocumentApi, marker, 'Policy-scoped secure document API: ' + marker);
 if (/return respond\(\{ ok: true, documents:.*storage_path/.test(policyDocumentApi)) throw new Error('Private storage paths must never enter the document inventory response');
+
+// The portal's Vercel Git deployment is intentionally disabled; until the
+// manual production deploy, HTML 404 responses must not produce JSON parse errors.
+const policyDocumentsTransport = read('lib/policy-documents.ts');
+for (const marker of [
+  "response.headers.get('content-type')", "contentType.includes('application/json')",
+  "contentType.includes('+json')", "result.ok !== true", "response.status === 404",
+  "The policy document service is not available yet.", "Unable to reach the policy document service."
+]) requireText(policyDocumentsTransport, marker, 'Policy documents non-JSON response handling: ' + marker);
+if (policyDocumentsTransport.includes("const result = await response.json() as")) throw new Error('Unsafe unconditional JSON response parsing returned');
