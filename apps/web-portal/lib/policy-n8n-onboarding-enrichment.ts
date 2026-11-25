@@ -110,6 +110,16 @@ export function enrichVerifiedN8nOnboardingFields<T extends N8nPrefillField>(
     const make=fields.find(f=>f.key==="vehicle_make");
     if(make){make.value="BharatBenz";make.label="BharatBenz — verified Daimler India marque";}
   }
+  // Magma's Kia Seltos schedule gives Kia's legal corporate name rather
+  // than the active Kia manufacturer-master option. Apply an exact
+  // source+model family alias only to the reviewed Magma package.
+  if(parserId==="magma_private_car_package_native_pdf"
+    && get("vehicle_make")==="KIA INDIA PRIVATE LIMITED"
+    && /^(?:KIA INDIA PRIVATE LIMITED\\s+)?SELTOS G1\\.5 IMT HTK PLUS$/i
+      .test(get("vehicle_model"))) {
+    const make=fields.find(f=>f.key==="vehicle_make");
+    if(make){make.value="Kia";make.label="Kia — verified printed Kia India vehicle";}
+  }
   const add = (key: string, value: string, label: string) => {
     if (value && !get(key)) fields.push({ key, label, value });
   };
