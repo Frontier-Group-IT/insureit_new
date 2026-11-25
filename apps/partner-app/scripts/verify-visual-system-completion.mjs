@@ -1712,4 +1712,6 @@ const claimsEmptyMotionSource = read('app/(tabs)/claims.tsx');
 const claimsEmptyMotionBody = claimsEmptyMotionSource.slice(claimsEmptyMotionSource.indexOf('function ClaimsEmptyState('), claimsEmptyMotionSource.indexOf('function ClaimCard('));
 for (const marker of ['useActivityMotion()', 'opacity: 0.43', 'translateY: emptyFloat', 'toValue: -5, duration: 1800', 'animation.stop(); emptyFloat.setValue(0)', 'if (!motion) return;', 'isInteraction: false', 'accessibilityElementsHidden', 'Everything looks settled here']) requireText(claimsEmptyMotionBody, marker, 'Claims empty-only faded motion: ' + marker);
 
-for (const marker of ['useHomeEntrance', 'HomeCount', 'HomeTrendBar', '500 + index * 90', 'duration={1500}', 'tabular-nums', 'if (!motion) return;', 'cancelAnimationFrame(frame)']) requireText(home, marker, 'Home motion: ' + marker);
+for (const marker of ['useHomeEntrance', 'HomeCount', 'HomeTrendBar', '400 + index * 90', 'duration={1500}', 'tabular-nums', 'if (!motion) return;', 'cancelAnimationFrame(frame)']) requireText(home, marker, 'Home motion: ' + marker);
+
+for (const marker of ['motionReady && biometricReady && !startupPending && !locked && visible', 'HomeSequenceContext.Provider', 'motion && animateOnMount ? 0 : 1', 'previous.current = target; setShown(text)', 'const start = previous.current;', '!sequenceStarted || !biometricReady || startupPending || locked', 'homeMotionEnabled={motion}']) requireText(home, marker, 'Home startup sequence: ' + marker);

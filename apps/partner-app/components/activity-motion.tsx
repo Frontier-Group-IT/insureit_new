@@ -9,15 +9,16 @@ export function useActivityMotion() {
   const focused = useIsFocused();
   const [foreground, setForeground] = useState(AppState.currentState == null || AppState.currentState === 'active' || Platform.OS === 'web');
   const [reduced, setReduced] = useState(true);
+  const [motionReady, setMotionReady] = useState(false);
   useEffect(() => {
     let live = true, changed = false;
     const app = AppState.addEventListener('change', state => setForeground(state === 'active'));
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', value => { changed = true; if (live) setReduced(value); });
-    void AccessibilityInfo.isReduceMotionEnabled().then(value => { if (live && !changed) setReduced(value); }).catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', value => { changed = true; if (live) { setReduced(value); setMotionReady(true); } });
+    void AccessibilityInfo.isReduceMotionEnabled().then(value => { if (live && !changed) { setReduced(value); setMotionReady(true); } }).catch(() => { if (live) setMotionReady(true); });
     return () => { live = false; app.remove(); sub.remove(); };
   }, []);
   const visible = focused && foreground;
-  return { visible, motion: visible && !reduced };
+  return { visible, motionReady, motion: visible && motionReady && !reduced };
 }
 function useEntrance(motion: boolean, delay = 0) {
   const value = useRef(new Animated.Value(motion ? 0 : 1)).current;

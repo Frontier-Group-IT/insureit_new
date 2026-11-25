@@ -19,6 +19,7 @@ type PartnerBiometricLockValue = {
   available: boolean;
   locked: boolean;
   ready: boolean;
+  startupPending: boolean;
   setEnabled: (enabled: boolean) => Promise<{ ok: boolean; reason?: string }>;
   unlock: () => Promise<boolean>;
 };
@@ -32,6 +33,7 @@ export function PartnerBiometricLockProvider({ children }: PropsWithChildren) {
   const [locked, setLocked] = useState(false);
   const [ready, setReady] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
+  const [startupVerified, setStartupVerified] = useState(false);
   const backgroundedAt = useRef<number | null>(null);
   const appState = useRef<AppStateStatus>(AppState.currentState);
   const promptedForReadySession = useRef(false);
@@ -63,6 +65,7 @@ export function PartnerBiometricLockProvider({ children }: PropsWithChildren) {
     try {
       const result = await authenticatePartnerLocally();
       if (result.success) {
+        setStartupVerified(true);
         setLocked(false);
         void partnerSuccessHaptic();
         return true;
@@ -79,6 +82,7 @@ export function PartnerBiometricLockProvider({ children }: PropsWithChildren) {
     if (!next) {
       await setPartnerBiometricLockEnabled(false);
       setEnabledState(false);
+      setStartupVerified(false);
       setLocked(false);
       promptedForReadySession.current = false;
       return { ok: true };
@@ -95,13 +99,14 @@ export function PartnerBiometricLockProvider({ children }: PropsWithChildren) {
     setEnabledState(true);
     setLocked(false);
     promptedForReadySession.current = true;
+    setStartupVerified(true);
     void partnerSuccessHaptic();
     return { ok: true };
   }, []);
 
   useEffect(() => {
     if (!ready || !enabled || session.status !== 'ready' || Platform.OS === 'web') {
-      if (session.status !== 'ready') promptedForReadySession.current = false;
+      if (session.status !== 'ready') { promptedForReadySession.current = false; setStartupVerified(false); }
       return;
     }
     if (promptedForReadySession.current) return;
@@ -132,7 +137,8 @@ export function PartnerBiometricLockProvider({ children }: PropsWithChildren) {
     return () => subscription.remove();
   }, [enabled, session.status, unlock]);
 
-  const value = useMemo(() => ({ enabled, available, locked, ready, setEnabled, unlock }), [enabled, available, locked, ready, setEnabled, unlock]);
+  const startupPending = !ready || (enabled && session.status === 'ready' && !startupVerified);
+  const value = useMemo(() => ({ enabled, available, locked, ready, startupPending, setEnabled, unlock }), [enabled, available, locked, ready, startupPending, setEnabled, unlock]);
 
   return (
     <PartnerBiometricLockContext.Provider value={value}>
