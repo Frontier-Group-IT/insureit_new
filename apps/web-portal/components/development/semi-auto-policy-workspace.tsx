@@ -55,7 +55,7 @@ const aiIssueTitles: Record<string,string> = {
   coverage_conflict:"Policy coverage conflict",
   draft_conflict:"Saved field differs from PDF",
   preflight_pending:"Canonical booking preflight pending",
-  booking_review_required:"Conversion needs manual review",
+  booking_review_required:"Prior conversion held · inspect exact review",
   stale_document:"Source PDF changed",
 };
 /** Saved OCR offers diagnostics only; source PDF and canonical checks remain authoritative. */
@@ -85,7 +85,10 @@ function commercialBookingIssue(row:SemiAutoIntakeRow,code:string):
 // provisional-RTO holds. The server checks actual trained parser identity,
 // source PDF/fingerprint, and insurer eligibility before any booking.
 function canRetryReviewHeldPolicy(row:SemiAutoIntakeRow):boolean {
-  return !row.is_duplicate&&row.ai_state==="exception"
+  return !row.is_duplicate
+    &&["in_review","ready_for_review","needs_attention"].includes(row.status)
+    &&row.ocr_status==="completed"
+    &&row.ai_state==="exception"
     &&row.ai_exceptions?.length===1
     &&["booking_review_required","registration_pending_review"].includes(row.ai_exceptions[0]);
 }
@@ -740,7 +743,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                       </button>
                       <div className="flex shrink-0 items-center gap-0.5">
                         <button type="button" aria-label={"Inspect "+row.intake_number} title="Inspect" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4"/></button>
-                        {((!row.is_duplicate&&row.ai_state==="verified"&&!row.ai_exceptions?.length)||canRetryReviewHeldPolicy(row))?<button type="button" aria-label={"Convert "+row.intake_number} title="Convert" disabled={isWaiting} onClick={()=>setAutoConvertRow(row)} className="rounded-lg p-2 text-emerald-700 hover:bg-emerald-50 disabled:opacity-40"><ArrowRight className="h-4 w-4"/></button>:null}
+                        {((!row.is_duplicate&&row.ai_state==="verified"&&!row.ai_exceptions?.length&&row.ocr_status==="completed"&&["in_review","ready_for_review","needs_attention"].includes(row.status))||canRetryReviewHeldPolicy(row))?<button type="button" aria-label={"Convert "+row.intake_number} title="Convert" disabled={isWaiting} onClick={()=>setAutoConvertRow(row)} className="rounded-lg p-2 text-emerald-700 hover:bg-emerald-50 disabled:opacity-40"><ArrowRight className="h-4 w-4"/></button>:null}
                         {row.policy_type==="motor"&&!row.is_duplicate&&["processing","ready_for_review","in_review","needs_attention"].includes(row.status)?<button type="button" aria-label={"Reparse "+row.intake_number} title="Reparse and replace saved draft" disabled={replaceReparseId!==null||isWaiting} onClick={()=>void reparseAndReplace(row)} className="rounded-lg p-2 text-blue-700 hover:bg-blue-50 disabled:opacity-40">{replaceReparseId===row.id?<Loader2 className="h-4 w-4 animate-spin"/>:<RotateCcw className="h-4 w-4"/>}</button>:null}
                       </div>
                     </div>
