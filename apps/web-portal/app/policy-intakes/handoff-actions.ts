@@ -215,7 +215,8 @@ export async function prepareVerifiedN8nIntakeHandoff(
         commercialPremium:commercial,
       }).eligible
       : Math.abs((commercial!.od+commercial!.tp)-commercial!.net)<0.07)
-    && Math.abs((commercial!.net+commercial!.gst)-commercial!.gross)<(PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId)?0.51:0.07);
+    && Math.abs((commercial!.net+commercial!.gst)-commercial!.gross)<(PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId)
+      ||Boolean(parsed.preview.candidateCanonicalPremium)?0.51:0.07);
   const acceptableCommercialWarning=(value:string)=>
     parsed.preview.parserId==="new_india_cv_native_pdf"
     && value.startsWith("Policy prints only an RTO prefix.");
