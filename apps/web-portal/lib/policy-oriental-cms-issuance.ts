@@ -75,7 +75,7 @@ export async function verifyOrientalCmsSigningDate(
  if(filters.length!==1||!["adbe.pkcs7.detached","ETSI.CAdES.detached"].includes(filters[0][1]))
    return null;
  const declaredRanges=[...dictionary.matchAll(RANGE)];
- if(declaredRanges.length!==1||declaredRanges[0].slice(1).join(",")!==
+ if(declaredRanges.length!==1||declaredRanges[0].slice(1).map(Number).join(",")!==
    [firstStart,firstLen,secondStart,secondLen].join(","))return null;
  const pdfM=[...dictionary.matchAll(/\/M\s*\((D:[^)]{14,28})\)/g)];
  if(pdfM.length>1)return null;
