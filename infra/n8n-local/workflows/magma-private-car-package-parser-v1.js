@@ -50,7 +50,11 @@ const checks={
  gross_net_tax_reconciled:near(net+gst,gross,.51),magma_layout:product&&a>=0&&b>a,
  od_ncb_addons_printed:basicOd!==null&&sub!==null&&near(basicOd+addons.reduce((sum,x)=>sum+x.amount,0),sub,.06)&&near(sub-ncb,od,.51),
  liability_cpa_itemized:basicTp!==null&&cpa!==null&&paid!==null&&near(basicTp+cpa+paid,tp,.06),
+ // The PDF prints CGST/SGST at 9% each or IGST at 18%. Verifying
+ // only their sum is insufficient: both amounts must match the taxable net.
  tax_components_reconciled:gst!==null&&gross!==null&&near(net+gst,gross,.51)
+   &&(igst!==null?near(igst,net*.18,.02)
+     :cgst!==null&&sgst!==null&&near(cgst,net*.09,.02)&&near(sgst,net*.09,.02))
 };
 const failed=Object.entries(checks).filter(([,v])=>v!==true).map(([k])=>k),ok=failed.length===0;
 const values={policy_number:policy,insurer_name:insurer?'Magma General Insurance Limited':null,
