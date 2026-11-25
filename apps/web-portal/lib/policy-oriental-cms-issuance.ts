@@ -39,6 +39,28 @@ function pdfMToIndiaDay(value:string):string|null {
   const offset=(tzHour*60+tzMin)*60_000*(sign==="+"?1:-1);
   return indiaDay(new Date(utc-offset));
 }
+/** ASN.1 GeneralizedTime may contain an explicit +HHMM/-HHMM offset.
+ * Some ASN.1 Date adapters normalize this format inconsistently; parse the
+ * encoded signed-attribute instant strictly rather than guessing local time.
+ * The CMS signature is still verified over signedAttrs before acceptance.
+ */
+export function cmsSigningTimeIndiaDay(
+  value:string, fallbackDate?:Date,
+):string|null {
+  const offset=/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})([+-])(\d{2})(\d{2})$/.exec(value);
+  if(!offset)return fallbackDate?indiaDay(fallbackDate):null;
+  const [,yy,mm,dd,hh,mi,ss,sign,oh,om]=offset;
+  const [year,month,day,hour,minute,second,tzHour,tzMin]=[yy,mm,dd,hh,mi,ss,oh,om].map(Number);
+  if(month<1||month>12||day<1||day>31||hour>23||minute>59||second>59
+    ||tzHour>14||tzMin>59||(tzHour===14&&tzMin!==0))return null;
+  const local=Date.UTC(year,month-1,day,hour,minute,second);
+  const check=new Date(local);
+  if(check.getUTCFullYear()!==year||check.getUTCMonth()!==month-1
+    ||check.getUTCDate()!==day)return null;
+  const minutes=(tzHour*60+tzMin)*(sign==="+"?1:-1);
+  return indiaDay(new Date(local-minutes*60000));
+}
+
 /** Resolve one current-document, full-coverage, detached CMS signature.
  * CMS signedAttrs signingTime is integrity-protected by the CMS signature.
  * PDF /M, if present, MUST agree on India business day. Never use /M alone.
@@ -95,9 +117,16 @@ export async function verifyOrientalCmsSigningDate(
    const attrs=cms.signerInfos[0].signedAttrs?.attributes||[];
    const signedTime=attrs.filter(a=>a.type==="1.2.840.113549.1.9.5");
    if(signedTime.length!==1||signedTime[0].values.length!==1)return hold("cms_signing_time_missing");
-   const asn=signedTime[0].values[0] as {toDate?:()=>Date};
-   if(typeof asn.toDate!=="function")return hold("cms_signing_time_type");
-   const day=indiaDay(asn.toDate());
+   const asn=signedTime[0].values[0] as {
+     toDate?:()=>Date;valueBlock?:{value?:unknown};
+   };
+   const encoded=asn.valueBlock?.value;
+   if(typeof encoded!=="string"&&typeof asn.toDate!=="function")
+     return hold("cms_signing_time_type");
+   // Explicit-offset GeneralizedTime must not be interpreted as local UTC.
+   const day=typeof encoded==="string"&&/^[0-9]{14}[+-][0-9]{4}$/.test(encoded)
+     ?cmsSigningTimeIndiaDay(encoded)
+     :typeof asn.toDate==="function"?indiaDay(asn.toDate()):null;
    if(!day)return hold("cms_time_date_invalid");
    if(pdfM.length===1&&pdfMToIndiaDay(pdfM[0][1])!==day)return hold("pdf_m_mismatch");
    const full=Buffer.concat([
