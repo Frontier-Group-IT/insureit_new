@@ -106,16 +106,17 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   const autoRequested=autoBookingEnabled();
   const attemptedIds=new Set<string>();
   let autoLedgerAvailable=!autoRequested;
-  let autoBookedCount=0,autoReviewCount=0,autoUncertainCount=0;
+  let autoClaimedCount=0,autoBookedCount=0,autoReviewCount=0,autoUncertainCount=0;
   if(autoRequested){
-    const aggregate=await Promise.all(["booked","review_required","uncertain"].map(state=>
+    const aggregate=await Promise.all(["claimed","booked","review_required","uncertain"].map(state=>
       admin.from("policy_intake_ai_auto_booking_attempts")
         .select("intake_id",{count:"exact",head:true}).eq("state",state)));
     autoLedgerAvailable=aggregate.every(result=>!result.error);
     if(autoLedgerAvailable){
-      autoBookedCount=aggregate[0].count??0;
-      autoReviewCount=aggregate[1].count??0;
-      autoUncertainCount=aggregate[2].count??0;
+      autoClaimedCount=aggregate[0].count??0;
+      autoBookedCount=aggregate[1].count??0;
+      autoReviewCount=aggregate[2].count??0;
+      autoUncertainCount=aggregate[3].count??0;
       for(let offset=0;offset<workspaceRows.length;offset+=100){
         const result=await admin.from("policy_intake_ai_auto_booking_attempts")
           .select("intake_id").in("intake_id",workspaceRows.slice(offset,offset+100).map(row=>row.id));
@@ -295,7 +296,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
              <SemiAutoPolicyWorkspace rows={pageRows} profileId={profile.id} primaryN8n={primaryN8n}
               queueActive={queueActive} queueCounts={queueCounts} bulkCandidates={bulkCandidates} reprocessCandidates={reprocessCandidates}
               autoBooking={{enabled:autoRequested&&autoLedgerAvailable,configured:autoRequested,ledgerAvailable:autoLedgerAvailable,
-                pending:autoLedgerAvailable?bulkCandidates.length:0,booked:autoBookedCount,
+                pending:autoLedgerAvailable?bulkCandidates.length:0,claimed:autoClaimedCount,booked:autoBookedCount,
                 review:autoReviewCount,uncertain:autoUncertainCount}}
               initialIntakeId={requestedId && pageRows.some(row => row.id === requestedId) ? requestedId : null} />
                       </>
