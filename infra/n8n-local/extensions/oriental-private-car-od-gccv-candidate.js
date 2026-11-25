@@ -109,7 +109,7 @@ function parseOrientalMotor(raw){
  const fields=Object.entries(fieldsObj).filter(([,v])=>v!==null&&v!=='').map(([key,value])=>({
   key,label:key,value:String(value),confidence:null,page:null,
   evidence:key==='policy_issuance_date'?'Oriental explicitly printed Policy Issue Date':
-   key==='vehicle_make'&&gcv?'Manufacturer-certified BharatBenz 2523C model family; not invented PDF printing':
+   key==='vehicle_make'&&gcv?'Manufacturer model-family certified: BharatBenz official 2523C specification https://www.bharatbenz.com/trucks/-specifications-2523c-16; make not separately printed in PDF':
    'Oriental current PDF policy/vehicle/premium schedule',
  }));
  return {contract_version:'1',ok:failed.length===0,validation_passed:failed.length===0,
