@@ -104,7 +104,11 @@ function iffco(t){
 }
 function digit(t){
  const id=grab(t,/Policy No\.\s*(D\d{8,12})/i)||grab(t,/Policy No:\s*(D\d{8,12})/i);
- const name=grab(t,/\bName\s+((?:MR|MRS|MS)\s+[^\n]{5,80}?)\s+Vehicle Registration No\./i)||grab(t,/\bName\s*\n\s*((?:MR|MRS|MS)\s+[^\n]{5,80})/i);
+ // Go Digit JCB schedules may print the insured without MR/MRS/MS and may
+ // place company names on the next line. The adjacent vehicle registration
+ // label is mandatory to avoid taking the broker or financier as insured.
+ const name=grab(t,/^Name[ \t]+((?:(?:MR|MRS|MS)\.?[ \t]+)?[A-Z][A-Z0-9 .&'()\/-]{3,90}?)[ \t]+Vehicle Registration No\./im)
+   ||grab(t,/^Name[ \t]*\n[ \t]*((?:(?:MR|MRS|MS)\.?[ \t]+)?[A-Z][A-Z0-9 .&'()\/-]{3,90}?)[ \t]*\n[ \t]*Vehicle Registration No\./im);
  const reg=grab(t,/Vehicle Registration No\.\s*([A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4})/i)||grab(t,/Vehicle Registration No\.\s*\n\s*([A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4})/i);
  let issue=validDate(grab(t,/Policy Issue Date\s+(\d{2}-[A-Za-z]{3}-\d{4})/i));
  let start=validDate(grab(t,/\bFrom\s+(\d{2}-[A-Za-z]{3}-\d{4})\s*00:\d{2}:\d{2}/i));
@@ -114,9 +118,19 @@ function digit(t){
  end=end||validDate(grab(t,/(\d{2}-[A-Za-z]{3}-\d{4})\s+23:\d{2}:\d{2}/i));
  const section=t.slice(Math.max(0,t.indexOf('YOUR POLICY DETAILS')),Math.max(0,t.indexOf('YOUR VEHICLE IDV')));
  const make=/\bJCB\b/.test(section)?'JCB':null;
- const model=/DX\s*ECO\s*XPERT/i.test(section)&&/BACKHOE\s*LOADER/i.test(section)?'3 DX ECO XPERT / BACKHOE LOADER':null;
+ // Preserve existing ECO XPERT; the distinct 2WD/Backhoe Loader is
+ // explicitly printed inside the Go Digit JCB vehicle detail block.
+ const model=/DX\s*ECO\s*XPERT/i.test(section)&&/BACKHOE\s*LOADER/i.test(section)
+   ?'3 DX ECO XPERT / BACKHOE LOADER'
+   :/\b3\s*DX\s*2WD\s*\/\s*BACKHOE\s+LOADER\b/i.test(section)
+     ?'3 DX 2WD / BACKHOE LOADER':null;
  const engine=grab(t,/Engine No\.\s*(H\d{8})/i)||grab(section,/\b(H\d{8})\b/i);
- const chassis=grab(t,/Chassis No\.\s*(HAR3DX[A-Z0-9]{9,18})/i)||grab(section,/\b(HAR3DX[A-Z0-9]{9,18})\b/i);
+ // Native PDF reading order places the chassis BEFORE its heading.
+ // RAJ and HAR are separate printed JCB 3DX chassis prefix variants.
+ // The unlabeled-order fallback must be unambiguous in the vehicle block.
+ const chassisCandidates=[...new Set([...section.matchAll(/\b((?:HAR|RAJ)3DX[A-Z0-9]{9,18})\b/gi)].map(m=>m[1].toUpperCase()))];
+ const chassis=grab(t,/Chassis No\.\s*((?:HAR|RAJ)3DX[A-Z0-9]{9,18})/i)
+   ||(chassisCandidates.length===1?chassisCandidates[0]:null);
  const idvSection=t.match(/YOUR VEHICLE IDV([\s\S]{0,1500}?)(?:OWN DAMAGE PREMIUM|LIABILITY PREMIUM)/i)?.[1]||'';
  const idv=amount(grab(idvSection,/\b(\d{6,9})\s+--/i))||amount(grab(idvSection,/\b(\d{6,9})\s+\d{6,9}\.00/i));
  let od=amountAfter(t,/Total\s+OD\s*\(?[^\n)]*\)?\s*(\d{2,8}(?:\.\d{2})?)/i);
@@ -133,10 +147,16 @@ function digit(t){
  const basicOd=amountAfter(t,/Own Damage Premium\s*\(\x60?\)\s*([\d,.]+)/i);
  const ncb=amountAfter(t,/NCB\s*\(45\s*%\)\(\x60?\)\s*([\d,.]+)/i);
  const tpBasic=amountAfter(t,/Basic Third-Party Liability\s*\(\x60?\)\s*([\d,.]+)/i);
- const ownerCpa=amountAfter(t,/PA cover for Owner-Driver\s*\(\x60?\)\s*([\d,.]+)/i);
+ // Company policies may explicitly show '--' for owner-driver PA. Zero is
+ // accepted only from that exact printed cell and an independently matching
+ // TP sum; a missing/unknown PA cell stays null.
+ const ownerCpaPrinted=grab(t,/PA cover for Owner-Driver\s*\(\x60?\)\s*(\d[\d,.]*|--)(?=\s|$)/i);
+ const ownerCpa=ownerCpaPrinted==='--'?0:amount(ownerCpaPrinted);
  const paidDriver=amountAfter(t,/Legal Liability to Paid\s*\(\x60?\)\s*Driver\s*\(Persons:1\)\s*([\d,.]+)/i);
  const base={policy_number:id,insured_name:name,policy_product:'Digit Commercial Vehicle Insurance',policy_start_date:start,policy_end_date:end,policy_issuance_date:issue,third_party_start_date:start,third_party_end_date:end,vehicle_registration_number:reg,vehicle_registration_status:plate(reg)?'registered':'registration_pending',vehicle_make:make,vehicle_model:model,vehicle_class:'Commercial Vehicle - Miscellaneous Class D',vehicle_fuel_type:grab(section,/Fuel Type\s*(Diesel|Petrol|CNG|Electric)/i)||(/\bDiesel\b/i.test(section)?'Diesel':null),vehicle_chassis_number:chassis,vehicle_engine_number:engine,idv};
- const extra={digit_layout:/Go Digit General Insurance/i.test(t)&&/Digit Commercial Vehicle Insurance/i.test(t),registered_plate:plate(reg),od_basic_ncb:basicOd==null||ncb==null?true:approx(od,basicOd-ncb),tp_itemization:tpBasic==null||ownerCpa==null||paidDriver==null?true:approx(tp,tpBasic+ownerCpa+paidDriver)};
+ const extra={digit_layout:/Go Digit General Insurance/i.test(t)&&/Digit Commercial Vehicle Insurance/i.test(t),registered_plate:plate(reg),od_basic_ncb:basicOd==null||ncb==null?true:approx(od,basicOd-ncb),tp_itemization:model==='3 DX 2WD / BACKHOE LOADER'?
+   (tpBasic!==null&&ownerCpa!==null&&paidDriver!==null&&approx(tp,tpBasic+ownerCpa+paidDriver)):
+   (tpBasic==null||ownerCpa==null||paidDriver==null?true:approx(tp,tpBasic+ownerCpa+paidDriver))};
  return output('Go Digit General Insurance Limited','go_digit_cv_native_pdf',base,{od,tp,net,gst:tax,gross},extra);
 }
 function parseNonTata(text){const t=asText(text);if(/THE NEW INDIA ASSURANCE CO\. LTD\./i.test(t)&&/Commercial Vehicle Package Policy/i.test(t))return newIndia(t);if(/IFFCO.?TOKIO GENERAL INSURANCE/i.test(t)&&/COMMERCIAL VEHICLE CERTIFICATE/i.test(t))return iffco(t);if(/Go Digit General Insurance/i.test(t)&&/Digit Commercial Vehicle Insurance/i.test(t))return digit(t);return output(null,'non_tata_unrecognized_native_pdf',{}, {},{supported_layout:false},['Unsupported insurer or policy layout; do not book automatically.']);}
