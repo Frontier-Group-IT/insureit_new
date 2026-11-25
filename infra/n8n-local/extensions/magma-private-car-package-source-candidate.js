@@ -17,7 +17,7 @@ function parseMagmaPrivateCar(t){
  const issue=date(read(/\bDate of Issue\s*:\s*(\d{2}\/\d{2}\/\d{4})/i));
  const dates=/\bPeriod of Insurance\s+(\d{2}\/\d{2}\/\d{4})\s+TO\s+(\d{2}\/\d{2}\/\d{4})/i.exec(text);
  const start=date(dates?.[1]||''),end=date(dates?.[2]||'');
- const makeModel=read(/\bVehicle Make\/Model\s*([\s\S]{3,240}?)\nRTO\b/i).replace(/\s+/g,' ').trim();
+ const makeModel=read(/\bVehicle Make\/Model\s*([\s\S]{3,240}?)\n(?:RTO\b|Vehicle Registration No\.)/i).replace(/\s+/g,' ').trim();
  const parts=makeModel.split(/\s+\/\s+/);
  const make=parts.length===2?parts[0]:'';
  const model=parts.length===2?parts[1]:'';
