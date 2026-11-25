@@ -24,6 +24,7 @@ assert.match(sql,/q\.state='verified'/);
 assert.match(sql,/cardinality\(q\.exception_codes\)=0/);
 assert.match(sql,/d\.is_current=true/);
 assert.match(sql,/i\.final_policy_id is null/);
+assert.match(sql,/i\.assigned_to_profile_id is null/);
 assert.match(sql,/i\.policy_type='motor'/);
 assert.match(sql,/to service_role/);
 assert.match(sql,/enable row level security/);
