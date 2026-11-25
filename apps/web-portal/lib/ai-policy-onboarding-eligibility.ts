@@ -14,7 +14,7 @@ export type AiPolicyExceptionCode =
   | "extraction_failed" | "unverified_parser" | "duplicate_policy"
   | "reviewer_conflict" | "customer_identity" | "customer_ambiguous"
   | "customer_duplicate" | "customer_master_unverified" | "customer_creation_required"
-  | "vehicle_ownership" | "missing_field" | "manufacturer_unmatched"
+  | "vehicle_ownership" | "insured_name_mismatch" | "missing_field" | "manufacturer_unmatched"
   | "financial_reconciliation" | "issuance_date_unverified" | "date_approval"
   | "bundled_validity" | "coverage_conflict" | "draft_conflict"
   | "preflight_pending" | "stale_document" | "booking_review_required"
