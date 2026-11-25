@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { partnerTheme } from '@/lib/theme';
 
 /** Matches the Policy Details navy title strip on nested Partner pages. */
-export function PartnerCasePageHeader({ title, icon, onBack }: {
+export function PartnerCasePageHeader({ title, icon, onBack, titleOpacity }: {
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
   onBack: () => void;
+  titleOpacity?: Animated.Value;
 }) {
   return (
     <View style={styles.pageHeader}>
@@ -15,8 +16,13 @@ export function PartnerCasePageHeader({ title, icon, onBack }: {
           style={({ pressed }) => [styles.headerBackButton, pressed && styles.pressed]}>
           <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
         </Pressable>
-        <Ionicons name={icon} size={23} color="#FFFFFF" />
-        <Text accessibilityRole="header" numberOfLines={1} style={styles.headerTitle}>{title}</Text>
+        {titleOpacity ? <>
+          <Animated.View style={{ opacity: titleOpacity.interpolate({ inputRange: [0, 1], outputRange: [0.75, 1] }) }}><Ionicons name={icon} size={23} color="#FFFFFF" /></Animated.View>
+          <Animated.Text accessibilityRole="header" numberOfLines={1} style={[styles.headerTitle, { opacity: titleOpacity.interpolate({ inputRange: [0, 1], outputRange: [0.75, 1] }) }]}>{title}</Animated.Text>
+        </> : <>
+          <Ionicons name={icon} size={23} color="#FFFFFF" />
+          <Text accessibilityRole="header" numberOfLines={1} style={styles.headerTitle}>{title}</Text>
+        </>}
       </View>
     </View>
   );
