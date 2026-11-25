@@ -89,7 +89,7 @@ const verifiedDiesel=validateTataAigN8nResponse(packageDiesel,IDS);
 assert.equal(verifiedDiesel.ok,true,"Diesel Tata AIG Package must pass after 18 signed-source checks");
 assert.equal(get(verifiedDiesel.fields,"vehicle_fuel_type"),"DIESEL");
 for(const permitted of ["CNG","LPG","ELECTRIC"]){
-  const fuelVariant=copy(packageDiesel);
+  const fuelVariant=copy(permitted==="ELECTRIC"?packageDiesel:cngPolicy);
   fuelVariant.fields.find(field=>field.key==="vehicle_fuel_type").value=permitted;
   assert.equal(validateTataAigN8nResponse(fuelVariant,IDS).ok,true,"Supported printed fuel: "+permitted);
 }
