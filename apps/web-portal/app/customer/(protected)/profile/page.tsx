@@ -1,4 +1,4 @@
-import { BadgeCheck, Mail, Phone } from "lucide-react";
+import { BadgeCheck } from "lucide-react";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
 import { CustomerProfileDocuments } from "@/components/customer-portal/customer-profile-documents";
 import { CustomerProfileEditor } from "@/components/customer-portal/customer-profile-editor";
@@ -24,32 +24,16 @@ export default async function CustomerProfilePage({
     <div className="space-y-4 pb-4">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/profile" />
 
-      <section className="flex min-w-0 items-center py-2" aria-label="Customer profile">
-          <div className="flex min-w-0 items-center gap-4 sm:gap-5">
-            <div className="shrink-0 rounded-full bg-white/85 p-1.5 shadow-[0_8px_24px_rgba(72,45,145,0.14)] ring-1 ring-[#DBD0FF]">
-              <CustomerAvatar userId={user.id} size="profile" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="break-words text-[22px] font-black tracking-[-0.02em] text-[#2D205E] sm:text-[26px]">{customer.contact_name}</h1>
-                <BadgeCheck className="h-5 w-5 shrink-0 text-[#6E42D5]" aria-label="Verified customer" />
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] font-semibold text-[#55437E]">
-                <span className="inline-flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-[#6743C6]" />{customer.phone || "—"}</span>
-                <span className="inline-flex min-w-0 items-center gap-1.5"><Mail className="h-3.5 w-3.5 shrink-0 text-[#6743C6]" /><span className="break-all">{customer.email || "—"}</span></span>
-              </div>
-              {customer.company_name ? <p className="mt-2 text-[10px] font-semibold text-[#7665A2]">{customer.company_name}</p> : null}
-            </div>
-          </div>
-      </section>
-
-      <section className="customer-profile-detail-section relative rounded-[22px] border border-[#E6E0F5] bg-white p-4 shadow-[0_9px_24px_rgba(79,56,139,0.055)] sm:p-5">
-        <div className="flex items-start gap-3 pr-20 sm:pr-24">
-          <img src="/assets/Custom-Icons/optimized-128/kyc-completed.png" alt="" aria-hidden="true" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
-          <div className="min-w-0">
-            <h2 className="text-[16px] font-black text-[#2E2358]">Your Details</h2>
-          </div>
+      <section className="customer-profile-detail-section relative flex min-w-0 flex-col items-center gap-3 rounded-[22px] border border-[#E6E0F5] bg-white p-3 shadow-[0_9px_24px_rgba(79,56,139,0.055)] sm:flex-row sm:items-center sm:gap-4 sm:p-4" aria-label="Customer profile">
+        <div className="shrink-0 rounded-full bg-white/85 p-1.5 shadow-[0_8px_24px_rgba(72,45,145,0.14)] ring-1 ring-[#DBD0FF]">
+          <CustomerAvatar userId={user.id} size="profile" />
         </div>
+        <div className="w-full min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2 pr-12">
+            <h1 className="min-w-0 break-words text-[19px] font-black tracking-[-0.02em] text-[#2D205E] sm:text-[22px]">{customer.contact_name}</h1>
+            <BadgeCheck className="h-5 w-5 shrink-0 text-[#6E42D5]" aria-label="Verified customer" />
+          </div>
+          {customer.company_name ? <p className="mt-1 text-[10px] font-semibold text-[#7665A2]">{customer.company_name}</p> : null}
         <CustomerProfileEditor
           customerId={customer.id}
           name={customer.contact_name}
@@ -61,6 +45,7 @@ export default async function CustomerProfilePage({
           postalCode={customer.postal_code ?? ""}
           documentsCount={documents.length}
         />
+        </div>
       </section>
 
       <CustomerProfileDocuments customerId={account.id} documents={documents} />
