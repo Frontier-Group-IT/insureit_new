@@ -28,4 +28,11 @@ assert.equal(refine("united_india_gcv_native_pdf",late.replace("SGST-Basic TP(2.
 assert.equal(refine("oriental_gccv_package_native_pdf",late),"oriental_gccv_package_native_pdf",
  "Other insurer routes must not be mutated");
 assert.equal(refine(null,late),null);
+const bridge=fs.readFileSync(path.resolve(here,"../lib/policy-intake-semi-auto-n8n.ts"),"utf8");
+assert.match(bridge,/"held_source_or_identity_unverified"/,
+ "Genuine Oriental issuance hold must be reported as source verification, not n8n outage");
+assert.match(bridge,/"held_required_source_field_missing"/,
+ "Missing Magma source fields must not be misreported as network outage");
+assert.match(bridge,/"n8n_nontata_identity_or_contract_invalid"/,
+ "UIIC parser response mismatch is validation failure, not connectivity issue");
 console.log("UIIC Punjab: complete-PDF split CGST/SGST source refinement and negative insurer/tax tests passed");
