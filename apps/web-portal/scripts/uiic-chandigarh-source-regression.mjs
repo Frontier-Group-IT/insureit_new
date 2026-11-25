@@ -67,5 +67,18 @@ const source=fs.readFileSync(path.resolve(root,"../../infra/n8n-local/workflows/
 assert(source.includes("const ch=unitedIndiaGcvFlexible(t)"));
 assert(source.includes("CHANDIGARH[ \\t]+UT"));
 assert(source.includes("if(classic.ok)return classic"),"Previous classic-first route retained");
-assert(source.includes("const chandigarh=ctx.match("));
+assert(source.includes("currentRows.length===1") &&
+  source.includes("currentAuthority==='CHANDIGARH UT (RLA AND STA) INDIA'"),
+  "CH authority must be bound to current printed vehicle schedule row");
+const parse=new Function("$input","$",source);
+const fake="UNITED INDIA INSURANCE COMPANY LIMITED\n"+
+ "GCV PUBLIC CARRIER OTHER THAN 3 WHEELER\nGross OD & TP:\n"+
+ "Particulars of Vehicle Insured\nCH - 01 - AB - 1234\n"+
+ "Registration Authority Auto Association Membership No. Geographical Area Extension\n"+
+ "DELHI INDIA\nPrevious vehicle Registration Authority\n"+
+ "CHANDIGARH UT (RLA AND STA) INDIA\n";
+const out=parse({all:()=>[{json:{text:fake}}]},
+ ()=>({first:()=>({json:{intake_id:"test",document_id:"test",request_id:"test"}})}))[0].json;
+assert.notEqual(out.fields.find(f=>f.key==="vehicle_rto_name")?.value,"CHANDIGARH",
+ "Historical Chandigarh mention must not override current DELHI authority");
 console.log("UIIC Chandigarh exact-source and existing MP GCV regression passed");
