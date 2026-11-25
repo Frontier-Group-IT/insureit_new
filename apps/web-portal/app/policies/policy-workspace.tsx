@@ -300,7 +300,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [], isRelationshipManage
     }
   }, [isRelationshipManager]);
 
-  const enriched = useMemo(() => rows.map((row) => ({ ...row, status: policyStatus(row), isActive: isPolicyCurrentlyActive(row, formatLocalDate(new Date())), daysLeft: daysUntil(row.end_date) })), [rows]);
+  const enriched = useMemo(() => rows.map((row) => ({ ...row, status: policyStatus(row.end_date), isActive: isPolicyCurrentlyActive(row, formatLocalDate(new Date())), daysLeft: daysUntil(row.end_date) })), [rows]);
   const rms = useMemo(() => Array.from(new Set(rows.map((row) => row.rm_name?.trim()).filter((item): item is string => Boolean(item)))).sort((a, b) => a.localeCompare(b)), [rows]);
   const visibleSourceOptions = useMemo(() => {
     if (rm === "all") return sourceOptions;
@@ -620,7 +620,7 @@ function PolicyMobileCard({ policy }: { policy: PolicyRow & { status: string; da
 }
 
 function PolicyStatus({ policy }: { policy: PolicyRow & { status?: string; daysLeft?: number | null } }) {
-  const status = policy.status ?? policyStatus(policy);
+  const status = policy.status ?? policyStatus(policy.end_date);
   if (status === "No fixed maturity") return <RegisterStatusPill tone="slate">No fixed maturity</RegisterStatusPill>;
   if (status === "Expired") return <RegisterStatusPill tone="red">Expired</RegisterStatusPill>;
   if (status === "Expiring soon") return <RegisterStatusPill tone="amber">Due</RegisterStatusPill>;
@@ -781,9 +781,8 @@ function quickDateRangeKey(fromDate: string, toDate: string): QuickDateRange | n
   }) ?? null;
 }
 
-function policyStatus(policy: PolicyRow) {
-  const endDate = policy.end_date;
-  if (!endDate) return isPolicyCurrentlyActive(policy, formatLocalDate(new Date())) ? "Active" : "No fixed maturity";
+function policyStatus(endDate: string | null) {
+  if (!endDate) return "No fixed maturity";
   const days = daysUntil(endDate);
   if (days === null) return "No fixed maturity";
   return days < 0 ? "Expired" : days <= 30 ? "Expiring soon" : "Active";
