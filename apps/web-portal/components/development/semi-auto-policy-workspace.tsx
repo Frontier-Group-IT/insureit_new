@@ -28,6 +28,8 @@ export type SemiAutoIntakeRow = {
   ai_exceptions?: string[];
   ai_processed_at?: string | null;
   ai_diagnostic_code?: string | null;
+  /** Read-only explanation of a historical generic hold, never booking evidence. */
+  ai_legacy_review_hint?: "insured_name_mismatch"|"vehicle_ownership"|"customer_identity"|null;
 };
 
 const aiIssueTitles: Record<string,string> = {
@@ -39,7 +41,7 @@ const aiIssueTitles: Record<string,string> = {
   registration_pending_review:"Confirm unregistered vehicle / RTO prefix",
   duplicate_policy:"Duplicate policy detected",
   reviewer_conflict:"Reviewer or review status conflict",
-  customer_identity:"Same mobile / different insured",
+  customer_identity:"Customer master identity / contact mismatch",
   customer_ambiguous:"Multiple customer matches",
   customer_duplicate:"Existing customer needs confirmation",
   customer_master_unverified:"Customer matching not verified",
@@ -96,6 +98,12 @@ function canAttemptFailedSourceRecovery(row:SemiAutoIntakeRow):boolean {
   return !row.is_duplicate&&row.policy_type==="motor"&&row.ocr_status==="pending"
     &&row.ai_state==="exception"&&row.ai_exceptions?.length===1
     &&row.ai_exceptions[0]==="extraction_failed";
+}
+function visibleReviewCodes(row:SemiAutoIntakeRow):string[] {
+  const codes=row.ai_exceptions??[];
+  if(codes.length===1&&codes[0]==="booking_review_required"
+    &&row.ai_legacy_review_hint)return [row.ai_legacy_review_hint];
+  return codes;
 }
 const aiStateLabel: Record<string,string> = {
   pending:"Queued",processing:"Reading PDF",exception:"Needs action",
@@ -733,8 +741,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                       <button type="button" title="Open exception" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}} className="flex min-w-0 items-center gap-2 text-left">
                         <span className={"h-2 w-2 shrink-0 rounded-full "+(row.is_duplicate?"bg-slate-400":row.ai_state==="verified"?"bg-emerald-500":row.ai_state==="processing"?"bg-sky-500":"bg-amber-500")}/>
                         <span className="sr-only">Parser not trained · Reprocess</span>
-                        <span className="max-w-[200px] truncate font-medium text-slate-700" title={row.ai_diagnostic_code ? parserDiagnostic(row.ai_diagnostic_code)?.detail : (row.ai_exceptions??[]).map(code=>aiIssueTitles[code]??code).join(", ")}>
-                          {row.is_duplicate?"Duplicate":row.ai_diagnostic_code?(parserDiagnostic(row.ai_diagnostic_code)?.title??"Parser error"):row.ai_exceptions?.length?(aiIssueTitles[row.ai_exceptions[0]]??"Needs review"):aiStateLabel[row.ai_state??""]??"Queued"}
+                        <span className="max-w-[200px] truncate font-medium text-slate-700" title={row.ai_diagnostic_code ? parserDiagnostic(row.ai_diagnostic_code)?.detail : visibleReviewCodes(row).map(code=>aiIssueTitles[code]??code).join(", ")}>
+                          {row.is_duplicate?"Duplicate":row.ai_diagnostic_code?(parserDiagnostic(row.ai_diagnostic_code)?.title??"Parser error"):visibleReviewCodes(row).length?(aiIssueTitles[visibleReviewCodes(row)[0]]??"Needs review"):aiStateLabel[row.ai_state??""]??"Queued"}
                         </span>
                         {(row.ai_exceptions?.length??0)>1?<span className="rounded-md bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-800">+{(row.ai_exceptions?.length??0)-1}</span>:null}
                       </button>
@@ -1089,7 +1097,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               </div>
             ):null}
             <div className="mt-3 max-h-[300px] space-y-2 overflow-y-auto">
-              {(exceptionRow.ai_exceptions??[]).map(code=>(
+              {visibleReviewCodes(exceptionRow).map(code=>(
                 <div key={code} className="rounded-lg border border-[#e6dfd0] bg-[#fffcf4] p-3">
                   <p className="text-[11px] font-bold text-[#77511f]">{commercialBookingIssue(exceptionRow,code)?.title??aiIssueTitles[code]??"Requires review"}</p>
                   <p className="mt-1 text-[10px] leading-4 text-[#6c5d42]">
