@@ -81,3 +81,9 @@ assert.match(screen, /scrollMetrics\.current\.content = width/, 'Measure horizon
 assert.match(screen, /pointerEvents="none" accessibilityElementsHidden/, 'Edge decoration does not intercept taps');
 assert.match(screen, /initialLoading \? "Loading insurers…"/, 'Loading does not display a false zero count');
 assert.match(screen, /<ReportValue text=\{amount == null \? '—' : formatInsurerCompactRupees\(amount\)\}/, 'Financial reveal preserves exact display formatter');
+
+assert.match(screen, /fixedHeader=\{stickyTableHeader\}/, 'Sticky heading is overlaid without changing the parent scroll layout');
+assert.match(screen, /stickyMetricsOffset\.setValue\(scrollMetrics\.current\.x\)/, 'Sticky metric headings track horizontal scroll');
+assert.match(screen, /stickyTableVisible \?/, 'Sticky heading only renders while the table extends beneath the viewport');
+assert.match(screen, /style=\{styles\.stickyHeaderOverlay\}/, 'Sticky header has a fixed visual layer');
+assert.match(screen, /resetScrollOnFocus=\{false\}/, 'Preserve report scroll position on tab focus');
