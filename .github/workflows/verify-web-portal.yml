@@ -45,6 +45,8 @@ jobs:
         run: node ../../infra/n8n-local/tests/tata-aig-private-car-source-variants-regression.mjs
       - name: United India GCV native PDF layout and false-positive regression
         run: node --experimental-strip-types ../../infra/n8n-local/tests/united-india-gcv-layout-regression.mjs
+      - name: Magma Private Car trained layouts and optional-RTO negative regression
+        run: node ../../infra/n8n-local/tests/magma-private-car-source-regression.mjs
       - name: National bilingual Private Car Liability Only source validation
         run: node ../../infra/n8n-local/tests/national-private-car-liability-regression.mjs
       - name: UIIC Chandigarh source-evidence and MP parity regression
@@ -160,6 +162,8 @@ jobs:
         run: node scripts/customer-spot-draft-sync-regression.mjs
       - name: External self-managed Claim Journey layout and read-only regression
         run: node scripts/external-self-managed-claim-layout-parity-regression.mjs
+      - name: Gagandeep dashboard section visibility regression
+        run: node scripts/gagandeep-dashboard-section-visibility-regression.mjs
       - name: Operations Dashboard and Partner layout regression
         run: node scripts/operations-dashboard-partner-branch-layout-regression.mjs
       - name: Operations claim Stage 3 autosave and green completion regression
