@@ -173,7 +173,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   rows: SemiAutoIntakeRow[]; profileId: string; initialIntakeId?: string | null;
   primaryN8n?: boolean;
   queueActive?: boolean;
-  autoBooking?: {enabled:boolean;configured:boolean;ledgerAvailable:boolean;pending:number;booked:number;review:number;uncertain:number};
+  autoBooking?: {enabled:boolean;configured:boolean;ledgerAvailable:boolean;pending:number;claimed:number;booked:number;review:number;uncertain:number};
   bulkCandidates?: Array<{id:string;intake_number:string}>;
   reprocessCandidates?: Array<{id:string;intake_number:string}>;
   queueCounts?: {eligible:number;extracted:number;duplicates:number;queued:number;extracting:number;exceptions:number;unprocessed:number;unsupported:number;failed:number};
@@ -679,6 +679,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
           </div>
           {autoBooking?.configured && autoBooking.ledgerAvailable ? (
             <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[#345676]" aria-label="Automatic booking outcomes">
+              <span>Claimed / check outcome: <strong>{autoBooking.claimed}</strong></span>
               <span>Auto onboarded: <strong>{autoBooking.booked}</strong></span>
               <span>Booking review: <strong>{autoBooking.review}</strong></span>
               <span>Uncertain (no retry): <strong>{autoBooking.uncertain}</strong></span>
