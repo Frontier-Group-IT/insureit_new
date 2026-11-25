@@ -67,33 +67,26 @@ requireText(service, 'policy_type: input.policyType', 'Partner Policy Intake ser
 
 requireText(api, 'policy_type: PolicyType', 'Partner Policy Intake API must accept policy_type on uploaded submissions.');
 requireText(api, 'action: "submit_without_proposal"', 'Partner Policy Intake API must accept no-proposal Life/Health submissions.');
-// Life/Health proposals must go directly to Operations review in both lane modes.
-// Motor/non-motor may be queued only according to server-side lane admission.
-requireText(api, 'status: proposalForm || manualSplit ? "ready_for_review" : "processing"', 'Proposal uploads and manual-lane policies must enter Operations review.');
-requireText(api, 'ocr_status: proposalForm ? "completed" : manualSplit ? "failed" : "pending"', 'Life/Health proposal uploads must not be OCR-pending.');
-requireText(api, 'status: proposalForm || replacementManual ? "ready_for_review" : "processing"', 'Life/Health proposal replacement must enter Operations review.');
-requireText(api, 'ocr_status: proposalForm ? "completed" : replacementManual ? "failed" : "pending"', 'Life/Health replacement must not be OCR-pending.');
-requireText(api, 'const lane=incomingPolicyIntakeLane(input.policy_type,aiQueueEnabled(),trainedLayout);', 'Upload admission must derive its lane server-side.');
-requireText(api, 'const manualSplit=segregatePolicyIntakeLanes() && lane==="manual";', 'Uploads must honor Manual Onboarding lane.');
-requireText(api, 'if (!proposalForm && aiQueueEnabled() && (!segregatePolicyIntakeLanes() || lane==="automation")) {', 'Upload AI queue must exclude Life/Health proposals in either lane mode.');
-requireText(api, 'if (!proposalForm && aiQueueEnabled() && (!segregatePolicyIntakeLanes() || intake.processing_lane==="automation")) {', 'Replacement AI queue must exclude Life/Health proposals in either lane mode.');
-requireText(api, 'else if (!proposalForm && !manualSplit)', 'Upload legacy OCR must exclude Life/Health proposals and manual-lane policies.');
-requireText(api, 'else if (!proposalForm && !replacementManual)', 'Replacement legacy OCR must exclude Life/Health proposals and manual-lane policies.');
-
-// Regression matrix: queue flag on/off and split flag on/off must never OCR proposals.
-for (const proposalForm of [true, false]) {
-  for (const queueEnabled of [true, false]) {
-    for (const splitEnabled of [true, false]) {
-      for (const lane of ['manual', 'automation']) {
-        const shouldQueue = !proposalForm && queueEnabled && (!splitEnabled || lane === 'automation');
-        const shouldLegacyOcr = !proposalForm && !queueEnabled && !splitEnabled;
-        if (proposalForm && (shouldQueue || shouldLegacyOcr)) throw new Error('Proposal must never enter OCR.');
-        if (!proposalForm && queueEnabled && splitEnabled && lane === 'manual' && shouldQueue) {
-          throw new Error('Manual-lane policy must never enter automation.');
-        }
-      }
-    }
-  }
+// Unified AI onboarding was shipped by PR #5219. Every uploaded policy copy,
+// including Life/Health proposals and replacements, enters the automation lane.
+// The explicit Life/Health flow WITHOUT a proposal stays ready for Operations review.
+requireText(api, 'status: "processing",', 'Uploaded policy intakes must enter AI processing.');
+requireText(api, 'processing_lane:"automation",', 'Uploaded intake must use the unified AI processing lane.');
+requireText(api, 'ocr_status: "pending",', 'New and replacement documents must begin with pending extraction.');
+requireText(api, 'if (aiQueueEnabled()) {', 'Intake AI queue must be gated by the configured queue feature.');
+requireText(api, 'processAiQueueBatch({preferredIntakeId:input.id})', 'Intake and replacement uploads must enqueue immediate processing.');
+if ((api.match(/processAiQueueBatch\(\{preferredIntakeId:input\.id\}\)/g) || []).length < 2) {
+  throw new Error('Both first uploads and replacements must enqueue the unified AI lane.');
+}
+requireText(api, 'async function submitWithoutProposal(', 'Life/Health flow without a proposal must remain separate.');
+requireText(api, 'status: "ready_for_review",', 'Life/Health without a proposal must remain ready for Operations review.');
+requireText(api, 'ocr_status: "completed",', 'Life/Health without a proposal must not require OCR.');
+requireText(api, 'ocr_fields: [],', 'Empty proposal drafts must not invent extracted OCR fields.');
+requireText(api, 'ocr_warnings: [],', 'Empty proposal drafts must not invent OCR warnings.');
+requireText(api, 'const proposalForm = LIFE_HEALTH_TYPES.has(input.policy_type);', 'Life/Health upload type must still be recognized.');
+requireText(api, 'const proposalForm = intake.policy_type === "life" || intake.policy_type === "health";', 'Replacement must preserve Life/Health proposal rules.');
+if (api.includes('const manualSplit=segregatePolicyIntakeLanes()') || api.includes('processing_lane:"manual"')) {
+  throw new Error('The retired manual-lane upload must not be restored.');
 }
 
 for (const required of [
