@@ -1,0 +1,95 @@
+/**
+ * Source-bound Oriental issuance date from the actual PDF CMS signing time.
+ * The printed 'Policy Printed On' line is never an issuance-date substitute.
+ * This is CMS integrity verification, NOT issuer certificate-chain trust.
+ * No PDF content, signature material, storage URL or policy PII is logged.
+ */
+import {createHash} from "node:crypto";
+import {fromBER} from "asn1js";
+import {ContentInfo,SignedData} from "pkijs";
+export type OrientalSignedIssuanceEvidence={
+  date:string; documentSha256:string;
+  verification:"detached_signature_integrity_verified";
+  source:"cms_signed_attribute_signing_time";
+};
+const RANGE=/\/ByteRange\s*\[\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*\]/g;
+const MAX_BYTES=15*1024*1024;
+function indiaDay(instant:Date):string|null {
+  if(!Number.isFinite(instant.getTime()))return null;
+  const p=new Intl.DateTimeFormat("en-GB",{
+    timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit",
+  }).formatToParts(instant);
+  const get=(key:string)=>p.find(x=>x.type===key)?.value??"";
+  const day=get("year")+"-"+get("month")+"-"+get("day");
+  const parsed=new Date(day+"T00:00:00Z");
+  return Number.isFinite(parsed.getTime())&&parsed.toISOString().slice(0,10)===day?day:null;
+}
+function pdfMToIndiaDay(value:string):string|null {
+  const match=/^D:(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})([+-])(\d{2})'?(\d{2})'?$/.exec(value);
+  if(!match)return null;
+  const [y,mo,d,h,mi,s,sign,zh,zm]=[...match.slice(1,7),match[7],match[8],match[9]];
+  const nums=[y,mo,d,h,mi,s,zh,zm].map(Number);
+  const [year,month,day,hour,minute,sec,tzHour,tzMin]=nums;
+  if(month<1||month>12||day<1||day>31||hour>23||minute>59||sec>59
+    ||tzHour>14||tzMin>59)return null;
+  const utc=Date.UTC(year,month-1,day,hour,minute,sec);
+  const roundTrip=new Date(utc);
+  if(roundTrip.getUTCFullYear()!==year||roundTrip.getUTCMonth()!==month-1
+    ||roundTrip.getUTCDate()!==day)return null;
+  const offset=(tzHour*60+tzMin)*60_000*(sign==="+"?1:-1);
+  return indiaDay(new Date(utc-offset));
+}
+/** Resolve one current-document, full-coverage, detached CMS signature.
+ * CMS signedAttrs signingTime is integrity-protected by the CMS signature.
+ * PDF /M, if present, MUST agree on India business day. Never use /M alone.
+ */
+export async function verifyOrientalCmsSigningDate(
+  bytes:Uint8Array,
+):Promise<OrientalSignedIssuanceEvidence|null>{
+ if(!(bytes instanceof Uint8Array)||bytes.byteLength<1024||bytes.byteLength>MAX_BYTES)
+   return null;
+ const raw=Buffer.from(bytes).toString("latin1");
+ if(!raw.startsWith("%PDF-"))return null;
+ const ranges=[...raw.matchAll(RANGE)];
+ if(ranges.length!==1)return null;
+ const [firstStart,firstLen,secondStart,secondLen]=ranges[0].slice(1).map(Number);
+ if(![firstStart,firstLen,secondStart,secondLen].every(Number.isSafeInteger)
+   ||firstStart!==0||firstLen<=0||secondLen<=0
+   ||secondStart<=firstLen||secondStart+secondLen!==bytes.byteLength)
+   return null;
+ const gap=raw.slice(firstLen,secondStart);
+ if(!/^<[0-9A-Fa-f]{1024,65536}>$/.test(gap))return null;
+ const prelude=raw.slice(Math.max(0,firstLen-1800),firstLen);
+ if(!/\/SubFilter\s*\/(?:adbe\.pkcs7\.detached|ETSI\.CAdES\.detached)\b/.test(prelude))
+   return null;
+ const pdfM=[...prelude.matchAll(/\/M\s*\((D:[^)]{14,28})\)/g)];
+ if(pdfM.length>1)return null;
+ try{
+   const padded=Buffer.from(gap.slice(1,-1),"hex");
+   const parsed=fromBER(padded);
+   if(parsed.offset<=0||parsed.offset>padded.length
+     ||padded.subarray(parsed.offset).some(byte=>byte!==0))return null;
+   const envelope=ContentInfo.fromBER(padded.subarray(0,parsed.offset));
+   if(envelope.contentType!==ContentInfo.SIGNED_DATA)return null;
+   const cms=new SignedData({schema:envelope.content});
+   if(cms.signerInfos.length!==1||cms.encapContentInfo.eContent)return null;
+   const attrs=cms.signerInfos[0].signedAttrs?.attributes||[];
+   const signedTime=attrs.filter(a=>a.type==="1.2.840.113549.1.9.5");
+   if(signedTime.length!==1||signedTime[0].values.length!==1)return null;
+   const asn=signedTime[0].values[0] as {toDate?:()=>Date};
+   if(typeof asn.toDate!=="function")return null;
+   const day=indiaDay(asn.toDate());
+   if(!day||(pdfM.length===1&&pdfMToIndiaDay(pdfM[0][1])!==day))return null;
+   const full=Buffer.concat([
+     Buffer.from(bytes.subarray(0,firstLen)),
+     Buffer.from(bytes.subarray(secondStart,secondStart+secondLen)),
+   ]);
+   const valid=await cms.verify({
+     signer:0,data:Uint8Array.from(full).buffer,checkChain:false,
+   });
+   if(!valid)return null;
+   return {date:day,documentSha256:createHash("sha256").update(bytes).digest("hex"),
+     verification:"detached_signature_integrity_verified",
+     source:"cms_signed_attribute_signing_time"};
+ }catch{return null;}
+}
