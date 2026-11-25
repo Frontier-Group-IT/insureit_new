@@ -203,7 +203,16 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
     &&fields.get("vehicle_registration_number")?.evidence==="UIIC PDF vehicle schedule: printed NEW registration reference"
     &&fields.get("vehicle_registration_status")?.evidence==="UIIC PDF vehicle schedule: printed NEW registration reference";
   const registered=/^MP\d{2}[A-Z]{1,3}\d{3,4}$/.test(reg)&&status==="registered";
-  if(!newPrinted&&!registered)return fail("uiic_registration_status_not_source_verified");
+  // Separate printed Chandigarh UT vehicle schedule profile; never accept
+  // arbitrary non-MP registrations without the exact insurer PDF RLA/STA
+  // Registration Authority and the same current policy's CH registration.
+  const registeredChandigarh=/^CH\d{2}[A-Z]{1,3}\d{3,4}$/.test(reg)
+    &&status==="registered"
+    &&get("vehicle_rto_name")==="CHANDIGARH"
+    &&fields.get("vehicle_rto_name")?.evidence===
+      "UIIC PDF vehicle Registration Authority: CHANDIGARH UT (RLA AND STA) INDIA";
+  if(!newPrinted&&!registered&&!registeredChandigarh)
+    return fail("uiic_registration_status_not_source_verified");
   const dates=["policy_start_date","policy_end_date","policy_issuance_date","third_party_start_date","third_party_end_date"];
   if(dates.some(key=>! /^\d{4}-\d\d-\d\d$/.test(get(key)))
     ||get("policy_end_date")<get("policy_start_date")
