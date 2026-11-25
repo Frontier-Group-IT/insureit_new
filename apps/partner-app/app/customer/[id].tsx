@@ -97,7 +97,7 @@ export default function CustomerDetailScreen() {
                       <OverviewTile icon="business-outline" label="Customer Type" value={humanize(data.customer.customer_type || 'Not recorded')} />
                       <OverviewTile icon="calendar-outline" label="Customer Since" value={formatMonthYear(data.customer.created_at)} />
                       <OverviewTile icon="people-outline" label="Intermediary" value={data.customer.intermediary_code || 'Not recorded'} />
-                      <OverviewTile icon="checkmark-circle-outline" label="Status" value={humanize(data.customer.status || 'Not recorded')} status={customerTone(data.customer.status) === 'success'} />
+                      <OverviewTile icon="checkmark-circle-outline" label="Status" value={humanize(data.customer.status || 'Not recorded')} status={data.customer.status?.trim().toLowerCase() === 'active'} />
                     </View>
                     <View style={redesign.overviewBottom}>
                       <OverviewDetailLine icon="id-card-outline" label="Customer ID" value={data.customer.customer_code || 'Not recorded'} />
