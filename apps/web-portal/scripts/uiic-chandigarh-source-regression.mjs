@@ -65,7 +65,7 @@ const mp=mutate("vehicle_registration_number","MP20AB1234")
 assert.equal(check(input(mp)).eligible,true,"Previous MP path remains valid");
 const source=fs.readFileSync(path.resolve(root,"../../infra/n8n-local/workflows/united-india-gcv-live-source-20261125.js"),"utf8");
 assert(source.includes("const ch=unitedIndiaGcvFlexible(t)"));
-assert(source.includes("CHANDIGARH[ \\t]+UT"));
+assert(source.includes("CHANDIGARH UT (RLA AND STA) INDIA"));
 assert(source.includes("if(classic.ok)return classic"),"Previous classic-first route retained");
 assert(source.includes("currentRows.length===1") &&
   source.includes("currentAuthority==='CHANDIGARH UT (RLA AND STA) INDIA'"),
