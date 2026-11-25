@@ -96,7 +96,7 @@ const TATA_INFORMATIONAL_WARNINGS = new Set([
 ]);
 export const NON_TATA_COMMERCIAL_N8N_IDS = new Set([
   "new_india_cv_native_pdf", "iffco_tokio_cv_native_pdf", "go_digit_cv_native_pdf",
-  "united_india_gcv_native_pdf", "united_india_private_car_package_native_pdf", "oriental_gccv_native_pdf",
+  "united_india_gcv_native_pdf", "united_india_gcv_punjab_split_gst_native_pdf", "united_india_private_car_package_native_pdf", "oriental_gccv_native_pdf",
   "zurich_kotak_private_car_tp_native_pdf", "go_digit_two_wheeler_od_native_pdf",
   "united_india_tractor_tp_native_pdf",
   "hdfc_ergo_two_wheeler_tp_native_pdf", "sbi_general_private_car_package_native_pdf",
