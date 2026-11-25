@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
+import ts from "typescript";
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 const code=fs.readFileSync(path.resolve(root,"../../infra/n8n-local/workflows/magma-private-car-package-parser-v1.js"),"utf8");
 const parse=new Function("$input",code);
@@ -49,10 +50,20 @@ assert.equal(v.fields.some(f=>f.key==="vehicle_fuel_type"),false,
  "The proposal option list is NOT evidence of selected policy fuel");
 assert.equal(v.fuel_verified_from_current_pdf,false);
 assert.equal(v.auto_finalize_allowed,false);
+const mapperSource=fs.readFileSync(path.join(root,"lib/policy-n8n-onboarding-premium.ts"),"utf8");
+const js=ts.transpileModule(mapperSource,{compilerOptions:{
+ target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
+const ex={};new Function("exports",js)(ex);
+const split=ex.mapVerifiedMagmaPrivateCarPremium(v.premium_components);
+assert.deepEqual(split,{
+ od:"1742.00",tp:"2144.00",addOnPremium:"2907.00",cpa:"450.00",cpaOpted:"Yes"
+},"The saved draft must preserve CPA and individually printed OD add-on economics");
+
 assert.equal(run(text.replace("Magma General Insurance Limited","Previous Insurer Magma General Insurance Limited").replace("www.magmaininsurance.com","unrelated-insurer.example.com")).ok,false,
  "Do not misclassify a prior insurer reference as the current Magma issuer");
 for(const invalid of [
  text.replace("CGST @ 9% 651.87","CGST @ 9% 600.00"),
+ text.replace("CGST @ 9% 651.87","CGST @ 9% 600.00").replace("SGST @ 9% 651.87","SGST @ 9% 600.00").replace("TOTAL 8,547.00","TOTAL 8,443.00"),
  text.replace("Total Package Premium(A+B) 7,243.00","Total Package Premium(A+B) 7,000.00"),
  text.replace("No claim bonus 35% 938.14","No claim bonus 35% 800.00"),
  text.replace("PA Owner Driver -SI Rs.1500000 450.00",""),
@@ -68,4 +79,6 @@ const profile=fs.readFileSync(path.join(root,"lib/ai-policy-onboarding-eligibili
 for(const s of [bridge,handoff,identity,profile])
  assert(s.includes('"magma_private_car_package_native_pdf"'),"No partial integration for new insurer");
 assert(bridge.includes("roundingToleranceCents"),"Magma printed gross rounding must not relax other insurers");
+assert(bridge.includes("magmaTaxVerified")&&bridge.includes("premium.odAddons"),"Strict source adapter must check printed tax bases and preserve add-ons");
+assert(handoff.includes("mapVerifiedMagmaPrivateCarPremium"),"Canonical Magma handoff must not zero CPA");
 console.log("Magma two sample layout family and strict source verification passed");
