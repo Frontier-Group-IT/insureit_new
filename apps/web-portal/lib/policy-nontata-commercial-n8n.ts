@@ -155,11 +155,18 @@ export function refineUiicPunjabSplitFromSource(
   // split-GST rows. Require BOTH printed tax lines and the exact OEM marker.
   const sourceIssuer=/UNITED\s+INDIA\s+INSURANCE\s+COMPANY\s+LIMITED/i.test(normalized.slice(0,10000));
   const sourceProduct=/GCV\s+PUBLIC\s+CARRIER/i.test(normalized.slice(0,15000));
-  const sourceMaker=/DAIMLER\s+INDIA\s+COMMERCIAL\s+VEHICLES\s+PVT\.?\s*LTD\.?\s*\/\s*BHARATBENZ/i.test(normalized);
-  const cgst=/CGST\s*-\s*Others\s*\(\s*9\s*%\s*\)/i.test(normalized);
-  const sgst=/SGST\s*-\s*Basic\s*TP\s*\(\s*2\.50\s*%\s*\)/i.test(normalized);
-  return sourceIssuer&&sourceProduct&&sourceMaker&&cgst&&sgst
-    ?"united_india_gcv_punjab_split_gst_native_pdf":initial;
+  const makerIndex=normalized.search(/DAIMLER\\s+INDIA\\s+COMMERCIAL\\s+VEHICLES/i);
+  const makerRow=makerIndex>=0?normalized.slice(makerIndex,makerIndex+200):"";
+  const sourceMaker=makerIndex>=0 && /PVT\\.?\\s*LTD/i.test(makerRow)
+    && /BHARATBENZ/i.test(makerRow);
+  const cgst=/CGST\s*[-–—:]?\s*Others\s*\(\s*9\s*%\s*\)/i.test(normalized);
+  const sgst=/SGST\s*[-–—:]?\s*Basic\s*TP\s*\(\s*2\.50\s*%\s*\)/i.test(normalized);
+  const accepted=sourceIssuer&&sourceProduct&&sourceMaker&&cgst&&sgst;
+  if(!accepted)console.warn("[uiic-punjab] source evidence gap",{
+    issuer:sourceIssuer,product:sourceProduct,maker:sourceMaker,
+    cgst,sgst,sourceLengthBounded:normalized.length,
+  });
+  return accepted?"united_india_gcv_punjab_split_gst_native_pdf":initial;
 }
 
 /** Recognize only printed, trained native-PDF layouts. Never accept insurer names from caller input. */
