@@ -286,6 +286,8 @@ jobs:
         run: npm run policy-onboarding:life-health-native-regression
       - name: Sales Executive policy access regression
         run: node --experimental-strip-types scripts/sales-executive-policy-access-regression.mjs
+      - name: Active Life/Health no-fixed-maturity dashboard/register parity regression
+        run: node --experimental-strip-types scripts/policy-active-no-fixed-maturity-parity-regression.mjs
       - name: Life team shared portfolio and historical owner regression
         run: node --experimental-strip-types scripts/life-team-portfolio-regression.mjs
       - name: Life Operations hierarchy and policy authorization regression
