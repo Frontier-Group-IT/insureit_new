@@ -83,6 +83,24 @@ const input={parserId:valid.parser_id,checksPassed:18,warnings:[],fields:valid.f
 assert.equal(eligible(input).eligible,true,JSON.stringify(eligible(input)));
 const wrong=valid.fields.map(f=>f.key==="vehicle_rto_name"?{...f,evidence:"Native PDF policy schedule"}:f);
 assert.equal(eligible({...input,fields:wrong}).eligible,false);
+const missingAuthority=fake.replace(
+ "Registration Authority Auto Association Membership No. Geographical Area Extension\\nRTO PATHANKOT INDIA\\n","");
+const withoutRto=parseOne(missingAuthority);
+assert.equal(withoutRto.ok,true,"Missing optional RTO must not fail otherwise verified PDF");
+assert.equal(withoutRto.fields.some(f=>f.key==="vehicle_rto_name"),false);
+assert.equal(eligible({...input,fields:withoutRto.fields}).eligible,true,
+ "Missing optional RTO cannot block source-verified Punjab registration");
+assert.equal(eligible({...input,fields:valid.fields.filter(f=>f.key!=="vehicle_rto_name")}).eligible,false,
+ "Conflicting RTO state with missing name must fail");
+const handoff=fs.readFileSync(path.join(root,"app/policy-intakes/handoff-actions.ts"),"utf8");
+const insuredSelector=fs.readFileSync(path.join(root,"lib/policy-n8n-onboarding-insured.ts"),"utf8");
+assert(handoff.includes('"united_india_gcv_punjab_split_gst_native_pdf"'),
+ "Canonical intake draft handoff must recognize verified Punjab parser");
+assert(handoff.includes('["united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf"].includes(verified?.parserId??"")'),
+ "Canonical premium mapping must recognize verified Punjab parser");
+assert(insuredSelector.includes('"united_india_gcv_punjab_split_gst_native_pdf"'),
+ "Verified insured name must survive Punjab draft selection");
+
 assert.equal(eligible({...input,fields:valid.fields.map(f=>f.key==="vehicle_make"?{...f,value:"Tata Motors"}:f)}).eligible,false);
 const bridge=fs.readFileSync(path.join(root,"lib/policy-nontata-commercial-n8n.ts"),"utf8");
 assert(bridge.includes("split_cgst_sgst_components_printed")&&bridge.includes("n8n_uiic_split_cgst_sgst_evidence_invalid"));
