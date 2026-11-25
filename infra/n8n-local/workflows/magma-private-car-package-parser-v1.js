@@ -63,7 +63,7 @@ const values={policy_number:policy,insurer_name:insurer?'Magma General Insurance
 const fields=Object.entries(values).filter(([,v])=>v!==null&&v!==undefined&&v!=='').map(([key,value])=>({
  key,label:key,value:String(value),confidence:null,page:null,
  evidence:key==='policy_issuance_date'?'Magma Private Car Package Date of Issue on current PDF'
-  :key==='insured_name'?'Magma current policy Insured & Vehicle Details Name of Insured'
+  :key==='insured_name'?'Native PDF policy schedule'
   :'Magma current PDF policy schedule'}));
 return [{json:{contract_version:'1',parser_id:'magma_private_car_package_native_pdf',
  parser_version:'non-tata-cv-v2',extraction_method:'native_pdf_text',ok,validation_passed:ok,
