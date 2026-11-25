@@ -31,7 +31,6 @@ export function CustomerDocumentVault({ customerId, documents, profileMode = fal
   const [picked, setPicked] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState("");
   const [expanded, setExpanded] = useState<number[]>([]);
-  const [vaultOpen, setVaultOpen] = useState(false);
 
   async function upload(file?: File) {
     if (!file || busy) return;
@@ -45,7 +44,7 @@ export function CustomerDocumentVault({ customerId, documents, profileMode = fal
       const body = await response.json() as { error?: string };
       if (!response.ok) { setUploadError(body.error || "Document upload failed."); return setMessage(body.error || "Document upload failed."); }
       if (inputRef.current) inputRef.current.value = "";
-      if (profileMode) { setVaultOpen(true); setPicked(null); setExpanded(old => Array.from(new Set([...old, documentGroup(type)]))); dialogRef.current?.close(); }
+      if (profileMode) { setPicked(null); setExpanded(old => Array.from(new Set([...old, documentGroup(type)]))); dialogRef.current?.close(); }
       router.refresh();
     } catch { setUploadError("Document upload failed."); setMessage("Document upload failed."); }
     finally { setBusy(false); }
@@ -79,20 +78,19 @@ export function CustomerDocumentVault({ customerId, documents, profileMode = fal
   }
 
   if (profileMode) return (
-    <div>
+    <div className="flex min-w-0 flex-1 flex-col">
       <div className="flex flex-wrap items-center gap-2 px-3 py-3 sm:flex-nowrap sm:gap-3 sm:px-4">
-        <button type="button" aria-expanded={vaultOpen} aria-controls="customer-profile-vault-body" onClick={() => setVaultOpen(old => !old)} className="flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8D6BD6]">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <img src="/assets/Custom-Icons/optimized-128/documents.png" alt="" aria-hidden="true" width={44} height={44} className="h-10 w-10 shrink-0 object-contain" />
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-2"><span className="text-[17px] font-black text-[#2E2358]">Document Vault</span><span aria-label={`${documents.length} files`} className="rounded-full bg-[#EEE7FF] px-2 py-0.5 text-[11px] font-bold tabular-nums text-[#6241B5]">{documents.length}</span></span>
             <span className="mt-0.5 block text-[10.5px] font-medium text-[#81739B]">Access and manage your important documents.</span>
           </span>
-        </button>
+        </div>
         <button type="button" disabled={busy} onClick={() => { setType("Other"); setPicked(null); setUploadError(""); if (inputRef.current) inputRef.current.value = ""; dialogRef.current?.showModal(); }} className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-xl bg-[#6742BB] px-3 py-2 text-[11px] font-bold text-white shadow-sm hover:bg-[#53329E] focus-visible:ring-2 focus-visible:ring-[#8D6BD6] disabled:opacity-60"><UploadCloud className="h-4 w-4" /> Upload Document</button>
-        <button type="button" aria-label={vaultOpen ? "Collapse Document Vault" : "Expand Document Vault"} aria-expanded={vaultOpen} aria-controls="customer-profile-vault-body" onClick={() => setVaultOpen(old => !old)} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[#6742BB] hover:bg-[#F4EEFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8D6BD6]"><ChevronDown className={`h-5 w-5 motion-safe:transition-transform ${vaultOpen ? "rotate-180" : ""}`} /></button>
       </div>
       {message ? <p role="status" className="mx-3 mb-3 rounded-lg bg-[#F3F7FD] px-3 py-2 text-[11px] font-bold text-[#45617E]">{message}</p> : null}
-      <div id="customer-profile-vault-body" hidden={!vaultOpen} className={vaultOpen ? "customer-profile-vault-content space-y-3 px-3 pb-3 sm:px-4" : "hidden"}>
+      <div id="customer-profile-vault-body" className="customer-profile-vault-content flex-1 space-y-3 px-3 pb-3 sm:px-4">
       {groups.map(({ label, Icon }, index) => {
         const items = documents.filter(doc => documentGroup(doc.document_type) === index);
         const open = expanded.includes(index);
