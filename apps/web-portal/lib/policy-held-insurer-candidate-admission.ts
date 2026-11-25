@@ -145,10 +145,10 @@ export function assessHeldInsurerCandidate(raw:unknown,
      ||!fields.get("vehicle_fuel_type")?.evidence?.startsWith("Manufacturer model-family: ")
      ||get("vehicle_fuel_type")!=="Petrol"
      ||!money(p.basicTp)||!money(p.paidDriver)
-     ||Math.abs(cent(p.basicTp+p.paidDriver+cpa)-cent(tp))>6)
+     ||Math.abs(cent((p.basicTp as number)+(p.paidDriver as number)+cpa)-cent(tp))>6)
      return reject("held_magma_package_or_cpa_conflict");
    if(p.taxRegime==="IGST"&&p.igst!==gst
-     ||p.taxRegime==="CGST_SGST"&&(!money(p.cgst)||!money(p.sgst)||Math.abs(cent(p.cgst+p.sgst)-cent(gst))>1)
+     ||p.taxRegime==="CGST_SGST"&&(!money(p.cgst)||!money(p.sgst)||Math.abs(cent((p.cgst as number)+(p.sgst as number))-cent(gst))>1)
      ||!["IGST","CGST_SGST"].includes(String(p.taxRegime)))
      return reject("held_magma_printed_gst_invalid");
  } else {
