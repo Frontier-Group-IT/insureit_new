@@ -464,8 +464,55 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
       &&/\bRegistration Authority\b/i.test(rtoFresh.evidence)
       &&/\bRTO\b/i.test(rtoFresh.evidence);
   }
+  // One original Chandigarh UIIC hold was saved before current-vehicle RTO
+  // enrichment and canonical Tata Motors make normalization. It is recoverable
+  // only when every other persisted PDF field matches the CURRENT document
+  // exactly, the newly sourced city is CHANDIGARH, and the official source
+  // profile independently passes all 18 checks. No older generic exception
+  // or arbitrary RTO/make substitution can enter this narrow path.
+  let reverifiedUiicChandigarhLegacyHold=false;
+  if(heldReview&&queued.parser_id==="united_india_gcv_native_pdf"
+    &&queued.last_error_code==="bulk_conversion_review_required"
+    &&extracted.preview.documentId===queued.document_id
+    &&extracted.preview.parserId===queued.parser_id
+    &&extracted.preview.checksPassed===18
+    &&extracted.preview.warnings.length===0
+    &&assessUiicGcvDirectConversion({
+      parserId:extracted.preview.parserId,checksPassed:extracted.preview.checksPassed,
+      warnings:extracted.preview.warnings,fields:extracted.preview.fields,
+      commercialPremium:extracted.preview.commercialPremium,
+    }).eligible){
+    const freshFields=extracted.preview.fields;
+    const fresh=new Map(freshFields.map(f=>[f.key,f]));
+    const name=fresh.get("vehicle_rto_name");
+    const make=fresh.get("vehicle_make");
+    const model=fresh.get("vehicle_model");
+    const plate=fresh.get("vehicle_registration_number");
+    if(fresh.size===freshFields.length
+      &&name?.value==="CHANDIGARH"
+      &&name.evidence==="UIIC PDF vehicle Registration Authority: CHANDIGARH UT (RLA AND STA) INDIA"
+      &&make?.value==="Tata Motors"
+      &&model?.value==="SIGNA 4832.TK BSVI 10X4 HD 29BX"
+      &&/^CH\\d{2}[A-Z]{1,3}\\d{3,4}$/.test(plate?.value||"")){
+      const {data:old,error:oldError}=await admin.from("policy_intake_requests")
+        .select("ocr_fields,final_policy_id").eq("id",id)
+        .maybeSingle<{ocr_fields:{key:string;value:string}[]|null;final_policy_id:string|null}>();
+      const previous=old?.ocr_fields??[];
+      const previousMap=new Map(previous.map(f=>[f.key,f.value.trim()]));
+      reverifiedUiicChandigarhLegacyHold=!oldError&&!old?.final_policy_id
+        &&previous.length>=20&&previousMap.size===previous.length
+        &&freshFields.length===previous.length+1
+        &&!previousMap.has("vehicle_rto_name")
+        &&!previousMap.has("vehicle_rto_state")
+        &&previousMap.get("vehicle_make")==="Tata"
+        &&previous.every(f=>f.key==="vehicle_make"
+          ?make.value==="Tata Motors"
+          :fresh.get(f.key)?.value?.trim()===f.value.trim())
+        &&freshFields.every(f=>previousMap.has(f.key)||f.key==="vehicle_rto_name");
+    }
+  }
   if(extracted.preview.documentId!==queued.document_id||
-     (!(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction||reverifiedTataFailedSource||reverifiedTataPrintedDateHold) && !reverifiedHeldExtraction)||
+     (!(sameReviewedFingerprint||reverifiedNiaLegacyHold||reverifiedUiicRtoEvidenceHold||reverifiedUiicExtraction||reverifiedTataFailedSource||reverifiedTataPrintedDateHold) && !reverifiedHeldExtraction && !reverifiedUiicChandigarhLegacyHold)||
      (heldReview&&extracted.preview.parserId!==queued.parser_id)||
      !hasVerifiedN8nParserEvidence(extracted.preview.parserId,
        extracted.preview.checksPassed,extracted.preview.warnings))
