@@ -32,7 +32,7 @@ function parseNationalPrivateCarLiability(raw){
  const rto=labelled('/Regn.','/Geographical');
  const insuredClass=labelled('/Class of Vehicle','/ Type of Fuel');
  const printedIdvNa=/\/Vehicle IDV\s*\nNA\s*\n/i.test(schedule);
- const net=amount(/\/Premium\s*\n₹\s*([\d,.]+)/i,schedule);
+ const net=amount(/\/\s*Premium\s*\n\s*₹\s*([\d,.]+)/i,schedule);
  const cgst=amount(/\/CGST\s*\n₹\s*([\d,.]+)/i,schedule);
  const sgst=amount(/\/SGST\/UTG[\s\S]{0,30}?₹\s*([\d,.]+)/i,schedule);
  const igst=amount(/\/IGST\s*\n₹\s*([\d,.]+)/i,schedule);
