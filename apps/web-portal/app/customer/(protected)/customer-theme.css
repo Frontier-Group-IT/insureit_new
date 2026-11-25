@@ -79,3 +79,377 @@
 .customer-compact[data-customer-theme="dark"] .customer-profile-preference-menu :is(a,div)[class~="hover:bg-[#F6F9FD]"]:hover { background-color: #293a53; }
 .customer-compact[data-customer-theme="dark"] .customer-profile-preference-menu [class~="border-[#EDF1F6]"] { border-color: #34445e; }
 .customer-compact[data-customer-theme="dark"] .customer-popup-preferences .customer-appearance-option[aria-pressed="true"] { background-color: #423668 !important; border-color: #9b82e5; color: #e1d6ff !important; }
+
+
+/* Shared Customer-only dark semantic palette. Light mode remains untouched. */
+.customer-compact[data-customer-theme="dark"] {
+  --customer-dark-surface: #1c293d;
+  --customer-dark-inset: #142035;
+  --customer-dark-tint: #303c58;
+  --customer-dark-text: #e5edf9;
+  --customer-dark-muted: #b4c2d8;
+  --customer-dark-accent: #c8b7ff;
+  --customer-dark-border: #34445e;
+  --customer-dark-success-bg: #173d32;
+  --customer-dark-success: #80e0b3;
+  --customer-dark-warning-bg: #47391e;
+  --customer-dark-warning: #f7cd72;
+  --customer-dark-danger-bg: #472833;
+  --customer-dark-danger: #ff9cae;
+}
+.customer-compact[data-customer-theme="dark"] :is(
+  [class~="bg-[#F9FAFF]"],
+  [class~="bg-[#F7FAFE]"],
+  [class~="bg-[#F7F9FD]"],
+  [class~="bg-[#F7F9FC]"],
+  [class~="bg-[#FAFCFF]"],
+  [class~="bg-[#F8FAFE]"],
+  [class~="bg-[#F8FAFD]"],
+  [class~="bg-[#F6F9FD]"],
+  [class~="bg-[#FDFDFF]"],
+  [class~="bg-[#F4FBF7]"]
+) { background-color: var(--customer-dark-surface) !important; }
+.customer-compact[data-customer-theme="dark"] :is(
+  [class~="bg-[#F8FAFF]"],
+  [class~="bg-[#F3F8FE]"],
+  [class~="bg-[#F8FBFF]"],
+  [class~="bg-[#F5F9FE]"],
+  [class~="bg-[#F1F6FC]"],
+  [class~="bg-[#F4F7FA]"],
+  [class~="bg-[#F0F7FF]"],
+  [class~="bg-[#EDF2F8]"],
+  [class~="bg-[#F0F6FF]"],
+  [class~="bg-[#F1F5FF]"],
+  [class~="bg-[#F2F4F9]"],
+  [class~="bg-[#F3F7FC]"],
+  [class~="bg-[#F3F7FD]"],
+  [class~="bg-[#F5F8FC]"],
+  [class~="bg-[#F1F5F9]"],
+  [class~="bg-[#F1F6FD]"],
+  [class~="bg-[#F2F7FF]"],
+  [class~="bg-[#EDF3FA]"],
+  [class~="bg-[#F7F8FF]"],
+  [class~="bg-[#F4F7FB]"],
+  [class~="bg-[#F6F8FB]"],
+  [class~="bg-[#F4F5FF]"],
+  [class~="bg-[#F7F9FC]"]
+) { background-color: var(--customer-dark-inset) !important; }
+.customer-compact[data-customer-theme="dark"] :is(
+  [class~="bg-[#F4F2FF]"],
+  [class~="bg-[#F3F0FF]"],
+  [class~="bg-[#F4F1FF]"],
+  [class~="bg-[#F0EBFF]"],
+  [class~="bg-[#F3EFFF]"],
+  [class~="bg-[#F4EEFF]"],
+  [class~="bg-[#EEE7FF]"],
+  [class~="bg-[#FAF8FF]"],
+  [class~="bg-[#F2EEFF]"],
+  [class~="bg-[#F6F2FF]"],
+  [class~="bg-[#F0ECFF]"],
+  [class~="bg-[#F0EAFF]"],
+  [class~="bg-[#F6F3FF]"],
+  [class~="bg-[#E7F0FD]"],
+  [class~="bg-[#EAF1FA]"],
+  [class~="bg-[#EFF4FF]"],
+  [class~="bg-[#EDF5FF]"],
+  [class~="bg-[#EAF3FF]"],
+  [class~="bg-[#EEF5FF]"],
+  [class~="bg-[#EFF0FF]"]
+) { background-color: var(--customer-dark-tint) !important; }
+.customer-compact[data-customer-theme="dark"] :is(
+  [class~="text-[#071D49]"],
+  [class~="text-[#182E60]"],
+  [class~="text-[#10284A]"],
+  [class~="text-[#244771]"],
+  [class~="text-[#102B54]"],
+  [class~="text-[#182D4B]"],
+  [class~="text-[#334762]"],
+  [class~="text-[#263B59]"],
+  [class~="text-[#344767]"],
+  [class~="text-[#142B51]"],
+  [class~="text-[#243A60]"],
+  [class~="text-[#15315B]"],
+  [class~="text-[#173A7D]"],
+  [class~="text-[#263758]"],
+  [class~="text-[#162E57]"],
+  [class~="text-[#244A87]"],
+  [class~="text-[#11254B]"],
+  [class~="text-[#183A66]"],
+  [class~="text-[#172846]"],
+  [class~="text-[#15386F]"],
+  [class~="text-[#10264C]"],
+  [class~="text-[#17365D]"],
+  [class~="text-[#1C244A]"],
+  [class~="text-[#242B51]"],
+  [class~="text-[#252A4D]"],
+  [class~="text-[#212755]"],
+  [class~="text-[#343B73]"],
+  [class~="text-[#29305D]"],
+  [class~="text-[#2B3268]"],
+  [class~="text-[#252B5E]"],
+  [class~="text-[#252B5C]"],
+  [class~="text-[#2D205E]"],
+  [class~="text-[#142746]"],
+  [class~="text-[#152649]"],
+  [class~="text-[#23345D]"],
+  [class~="text-[#443775]"],
+  [class~="text-[#2D2352]"],
+  [class~="text-[#2E2358]"],
+  [class~="text-[#35445B]"],
+  [class~="text-[#11284B]"],
+  [class~="text-[#23284C]"],
+  [class~="text-[#35395F]"],
+  [class~="text-[#31345F]"],
+  [class~="text-[#3A3B6C]"],
+  [class~="text-[#243763]"],
+  [class~="text-[#293461]"],
+  [class~="text-[#253760]"],
+  [class~="text-[#28346A]"],
+  [class~="text-[#203650]"],
+  [class~="text-[#263F67]"],
+  [class~="text-[#15376B]"],
+  [class~="text-[#142C56]"],
+  [class~="text-[#264572]"],
+  [class~="text-[#222659]"]
+) { color: var(--customer-dark-text) !important; }
+.customer-compact[data-customer-theme="dark"] :is(
+  [class~="text-[#7186A0]"],
+  [class~="text-[#526782]"],
+  [class~="text-[#637B9A]"],
+  [class~="text-[#697D98]"],
+  [class~="text-[#7588A3]"],
+  [class~="text-[#506786]"],
+  [class~="text-[#7A8CA4]"],
+  [class~="text-[#64748B]"],
+  [class~="text-[#60728D]"],
+  [class~="text-[#526682]"],
+  [class~="text-[#8A9AB0]"],
+  [class~="text-[#6A7B93]"],
+  [class~="text-[#647590]"],
+  [class~="text-[#71809A]"],
+  [class~="text-[#71839E]"],
+  [class~="text-[#536681]"],
+  [class~="text-[#73829A]"],
+  [class~="text-[#63738B]"],
+  [class~="text-[#6583B0]"],
+  [class~="text-[#8796AB]"],
+  [class~="text-[#8490AB]"],
+  [class~="text-[#637995]"],
+  [class~="text-[#8390A6]"],
+  [class~="text-[#8391A7]"],
+  [class~="text-[#7186A5]"],
+  [class~="text-[#63738A]"],
+  [class~="text-[#8B9AB2]"],
+  [class~="text-[#7A8CA9]"],
+  [class~="text-[#94A3B8]"],
+  [class~="text-[#777C9B]"],
+  [class~="text-[#7B809B]"],
+  [class~="text-[#7781A5]"],
+  [class~="text-[#8791AB]"],
+  [class~="text-[#8A94AC]"],
+  [class~="text-[#939AB3]"],
+  [class~="text-[#7D86A5]"],
+  [class~="text-[#8189A5]"],
+  [class~="text-[#7665A2]"],
+  [class~="text-[#70809A]"],
+  [class~="text-[#74839B]"],
+  [class~="text-[#7B899F]"],
+  [class~="text-[#718096]"],
+  [class~="text-[#607089]"],
+  [class~="text-[#81739B]"],
+  [class~="text-[#6C7D94]"],
+  [class~="text-[#8390A2]"],
+  [class~="text-[#8491A3]"],
+  [class~="text-[#74839A]"],
+  [class~="text-[#71839A]"],
+  [class~="text-[#61738B]"],
+  [class~="text-[#657791]"],
+  [class~="text-[#415775]"],
+  [class~="text-[#405473]"],
+  [class~="text-[#AAA1C8]"],
+  [class~="text-[#6A6E8C]"],
+  [class~="text-[#7384A5]"],
+  [class~="text-[#8090B0]"],
+  [class~="text-[#53648C]"],
+  [class~="text-[#93A1BB]"],
+  [class~="text-[#3B568D]"],
+  [class~="text-[#8C99B2]"],
+  [class~="text-[#5979AF]"],
+  [class~="text-[#3C578A]"],
+  [class~="text-[#455B85]"],
+  [class~="text-[#426083]"],
+  [class~="text-[#7D95B7]"],
+  [class~="text-[#7188A8]"],
+  [class~="text-[#637B9B]"],
+  [class~="text-[#7790B0]"],
+  [class~="text-[#8690AA]"],
+  [class~="text-[#677391]"],
+  [class~="text-[#7E87A4]"],
+  [class~="text-[#9BA9C0]"],
+  [class~="text-[#7A83A0]"],
+  [class~="text-[#78869A]"]
+) { color: var(--customer-dark-muted) !important; }
+.customer-compact[data-customer-theme="dark"] :is(
+  [class~="text-[#1557A8]"],
+  [class~="text-[#1769DC]"],
+  [class~="text-[#1672DC]"],
+  [class~="text-[#176CD4]"],
+  [class~="text-[#6955D8]"],
+  [class~="text-[#426BCA]"],
+  [class~="text-[#245FD1]"],
+  [class~="text-[#7540D9]"],
+  [class~="text-[#6941CA]"],
+  [class~="text-[#7442CC]"],
+  [class~="text-[#693CEC]"],
+  [class~="text-[#7D77BD]"],
+  [class~="text-[#6E42D5]"],
+  [class~="text-[#6742BB]"],
+  [class~="text-[#6241B5]"],
+  [class~="text-[#6144AA]"],
+  [class~="text-[#146AD3]"],
+  [class~="text-[#095EC6]"],
+  [class~="text-[#815CCB]"],
+  [class~="text-[#7141CC]"],
+  [class~="text-[#6255E9]"],
+  [class~="text-[#6159ED]"],
+  [class~="text-[#176CE7]"],
+  [class~="text-[#642DA1]"],
+  [class~="text-[#6844C4]"],
+  [class~="text-[#6747B3]"],
+  [class~="text-[#8A77BB]"],
+  [class~="text-[#633BF5]"]
+) { color: var(--customer-dark-accent) !important; }
+.customer-compact[data-customer-theme="dark"] :is(
+  [class~="border-[#E0E8F3]"],
+  [class~="border-[#E6EDF6]"],
+  [class~="border-[#EEF2F8]"],
+  [class~="border-[#D9E2EF]"],
+  [class~="border-[#E4EAF2]"],
+  [class~="border-[#DFE7F0]"],
+  [class~="border-[#E8EDF4]"],
+  [class~="border-[#DCE4EE]"],
+  [class~="border-[#E6ECF4]"],
+  [class~="border-[#E3E8F1]"],
+  [class~="border-[#E9EDF5]"],
+  [class~="border-[#E2E9F3]"],
+  [class~="border-[#D8E1EC]"],
+  [class~="border-[#E0E6F2]"],
+  [class~="border-[#DEE6F5]"],
+  [class~="border-[#EDF0F7]"],
+  [class~="border-[#E0E7F4]"],
+  [class~="border-[#DEE6F3]"],
+  [class~="border-[#DCE5F1]"],
+  [class~="border-[#E4EAF3]"],
+  [class~="border-[#C8D8F1]"],
+  [class~="border-[#E9E4FA]"],
+  [class~="border-[#EAE6F4]"],
+  [class~="border-[#E3E7F4]"],
+  [class~="border-[#EBEDF7]"],
+  [class~="border-[#C8D8F3]"],
+  [class~="border-[#E6E8F4]"],
+  [class~="border-[#E1E9F7]"],
+  [class~="border-[#DCE6F7]"],
+  [class~="border-[#E6E0F5]"],
+  [class~="border-[#DBE5F1]"],
+  [class~="border-[#C9D5E3]"],
+  [class~="border-[#D9E3EF]"],
+  [class~="border-[#E0E7F0]"],
+  [class~="border-[#E6DDF9]"],
+  [class~="border-[#9FB6D2]"],
+  [class~="border-[#D7E2F0]"],
+  [class~="border-[#DCE6F2]"],
+  [class~="border-[#E2DDF0]"],
+  [class~="border-[#E8E1F8]"],
+  [class~="border-[#E4E6F2]"],
+  [class~="border-[#E2E9F5]"],
+  [class~="border-[#DFE9F5]"],
+  [class~="border-[#DCE7F5]"],
+  [class~="border-[#E2EAF5]"],
+  [class~="border-[#E7EDF6]"],
+  [class~="border-[#D4E2F7]"],
+  [class~="border-[#EEEAF7]"],
+  [class~="border-[#DBE4F0]"],
+  [class~="border-[#EDF1F6]"],
+  [class~="border-[#D6E0EB]"]
+) { border-color: var(--customer-dark-border) !important; }
+.customer-compact[data-customer-theme="dark"] :is(
+  [class~="bg-[#ECFBF3]"],
+  [class~="bg-[#E4F8EC]"],
+  [class~="bg-[#E1F8EE]"],
+  [class~="bg-[#ECF8F2]"],
+  [class~="bg-[#EAF9F0]"]
+) { background-color: var(--customer-dark-success-bg) !important; }
+.customer-compact[data-customer-theme="dark"] :is(
+  [class~="text-[#116747]"],
+  [class~="text-[#16865B]"],
+  [class~="text-[#17815B]"],
+  [class~="text-[#11986A]"],
+  [class~="text-[#0B7A54]"],
+  [class~="text-[#239B68]"]
+) { color: var(--customer-dark-success) !important; }
+.customer-compact[data-customer-theme="dark"] :is(
+  [class~="bg-[#FFF0CF]"],
+  [class~="bg-[#FFF7E8]"],
+  [class~="bg-[#FFF5E3]"],
+  [class~="bg-[#FFFCF6]"]
+) { background-color: var(--customer-dark-warning-bg) !important; }
+.customer-compact[data-customer-theme="dark"] :is(
+  [class~="text-[#B66A16]"],
+  [class~="text-[#7A4B10]"],
+  [class~="text-[#92714A]"],
+  [class~="text-[#9A5C12]"],
+  [class~="text-[#B87817]"],
+  [class~="text-[#B88317]"],
+  [class~="text-[#9B6718]"],
+  [class~="text-[#C98E29]"],
+  [class~="text-[#9A765F]"]
+) { color: var(--customer-dark-warning) !important; }
+.customer-compact[data-customer-theme="dark"] :is(
+  [class~="bg-[#FEE2E2]"],
+  [class~="bg-[#FFF0F2]"],
+  [class~="bg-[#FFF0F0]"],
+  [class~="bg-[#FFF9F7]"]
+) { background-color: var(--customer-dark-danger-bg) !important; }
+.customer-compact[data-customer-theme="dark"] :is(
+  [class~="text-[#B91C1C]"],
+  [class~="text-[#DF3A58]"],
+  [class~="text-[#C53232]"],
+  [class~="text-[#B44949]"],
+  [class~="text-[#A13B3B]"],
+  [class~="text-[#D33B4C]"],
+  [class~="text-[#D34358]"],
+  [class~="text-[#D23F91]"]
+) { color: var(--customer-dark-danger) !important; }
+
+/* Animated search hint sits behind a transparent input, not an opaque dark field. */
+.customer-compact[data-customer-theme="dark"] input.bg-transparent { background-color: transparent !important; color: var(--customer-dark-text) !important; }
+.customer-compact[data-customer-theme="dark"] :is(input,textarea)::placeholder { color: var(--customer-dark-muted); opacity: 1; }
+.customer-compact[data-customer-theme="dark"] .customer-header-notification { background-color: var(--customer-dark-tint) !important; color: var(--customer-dark-text); }
+.customer-compact[data-customer-theme="dark"] .customer-header-action-divider { background-color: var(--customer-dark-border); }
+.customer-compact[data-customer-theme="dark"] aside a[aria-label="INSUREIT Customer home"] img { filter: brightness(0) invert(1); }
+.customer-compact[data-customer-theme="dark"] [data-customer-route-breadcrumbs] [aria-current="page"] { color: var(--customer-dark-accent) !important; }
+.customer-compact[data-customer-theme="dark"] .customer-support-hero > [aria-hidden="true"]:first-child { opacity: .55; }
+.customer-compact[data-customer-theme="dark"] .customer-support-hero > [aria-hidden="true"]:nth-child(2) { background: linear-gradient(90deg,#202c48 0%,rgba(32,44,72,.95) 40%,rgba(32,44,72,.15) 100%); }
+.customer-compact[data-customer-theme="dark"] .customer-support-hero { background-color: #202c48 !important; }
+.customer-compact[data-customer-theme="dark"] .customer-support-open-status { background-color: var(--customer-dark-warning-bg) !important; border-color: #80643b !important; color: var(--customer-dark-warning) !important; }
+.customer-compact[data-customer-theme="dark"] :is([class~="hover:bg-[#F3F0FF]"],[class~="hover:bg-[#F4F0FF]"],[class~="hover:bg-[#F4EEFF]"],[class~="hover:bg-[#F6F9FD]"],[class~="hover:bg-[#F8FAFF]"],[class~="hover:bg-[#F1F5F9]"]):hover { background-color: var(--customer-dark-tint) !important; }
+.customer-compact[data-customer-theme="dark"] .customer-profile-joined-details .customer-profile-detail-card { background: var(--customer-dark-surface) !important; border-color: var(--customer-dark-border) !important; }
+.customer-compact[data-customer-theme="dark"] .customer-profile-joined-details .customer-profile-detail-card:hover { background: var(--customer-dark-tint) !important; }
+.customer-compact[data-customer-theme="dark"] .customer-home-modern :is(.customer-modern-kpi-1,.customer-modern-kpi-2,.customer-modern-kpi-3,.customer-modern-kpi-4) { border-color: var(--customer-dark-border); }
+.customer-compact[data-customer-theme="dark"] .customer-home-modern :is(.customer-modern-kpi-1,.customer-modern-kpi-2,.customer-modern-kpi-3,.customer-modern-kpi-4)::before { background: linear-gradient(135deg,#303c58,#1c293d); }
+.customer-compact[data-customer-theme="dark"] .customer-home-modern [data-home-reveal] thead { background: var(--customer-dark-inset); }
+.customer-compact[data-customer-theme="dark"] .exchange-reference .exchange-premium-hero { background: linear-gradient(110deg,#202c48,#142035); border-color: var(--customer-dark-border); }
+.customer-compact[data-customer-theme="dark"] .exchange-reference .exchange-premium-hero-shade { background: linear-gradient(90deg,#202c48 0%,rgba(32,44,72,.94) 31%,rgba(32,44,72,.5) 65%,transparent 100%); }
+.customer-compact[data-customer-theme="dark"] .exchange-reference .exchange-premium-hero p { color: var(--customer-dark-muted); }
+.customer-compact[data-customer-theme="dark"] .exchange-reference .exchange-reference-gradient-text { background-image: linear-gradient(90deg,#c8b7ff,#8cc5ff); }
+.customer-compact[data-customer-theme="dark"] .exchange-reference .exchange-reference-category:not([aria-current="page"]):hover { background: var(--customer-dark-tint); border-color: var(--customer-dark-border); }
+.customer-compact[data-customer-theme="dark"] .customer-claim-ref-page { color: var(--customer-dark-text); }
+.customer-compact[data-customer-theme="dark"] .customer-claim-ref-summary { background: linear-gradient(115deg,#202c48,#142035); }
+.customer-compact[data-customer-theme="dark"] .customer-claim-ref-summary-cell,
+.customer-compact[data-customer-theme="dark"] .customer-claim-ref-summary-cell:nth-child(5) { background: var(--customer-dark-surface); }
+.customer-compact[data-customer-theme="dark"] .customer-claim-ref-summary-footer { background: var(--customer-dark-inset); border-color: var(--customer-dark-border); }
+.customer-compact[data-customer-theme="dark"] .customer-claim-ref-claim-status { background: var(--customer-dark-success-bg); color: var(--customer-dark-success); }
+.customer-compact[data-customer-theme="dark"] :is(.customer-claim-ref-details,.customer-claim-ref-docs,.customer-claim-ref-docs .customer-claim-ref-card,.customer-claim-ref-docs .customer-claim-ref-card:has(a[href])) { background: var(--customer-dark-surface); border-color: var(--customer-dark-border); }
+.customer-compact[data-customer-theme="dark"] .customer-claim-ref-docs .customer-claim-ref-file { background: var(--customer-dark-inset); border-color: var(--customer-dark-border); }
+.customer-compact[data-customer-theme="dark"] .customer-claim-ref-docs .customer-claim-ref-file:hover { background: var(--customer-dark-tint); }
+/* Profile editor is portalled to body; its own theme scope is applied separately. */

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Loader2, Pencil, Save, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { CustomerThemeScope } from "./customer-theme";
 
 export function CustomerProfileEditor({
   customerId,
@@ -107,6 +108,7 @@ export function CustomerProfileEditor({
           </div>
         </>
       ) : typeof document !== "undefined" ? createPortal(
+        <CustomerThemeScope portal>
         <div className="fixed inset-0 z-[1000] flex items-center justify-center overflow-y-auto bg-[#061B3B]/65 px-3 py-5 backdrop-blur-[2px] sm:px-5" role="dialog" aria-modal="true" aria-labelledby="customer-profile-edit-title">
           <div className="my-auto w-full max-w-[620px] max-h-[calc(100dvh-40px)] overflow-y-auto rounded-2xl border border-[#D9E3EF] bg-white shadow-[0_24px_70px_rgba(6,27,59,.24)]">
             <div className="flex items-center justify-between border-b border-[#E6EDF5] px-5 py-4">
@@ -139,7 +141,8 @@ export function CustomerProfileEditor({
               </div>
             </div>
           </div>
-        </div>,
+        </div>
+        </CustomerThemeScope>,
         document.body
       ) : null}
     </>
