@@ -191,7 +191,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
   // Never attempt to pass its commercial totals through ICICI/Tata rules.
   const commercialChecksOk=Boolean(commercial)
     && (["go_digit_cv_native_pdf","iffco_tokio_cv_native_pdf","new_india_cv_native_pdf",
-        "united_india_gcv_native_pdf","united_india_private_car_package_native_pdf","oriental_gccv_native_pdf"].includes(parsed.preview.parserId)
+        "united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf","united_india_private_car_package_native_pdf","oriental_gccv_native_pdf"].includes(parsed.preview.parserId)
        || PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId))
     && parsed.preview.checksPassed === (trainedN8nParserProfile(parsed.preview.parserId)?.checks ?? 0)
     // SBI Package prints owner-driver CPA separately from TP. Reuse its
@@ -429,7 +429,7 @@ async function preparePolicyIntakeHandoffInternal(
           ?"go_digit_missing_verified_onboarding_fields"
           :verified.parserId==="iffco_tokio_cv_native_pdf"?iffcoReview.reason
           :verified.parserId==="new_india_cv_native_pdf"?niaReview.reason
-          :verified.parserId==="united_india_gcv_native_pdf"?uiicReview.reason
+          :["united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf"].includes(verified.parserId)?uiicReview.reason
           :verified.parserId==="united_india_private_car_package_native_pdf"?uiicPrivateCarReview.reason
           :PRODUCT_VARIANT_PARSERS.has(verified.parserId)?productVariantReview.reason
            :["united_india_gcv_native_pdf","oriental_gccv_native_pdf"].includes(verified.parserId)?standardReview.reason
@@ -500,7 +500,7 @@ async function preparePolicyIntakeHandoffInternal(
       commercialPremium:verified.commercialPremium,
     }).eligible;
   const niaCpa=niaCertified?Number(verified.fields.find(f=>f.key==="cpa_premium")?.value):NaN;
-  const uiicCertified=verified?.parserId==="united_india_gcv_native_pdf"
+  const uiicCertified=["united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf"].includes(verified?.parserId??"")
     &&assessUiicGcvDirectConversion({
       parserId:verified.parserId,checksPassed:verified.checksPassed,
       warnings:verified.warnings,fields:verified.fields,
