@@ -104,11 +104,13 @@ function iffco(t){
 }
 function digit(t){
  const id=grab(t,/Policy No\.\s*(D\d{8,12})/i)||grab(t,/Policy No:\s*(D\d{8,12})/i);
- // Go Digit JCB schedules may print the insured without MR/MRS/MS and may
- // place company names on the next line. The adjacent vehicle registration
- // label is mandatory to avoid taking the broker or financier as insured.
- const name=grab(t,/^Name[ \t]+((?:(?:MR|MRS|MS)\.?[ \t]+)?[A-Z][A-Z0-9 .&'()\/-]{3,90}?)[ \t]+Vehicle Registration No\./im)
-   ||grab(t,/^Name[ \t]*\n[ \t]*((?:(?:MR|MRS|MS)\.?[ \t]+)?[A-Z][A-Z0-9 .&'()\/-]{3,90}?)[ \t]*\n[ \t]*Vehicle Registration No\./im);
+ // Preserve both previously working, titled-name forms unchanged.
+ // Only the new untitled/multiline JCB fallback requires a nearby printed
+ // Vehicle Registration No. label; never guess insured from broker/financier.
+ const name=grab(t,/\bName\s+((?:MR|MRS|MS)\s+[^\n]{5,80}?)\s+Vehicle Registration No\./i)
+   ||grab(t,/\bName\s*\n\s*((?:MR|MRS|MS)\s+[^\n]{5,80})/i)
+   ||grab(t,/^Name[ \t]+([A-Z][A-Z0-9 .&'()\/-]{3,90}?)[ \t]+Vehicle Registration No\./im)
+   ||grab(t,/^Name[ \t]*\n[ \t]*([A-Z][A-Z0-9 .&'()\/-]{3,90}?)[ \t]*\n[ \t]*Vehicle Registration No\./im);
  const reg=grab(t,/Vehicle Registration No\.\s*([A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4})/i)||grab(t,/Vehicle Registration No\.\s*\n\s*([A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4})/i);
  let issue=validDate(grab(t,/Policy Issue Date\s+(\d{2}-[A-Za-z]{3}-\d{4})/i));
  let start=validDate(grab(t,/\bFrom\s+(\d{2}-[A-Za-z]{3}-\d{4})\s*00:\d{2}:\d{2}/i));
