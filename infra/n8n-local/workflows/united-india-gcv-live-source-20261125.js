@@ -392,7 +392,7 @@ function unitedIndiaPunjabBharatBenz(t){
   vehicle_model:model,vehicle_class:'Goods Carrying Vehicle',vehicle_fuel_type:fuel,
   vehicle_manufacturing_year:year,vehicle_capacity:capacity,
   vehicle_chassis_number:chassis,vehicle_engine_number:engine,
-  vehicle_rto_name:authorityCity,vehicle_rto_state:registration?.startsWith('PB')?'Punjab':null,
+  vehicle_rto_name:authorityCity,vehicle_rto_state:null, // Do not infer RTO state from the PB plate prefix.
   idv,cpa_premium:cpaRemoved?0:null};
  const printed={od,tp,net,gst,gross,cgstOthers:cgstOther,sgstOthers:sgstOther,
   cgstBasicTp:cgstTp,sgstBasicTp:sgstTp,stampDuty:stamp,taxRegime:'CGST_SGST'};
