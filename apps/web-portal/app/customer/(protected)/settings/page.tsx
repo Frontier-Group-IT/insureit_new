@@ -19,8 +19,30 @@ export default function CustomerSettingsPage() {
   const [navigationLayout, setNavigationLayout] = useState<"sidebar" | "top">("sidebar");
   const [theme, setTheme] = useState<CustomerTheme>("light");
   useEffect(() => {
-    setTheme(readCustomerTheme());
-    try { setNavigationLayout(window.localStorage.getItem(customerNavigationPreferenceKey) === "top" ? "top" : "sidebar"); } catch { /* keep sidebar */ }
+    function readPreferences() {
+      setTheme(readCustomerTheme());
+      try { setNavigationLayout(window.localStorage.getItem(customerNavigationPreferenceKey) === "top" ? "top" : "sidebar"); } catch { /* keep current preference */ }
+    }
+    const onTheme = (event: Event) => {
+      const next = (event as CustomEvent<CustomerTheme>).detail;
+      if (next === "system" || next === "light" || next === "dark") setTheme(next);
+    };
+    const onLayout = (event: Event) => {
+      const next = (event as CustomEvent<{ layout?: "sidebar" | "top" }>).detail?.layout;
+      if (next === "sidebar" || next === "top") setNavigationLayout(next);
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === customerThemeKey || event.key === customerNavigationPreferenceKey) readPreferences();
+    };
+    readPreferences();
+    window.addEventListener(customerThemeEvent, onTheme);
+    window.addEventListener(customerNavigationPreferenceEvent, onLayout);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(customerThemeEvent, onTheme);
+      window.removeEventListener(customerNavigationPreferenceEvent, onLayout);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
   function setPreferredLayout(next: "sidebar" | "top") {
     setNavigationLayout(next);

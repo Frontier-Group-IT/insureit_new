@@ -68,3 +68,14 @@
   .customer-appearance-grid .customer-appearance-option { gap: 3px; padding-inline: 2px; font-size: 10px; }
   .customer-appearance-grid .customer-appearance-option svg { width: 13px; height: 13px; }
 }
+
+/* Compact profile-menu controls share the Settings palette without stretching the theme switch. */
+.customer-compact .customer-popup-theme-segment { flex: 0 0 auto; }
+.customer-compact .customer-popup-preferences .customer-appearance-option[aria-pressed="true"] { background-color: #eee7ff; border-color: #cbbaf7; color: #6031bf; }
+.customer-compact .customer-popup-theme-segment .customer-appearance-option[aria-pressed="true"] { background-color: #fff; border-color: transparent; }
+.customer-compact[data-customer-theme="dark"] .customer-profile-preference-menu { border-color: #34445e; color: #e5edf9; }
+.customer-compact[data-customer-theme="dark"] .customer-profile-preference-menu :is([class~="text-[#142746]"],[class~="text-[#292655]"]) { color: #e5edf9 !important; }
+.customer-compact[data-customer-theme="dark"] .customer-profile-preference-menu [class~="text-[#78869A]"] { color: #b4c2d8; }
+.customer-compact[data-customer-theme="dark"] .customer-profile-preference-menu :is(a,div)[class~="hover:bg-[#F6F9FD]"]:hover { background-color: #293a53; }
+.customer-compact[data-customer-theme="dark"] .customer-profile-preference-menu [class~="border-[#EDF1F6]"] { border-color: #34445e; }
+.customer-compact[data-customer-theme="dark"] .customer-popup-preferences .customer-appearance-option[aria-pressed="true"] { background-color: #423668 !important; border-color: #9b82e5; color: #e1d6ff !important; }

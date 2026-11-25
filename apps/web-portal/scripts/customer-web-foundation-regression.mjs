@@ -304,6 +304,20 @@ assert(/value: "system".*value: "light".*value: "dark"/.test(appearanceSection),
 assert(/<Icon[^>]*\/><span className="customer-option-full-label">/.test(appearanceSection), "Appearance inline icon precedes label");
 assert(/<Icon[^>]*\/><span>\{name\}<\/span>/.test(appearanceSection), "Theme inline icon precedes label");
 assert(appearanceSection.includes("customer-option-short-label"));
+const profileMenuPreferences = read("components/customer-portal/customer-header-actions.tsx");
+const popupSidebar = read("components/customer-portal/customer-sidebar-shell.tsx");
+assert(profileMenuPreferences.includes("customer-popup-preferences") && profileMenuPreferences.includes("customer-popup-theme-segment"), "Profile menu exposes compact preference controls");
+assert(/value: "system".*value: "light".*value: "dark"/.test(profileMenuPreferences), "Popup theme order follows System, Light, Dark");
+assert(profileMenuPreferences.includes('aria-label="Navigation layout" className="grid grid-cols-2 gap-2"'), "Popup navigation choices have equal widths");
+assert(profileMenuPreferences.includes("aria-pressed={theme === value}") && profileMenuPreferences.includes("aria-pressed={navigationLayout === value}"), "Popup preferences expose selected state");
+for (const source of [profileMenuPreferences, customerSettings]) {
+  assert(source.includes("window.localStorage.setItem(customerThemeKey, next)") && source.includes("window.localStorage.setItem(customerNavigationPreferenceKey, next)"), "Both preference surfaces persist the same keys");
+  assert(source.includes("new CustomEvent(customerThemeEvent") && source.includes("new CustomEvent(customerNavigationPreferenceEvent"), "Both preference surfaces broadcast changes");
+  assert(source.includes("window.addEventListener(customerThemeEvent, onTheme)") && source.includes("window.addEventListener(customerNavigationPreferenceEvent, onLayout)") && source.includes('window.addEventListener("storage", onStorage)'), "Both surfaces synchronize immediately");
+  assert(source.includes("window.removeEventListener(customerThemeEvent, onTheme)") && source.includes("window.removeEventListener(customerNavigationPreferenceEvent, onLayout)") && source.includes('window.removeEventListener("storage", onStorage)'), "Preference listeners are cleaned up");
+}
+assert(popupSidebar.includes("new CustomEvent(customerNavigationPreferenceEvent") && popupSidebar.includes('window.addEventListener("storage", onStorage)'), "Header navigation and other tabs synchronize with preferences");
+assert(appearanceCss.includes("customer-popup-theme-segment") && appearanceCss.includes('data-customer-theme="dark"] .customer-profile-preference-menu'), "Popup has compact light and dark styling");
 if (!process.exitCode) {
   console.log("Customer Web foundation and Settings responsive appearance regression passed.");
 }
