@@ -8,6 +8,14 @@ const source=fs.readFileSync(path.resolve(here,"../lib/policy-held-insurer-candi
 const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const ex={};new Function("exports",compiled)(ex);
 const admit=ex.assessHeldInsurerCandidate;
+const classify=ex.recognizeHeldInsurerLayout;
+assert.equal(classify("Magma General Insurance Limited PRIVATE CAR PACKAGE POLICY"),"magma_private_car_package_native_pdf");
+assert.equal(classify("National Insurance Co. Ltd. Policy Schedule - Motor - Private Car - Liability Only"),"national_private_car_liability_only_native_pdf");
+assert.equal(classify("THE ORIENTAL INSURANCE COMPANY LIMITED STANDALONE OWN DAMAGE(OD)-PRIVATE CAR POLICY"),"oriental_private_car_standalone_od_native_pdf");
+assert.equal(classify("THE ORIENTAL INSURANCE COMPANY LIMITED GCCV-PUBLIC CARRIERS OTHER THAN THREE WHEELERS PACKAGE POLICY"),"oriental_gccv_package_native_pdf");
+assert.equal(classify("THE ORIENTAL INSURANCE COMPANY LIMITED GCCV-PUBLIC CARRIERS OTHER THAN THREE WHEELERS PACKAGE STANDALONE OWN DAMAGE(OD)-PRIVATE CAR POLICY"),null,"Ambiguous two-product text must remain unclassified");
+assert.equal(classify("PRIVATE CAR PACKAGE POLICY - ICICI Lombard"),null,"Existing trained insurer must not be rerouted");
+
 const ids={intake_id:"a",document_id:"b",request_id:"c"};
 const MAGMA=[
  "insurer_product_verified","policy_number_verified","insured_name_verified","issuance_date_printed",
@@ -94,3 +102,8 @@ assert.equal(admit(orientalFakeDate,ids).accepted,false,"Footer date not policy 
 const magnaWrongTax=build("magma");magnaWrongTax.premium_components.cgst=900;
 assert.equal(admit(magnaWrongTax,ids).accepted,false);
 console.log("Held new insurers: strict source response/CPA split/optional independent RTO/identity and premium negative gates passed");
+
+const adapter=fs.readFileSync(path.resolve(here,"../lib/policy-nontata-commercial-n8n.ts"),"utf8");
+assert(adapter.includes('INSUREIT_ENABLE_HELD_INSURER_CANDIDATES === "1"'),"Candidate classifier must remain disabled by default");
+assert(adapter.includes("assessHeldInsurerCandidate(payload,ids)"),"Candidate response must undergo strict admission");
+assert(adapter.includes("candidateCanonicalPremium:decision.canonicalPremium"),"Source-certified CPA split must survive adapter");
