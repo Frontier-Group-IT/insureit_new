@@ -8,7 +8,6 @@ import { FileText, ShieldCheck, Clock3, Plus } from "lucide-react";
 import { getStaticInsurerLogo } from "@/lib/insurer-logo";
 import {
   CustomerAccountTabs,
-  EmptyCustomerState,
   StatusPill,
 } from "@/components/customer-portal/customer-phase1";
 import {
@@ -83,6 +82,19 @@ export default async function CustomerPoliciesPage({
     },
   });
 
+  const emptyState = query || sourceFilter !== "all"
+    ? { title: "No matching policies found", body: "Try clearing your search or filters." }
+    : policies.length === 0 && statusFilter === "all"
+      ? { title: "No policies added yet", body: "Add a policy to manage your insurance in one place." }
+      : statusFilter === "due"
+        ? { title: "No policies due for renewal", body: "You're all caught up! No upcoming renewals." }
+        : statusFilter === "active"
+          ? { title: "No active policies", body: "View all policies to review your insurance coverage." }
+          : statusFilter === "expired"
+            ? { title: "No expired policies", body: "There are no expired policies in this account." }
+            : { title: "No matching policies found", body: "Try adjusting your filters." };
+  const canAddFirstPolicy = policies.length === 0 && statusFilter === "all" && !query && sourceFilter === "all";
+
   return (
     <div className="customer-register-motion customer-policies-page space-y-3">
       <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/policies" />
@@ -90,7 +102,7 @@ export default async function CustomerPoliciesPage({
         <div className="flex min-w-0 items-center gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#FFF0CF] text-[#B66A16]"><Clock3 className="h-5 w-5"/></span><div><strong className="block text-[13px] text-[#7A4B10]">{counts.due} polic{counts.due===1?"y is":"ies are"} approaching renewal</strong><span className="text-[12px] text-[#92714A]">Review due policies to avoid a break in cover.</span></div></div>
         <Link href={makeHref({status:"due"})} className="customer-register-action shrink-0 rounded-lg bg-white px-3 py-2 text-[12px] font-semibold text-[#9A5C12] shadow-sm">Review</Link>
       </section>:null}
-      <section className="customer-register-panel overflow-hidden rounded-2xl border border-[#D9E2EF] bg-white shadow-[0_8px_30px_rgba(24,42,72,.04)]">
+      <section className="customer-register-panel flex flex-col overflow-hidden rounded-2xl border border-[#D9E2EF] bg-white shadow-[0_8px_30px_rgba(24,42,72,.04)]">
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E4EAF2] px-3 py-3 sm:px-4 xl:flex-nowrap">
           <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><img src="/assets/Custom-Icons/optimized-128/documents.png" alt="" aria-hidden="true" width={34} height={34} className="h-[34px] w-[34px] object-contain" />Policy Register</h2>
           <CustomerPolicyAnimatedSearch accountId={account.id} query={currentQuery} status={statusFilter ?? "all"} source={sourceFilter ?? "all"} suggestions={policies.filter(policy => (statusFilter === "all" || customerPolicyTone(policy.end_date).tone === statusFilter) && (sourceFilter === "all" || (sourceFilter === "external" ? policy.source === "external" : policy.source !== "external"))).flatMap(policy => [policy.policy_no, policy.policy_type, policy.policy_product, policy.insurer_name, policy.vehicle_no, policy.vehicle_make, policy.vehicle_model].filter((v): v is string => Boolean(v)))} />
@@ -99,7 +111,14 @@ export default async function CustomerPoliciesPage({
           <Link href={{ pathname: "/customer/add-policy", query: { account: account.id } }} className="customer-register-action inline-flex h-10 w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#1253A7] px-3 text-[12px] font-bold text-white shadow-sm transition hover:bg-[#0A3E87] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1253A7]"><Plus className="h-4 w-4" />Add Policy</Link>
         </div>
       {sourceFilteredRows.length === 0 ? (
-        <div className="p-5"><EmptyCustomerState title="No matching policies" body="Try adjusting your filters." /></div>
+        <div className="customer-policy-empty flex min-h-[280px] flex-1 flex-col items-center justify-center gap-3 px-4 py-10 text-center">
+          <img src="/assets/customer-policies/empty-state.webp" alt="" aria-hidden="true" width={240} height={192} className="customer-policy-empty-art h-auto w-[200px] max-w-full object-contain sm:w-[240px]" />
+          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{emptyState.title}</h3>
+          <p className="max-w-sm text-sm text-slate-500 dark:text-slate-300">{emptyState.body}</p>
+          <Link href={{ pathname: canAddFirstPolicy ? "/customer/add-policy" : "/customer/policies", query: { account: account.id } }} className="customer-register-action inline-flex w-fit items-center justify-center rounded-xl border border-[#1253A7] px-4 py-2.5 text-sm font-semibold text-[#1253A7] dark:border-blue-400 dark:text-blue-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+            {canAddFirstPolicy ? "Add Policy" : query || sourceFilter !== "all" ? "Clear Filters" : "View All Policies"}
+          </Link>
+        </div>
       ) : (
         <>
           <div className="hidden overflow-x-auto lg:block">
