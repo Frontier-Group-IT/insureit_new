@@ -529,6 +529,8 @@ async function preparePolicyIntakeHandoffInternal(
     current:{registrationNo:"",vehicleClass:"",make:"",model:"",fuelType:"",manufacturingYear:"",capacity:"",chassisNo:"",engineNo:"",rtoState:"",rtoName:"",policyProduct:"",idv:"",od:"",tp:"",cpa:"",policyNo:"",insurerId:"",validFrom:"",validUpto:""},
     fields:verified?enrichVerifiedN8nOnboardingFields(verified.fields,verified.parserId):(intake.ocr_fields??[]),
     manufacturers:manufacturerOptions,insurers,rcVerified:false,
+    sourceParserId:verified?.parserId,sourceChecksPassed:verified?.checksPassed,
+    sourceWarnings:verified?.warnings,
   });
   // Only a server-verified current-PDF insured name is offered as an
   // editable, review-required draft value. It NEVER auto-links a customer.
