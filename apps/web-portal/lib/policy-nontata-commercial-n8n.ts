@@ -468,7 +468,8 @@ export function validateNationalGcvExtractionOnly(
   &&new Date(v+"T00:00:00Z").toISOString().slice(0,10)===v;
  if(by.get("policy_issuance_date")?.evidence!=="NIA printed Date of issue"
   ||!date(val("policy_issuance_date"))||!date(val("policy_start_date"))
-  ||!date(val("policy_end_date"))||val("policy_start_date")>val("policy_end_date"))
+  ||!date(val("policy_end_date"))||val("policy_start_date")>val("policy_end_date")
+  ||val("policy_issuance_date")>val("policy_end_date"))
   throw new Error("n8n_national_gcv_issue_or_coverage_invalid");
  const p=payload.premium_components;
  const money=(key:string)=>typeof p[key]==="number"&&Number.isFinite(p[key])
