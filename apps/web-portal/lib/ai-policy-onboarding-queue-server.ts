@@ -444,6 +444,13 @@ async function processClaim(item: Claimed, parserRevision: string) {
     &&!niaReview.eligible&&!isDuplicate
     &&!codes.includes("booking_review_required"))
     codes.push("booking_review_required");
+  // National GCV schedule is 18/18 source-extracted, but the PDF premium
+  // does not print a separately certified owner-driver CPA charge/exemption.
+  // Correcting Eicher's active marque must not promote it to unattended
+  // booking. Keep the source-only hold independent of manufacturer mapping.
+  const nationalCpaReview=extraction.preview.parserId==="national_gcv_package_native_pdf";
+  if(nationalCpaReview&&!isDuplicate&&!codes.includes("booking_review_required"))
+    codes.push("booking_review_required");
   const state:AiQueueState=isDuplicate?"duplicate"
     :assessment.state==="unsupported"?"unsupported"
     :codes.length?"exception":"verified";
@@ -452,7 +459,9 @@ async function processClaim(item: Claimed, parserRevision: string) {
     parser_id:extraction.preview.parserId,
     checks_passed:extraction.preview.checksPassed,
     extraction_fingerprint:extraction.preview.fingerprint,
-    last_error_code:extraction.preview.parserId==="new_india_cv_native_pdf"
+    last_error_code:nationalCpaReview&&!isDuplicate
+      ?"national_gcv_owner_driver_cpa_unverified"
+      :extraction.preview.parserId==="new_india_cv_native_pdf"
       &&!niaReview.eligible&&!isDuplicate?"nia_"+niaReview.reason:null,
     processed_at:new Date().toISOString(),
     retry_after:retryAfter(1440),
