@@ -543,6 +543,8 @@ jobs:
         run: node scripts/sheetjs-xlsx-0203-regression.mjs
       - name: Patched Sharp image and PostCSS CSS smoke regression
         run: node scripts/postcss-sharp-patched-regression.mjs
+      - name: Reports-only commercial visibility and export guard regression
+        run: node scripts/report-commercial-access-regression.mjs
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
