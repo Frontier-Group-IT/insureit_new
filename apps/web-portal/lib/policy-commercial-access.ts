@@ -19,3 +19,15 @@ export function canAccessPolicyCommercials(profile: CommercialProfile, scopedRec
   if (profile?.role === "accounts") return true;
   return Boolean(profile?.id && COMMERCIAL_PROFILE_IDS.has(profile.id));
 }
+
+// Reports-only approval. Do not add this employee to the operational commercial
+// allowlist above: that would also expose edit/review workflows.
+const REPORT_COMMERCIAL_READ_PROFILE_IDS = new Set([
+  "7bda6ffc-340e-48aa-bd3d-4f1f62cf85d9", // Gagandeep Singh — Sales Head
+]);
+
+export function canViewReportCommercials(profile: CommercialProfile) {
+  return canAccessPolicyCommercials(profile) || Boolean(
+    profile?.id && profile.role === "sales_head" && REPORT_COMMERCIAL_READ_PROFILE_IDS.has(profile.id)
+  );
+}

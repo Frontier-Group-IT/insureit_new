@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
-import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
+import { canViewReportCommercials } from "@/lib/policy-commercial-access";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadFinanceReport, type FinanceQuery } from "@/lib/reports/finance";
 
 export async function GET(request: NextRequest) {
   const profile = await requireCapability("view_reports");
   if(profile.role==="backoffice_executive")return new Response("Finance reporting is not available for this role.",{status:403,headers:{"Content-Type":"text/plain; charset=utf-8","Cache-Control":"private, no-store, max-age=0"}});
-  if (!canAccessPolicyCommercials(profile)) {
+  if (!canViewReportCommercials(profile)) {
     return new Response("Commercial details restricted", {
       status: 403,
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "private, no-store, max-age=0" },
