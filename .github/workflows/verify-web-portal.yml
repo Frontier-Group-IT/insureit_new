@@ -176,6 +176,8 @@ jobs:
         run: node scripts/claim-document-reupload-all-stages-regression.mjs
       - name: Internal and External claim stage error popup regression
         run: node scripts/claim-stage-errors-popup-regression.mjs
+      - name: Operations Claim immediate save navigation regression
+        run: node scripts/operations-claim-stage-success-navigation-regression.mjs
       - name: Operations claim verification-required one-line error regression
         run: node scripts/operations-claim-verify-first-error-regression.mjs
       - name: Internal and External customer spot draft sync regression
