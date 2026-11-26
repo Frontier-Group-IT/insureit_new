@@ -744,7 +744,8 @@ assert.deepEqual({action:aiBucketCounts.action_required,review:aiBucketCounts.in
 const aiPageText=text("app/development/ai-policy-onboarding/page.tsx");
 assert(aiPageText.includes("policyIntakeStatusCounts(workspaceRows,duplicateIds)")
   && aiPageText.includes("getPartnerEmployeeIntakeReadScope")
-  && aiPageText.includes("policyIntakeBucket(row,duplicateIds.has(row.id)) === selectedView")
+  && aiPageText.includes("const canonical=policyIntakeBucket(row,duplicateIds.has(row.id));")
+  && aiPageText.includes("displayBucket(row) === selectedView")
   && aiPageText.includes("const pageRows: SemiAutoIntakeRow[] = statusRows"),
  "AI Intake status tabs must use canonical register bucket and authorized scope before paging");
 assert(aiPageText.includes('if(item.state==="pending")queueCounts.queued++')
