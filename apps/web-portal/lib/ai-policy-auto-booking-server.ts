@@ -9,7 +9,7 @@ import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyIntakeReviewer,requirePolicyIntakeFinalizer } from "@/lib/policy-intake-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 
-type Claim={intake_id:string;document_id:string;extraction_fingerprint:string};
+type Claim={intake_id:string;document_id:string;extraction_fingerprint:string;recovery?:boolean};
 type FinalState="booked"|"review_required"|"uncertain";
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HASH=/^[a-f0-9]{64}$/i;
@@ -52,7 +52,8 @@ function safeReason(fields:readonly {field:string}[]):{state:FinalState;code:str
 }
 async function finish(claim:Claim,state:FinalState,code:string|null,policyId:string|null){
   const admin=createSupabaseAdminClient();
-  const {data,error}=await admin.rpc("finish_ai_auto_booking_v1",{
+  const {data,error}=await admin.rpc(claim.recovery
+    ?"finish_ai_auto_booking_liberty_recovery_v1":"finish_ai_auto_booking_v1",{
     p_intake_id:claim.intake_id,p_document_id:claim.document_id,
     p_fingerprint:claim.extraction_fingerprint,p_state:state,
     p_policy_id:policyId,p_failure_code:code,
@@ -96,6 +97,19 @@ export async function runAutoBookingBatch():Promise<{
     throw Error("auto_booking_claim_unavailable");
   }
   const claims=(data??[]) as Claim[];
+  // This second immutable claim only covers the pre-transaction Liberty
+  // insured-name parser-evidence bug. Never retry uncertain/booked outcomes.
+  // A missing reviewed migration is not permission to claim or auto-book.
+  const recovered=await admin.rpc("claim_ai_auto_booking_liberty_recovery_v1",{
+    p_operator_profile_id:operatorId,p_limit:3,
+  });
+  if(recovered.error){
+    const missing=["PGRST202","42883"].includes(recovered.error.code??"");
+    if(!missing)throw Error("auto_booking_recovery_claim_unavailable");
+  }else{
+    for(const entry of (recovered.data??[]) as Claim[])
+      claims.push({...entry,recovery:true});
+  }
   let booked=0,review=0,uncertain=0;
   for(const claim of claims){
     if(!UUID.test(claim.intake_id)||!UUID.test(claim.document_id)||!HASH.test(claim.extraction_fingerprint)){
