@@ -420,6 +420,7 @@ export function validateNationalGcvExtractionOnly(
   ||!Array.isArray(payload.warnings)||payload.warnings.length!==0
   ||!object(payload.premium_components))
   throw new Error("n8n_national_gcv_extraction_contract_invalid");
+ const checkMap=payload.checks as Record<string,unknown>;
  const names=[
   "insurer_product_verified","policy_number_verified","insured_name_verified",
   "printed_issuance_date_verified","coverage_dates_verified",
@@ -429,7 +430,7 @@ export function validateNationalGcvExtractionOnly(
   "printed_tax_components_verified","net_tax_gross_reconciled",
   "tp_itemization_reconciled","stamp_charge_disclosed",
  ];
- if(Object.keys(payload.checks).length!==18||names.some(k=>payload.checks[k]!==true))
+ if(Object.keys(checkMap).length!==18||names.some(k=>checkMap[k]!==true))
   throw new Error("n8n_national_gcv_extraction_checks_invalid");
  const fields:OcrField[]=payload.fields.map((raw:unknown)=>{
   if(!object(raw)||typeof raw.key!=="string"||!ALLOWED_FIELDS.has(raw.key)
@@ -475,20 +476,22 @@ export function validateNationalGcvExtractionOnly(
  const money=(key:string)=>typeof p[key]==="number"&&Number.isFinite(p[key])
    &&p[key]>=0&&Math.abs(p[key]*100-Math.round(p[key]*100))<.00001;
  const amounts=["od","tp","net","gst","gross","cgst","sgst","igst","stampDuty","separatelyPaidStamp"];
+ const od=p.od as number,tp=p.tp as number,net=p.net as number,
+   gst=p.gst as number,gross=p.gross as number;
  if(amounts.some(key=>!money(key))||p.cpa!==null||p.taxRegime!=="IGST"
   ||p.cgst!==0||p.sgst!==0||p.igst!==p.gst||p.stampDuty!==0
   ||p.separatelyPaidStamp!==0.5
-  ||p.od<=0||p.tp<=0||p.net<=0||p.gross<=0
-  ||Math.abs(p.od+p.tp-p.net)>.06
-  ||Math.abs(p.net+p.gst-p.gross)>.06
-  ||Math.abs(Number(val("od_premium"))-p.od)>.001
-  ||Math.abs(Number(val("tp_premium"))-p.tp)>.001
+  ||od<=0||tp<=0||net<=0||gross<=0
+  Math.abs(od+tp-net)>.06
+  ||Math.abs(net+gst-gross)>.06
+  ||Math.abs(Number(val("od_premium"))-od)>.001
+  ||Math.abs(Number(val("tp_premium"))-tp)>.001
   ||Math.abs(Number(val("idv")))===0||!Number.isFinite(Number(val("idv"))))
   throw new Error("n8n_national_gcv_financial_evidence_invalid");
  // Do NOT supply candidateCanonicalPremium or CPA. Extraction verified,
  // registration is restricted to a separate product-specific human preflight.
  return{parserId:"national_gcv_package_native_pdf",parserVersion:"source-candidate-1",
-  fields,warnings:[],checksPassed:18,premium:{od:p.od,tp:p.tp,net:p.net,gst:p.gst,gross:p.gross}};
+  fields,warnings:[],checksPassed:18,premium:{od,tp,net,gst,gross}};
 }
 
 function validate(payload: unknown, insurer: Insurer,
