@@ -1,6 +1,7 @@
 import "server-only";
 
 import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
+import { classifyKnownUntrainedPolicyLayout } from "@/lib/policy-known-layout-classification";
 import { enrichIffcoCertifiedMachineFamily } from "@/lib/policy-iffco-machine-family";
 import { assessHeldInsurerCandidate, recognizeHeldInsurerLayout } from "@/lib/policy-held-insurer-candidate-admission";
 import { verifyOrientalCmsSigningDate, type OrientalSignedIssuanceEvidence } from "@/lib/policy-oriental-cms-issuance";
@@ -249,6 +250,8 @@ export async function recognizeNonTataCommercialPdf(file: File): Promise<Insurer
   if (new TextDecoder("ascii").decode(bytes.subarray(0, 5)) !== PDF) return null;
   const pages = await extractNativePdfTextPages(bytes);
   const text = pages.slice(0, 3).map((page) => page.text).join("\n");
+  const knownUntrained=classifyKnownUntrainedPolicyLayout(text);
+  if(knownUntrained)throw new Error(knownUntrained);
   const initial=insurerForText(text);
   // Only UIIC GCV needs late-page financial labels for the split-GST
   // sub-profile. Never broaden other insurer classification.
