@@ -91,6 +91,31 @@ export function validateN8nPolicyIntakeResponse(
   if (!plainObject(value) || value.contract_version !== "1") throw new Error("n8n_contract_version_invalid");
   if (value.intake_id !== ids.intakeId || value.document_id !== ids.documentId
       || value.request_id !== ids.requestId) throw new Error("n8n_request_identity_mismatch");
+  // A Shriram package PDF can have valid printed vehicle and premium data
+  // while its literal "Prop Issue Date" cell is N.A. Never promote it to a
+  // verified intake or invent issuance from coverage, receipt or unsigned CMS.
+  // Expose a safe actionable review reason ONLY for the exact failing profile.
+  if(value.parser_id==="shriram_private_car_package_review_native_pdf"
+    &&value.parser_version==="source-review-1"
+    &&value.ok===false&&value.validation_passed===false
+    &&value.review_required===true&&value.auto_finalize_allowed===false
+    &&value.error_code==="source_issuance_date_unverified"
+    &&plainObject(value.checks)&&Object.keys(value.checks).length===18
+    &&value.checks.printed_issuance_date_verified===false
+    &&value.checks.original_issue_source_non_blank===false
+    &&Object.entries(value.checks).every(([key,pass])=>
+      ["printed_issuance_date_verified","original_issue_source_non_blank"].includes(key)
+       ?pass===false:pass===true)
+    &&Array.isArray(value.fields)
+    &&value.fields.some((field:unknown)=>plainObject(field)
+      &&field.key==="insurer_name"
+      &&field.value==="Shriram General Insurance Company Limited")
+    &&value.fields.some((field:unknown)=>plainObject(field)
+      &&field.key==="policy_product"&&field.value==="Private Car Package")
+    &&!value.fields.some((field:unknown)=>plainObject(field)
+      &&field.key==="policy_issuance_date")){
+    throw new Error("n8n_shriram_issuance_not_verified");
+  }
   const isOd = value.parser_id === "icici_3005_od_n8n_native_pdf"
     && value.parser_version === "bridge-od-v1";
   const isBundled = value.parser_id === "icici_3005_n8n_native_pdf"
