@@ -16,7 +16,7 @@ assert.match(screen,/onPress=\{\(\)=>setMotorCopy\(null\)\}/,'Attachment removal
 assert.match(screen,/onPress=\{\(\)=>void pickMotorCopy\(\)\}/,'Change and browse retain picker');
 assert.match(screen,/motorCopySaveDisabled/,'Save is visibly disabled without required file');
 assert.match(screen,/Complete Policy Copy Upload/,'Booked policy upload retry remains available');
-assert.match(screen,/Use current Policy Intake copy/,'Intake copy reused');
+assert.match(screen,/Current Policy Intake copy/,'Intake copy reused');
 assert.match(screen,/isNew&&!motorCopy/,'Standalone Motor requires document');
 assert.match(screen,/MOTOR_COPY_MAX_BYTES = 15\*1024\*1024/);
 assert.match(screen,/const thisMonth=part\('year'\)\*12\+part\('month'\)-1/);
