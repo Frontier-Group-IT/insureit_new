@@ -59,7 +59,7 @@ begin
      )
    order by i.created_at,i.id limit p_limit
  ), inserted as (
-   insert into public.policy_intake_ai_auto_booking_recovery_attempts r
+   insert into public.policy_intake_ai_auto_booking_recovery_attempts as r
      (intake_id,operator_profile_id,document_id,extraction_fingerprint)
    select e.intake_id,p_operator_profile_id,e.document_id,e.extraction_fingerprint
    from eligible e
