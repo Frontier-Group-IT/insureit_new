@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseWithAccessToken } from "@/lib/auth";
 import { withVerifiedPartnerApiToken } from "@/lib/partner-ai-studio-api-context";
 import { convertVerifiedAiIntake } from "@/app/development/ai-policy-onboarding/actions";
+import { withAutomaticPolicyBooking } from "@/lib/ai-policy-auto-booking-context";
 import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyIntakeReviewer,requirePolicyIntakeFinalizer } from "@/lib/policy-intake-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
@@ -85,7 +86,15 @@ export async function runAutoBookingBatch():Promise<{
   const {data,error}=await admin.rpc("claim_ai_auto_booking_v1",{
     p_operator_profile_id:operatorId,p_limit:3,
   });
-  if(error)throw Error("auto_booking_claim_unavailable");
+  if(error){
+    // Supabase error codes are protocol metadata (e.g. 42702), not customer
+    // information. Preserve only the bounded SQLSTATE to diagnose a blocked
+    // scheduler; never log exception messages, PDFs or credentials.
+    const pgCode=typeof error.code==="string" && /^[0-9A-Z]{5}$/.test(error.code)
+      ?error.code:"unknown";
+    console.error("[ai-auto-booking] claim unavailable",{pgCode});
+    throw Error("auto_booking_claim_unavailable");
+  }
   const claims=(data??[]) as Claim[];
   let booked=0,review=0,uncertain=0;
   for(const claim of claims){
@@ -94,8 +103,8 @@ export async function runAutoBookingBatch():Promise<{
       continue; // Malformed persisted evidence: no booking and no guessed repair.
     }
     try{
-      const result=await withVerifiedPartnerApiToken(operatorToken,
-        ()=>convertVerifiedAiIntake(claim.intake_id,true));
+      const result=await withAutomaticPolicyBooking(()=>withVerifiedPartnerApiToken(operatorToken,
+        ()=>convertVerifiedAiIntake(claim.intake_id,true)));
       if(result.ok&&result.policyId&&UUID.test(result.policyId)){
         await finish(claim,"booked",null,result.policyId);
         booked++;

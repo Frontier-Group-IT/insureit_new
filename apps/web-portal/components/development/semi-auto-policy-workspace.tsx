@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
 import { hasVerifiedN8nParserEvidence } from "@/lib/ai-policy-onboarding-eligibility";
 import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles, Eye, RotateCcw, ArrowRight, X } from "lucide-react";
-import { applySemiAutoN8nIntake, bookSemiAutoIntake, convertVerifiedAiIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reparseAndReplaceAiPolicyIntakeDraft, reviewAiIntakeCustomerCandidates, reviewIciciVerifiedDraftRepair, applyReviewedIciciDraftRepair, type ReviewedIciciDraftComparison, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
+import { applySemiAutoN8nIntake, bookSemiAutoIntake, convertVerifiedAiIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reparseAndReplaceAiPolicyIntakeDraft, sendAiIntakeForManualReview, reviewAiIntakeCustomerCandidates, reviewIciciVerifiedDraftRepair, applyReviewedIciciDraftRepair, type ReviewedIciciDraftComparison, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
 
 export type SemiAutoIntakeRow = {
   id: string;
@@ -273,7 +273,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
       const response=await reparseAndReplaceAiPolicyIntakeDraft(row.id);
       if(!response.ok){setReplaceReparseErrorId(row.id);setReplaceReparseError(response.error??"Could not reparse this Intake.");return;}
       setExceptionRow(null);setReplaceReparseError(null);
-      router.push(studioOnboardingUrl(response.editUrl??("/policies/new?intake_id="+encodeURIComponent(row.id))));
+      setN8nNotice("Current PDF and draft reparsed. No reviewer was assigned. Verified unassigned policies remain in automatic processing.");
+       router.refresh();
     }catch{setReplaceReparseErrorId(row.id);setReplaceReparseError("The reparse result is unknown. Refresh this Intake before trying again.");}
     finally{setReplaceReparseId(null);}
   }
@@ -295,6 +296,23 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   // Reprocess is unbounded by UI batch size, but every Intake is checked
   // sequentially through the same server-side authorization and queue CAS.
   const reprocessBatch=reprocessRemaining;
+
+  async function explicitlySendToManualReview(){
+    if(!selected || selected.policy_type!=="motor" || selected.assigned_to_profile_id || isWaiting)return;
+    if(!window.confirm("Assign "+selected.intake_number+" to your account for MANUAL review? Automatic booking will no longer pick up this Intake while it is assigned. Nothing is booked by this action."))return;
+    setBusy("forwarding");
+    try{
+      const result=await sendAiIntakeForManualReview(selected.id,true);
+      setN8nNotice(result.ok
+        ?"Manual review assigned to your account by your explicit confirmation. No policy has been booked."
+        :result.error??"Manual review assignment could not be confirmed.");
+      router.refresh();
+    }catch{
+      setN8nNotice("Manual review assignment result could not be confirmed. Refresh before retrying.");
+    }finally{
+      setBusy(null);
+    }
+  }
 
   async function selectRow(id: string) {
     const next = ++requestId.current;
@@ -875,6 +893,13 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
             {busy === "extracting" ? <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Reading current private PDF through the n8n review-only bridge...</div> : null}
             {busy === "applying" ? <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Revalidating and saving the confirmed failed OCR recovery...</div> : null}
             {n8nNotice ? <p role="status" className="mt-3 rounded-lg border border-[#c8d8eb] bg-[#f5f9ff] p-3 text-[11px] leading-5 text-[#284d77]">{n8nNotice}</p> : null}
+            {primaryN8n && selected && selected.policy_type==="motor"
+              && !selected.assigned_to_profile_id && !selected.is_duplicate ? (
+              <button type="button" onClick={()=>{void explicitlySendToManualReview();}} disabled={isWaiting}
+                className="mt-3 w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-900 disabled:opacity-50">
+                Send for Manual Review (explicit assignment)
+              </button>
+            ) : null}
             {primaryN8n && selectedId && !n8nResult && busy === null ? <p className="mt-3 text-[10.5px] text-[#61738a]">Previously saved details appear above. Re-extract the current PDF only when a new verified result is necessary.</p> : null}
             {primaryN8n && selected && !done && !n8nResult
               && selected.policy_type === "motor" && !selected.is_duplicate
@@ -882,11 +907,11 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               && selected.ocr_status === "completed" ? (
               <div className="mt-3 rounded-lg border border-[#bcd9d0] bg-[#f5fbf8] p-3">
                 <p className="text-[10.5px] font-bold text-[#215b46]">Extracted policy · automated verification available</p>
-                <p className="mt-1 text-[10px] leading-4 text-[#47675b]">Continue directly from the saved Intake. For safety, the current PDF will be verified by n8n before opening the editable onboarding draft. Existing exceptions are not silently cleared.</p>
+                <p className="mt-1 text-[10px] leading-4 text-[#47675b]">Automated booking does not require this button. Use it only when you intentionally want to assign this Intake to yourself for manual review. The current PDF will be verified before the editable draft opens.</p>
                 <button type="button" onClick={() => { void beginDirectN8nHandoff(); }} disabled={isWaiting}
                   className="mt-2 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg bg-[#1c5e8c] px-3 text-[11px] font-bold text-white disabled:opacity-50">
                   {busy === "extracting" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ArrowUpRight className="h-3.5 w-3.5"/>}
-                  Continue to Policy Onboarding
+                  Send for Manual Review
                 </button>
               </div>
             ) : null}
@@ -1408,19 +1433,19 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
             <div className="mb-3 flex items-center gap-2 text-[#174b83]">
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e8f2fb]"><ClipboardCheck className="h-4.5 w-4.5"/></span>
               <h3 id="n8n-handoff-dialog-title" className="text-[15px] font-bold text-[#193657]">
-                {handoffDialog.kind === "confirm" ? "Continue to Policy Onboarding?"
+                {handoffDialog.kind === "confirm" ? "Send for Manual Review?"
                   : handoffDialog.kind === "takeover" ? "Confirm reviewer takeover"
                     : "Existing onboarding draft"}
               </h3>
             </div>
             <p id="n8n-handoff-dialog-description" className="text-[12px] leading-5 text-[#52647b]">
               {handoffDialog.kind === "confirm"
-                ? "INSUREIT will recheck the current PDF and n8n extraction, then open the canonical editable Policy Onboarding draft. Review all mapped values and the original PDF before booking. No policy will be booked by this action."
+                ? "This explicit action assigns the Intake to your reviewer account and opens the canonical editable Policy Onboarding draft. It does not book a policy. Simply viewing, previewing, or reparsing never assigns a reviewer."
                 : handoffDialog.kind === "takeover"
                   ? `This Intake is assigned to ${handoffDialog.reviewerName || "another reviewer"}. Continuing will transfer the reviewer assignment to you. No policy will be booked.`
                   : fillEmptySavedFields
                     ? "The saved draft has been preserved. Only previously empty eligible fields were filled from the verified extraction or an approved customer master; existing manual values were not changed."
-                    : "The saved draft has been preserved without changes. Compare it with the latest n8n preview and the original PDF before booking."}
+                    : "You explicitly requested manual review. The saved draft has been preserved without changes. Compare it with the latest n8n preview and original PDF before booking."}
             </p>
             {handoffDialog.kind !== "existing" && n8nResult?.ok
               && n8nResult.preview.issuanceEvidence
@@ -1446,7 +1471,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               <button type="button" onClick={() => { void confirmN8nHandoff(); }} disabled={isWaiting}
                 className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#174b83] px-4 text-[11px] font-bold text-white disabled:opacity-50">
                 {isWaiting ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : null}
-                {handoffDialog.kind === "confirm" ? "Continue to onboarding"
+                {handoffDialog.kind === "confirm" ? "Assign & open manual review"
                   : handoffDialog.kind === "takeover" ? "Take over & continue" : "Open saved draft"}
               </button>
             </div>
