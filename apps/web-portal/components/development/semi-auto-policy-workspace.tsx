@@ -273,7 +273,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
       const response=await reparseAndReplaceAiPolicyIntakeDraft(row.id);
       if(!response.ok){setReplaceReparseErrorId(row.id);setReplaceReparseError(response.error??"Could not reparse this Intake.");return;}
       setExceptionRow(null);setReplaceReparseError(null);
-      router.push(studioOnboardingUrl(response.editUrl??("/policies/new?intake_id="+encodeURIComponent(row.id))));
+      setN8nNotice("Current PDF and draft reparsed. No reviewer was assigned. Verified unassigned policies remain in automatic processing.");
+       router.refresh();
     }catch{setReplaceReparseErrorId(row.id);setReplaceReparseError("The reparse result is unknown. Refresh this Intake before trying again.");}
     finally{setReplaceReparseId(null);}
   }
