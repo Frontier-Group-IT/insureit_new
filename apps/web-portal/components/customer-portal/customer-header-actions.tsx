@@ -83,7 +83,7 @@ export function CustomerHeaderActions({ name, userId }: { name: string; userId: 
       </Link>
       <span className="customer-header-action-divider h-8 w-px bg-[#D2DAE7]" aria-hidden="true" />
       <div ref={menuRef} className="relative">
-        <button type="button" aria-label="Open customer profile menu" aria-expanded={open} onClick={() => setOpen(!open)} className="customer-motion-icon grid h-11 w-11 place-items-center rounded-full bg-[#633BF5] text-base font-bold text-white shadow-[0_4px_12px_rgba(95,61,245,.18)]">{initial}</button>
+        <button type="button" aria-label="Open customer profile menu" aria-expanded={open} onClick={() => setOpen(!open)} className="customer-motion-icon grid h-11 w-11 place-items-center rounded-full bg-[#633BF5] text-base font-bold text-white shadow-[0_4px_12px_rgba(95,61,245,.18)]">{initial}</button><button type="button" className="ref-home-profile-name hidden" aria-label="Open customer profile menu" aria-expanded={open} onClick={()=>setOpen(!open)}>{name} <ChevronRight className="h-4 w-4 rotate-90"/></button>
         {open ? (
           <>
             <div className="customer-profile-preference-menu customer-motion-menu absolute right-0 top-14 z-50 max-h-[calc(100dvh-84px)] overflow-y-auto w-[min(320px,calc(100vw-24px))] rounded-3xl border border-[#DBE4F0] bg-white shadow-[0_20px_50px_rgba(15,32,57,0.17)]">

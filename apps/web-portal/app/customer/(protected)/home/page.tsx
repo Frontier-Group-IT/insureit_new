@@ -1,20 +1,10 @@
 import "./customer-home-modern.css";
 import Link from "next/link";
-import { AlertTriangle, CarFront, ClipboardList, ShieldPlus, ShieldCheck, FileText, ArrowLeftRight, Truck, CalendarDays, ClipboardPlus, ShieldX, Headset } from "lucide-react";
+import { ArrowRight, BellRing, CarFront, CheckCircle2, Clock, FilePlus2, FileText, Headset, ShieldCheck, ShieldPlus, Star, Zap, ArrowLeftRight } from "lucide-react";
 import { CustomerAccountTabs } from "@/components/customer-portal/customer-phase1";
-import { CustomerHomeScrollMotion } from "./customer-home-scroll-motion";
-import { CustomerHomeCount } from "./customer-home-count";
-import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
 import { customerPolicyTone, loadCustomerWebPolicies, loadCustomerWebVehicles, resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { isCompletedCustomerClaim, loadCustomerClaimListContext } from "@/lib/customer-web-phase2-data";
-
-function customerHomeInsurerName(name: string | null): string {
-  if (!name) return "—";
-  return name.trim()
-    .replace(/\s+(?:(?:Private|Pvt\.?)\s+)?(?:Limited|Ltd\.?)$/i, "")
-    .replace(/\s+(?:(?:General|Life|Health)\s+)?Insurance(?:\s+Company)?$/i, "")
-    .trim();
-}
+import { HomeVehicleCarousel, HomeVehicleArt } from "./home-vehicle-carousel";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -28,126 +18,97 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
     loadCustomerClaimListContext(account.id),
   ]);
   const { claims, milestones_by_claim } = claimContext;
-  const currentPolicies = policies.filter((policy) => customerPolicyTone(policy.end_date).tone !== "expired");
-  const coveredIds = new Set(currentPolicies.map((policy) => policy.vehicle_id).filter(Boolean));
-  const uncoveredVehicles = vehicles.filter((vehicle) => !coveredIds.has(vehicle.id));
-  const duePolicies = policies.filter((policy) => customerPolicyTone(policy.end_date).tone === "due");
-  const openClaims = claims.filter((claim) => !isCompletedCustomerClaim(claim, milestones_by_claim.get(claim.id) ?? []) && claim.current_status !== "Rejected");
-  const attentionCount = uncoveredVehicles.length + duePolicies.length;
+  const classified = policies.map(policy => ({policy, ...customerPolicyTone(policy.end_date)}));
+  const active = classified.filter(p => p.tone === "active").length;
+  const due = classified.filter(p => p.tone === "due");
+  const expired = classified.filter(p => p.tone === "expired");
+  const coveredIds = new Set(classified.filter(p => p.tone !== "expired").map(p => p.policy.vehicle_id).filter(Boolean));
+  const uncoveredVehicles = vehicles.filter(vehicle => !coveredIds.has(vehicle.id));
+  const completedClaims = claims.filter(claim => isCompletedCustomerClaim(claim, milestones_by_claim.get(claim.id) ?? []));
+  const openClaims = claims.filter(claim => !isCompletedCustomerClaim(claim, milestones_by_claim.get(claim.id) ?? []) && claim.current_status !== "Rejected");
   const accountQuery = { account: account.id };
-  const latestPolicies = policies.slice(0, 4);
-  const latestClaims = claims.slice(0, 4);
-  return (
-    <div data-customer-home className="customer-home-modern space-y-4 pb-6">
-      <style>{`
-        @keyframes customerHomeEnter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        @keyframes customerCardEnter { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        @keyframes customerHomeBreathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
-        .customer-home-enter { animation: customerHomeEnter 360ms cubic-bezier(.22,.72,.25,1) both; }
-        .customer-home-breathe { position: relative; transform-origin: center; animation: customerCardEnter 360ms cubic-bezier(.22,.72,.25,1) backwards; transition: transform 300ms ease, box-shadow 300ms ease; }
-        .customer-home-breathe:nth-child(1) { animation-delay: 70ms; }
-        .customer-home-breathe:nth-child(2) { animation-delay: 120ms; }
-        .customer-home-breathe:nth-child(3) { animation-delay: 170ms; }
-        .customer-home-breathe:nth-child(4) { animation-delay: 220ms; }
-        .customer-home-breathe .customer-home-icon-breathe { transition: transform 220ms ease; transform-origin: center; }
-        @media (hover: hover) { .customer-home-breathe:hover { z-index: 3; transform: translateY(-3px); box-shadow: 0 12px 26px rgba(20,58,100,.13); } }
-        .customer-home-breathe:focus-visible { z-index: 3; transform: scale(1.08); outline: 2px solid #1769DC; outline-offset: -2px; }
-        .customer-home-quick-action { position: relative; transform-origin: center; transition: transform 300ms ease, box-shadow 300ms ease, background-color 300ms ease; animation: customerCardEnter 360ms cubic-bezier(.22,.72,.25,1) backwards; }
-        .customer-home-quick-action:nth-child(1) { animation-delay: 90ms; }
-        .customer-home-quick-action:nth-child(2) { animation-delay: 140ms; }
-        .customer-home-quick-action:nth-child(3) { animation-delay: 190ms; }
-        .customer-home-quick-action:nth-child(4) { animation-delay: 240ms; }
-        .customer-home-quick-action:nth-child(5) { animation-delay: 290ms; }
-        .customer-home-quick-action:nth-child(6) { animation-delay: 340ms; }
-        @media (hover: hover) { .customer-home-quick-action:hover { z-index: 2; transform: translateY(-3px); box-shadow: 0 12px 26px rgba(20,58,100,.14); } }
-        .customer-home-quick-action:focus-visible { z-index: 2; transform: translateY(-3px); box-shadow: 0 12px 26px rgba(20,58,100,.14); outline: 2px solid #1769DC; outline-offset: 2px; }
-        @media (prefers-reduced-motion: reduce) {
-          .customer-home-enter, .customer-home-breathe, .customer-home-breathe .customer-home-icon-breathe, .customer-home-quick-action { animation: none !important; }
-          .customer-home-breathe, .customer-home-breathe:hover, .customer-home-breathe:focus-visible, .customer-home-quick-action, .customer-home-quick-action:focus-visible, .customer-home-quick-action:hover { transition: none; transform: none; }
-        }
-        .customer-home-motion-ready [data-home-reveal] { transition: opacity 400ms cubic-bezier(.22,.72,.25,1), transform 400ms cubic-bezier(.22,.72,.25,1), box-shadow 300ms ease, border-color 300ms ease; }
-        .customer-home-motion-ready [data-home-reveal]:not(.customer-home-visible) { opacity: 0; transform: translateY(12px); }
-        .customer-home-motion-ready [data-home-reveal].customer-home-visible { opacity: 1; transform: translateY(0); }
-        .customer-home-motion-ready .customer-home-explore-card:nth-child(2) { transition-delay: 100ms; }
-        .customer-home-motion-ready .customer-home-explore-card:nth-child(3) { transition-delay: 200ms; }
-        .customer-home-motion-ready .customer-home-explore-card:nth-child(4) { transition-delay: 300ms; }
-        @media (hover: hover) { .customer-home-explore-card.customer-home-visible:hover { position: relative; z-index: 2; transform: translateY(-3px); box-shadow: 0 12px 26px rgba(20,58,100,.14); transition-delay: 0ms; } }
-        .customer-home-explore-card:focus-visible { position: relative; z-index: 2; transform: translateY(-3px) !important; box-shadow: 0 12px 26px rgba(20,58,100,.14); outline: 2px solid #1769DC; outline-offset: 2px; transition-delay: 0ms; }
-        @media (prefers-reduced-motion: reduce) { .customer-home-motion-ready [data-home-reveal], .customer-home-explore-card, .customer-home-explore-card:focus-visible { transition: none !important; opacity: 1 !important; transform: none !important; } }
-      `}</style>
-      <CustomerHomeScrollMotion />
-      <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/home" />
-      <h1 className="customer-home-enter text-[clamp(22px,2.4vw,30px)] font-bold leading-tight tracking-tight text-[#182E60]">
-        Good morning, {account.contact_name?.split(" ")[0] || "Customer"}!
-      </h1>
-      <section aria-label="Quick actions" className="rounded-2xl border border-[#E0E8F3] bg-white px-3 py-3 shadow-[0_3px_12px_rgba(20,58,100,.04)] sm:px-4">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-[14px] font-black text-[#10284A]">Quick actions</h2>
-          <span className="text-[10px] font-semibold text-[#7186A0]">One tap services</span>
+  const href = (pathname:string) => ({pathname,query:accountQuery});
+  const urgent = [...expired.filter(p=>!p.policy.vehicle_id||!coveredIds.has(p.policy.vehicle_id)), ...due].sort((a,b)=>a.days-b.days)[0];
+  const urgentVehicle = urgent ? vehicles.find(v=>v.id===urgent.policy.vehicle_id) : uncoveredVehicles[0];
+  const total = policies.length;
+  const activeArc = total ? active / total * 100 : 0;
+  const dueArc = total ? due.length / total * 100 : 0;
+  const actions = [
+    {label:"Renew Policy",path:"/customer/renewals",Icon:ShieldPlus},
+    {label:"New Claim",path:"/customer/start-claim",Icon:FilePlus2},
+    {label:"Get a Quote",path:"/customer/insurance-quote",Icon:FileText},
+    {label:"Add Vehicle",path:"/customer/add-vehicle",Icon:CarFront},
+    {label:"Vehicle Exchange",path:"/customer/exchange",Icon:ArrowLeftRight},
+    {label:"Support",path:"/customer/support",Icon:Headset},
+  ];
+  return <div data-customer-home className="customer-home-modern customer-reference-home">
+    <CustomerAccountTabs accounts={accounts} selectedId={account.id} pathname="/customer/home" />
+    <section className="ref-home-hero">
+      <div className="ref-home-copy">
+        <p className="ref-home-eyebrow">Complete vehicle insurance solution</p>
+        <h1>Drive Worry-Free<br/>with <span>Insureit</span></h1>
+        <p>Buy, renew, claim and manage your<br className="hidden sm:block"/> vehicle insurance – all in one place.</p>
+        <div className="ref-home-buttons">
+          <Link className="ref-home-primary" href={{ pathname: "/customer/start-claim", query: accountQuery }}>Start New Claim <ArrowRight size={19}/></Link>
+          <Link className="ref-home-secondary" href={href("/customer/insurance-quote")}><FilePlus2 size={21}/> Get a Quote</Link>
         </div>
-        <nav aria-label="Customer quick actions" className="grid grid-cols-3 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-          {[
-            {title:"Renew policies",href:"/customer/renewals",art:"/assets/Custom-Icons/optimized-128/renewal.png"},
-            {title:"Start New Claim",href:"/customer/start-claim",art:"/assets/Custom-Icons/optimized-128/claims.png"},
-            {title:"Get a quote",href:"/customer/insurance-quote",art:"/assets/Custom-Icons/optimized-128/documents.png"},
-            {title:"My vehicles",href:"/customer/vehicles",art:"/assets/customer-home/my-vehicles-reference.png"},
-            {title:"Vehicle exchange",href:"/customer/exchange",art:"/assets/Custom-Icons/optimized-128/distribution-network.png"},
-            {title:"Support",href:"/customer/support",art:"/assets/Custom-Icons/optimized-128/customers.png"},
-          ].map(({title,href,art})=><Link key={href} href={href === "/customer/start-claim" ? { pathname: "/customer/start-claim", query: accountQuery } : { pathname: href, query: accountQuery }} className="customer-home-quick-action group flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-xl px-1.5 py-2.5 text-center transition hover:bg-[#F3F8FE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1769DC]"><span className="grid h-11 w-11 place-items-center transition-transform group-hover:scale-105">{art ? <img src={art} alt="" aria-hidden="true" className={title === "My vehicles" ? "h-11 w-11 object-contain" : "h-9 w-9 object-contain"} /> : <CarFront aria-hidden="true" className="h-9 w-9 text-[#1557A8]" strokeWidth={1.8} />}</span><span className="text-[11px] font-bold leading-4 text-[#244771]">{title}</span></Link>)}
-        </nav>
-      </section>
-      <div className="grid gap-3 lg:grid-cols-2">
-        <section data-home-reveal className="min-w-0 overflow-hidden rounded-2xl border border-[#E0E8F3] bg-white">
-          <div className="flex items-center justify-between gap-2 border-b border-[#E6EDF6] px-3 py-1.5"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><AlertTriangle className="h-4 w-4 text-red-500"/>Needs your attention</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all</Link></div>
-          {attentionCount === 0?<p className="m-4 rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">No urgent insurance actions.</p>:<div className="overflow-x-auto">
-            <table className="w-full min-w-[440px] text-center">
-              <thead className="bg-[#F7FAFE] text-center text-[10px] font-semibold uppercase tracking-wide text-[#7186A0]"><tr><th className="px-3 py-1.5">Vehicle / Policy</th><th className="px-3 py-1.5">Issue</th><th className="px-3 py-1.5">Status</th></tr></thead>
-              <tbody className="divide-y divide-[#EDF2F7]">
-                {uncoveredVehicles.slice(0, 3).map(vehicle=>{ const href={pathname:`/customer/vehicles/${vehicle.id}`,query:accountQuery}; return <tr key={vehicle.id} className="cursor-pointer transition hover:bg-[#FFF9F7]">
-                  <td className="p-0"><Link href={href} className="block px-3 py-1.5 text-center font-medium text-[11px] text-[#526782]">{vehicle.vehicle_no || (vehicle.chassis_no ? `New-${vehicle.chassis_no}` : "Unregistered vehicle")}</Link></td>
-                  <td className="p-0"><Link href={href} className="block px-3 py-1.5 text-center text-[11px] text-[#9A765F]">No active insurance cover</Link></td>
-                  <td className="p-0"><Link href={href} className="block px-3 py-1.5 text-center"><span className="inline-flex rounded-full bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-600">Uninsured</span></Link></td>
-                </tr>;})}
-                {duePolicies.slice(0, 2).map(policy=>{ const href={pathname:`/customer/policies/${policy.id}`,query:{...accountQuery,source:policy.source}}; return <tr key={policy.id} className="cursor-pointer transition hover:bg-[#FFFCF6]">
-                  <td className="p-0"><Link href={href} className="block px-3 py-1.5 text-center font-medium text-[11px] text-[#526782]">{policy.policy_no || "Renewal due"}</Link></td>
-                  <td className="p-0"><Link href={href} className="block px-3 py-1.5 text-center text-[11px] text-[#9A765F]">Policy renewal due</Link></td>
-                  <td className="p-0"><Link href={href} className="block px-3 py-1.5 text-center"><span className="inline-flex rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700">Due</span></Link></td>
-                </tr>;})}
-              </tbody>
-            </table>
-          </div>}
-        </section>
-
-        <section data-home-reveal className="min-w-0 overflow-hidden rounded-2xl border border-[#E0E8F3] bg-white">
-          <div className="flex items-center justify-between border-b border-[#E6EDF6] px-3 py-1.5"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><CarFront className="h-4 w-4 text-[#1672DC]"/>My Vehicles</h2><Link href={{pathname:"/customer/vehicles",query:accountQuery}} className="text-[12px] font-semibold text-[#1769DC]">View all</Link></div>
-          {vehicles.length===0?<p className="p-4 text-xs text-[#7186A0]">No vehicles found.</p>:<div className="overflow-x-auto">
-            <table className="w-full min-w-[470px] text-center">
-              <thead className="bg-[#F7FAFE] text-center text-[10px] font-semibold uppercase tracking-wide text-[#7186A0]"><tr><th className="px-3 py-1.5">Vehicle</th><th className="px-3 py-1.5">Make / Model</th><th className="px-3 py-1.5">Insurance status</th></tr></thead>
-              <tbody className="divide-y divide-[#EDF2F7]">
-                {vehicles.slice(0,3).map(vehicle=>{
-                  const insured=coveredIds.has(vehicle.id);
-                  const href={pathname:`/customer/vehicles/${vehicle.id}`,query:accountQuery};
-                  return <tr key={vehicle.id} className="cursor-pointer transition hover:bg-[#F8FBFF]">
-                    <td className="p-0"><Link href={href} className="block px-3 py-1.5 text-center font-medium text-[11px] text-[#526782]">{vehicle.vehicle_no || (vehicle.chassis_no?`New-${vehicle.chassis_no}`:"Unregistered")}</Link></td>
-                    <td className="p-0"><Link href={href} className="flex px-3 py-1.5 items-center justify-center gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F5F9FE]"><ManufacturerMark make={vehicle.make??""}/></span><span className="min-w-0"><span className="block truncate text-[10px] text-[#7186A0]">{vehicle.model || "—"}</span></span></Link></td>
-                    <td className="p-0"><Link href={href} className="block px-3 py-1.5 text-center"><span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${insured?"bg-emerald-50 text-emerald-700":"bg-red-50 text-red-600"}`}>{insured?"Insured":"Not insured"}</span></Link></td>
-                  </tr>;
-                })}
-              </tbody>
-            </table>
-          </div>}
-        </section>
       </div>
-      <div className="grid gap-3 lg:grid-cols-2">
-        <section data-home-reveal className="min-w-0 rounded-xl border border-[#E0E8F3] bg-white p-3">
-          <div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><ShieldCheck className="h-4 w-4 text-[#1672DC]"/>My Policies</h2><Link href={{pathname:"/customer/policies",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all</Link></div>
-          <div className="overflow-x-auto"><table className="w-full min-w-[410px] text-center text-[10px] text-[#526782]"><thead className="bg-[#F1F6FC] text-center text-[#637B9A]"><tr><th className="px-2 py-1.5">Policy Number</th><th className="px-2 py-1.5">Vehicle</th><th className="px-2 py-1.5">Insurer</th><th className="px-2 py-1.5">Status</th></tr></thead><tbody>{latestPolicies.map(policy=><tr key={policy.id} className="border-b border-[#EEF2F8]"><td className="px-2 py-1.5 font-medium text-[#526782]"><Link href={{pathname:`/customer/policies/${policy.id}`,query:{...accountQuery,source:policy.source}}}>{policy.policy_no||"—"}</Link></td><td className="px-2 py-1.5 text-[#526782]">{policy.vehicle_no||"—"}</td><td className="px-2 py-1.5 text-[#526782]">{customerHomeInsurerName(policy.insurer_name)}</td><td className="px-2 py-1.5 text-[#526782]"><span className={`rounded-full px-2 py-1 ${customerPolicyTone(policy.end_date).tone === "expired" ? "bg-[#FEE2E2] text-[#B91C1C]" : "bg-[#EEF5FF] text-[#526782]"}`}>{customerPolicyTone(policy.end_date).tone}</span></td></tr>)}</tbody></table>{latestPolicies.length===0?<p className="p-3 text-xs text-[#7186A0]">No policies found.</p>:null}</div>
-        </section>
-        <section data-home-reveal className="min-w-0 rounded-xl border border-[#E0E8F3] bg-white p-3">
-          <div className="mb-3 flex items-center justify-between"><h2 className="flex items-center gap-2 text-[14px] font-black text-[#10284A]"><ClipboardList className="h-4 w-4 text-[#1672DC]"/>My Claims</h2><Link href={{pathname:"/customer/claims",query:accountQuery}} className="text-[10px] font-bold text-[#176CD4]">View all</Link></div>
-          <div className="overflow-x-auto"><table className="w-full min-w-[480px] text-center text-[10px] text-[#526782]"><thead className="bg-[#F1F6FC] text-center text-[#637B9A]"><tr><th className="px-2 py-1.5">Claim Number</th><th className="px-2 py-1.5">Vehicle Number</th><th className="px-2 py-1.5">Incident Date</th><th className="px-2 py-1.5">Status</th></tr></thead><tbody>{latestClaims.map(claim=>{ const href={pathname:`/customer/claims/${claim.id}`,query:accountQuery}; return <tr key={claim.id} className="cursor-pointer border-b border-[#EEF2F8] transition hover:bg-[#F8FBFF]">{[claim.claim_no||claim.id.slice(0,8),claim.vehicle_no||"—",claim.accident_at?new Date(claim.accident_at).toLocaleDateString("en-IN",{day:"2-digit",month:"2-digit",year:"numeric"}):"—",claim.current_status||"Submitted"].map((value,index)=><td key={index} className="p-0"><Link href={href} className="block px-2 py-1.5 text-center text-[#526782]">{value}</Link></td>)}</tr>;})}</tbody></table>{latestClaims.length===0?<p className="p-3 text-xs text-[#7186A0]">No claims found.</p>:null}</div>
-        </section>
+      <div className="ref-home-art" aria-hidden="true">
+        <ShieldCheck className="ref-home-shield"/>
+        <img className="ref-home-hero-car" src="/assets/exchange-vehicles/pcp-car.webp" alt=""/>
+        <img className="ref-home-hero-bike" src="/assets/exchange-vehicles/twp-bike.png" alt=""/>
+        <img className="ref-home-hero-truck" src="/assets/exchange-vehicles/insureit-branded-truck.webp" alt=""/>
       </div>
+    </section>
+    <div className="ref-home-dashboard">
+      <div className="ref-home-main">
+        <div className="ref-home-benefits">
+          {[[ShieldCheck,"Trusted Partners"],[Zap,"Quick Claims"],[Headset,"Expert Support"],[Star,"Hassle-Free Process"]].map(([Icon,label])=>{const Glyph=Icon as typeof ShieldCheck;return <div key={String(label)}><Glyph aria-hidden="true"/><span>{String(label)}</span></div>;})}
+        </div>
+        <div className="ref-home-top-grid">
+          <section className="ref-home-card ref-home-summary">
+            <h2>Your Insurance Summary</h2>
+            <Link href={href("/customer/policies")} className="ref-home-summary-body" aria-label={`View all ${total} policies: ${active} active, ${due.length} expiring soon, ${expired.length} expired`}>
+              <div className="ref-home-ring">
+                <svg viewBox="0 0 120 120" aria-hidden="true">
+                  <circle cx="60" cy="60" r="49" stroke="#dbe6fc" strokeWidth="10" fill="none"/>
+                  {total>0?<g transform="rotate(-90 60 60)" fill="none" strokeWidth="10">
+                    <circle cx="60" cy="60" r="49" pathLength="100" stroke="#285bfa" strokeDasharray={`${activeArc} ${100-activeArc}`}/>
+                    <circle cx="60" cy="60" r="49" pathLength="100" stroke="#86a8ff" strokeDasharray={`${dueArc} ${100-dueArc}`} strokeDashoffset={-activeArc}/>
+                    <circle cx="60" cy="60" r="49" pathLength="100" stroke="#c1d3ff" strokeDasharray={`${100-activeArc-dueArc} ${activeArc+dueArc}`} strokeDashoffset={-(activeArc+dueArc)}/>
+                  </g>:null}
+                </svg><div><strong>{total}</strong><span>Policies</span></div>
+              </div>
+              <div className="ref-home-legend"><span><i className="active"/><b>{active}</b> Active</span><span><i className="due"/><b>{due.length}</b> Expiring Soon</span><span><i className="expired"/><b>{expired.length}</b> Expired</span></div><ArrowRight size={17}/>
+            </Link>
+          </section>
+          <section className={`ref-home-card ref-home-attention ${urgent||urgentVehicle?"has-action":""}`}>
+            <h2><BellRing size={24}/> Action Required</h2>
+            {urgent||urgentVehicle?<div className="ref-home-alert-row">
+              <HomeVehicleArt vehicleType={urgentVehicle?.vehicle_type} />
+              <div className="ref-home-alert-text"><strong>{urgentVehicle?.vehicle_no || urgent?.policy.vehicle_no || urgent?.policy.policy_no || "Unregistered vehicle"}</strong>
+                <p>{urgent ? urgent.days<0 ? `Policy expired ${-urgent.days} day${urgent.days===-1?"":"s"} ago` : urgent.days===0?"Policy expires today":`Policy expires in ${urgent.days} days` : "No active insurance cover"}</p>
+              </div>
+              <Link className="ref-home-renew" href={urgent?href("/customer/renewals"):href("/customer/insurance-quote")}>{urgent?"Renew Now":"Get a Quote"} <ArrowRight size={17}/></Link>
+            </div>:<p className="ref-home-clear"><CheckCircle2 size={22}/> No urgent insurance actions.</p>}
+            {urgent||urgentVehicle?<Link className="ref-home-alert-more" href={href("/customer/renewals")}>View renewals <ArrowRight size={13}/></Link>:null}
+            {uncoveredVehicles.length>0?<Link className="ref-home-alert-more" href={href("/customer/vehicles")}>View uninsured vehicles ({uncoveredVehicles.length})</Link>:null}
+          </section>
+        </div>
+        <div className="ref-home-bottom-grid">
+          <section className="ref-home-card ref-home-vehicles"><div className="ref-home-section-heading"><h2>My Vehicles ({vehicles.length})</h2><Link href={href("/customer/vehicles")}>View All <ArrowRight size={16}/></Link></div>
+            <HomeVehicleCarousel accountId={account.id} items={vehicles.map(v=>({id:v.id,number:v.vehicle_no||(v.chassis_no?`New-${v.chassis_no}`:"Unregistered"),model:v.model||v.make||"Vehicle",vehicleType:v.vehicle_type,insured:coveredIds.has(v.id)}))}/>
+          </section>
+          <section className="ref-home-card ref-home-claims"><div className="ref-home-section-heading"><h2><FileText size={24}/> My Claims</h2><Link href={{pathname:"/customer/claims",query:accountQuery}}>View All <ArrowRight size={16}/></Link></div>
+            <Link className="ref-home-claim-row" href={{pathname:"/customer/claims",query:{...accountQuery,filter:"completed"}}}><CheckCircle2 className="settled"/><span>Settled Claims</span><b>{completedClaims.length}</b></Link>
+            <Link className="ref-home-claim-row" href={{pathname:"/customer/claims",query:{...accountQuery,filter:"open"}}}><Clock className="pending"/><span>Open Claims</span><b>{openClaims.length}</b></Link>
+          </section>
+        </div>
+      </div>
+      <aside className="ref-home-aside">
+        <section className="ref-home-quick" aria-label="Quick actions"><h2><Zap size={24}/> Quick Actions</h2><nav aria-label="Customer quick actions">{actions.map(({label,path,Icon})=><Link key={path} href={href(path)}><Icon size={32}/><span>{label}</span></Link>)}</nav></section>
+        <section className="ref-home-support"><div><h2><Headset size={25}/> Need Help?</h2><p>Our support team is here for you.</p><Link href={href("/customer/support")}>Contact Support <ArrowRight size={16}/></Link></div><img src="/assets/customer-3d-icons/help_and_support.png" alt="" aria-hidden="true" loading="lazy"/></section>
+      </aside>
     </div>
-  );
+  </div>;
 }
