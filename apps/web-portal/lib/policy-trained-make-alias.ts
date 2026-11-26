@@ -8,7 +8,7 @@ export function verifiedPolicyManufacturerBrand(input:{
  if(input.checksPassed!==18)return null;
  const make=input.make.trim().replace(/\s+/g," ").toUpperCase();
  const model=input.model.trim().replace(/\s+/g," ").toUpperCase();
- if(input.warnings.length!==0)return null;
+ if(input.parserId!=="tata_aig_private_car_saod_n8n_native_pdf" && input.warnings.length!==0)return null;
  if((input.parserId==="united_india_gcv_native_pdf"
      ||input.parserId==="united_india_gcv_punjab_split_gst_native_pdf"
      ||input.parserId==="oriental_private_car_standalone_od_native_pdf")
