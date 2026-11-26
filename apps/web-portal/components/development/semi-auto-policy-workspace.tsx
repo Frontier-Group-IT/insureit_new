@@ -882,11 +882,11 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               && selected.ocr_status === "completed" ? (
               <div className="mt-3 rounded-lg border border-[#bcd9d0] bg-[#f5fbf8] p-3">
                 <p className="text-[10.5px] font-bold text-[#215b46]">Extracted policy · automated verification available</p>
-                <p className="mt-1 text-[10px] leading-4 text-[#47675b]">Continue directly from the saved Intake. For safety, the current PDF will be verified by n8n before opening the editable onboarding draft. Existing exceptions are not silently cleared.</p>
+                <p className="mt-1 text-[10px] leading-4 text-[#47675b]">Automated booking does not require this button. Use it only when you intentionally want to assign this Intake to yourself for manual review. The current PDF will be verified before the editable draft opens.</p>
                 <button type="button" onClick={() => { void beginDirectN8nHandoff(); }} disabled={isWaiting}
                   className="mt-2 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg bg-[#1c5e8c] px-3 text-[11px] font-bold text-white disabled:opacity-50">
                   {busy === "extracting" ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ArrowUpRight className="h-3.5 w-3.5"/>}
-                  Continue to Policy Onboarding
+                  Send for Manual Review
                 </button>
               </div>
             ) : null}
@@ -1408,19 +1408,19 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
             <div className="mb-3 flex items-center gap-2 text-[#174b83]">
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e8f2fb]"><ClipboardCheck className="h-4.5 w-4.5"/></span>
               <h3 id="n8n-handoff-dialog-title" className="text-[15px] font-bold text-[#193657]">
-                {handoffDialog.kind === "confirm" ? "Continue to Policy Onboarding?"
+                {handoffDialog.kind === "confirm" ? "Send for Manual Review?"
                   : handoffDialog.kind === "takeover" ? "Confirm reviewer takeover"
                     : "Existing onboarding draft"}
               </h3>
             </div>
             <p id="n8n-handoff-dialog-description" className="text-[12px] leading-5 text-[#52647b]">
               {handoffDialog.kind === "confirm"
-                ? "INSUREIT will recheck the current PDF and n8n extraction, then open the canonical editable Policy Onboarding draft. Review all mapped values and the original PDF before booking. No policy will be booked by this action."
+                ? "This explicit action assigns the Intake to your reviewer account and opens the canonical editable Policy Onboarding draft. It does not book a policy. Simply viewing, previewing, or reparsing never assigns a reviewer."
                 : handoffDialog.kind === "takeover"
                   ? `This Intake is assigned to ${handoffDialog.reviewerName || "another reviewer"}. Continuing will transfer the reviewer assignment to you. No policy will be booked.`
                   : fillEmptySavedFields
                     ? "The saved draft has been preserved. Only previously empty eligible fields were filled from the verified extraction or an approved customer master; existing manual values were not changed."
-                    : "The saved draft has been preserved without changes. Compare it with the latest n8n preview and the original PDF before booking."}
+                    : "You explicitly requested manual review. The saved draft has been preserved without changes. Compare it with the latest n8n preview and original PDF before booking."}
             </p>
             {handoffDialog.kind !== "existing" && n8nResult?.ok
               && n8nResult.preview.issuanceEvidence
@@ -1446,7 +1446,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
               <button type="button" onClick={() => { void confirmN8nHandoff(); }} disabled={isWaiting}
                 className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#174b83] px-4 text-[11px] font-bold text-white disabled:opacity-50">
                 {isWaiting ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : null}
-                {handoffDialog.kind === "confirm" ? "Continue to onboarding"
+                {handoffDialog.kind === "confirm" ? "Assign & open manual review"
                   : handoffDialog.kind === "takeover" ? "Take over & continue" : "Open saved draft"}
               </button>
             </div>
