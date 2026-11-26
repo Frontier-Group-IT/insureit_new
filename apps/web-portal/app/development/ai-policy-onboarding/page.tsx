@@ -132,6 +132,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   // claims separately from OCR queue state so an uncertain outcome cannot
   // be presented as automatically retryable.
   const attemptedIds=new Set<string>();
+  const bookingAttemptByIntake=new Map<string,{state:string;failure_code:string|null}>();
   let autoLedgerAvailable=!autoRequested;
   let autoClaimedCount=0,autoBookedCount=0,autoReviewCount=0,autoUncertainCount=0;
   if(autoRequested){
@@ -146,9 +147,12 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
       autoUncertainCount=aggregate[3].count??0;
       for(let offset=0;offset<workspaceRows.length;offset+=100){
         const result=await admin.from("policy_intake_ai_auto_booking_attempts")
-          .select("intake_id").in("intake_id",workspaceRows.slice(offset,offset+100).map(row=>row.id));
+          .select("intake_id,state,failure_code").in("intake_id",workspaceRows.slice(offset,offset+100).map(row=>row.id));
         if(result.error){autoLedgerAvailable=false;break;}
-        for(const item of result.data??[])attemptedIds.add(item.intake_id);
+        for(const item of result.data??[]){
+          attemptedIds.add(item.intake_id);
+          bookingAttemptByIntake.set(item.intake_id,{state:item.state,failure_code:item.failure_code});
+        }
       }
     }
   }
@@ -204,6 +208,8 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
       is_duplicate: policyIntakeBucket(row, duplicateIds.has(row.id)) === "duplicate",
       n8n_enabled: semiAutoN8nEnabledForIntake(row.id),
       ai_state: queue.get(row.id)?.state ?? null,
+      ai_booking_state:bookingAttemptByIntake.get(row.id)?.state??null,
+      ai_booking_failure_code:bookingAttemptByIntake.get(row.id)?.failure_code??null,
       // A duplicate is derived from its OCR policy number. The raw database
       // row has no is_duplicate property, so NEVER read row.is_duplicate here.
       ai_exceptions: policyIntakeBucket(row, duplicateIds.has(row.id)) === "duplicate"
