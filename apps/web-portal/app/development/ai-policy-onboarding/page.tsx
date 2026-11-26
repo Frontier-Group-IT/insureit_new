@@ -85,19 +85,25 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   const displayBucket=(row:CandidateIntake):Exclude<IntakeStatusBucket,"all">=>{
     const canonical=policyIntakeBucket(row,duplicateIds.has(row.id));
     const q=queue.get(row.id);
-    return autoRequested && canonical==="action_required"
-      && row.assigned_to_profile_id===null
-      && row.policy_type==="motor" && q?.state==="verified"
-      && q.exception_codes.length===0
-      ? "processing" : canonical;
+    if(!autoRequested || row.assigned_to_profile_id!==null || row.policy_type!=="motor")
+      return canonical;
+    // Unassigned records must not appear in the human In Review lane just
+    // because an automatic handoff set an internal workflow state.
+    if(q?.state==="verified" && q.exception_codes.length===0
+      && (canonical==="action_required"||canonical==="in_review"))
+      return "processing";
+    if(q?.state==="exception" && canonical==="in_review")
+      return "action_required";
+    return canonical;
   };
   const intakeCounts=policyIntakeStatusCounts(workspaceRows,duplicateIds);
   if(autoRequested){
     for(const row of workspaceRows){
-      if(policyIntakeBucket(row,duplicateIds.has(row.id))==="action_required"
-        &&displayBucket(row)==="processing"){
-        intakeCounts.action_required--;
-        intakeCounts.processing++;
+      const canonical=policyIntakeBucket(row,duplicateIds.has(row.id));
+      const displayed=displayBucket(row);
+      if(canonical!==displayed){
+        intakeCounts[canonical]--;
+        intakeCounts[displayed]++;
       }
     }
   }
