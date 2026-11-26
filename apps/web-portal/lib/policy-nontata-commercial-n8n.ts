@@ -99,8 +99,8 @@ function insurerForText(head: string): Insurer | null {
   // National GCV Package is different from the established National private
   // car liability-only product. Require BOTH independently read native-PDF
   // issuer and bilingual Goods Carrying Vehicle Package heading.
-  if (/National Insurance Co(?:mpany)?\\.?\\s*(?:Ltd\\.?|Limited)/i.test(normalized)
-      && /Policy Schedule-Motor\\s*-\\s*Goods Carrying Vehicle\\s*-\\s*Package/i.test(normalized))
+  if (/National Insurance Co(?:mpany)?\.?\s*(?:Ltd\.?|Limited)/i.test(normalized)
+      && /Policy Schedule-Motor\s*-\s*Goods Carrying Vehicle\s*-\s*Package/i.test(normalized))
     matches.push("national_gcv_package_native_pdf");
   if (/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(issuer) && /GCV PUBLIC CARRIER/i.test(product)){
     // Exact source-certified Punjab/BharatBenz four-component split tax.
