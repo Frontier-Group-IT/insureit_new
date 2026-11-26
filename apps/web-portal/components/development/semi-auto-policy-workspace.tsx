@@ -105,6 +105,18 @@ function canAttemptFailedSourceRecovery(row:SemiAutoIntakeRow):boolean {
     &&row.ai_state==="exception"&&row.ai_exceptions?.length===1
     &&row.ai_exceptions[0]==="extraction_failed";
 }
+/** Previously verified PDF has an immutable parser/fingerprint but an old
+ * bulk-conversion attempt left the queue in a generic hold. Do not offer
+ * Convert here: create the canonical editable onboarding draft first.
+ * The server re-reads the ORIGINAL current PDF and enforces all evidence.
+ */
+function canPrepareVerifiedOnboarding(row:SemiAutoIntakeRow):boolean {
+  return !row.is_duplicate&&row.policy_type==="motor"
+    &&row.status==="processing"&&row.ocr_status==="pending"
+    &&row.ai_source_verified===true&&row.ai_state==="exception"
+    &&row.ai_exceptions?.length===1
+    &&row.ai_exceptions[0]==="booking_review_required";
+}
 function visibleReviewCodes(row:SemiAutoIntakeRow):string[] {
   const codes=row.ai_exceptions??[];
   if(codes.length===1&&codes[0]==="booking_review_required"
@@ -791,6 +803,14 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                       <div className="flex shrink-0 items-center gap-0.5">
                         <button type="button" aria-label={"Inspect "+row.intake_number} title="Inspect" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4"/></button>
                         {((!row.is_duplicate&&row.ai_state==="verified"&&!row.ai_exceptions?.length&&row.ocr_status==="completed"&&["in_review","ready_for_review","needs_attention"].includes(row.status))||canRetryReviewHeldPolicy(row))?<button type="button" aria-label={"Convert "+row.intake_number} title="Convert" disabled={isWaiting} onClick={()=>setAutoConvertRow(row)} className="rounded-lg p-2 text-emerald-700 hover:bg-emerald-50 disabled:opacity-40"><ArrowRight className="h-4 w-4"/></button>:null}
+                        {canPrepareVerifiedOnboarding(row)?<button type="button"
+                          aria-label={"Prepare onboarding "+row.intake_number}
+                          title="Prepare verified PDF onboarding (no booking)"
+                          disabled={replaceReparseId!==null||isWaiting}
+                          onClick={()=>void reparseAndReplace(row)}
+                          className="rounded-lg bg-emerald-50 px-2 py-2 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40">
+                          {replaceReparseId===row.id?"Preparing...":"Prepare onboarding"}
+                        </button>:null}
                         {row.policy_type==="motor"&&!row.is_duplicate&&["processing","ready_for_review","in_review","needs_attention"].includes(row.status)?<button type="button" aria-label={"Reparse "+row.intake_number} title="Reparse and replace saved draft" disabled={replaceReparseId!==null||isWaiting} onClick={()=>void reparseAndReplace(row)} className="rounded-lg p-2 text-blue-700 hover:bg-blue-50 disabled:opacity-40">{replaceReparseId===row.id?<Loader2 className="h-4 w-4 animate-spin"/>:<RotateCcw className="h-4 w-4"/>}</button>:null}
                       </div>
                     </div>
@@ -1187,6 +1207,16 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                  </button>
                </div>
              ) : null}
+             {primaryN8n && canPrepareVerifiedOnboarding(exceptionRow) ? (
+               <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                 <span className="text-[11px] text-emerald-900">18/18 source checks were verified previously. Re-read the current PDF and prepare an editable draft; no policy will be registered.</span>
+                 <button type="button" disabled={isWaiting||replaceReparseId!==null}
+                   onClick={()=>void reparseAndReplace(exceptionRow)}
+                   className="rounded-lg bg-emerald-700 px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-50">
+                   Prepare onboarding
+                 </button>
+               </div>
+             ):null}
              {primaryN8n && canRetryReviewHeldPolicy(exceptionRow) ? (
                <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
                  <span className="text-[11px] text-emerald-900">Rechecks the live PDF and mandatory vehicle fields before any booking; missing or unmatched make/fuel will stop conversion.</span>
