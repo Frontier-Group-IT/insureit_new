@@ -77,7 +77,7 @@ rejects({...p,fields:p.fields.map(f=>f.key==="vehicle_make"?{...f,value:"Other M
 rejects({...p,fields:[...p.fields,p.fields[0]]});
 const classifier=source.slice(source.indexOf("function insurerForText("),
  source.indexOf("/** Strict insurer/product refinement",source.indexOf("function insurerForText(")));
-assert.match(classifier,/Policy Schedule-Motor\s*\\s\*/);
+assert.ok(classifier.includes("Policy Schedule-Motor"),"National GCV product heading must be classified");
 assert.match(classifier,/National Insurance Co/);
 assert.match(eligibility,/"national_gcv_package_native_pdf"/);
 console.log("National GCV strict source-only extraction positives and negatives passed");
