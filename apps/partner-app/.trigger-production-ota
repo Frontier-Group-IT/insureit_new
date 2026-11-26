@@ -1,12 +1,12 @@
 Partner production OTA trigger
-release=partner-verified-intake-sectioned-ui
+release=partner-save-active-policy-popup-redesign
 source=verified-merged-main
-source_pr=5292
-source_merge=de5af5d15073c296718325421d086570dcc54ef2
-reason=publish-approved-verified-intake-sectioned-details-UI
+source_pr=5307
+source_merge=739ad8f814992dc8548b1e09e3c8d6363ecad981
+reason=publish-approved-motor-policy-copy-confirmation-ui
 channel=production
 runtime=0.2.0
-requested=2026-11-25
+requested=2026-11-26
 backend_changes=false
 no_native_build=true
 no_apk=true
