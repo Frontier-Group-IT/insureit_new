@@ -43,6 +43,8 @@ jobs:
         run: node --experimental-strip-types scripts/go-digit-new-jcb-cpa-regression.mjs
       - name: Final four source-certified manufacturer mapping regression
         run: node --experimental-strip-types scripts/final-four-manufacturer-alias-regression.mjs
+      - name: Liberty insured identity source and auto-booking conflict regression
+        run: node --experimental-strip-types scripts/liberty-insured-auto-book-regression.mjs
       - name: Liberty TP and owner-driver CPA product-layout regression
         run: node --experimental-strip-types scripts/liberty-two-wheeler-tp-regression.mjs
       - name: RTO city and state independently optional across policy onboarding

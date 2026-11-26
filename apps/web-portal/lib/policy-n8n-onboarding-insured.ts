@@ -51,6 +51,10 @@ export function selectVerifiedN8nInsuredDraftIdentity(
     zurich_kotak_private_car_tp_native_pdf: "Native PDF: INSURED DETAILS Name",
     hdfc_ergo_two_wheeler_tp_native_pdf: "Native PDF: Policy Schedule Insured Name",
     sbi_general_private_car_package_native_pdf: "Native PDF: Premium Receipt Policy Holder Name",
+    // The source-verified Liberty 18-check parser emits page:null and this
+    // exact insurer label. Without it, the handoff treats the insured as
+    // unverified and can retain a conflicting lead/master name.
+    liberty_two_wheeler_tp_native_pdf: "Liberty Insured row",
   };
   // Held insurers only become eligible after their current-PDF source and
   // product-specific 18-check contract has been independently verified.

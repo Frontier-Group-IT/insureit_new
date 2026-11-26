@@ -25,6 +25,9 @@ export type SemiAutoIntakeRow = {
   is_duplicate?: boolean;
   intake_bucket?: Exclude<IntakeStatusBucket, "all">;
   ai_state?: "pending" | "processing" | "exception" | "verified" | "unsupported" | "failed" | null;
+  /** Immutable auto-booking ledger is separate from extraction success. */
+  ai_booking_state?:string|null;
+  ai_booking_failure_code?:string|null;
   ai_exceptions?: string[];
   ai_processed_at?: string | null;
   ai_diagnostic_code?: string | null;
@@ -132,6 +135,17 @@ const aiStateLabel: Record<string,string> = {
   verified:"Extracted · booking preflight pending",unsupported:"Not trained",
   failed:"Retry scheduled",duplicate:"Duplicate · skipped",
 };
+
+function bookingLedgerLabel(row:SemiAutoIntakeRow):string|null{
+  if(row.ai_booking_state==="review_required")
+    return row.ai_booking_failure_code==="insured_name_mismatch"
+      ?"Booking review · insured name mismatch"
+      :"Booking review · "+(row.ai_booking_failure_code??"canonical checks");
+  if(row.ai_booking_state==="uncertain")return "Booking outcome uncertain · do not retry";
+  if(row.ai_booking_state==="claimed")return "Booking claimed · checking";
+  if(row.ai_booking_state==="booked")return "Auto booked";
+  return null;
+}
 
 function parserDiagnostic(code:string|null|undefined): {title:string;detail:string;checks:string[]} | null {
   if(!code)return null;
@@ -816,8 +830,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                       <button type="button" title="Open exception" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}} className="flex min-w-0 items-center gap-2 text-left">
                         <span className={"h-2 w-2 shrink-0 rounded-full "+(row.is_duplicate?"bg-slate-400":row.ai_state==="verified"?"bg-emerald-500":row.ai_state==="processing"?"bg-sky-500":"bg-amber-500")}/>
                         <span className="sr-only">Parser not trained · Reprocess</span>
-                        <span className="max-w-[200px] truncate font-medium text-slate-700" title={row.ai_diagnostic_code ? parserDiagnostic(row.ai_diagnostic_code)?.detail : visibleReviewCodes(row).map(code=>aiIssueTitles[code]??code).join(", ")}>
-                          {row.is_duplicate?"Duplicate":row.ai_diagnostic_code?(parserDiagnostic(row.ai_diagnostic_code)?.title??"Parser error"):visibleReviewCodes(row).length?(aiIssueTitles[visibleReviewCodes(row)[0]]??"Needs review"):aiStateLabel[row.ai_state??""]??"Queued"}
+                        <span className="max-w-[200px] truncate font-medium text-slate-700" title={bookingLedgerLabel(row)??(row.ai_diagnostic_code ? parserDiagnostic(row.ai_diagnostic_code)?.detail : visibleReviewCodes(row).map(code=>aiIssueTitles[code]??code).join(", "))}>
+                          {row.is_duplicate?"Duplicate":bookingLedgerLabel(row)??(row.ai_diagnostic_code?(parserDiagnostic(row.ai_diagnostic_code)?.title??"Parser error"):visibleReviewCodes(row).length?(aiIssueTitles[visibleReviewCodes(row)[0]]??"Needs review"):aiStateLabel[row.ai_state??""]??"Queued")}
                         </span>
                         {(row.ai_exceptions?.length??0)>1?<span className="rounded-md bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-800">+{(row.ai_exceptions?.length??0)-1}</span>:null}
                       </button>
