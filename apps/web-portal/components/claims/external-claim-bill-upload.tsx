@@ -8,6 +8,7 @@ import { prepareClaimDocumentUpload, finalizeClaimDocumentUpload, cancelClaimDoc
 import { createSupabaseBrowserClient } from "@/lib/auth";
 import { VerifyDocumentButton } from "@/components/spot-survey/verify-buttons";
 import { RequestCustomerDocumentReuploadButton } from "@/components/spot-survey/request-customer-document-reupload-button";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { CustomerSpotAttachmentDelete } from "@/components/customer-portal/customer-spot-attachment-delete";
 
 export type WorkshopBillDocument = { id: string; file_name?: string | null; verification_status?: string | null };
@@ -46,7 +47,7 @@ export function ExternalClaimBillUpload({ mode, claimId, accountId, documents, r
           if (reuploadRequestId) form.set("reupload_request", reuploadRequestId);
           form.set("file", file);
           const result = await uploadCustomerClaimDocument({ error: null }, form);
-          if (result.error) throw new Error(result.error);
+          if (result.error || !result.uploaded) throw new Error(result.error || "Upload was not confirmed.");
           if (result.uploaded) setRecent(previous => [result.uploaded!, ...previous]);
         } else {
           const prepared = await prepareClaimDocumentUpload(claimId, documentType, { name: file.name, size: file.size, type: file.type });
@@ -86,7 +87,7 @@ export function ExternalClaimBillUpload({ mode, claimId, accountId, documents, r
         <button type="button" disabled={pending} onClick={() => input.current?.click()} className={compactBilling ? "flex h-[26px] shrink-0 items-center gap-1 whitespace-nowrap rounded bg-[#164A9F] px-2 text-[10px] font-semibold text-white disabled:opacity-50" : "flex shrink-0 items-center gap-1 rounded-xl bg-[#164A9F] px-4 py-3 text-[12px] font-semibold text-white disabled:opacity-50"}><UploadCloud className="h-3.5 w-3.5"/>{pending ? "Uploading…" : "Choose File"}</button>
       </> : null}
     </div>
-    {message ? <p role="status" className="mt-1 text-[11px] text-[#315B9A]">{message}</p> : null}
+    {mode === "customer" ? <ClaimStageErrorDialog success={message === "Final workshop bill uploaded successfully."} title={message === "Final workshop bill uploaded successfully." ? "Success" : "Check details"} message={message} onClose={() => setMessage("")}/> : message ? <p role="status" className="mt-1 text-[11px] text-[#315B9A]">{message}</p> : null}
     {files.length ? <div className="mt-1 space-y-1">{files.map(file=><div key={file.id} className="flex min-w-0 items-center justify-between gap-2"><a href={openFile(file.id)} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-1 items-center gap-1 text-[11px] text-[#155EEF] underline"><FileText className="h-3.5 w-3.5 shrink-0"/><span className="truncate">{file.file_name || "Final workshop bill"}</span></a>{mode === "customer" && !readonly && accountId && file.verification_status === "pending" ? <CustomerSpotAttachmentDelete accountId={accountId} claimId={claimId} documentId={file.id} fileName={file.file_name || "Final workshop bill"} stage="billing" onDeleted={id=>setDeletedIds(previous=>[...previous,id])} /> : null}{mode === "operations" && !readonly ? <RequestCustomerDocumentReuploadButton claimId={claimId} documentId={file.id} fileName={file.file_name || "Final workshop bill"} /> : null}{mode === "operations" && file.verification_status !== "verified" ? <div className="w-16 shrink-0"><VerifyDocumentButton claimId={claimId} documentId={file.id} /></div> : null}{file.verification_status === "verified" ? <span className="text-[10px] font-semibold text-emerald-700">Verified</span> : null}</div>)}</div> : null}
   </div>;
 }

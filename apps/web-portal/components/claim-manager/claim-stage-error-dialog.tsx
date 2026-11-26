@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 /** Shared claim-stage error dialog: no inline validation banners. */
 export function ClaimStageErrorDialog({
@@ -10,11 +10,13 @@ export function ClaimStageErrorDialog({
   onClose,
   title = "Check details",
   fields,
+  success = false,
 }: {
   message: string | null | undefined;
   onClose: () => void;
   title?: string;
   fields?: string[];
+  success?: boolean;
 }) {
   const titleId = useId();
   const messageId = useId();
@@ -49,11 +51,11 @@ export function ClaimStageErrorDialog({
 
   return createPortal(
     <div className="fixed inset-0 z-[10000] grid place-items-center bg-[#07152F]/60 px-4 py-6" role="presentation">
-      <div role="alertdialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={messageId}
+      <div role={success ? "dialog" : "alertdialog"} aria-modal="true" aria-labelledby={titleId} aria-describedby={messageId}
         className="w-full max-w-[490px] overflow-hidden rounded-[20px] border border-[#DFE6F0] bg-white shadow-[0_20px_70px_rgba(7,21,47,.24)]">
         <div className="flex flex-col items-center px-6 pb-6 pt-7 text-center">
-          <span className="grid h-14 w-14 place-items-center rounded-full bg-[#FFF1E9] text-[#D9732C]" aria-hidden="true">
-            <AlertCircle className="h-7 w-7" />
+          <span className={`grid h-14 w-14 place-items-center rounded-full ${success ? "bg-[#E8F8ED] text-[#159653]" : "bg-[#FFF1E9] text-[#D9732C]"}`} aria-hidden="true">
+            {success ? <CheckCircle2 className="h-7 w-7" /> : <AlertCircle className="h-7 w-7" />}
           </span>
           <h2 id={titleId} className="mt-4 text-[18px] font-semibold text-[#17365D]">{title}</h2>
           {fields?.length ? <ul className="mt-4 w-full max-h-48 overflow-y-auto space-y-1 rounded-lg bg-slate-50 p-3 text-left text-[13px] font-medium text-slate-700">{fields.map(field => <li key={field} className="flex items-center gap-2"><AlertCircle aria-hidden="true" className="h-4 w-4 shrink-0 text-orange-600" />{field}</li>)}</ul> : null}

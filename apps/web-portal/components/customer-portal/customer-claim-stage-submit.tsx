@@ -12,12 +12,23 @@ export function CustomerClaimStageSubmit({ formId, variant = "intimation" }: { f
   const [saving, setSaving] = useState<"draft" | "details" | null>(null);
   const [errorPopup, setErrorPopup] = useState("");
 
+  const [confirmation, setConfirmation] = useState<{message:string; destination:string} | null>(null);
+  const [invalidFields, setInvalidFields] = useState<string[]>([]);
+
   async function submit(mode: "draft" | "details") {
     const form = document.getElementById(formId);
     if (!(form instanceof HTMLFormElement) || saving) return;
     setErrorPopup("");
     // Drafts deliberately allow empty required fields; final saves do not.
-    if (mode === "details" && !form.reportValidity()) return;
+    setInvalidFields([]);
+    if (mode === "details" && !form.checkValidity()) {
+      setInvalidFields(Array.from(form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>("input:invalid, select:invalid, textarea:invalid")).map(control => {
+        const label = control.closest("label")?.querySelector("span")?.textContent || control.getAttribute("aria-label") || control.name.replace(/_/g, " ");
+        return `${label.trim().replace(/\s*\*$/, "")}: ${control.validationMessage}`;
+      }));
+      setErrorPopup("Please complete or correct the highlighted required details before saving.");
+      return;
+    }
     const data = new FormData(form);
     const key = customerClaimStageDraftKey(String(data.get("account") || ""), String(data.get("claim") || ""), String(data.get("stage") || ""));
     saveCustomerClaimDraft(form, key);
@@ -35,13 +46,11 @@ export function CustomerClaimStageSubmit({ formId, variant = "intimation" }: { f
       }
       clearCustomerClaimDraft(key);
       // Keep the button in its Saving state until the next page mounts.
-      navigating = mode === "details";
-      router.push(result.destination);
+      navigating = true;
+      setConfirmation({message: mode === "draft" ? "Claim draft saved successfully." : "Claim stage details saved successfully.", destination: result.destination});
     } catch (error) {
       navigating = false;
-      setErrorPopup(error instanceof Error && error.message && !error.message.includes("NEXT_REDIRECT")
-        ? error.message
-        : "The save could not be completed. Your entries remain on this page. Please try again.");
+      setErrorPopup("The save could not be confirmed. Your entries remain on this page. Check the saved claim before retrying.");
     } finally {
       if (!navigating) setSaving(null);
     }
@@ -59,7 +68,8 @@ export function CustomerClaimStageSubmit({ formId, variant = "intimation" }: { f
         {saving === "details" ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
         {saving === "details" ? "Saving..." : variant === "continue" ? "Save & Continue" : "Save Details"}
       </button>
-      <ClaimStageErrorDialog message={errorPopup} onClose={() => setErrorPopup("")} />
+      <ClaimStageErrorDialog message={errorPopup} fields={invalidFields} onClose={() => setErrorPopup("")} />
+      <ClaimStageErrorDialog success title="Saved successfully" message={confirmation?.message} onClose={() => { if (!confirmation) return; const destination = confirmation.destination; setConfirmation(null); setSaving(null); router.push(destination); }} />
     </div>
   );
 }

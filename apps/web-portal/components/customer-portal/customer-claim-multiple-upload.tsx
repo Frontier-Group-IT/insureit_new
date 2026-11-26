@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CustomerErrorDialog } from "./customer-error-dialog";
+import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { Files, Upload, ChevronDown, ChevronUp, FileText, ExternalLink, Loader2 } from "lucide-react";
 import type { CustomerClaimFile } from "./customer-claim-compact-document";
 import { CustomerSpotAttachmentDelete } from "./customer-spot-attachment-delete";
@@ -20,6 +20,7 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
   const [uploading,setUploading]=useState(false);
   const [progress,setProgress]=useState({done:0,total:0});
   const [errorNotice,setErrorNotice]=useState<string|null>(null);
+  const [successNotice,setSuccessNotice]=useState<string|null>(null);
   const [expanded,setExpanded]=useState(false);
   const [deletedIds,setDeletedIds]=useState<string[]>([]);
   const [recentUploads,setRecentUploads]=useState<CustomerClaimFile[]>([]);
@@ -85,6 +86,7 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
         setExpanded(false);
         router.refresh();
       }
+      if(complete && !failures.length) setSuccessNotice(`${complete} document(s) uploaded successfully.`);
       if(failures.length) setErrorNotice(failures.length+" file"+(failures.length===1?"":"s")+" failed: "+failures.join(", ")+". Select the failed files again using the upload icon.");
     } finally {
       running.current=false;
@@ -92,7 +94,8 @@ export function CustomerClaimMultipleUpload({claimId,accountId,stage,documents,a
     }
   }
   return <div className="rounded-xl border-2 border-dashed border-[#C5D8ED] bg-[#F8FAFE] p-3">
-    <CustomerErrorDialog title="Document upload failed" message={errorNotice} onClose={()=>setErrorNotice(null)}/>
+    <ClaimStageErrorDialog title="Document upload failed" message={errorNotice} onClose={()=>setErrorNotice(null)}/>
+    <ClaimStageErrorDialog success title="Success" message={successNotice} onClose={()=>setSuccessNotice(null)}/>
 
     <input ref={picker} type="file" name="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.mp4,.mov,.webm,.m4a,.ogg" className="sr-only" aria-label="Select multiple claim documents" disabled={!allowUpload || uploading} onChange={event=>{const files=Array.from(event.currentTarget.files||[]);event.currentTarget.value="";void uploadFiles(files);}}/>
     <div className="flex min-w-0 items-center gap-2">

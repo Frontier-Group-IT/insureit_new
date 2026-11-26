@@ -80,7 +80,7 @@ export function CustomerClaimStageDraftForm({
     const button = document.querySelector<HTMLButtonElement>(`[data-claim-stage-save="${id}"]`);
     button?.click();
   }
-  return <form ref={formRef} id={id} className={className} onInput={event => saveCustomerClaimDraft(event.currentTarget, key)} onChange={event => saveCustomerClaimDraft(event.currentTarget, key)} onSubmit={submit}>
+  return <form noValidate ref={formRef} id={id} className={className} onInput={event => saveCustomerClaimDraft(event.currentTarget, key)} onChange={event => saveCustomerClaimDraft(event.currentTarget, key)} onSubmit={submit}>
     {children}
   </form>;
 }
