@@ -1494,37 +1494,77 @@ export default function NativePolicyOnboarding(){
     </Modal>
     <Modal transparent visible={motorCopyDialogOpen} animationType="fade"
       onRequestClose={()=>{if(!booking&&!uploadingMotorCopy)setMotorCopyDialogOpen(false);}}>
-      <View style={styles.scrim}><View style={styles.sheet}>
-        <View style={styles.sheetTitle}>
-          <Text style={styles.sectionTitle}>{bookedMotorPolicyId?'Complete Policy Copy Upload':'Save Active Policy'}</Text>
-          <Pressable accessibilityLabel="Close policy copy confirmation" disabled={booking||uploadingMotorCopy}
-            onPress={()=>setMotorCopyDialogOpen(false)}><Ionicons name="close" size={21} color="#4C5970"/></Pressable>
+      <View style={styles.scrim}>
+        <View style={styles.motorCopyDialog}>
+          <View style={styles.motorCopyHeader}>
+            <View style={styles.motorCopyHeaderIcon}><Ionicons name="document-text-outline" size={24} color="#2457BF"/></View>
+            <View style={styles.motorCopyHeaderCopy}>
+              <Text style={styles.motorCopyTitle}>{bookedMotorPolicyId?'Complete Policy Copy Upload':'Save Active Policy'}</Text>
+              <Text style={styles.motorCopySubtitle}>{bookedMotorPolicyId?'Finish uploading the issued document':'Attach the issued policy copy'}</Text>
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close policy copy confirmation" hitSlop={8}
+              disabled={booking||uploadingMotorCopy} style={styles.motorCopyClose}
+              onPress={()=>setMotorCopyDialogOpen(false)}><Ionicons name="close" size={22} color="#51617C"/></Pressable>
+          </View>
+          <View style={styles.motorCopyContent}>
+            {bookedMotorPolicyId?<View style={styles.motorCopyInfo}>
+              <Ionicons name="information-circle-outline" size={18} color="#8A5E1F"/>
+              <Text style={styles.motorCopyInfoText}>Policy already booked. Retry the copy upload only; no new policy will be created.</Text>
+            </View>:!isNew?<View style={styles.motorCopyInfo}>
+              <Ionicons name="checkmark-circle-outline" size={19} color="#168552"/>
+              <Text style={styles.motorCopyInfoText}>The current Policy Intake copy will be reused for this active policy.</Text>
+            </View>:null}
+            {isNew?<View style={styles.motorCopyAttachment}>
+              {motorCopy?<View style={styles.motorCopySelected}>
+                <View style={styles.motorCopyFileIcon}><Ionicons name="document-text-outline" size={25} color="#2457BF"/></View>
+                <View style={styles.motorCopyFileInfo}>
+                  <Text style={styles.motorCopyFileName} numberOfLines={2}>{motorCopy.name}</Text>
+                  <Text style={styles.motorCopyFileMeta}>{motorCopy.mimeType==='application/pdf'?'PDF document':'Image document'} · {(motorCopy.size/(1024*1024)).toFixed(2)} MB</Text>
+                </View>
+                <Ionicons name="checkmark-circle" size={23} color="#16A065" accessibilityLabel="Policy copy selected"/>
+              </View>:<Pressable style={styles.motorCopyDropzone} accessibilityRole="button" accessibilityLabel="Browse for issued policy copy"
+                disabled={booking||uploadingMotorCopy} onPress={()=>void pickMotorCopy()}>
+                <View style={styles.motorCopyUploadIcon}><Ionicons name="cloud-upload-outline" size={29} color="#2457BF"/></View>
+                <Text style={styles.motorCopyUploadTitle}>Upload Policy Copy</Text>
+                <Text style={styles.motorCopyUploadHint}>Choose your issued policy document</Text>
+                <View style={styles.motorCopyBrowse}><Text style={styles.motorCopyBrowseText}>Browse File</Text></View>
+                <Text style={styles.motorCopyRequirements}>PDF, JPG, PNG or WebP · Maximum 15 MB</Text>
+              </Pressable>}
+              {motorCopy?<View style={styles.motorCopyFileActions}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Change policy copy" disabled={booking||uploadingMotorCopy}
+                  style={styles.motorCopyFileAction} onPress={()=>void pickMotorCopy()}>
+                  <Ionicons name="refresh-outline" size={16} color="#2457BF"/><Text style={styles.motorCopyFileActionText}>Change file</Text>
+                </Pressable>
+                <Pressable accessibilityRole="button" accessibilityLabel="Remove selected policy copy" disabled={booking||uploadingMotorCopy}
+                  style={styles.motorCopyFileAction} onPress={()=>setMotorCopy(null)}>
+                  <Ionicons name="trash-outline" size={16} color="#AD4949"/><Text style={[styles.motorCopyFileActionText,{color:'#AD4949'}]}>Remove</Text>
+                </Pressable>
+              </View>:null}
+            </View>:<View style={styles.motorCopyExisting}>
+              <Ionicons name="document-attach-outline" size={22} color="#2A64B8"/>
+              <View style={{flex:1}}>
+                <Text style={styles.motorCopyFileName}>Current Policy Intake copy</Text>
+                <Text style={styles.motorCopyFileMeta}>Existing document will be reused</Text>
+              </View>
+              <Ionicons name="checkmark-circle" size={22} color="#16A065"/>
+            </View>}
+            {isNew?<View style={styles.motorCopyRequired}>
+              <Ionicons name={motorCopy?'checkmark-circle-outline':'shield-checkmark-outline'} size={17} color={motorCopy?'#168552':'#526984'}/>
+              <Text style={styles.motorCopyRequiredText}>{motorCopy?'Policy copy ready to upload':'Policy copy required before saving'}</Text>
+            </View>:null}
+          </View>
+          <View style={styles.motorCopyFooter}>
+            <Pressable accessibilityRole="button" disabled={booking||uploadingMotorCopy}
+              onPress={()=>setMotorCopyDialogOpen(false)} style={styles.motorCopyCancel}><Text style={styles.motorCopyCancelText}>Cancel</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={bookedMotorPolicyId?'Retry policy copy upload':'Confirm Create Active Policy'}
+              disabled={booking||saving||uploadingMotorCopy||(isNew&&!motorCopy)}
+              onPress={()=>void continueMotorConfirmation()} style={[styles.motorCopySave,(booking||saving||uploadingMotorCopy||(isNew&&!motorCopy))&&styles.motorCopySaveDisabled]}>
+              {(booking||uploadingMotorCopy)?<ActivityIndicator size="small" color="#FFFFFF"/>:<Ionicons name="checkmark-circle-outline" size={17} color="#FFFFFF"/>}
+              <Text style={styles.motorCopySaveText} numberOfLines={1}>{bookedMotorPolicyId?'Retry Upload':'Save Active Policy'}</Text>
+            </Pressable>
+          </View>
         </View>
-        <Text style={styles.notice}>{bookedMotorPolicyId
-          ?'This policy is already booked. Retry its copy upload only; do not create another policy.'
-          :isNew?'Attach the issued policy copy before creating the active policy.'
-          :'The current Policy Intake copy will be reused for this active policy.'}</Text>
-        {isNew?<Pressable accessibilityRole="button" accessibilityLabel="Choose policy copy"
-          disabled={booking||uploadingMotorCopy} onPress={()=>void pickMotorCopy()} style={styles.choice}>
-          <Ionicons name="document-attach-outline" size={17} color="#17365D"/>
-          <Text style={[styles.choiceText,{flex:1}]} numberOfLines={2}>{motorCopy?.name||'Upload Policy Copy · Browse'}</Text>
-        </Pressable>:<View style={styles.choice}>
-          <Ionicons name="checkmark-circle-outline" size={18} color="#168552"/>
-          <Text style={styles.choiceText}>Use current Policy Intake copy</Text>
-        </View>}
-        {isNew?<Text style={styles.notice}>PDF, JPG, PNG or WebP · Maximum 15 MB</Text>:null}
-        {bookedMotorPolicyId?<Text style={styles.notice}>Policy already booked · upload only</Text>:null}
-        <View style={styles.modalFooter}>
-          <Pressable accessibilityRole="button" disabled={booking||uploadingMotorCopy}
-            onPress={()=>setMotorCopyDialogOpen(false)} style={styles.secondary}><Text style={styles.secondaryText}>Cancel</Text></Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel={bookedMotorPolicyId?'Retry policy copy upload':'Confirm Create Active Policy'}
-            disabled={booking||saving||uploadingMotorCopy||(isNew&&!motorCopy)}
-            onPress={()=>void continueMotorConfirmation()} style={[styles.primary,styles.bookButton,(booking||saving||uploadingMotorCopy||(isNew&&!motorCopy))&&styles.disabled]}>
-            {(booking||uploadingMotorCopy)?<ActivityIndicator size="small" color="#FFFFFF"/>:null}
-            <Text style={styles.primaryText}>{bookedMotorPolicyId?'Retry Upload':'Save Active Policy'}</Text>
-          </Pressable>
-        </View>
-      </View></View>
+      </View>
     </Modal>
     <Modal transparent visible={dateApprovalOpen} animationType="fade" onRequestClose={()=>setDateApprovalOpen(false)}>
       <View style={styles.scrim}><View style={styles.sheet}>
@@ -1724,6 +1764,41 @@ const styles=StyleSheet.create({
   primary:{flex:1,backgroundColor:'#243F9E',borderRadius:10,paddingHorizontal:7,paddingVertical:12,minHeight:45,flexDirection:'row',gap:5,justifyContent:'center',alignItems:'center'},buttonPressed:{opacity:0.92,transform:[{scale:0.985}]},primaryText:{fontSize:11,fontWeight:'800',color:'white'},disabled:{opacity:.48},
   bookButton:{marginBottom:11,flexDirection:'row',justifyContent:'center',gap:8},
   bookingNotice:{flexDirection:'row',gap:9,padding:12,backgroundColor:'#FFF7E9',borderRadius:10,marginBottom:14},bookingText:{flex:1,fontSize:10,lineHeight:16,color:'#75531C'},
+  motorCopyDialog:{alignSelf:'center',width:'92%',maxWidth:430,maxHeight:'82%',borderRadius:22,overflow:'hidden',backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#E1E8F4',elevation:12},
+  motorCopyHeader:{paddingHorizontal:17,paddingVertical:16,flexDirection:'row',alignItems:'center',gap:11,borderBottomWidth:1,borderBottomColor:'#E5EAF4'},
+  motorCopyHeaderIcon:{width:43,height:43,borderRadius:13,backgroundColor:'#E7EFFF',alignItems:'center',justifyContent:'center'},
+  motorCopyHeaderCopy:{flex:1,minWidth:0,gap:3},
+  motorCopyTitle:{fontSize:16.5,fontWeight:'800',color:'#10254A'},
+  motorCopySubtitle:{fontSize:11,color:'#697C98',fontWeight:'500'},
+  motorCopyClose:{width:35,height:40,alignItems:'center',justifyContent:'center'},
+  motorCopyContent:{padding:16,gap:13},
+  motorCopyInfo:{flexDirection:'row',alignItems:'flex-start',gap:8,padding:11,borderRadius:11,backgroundColor:'#FFF7E8'},
+  motorCopyInfoText:{flex:1,color:'#805B2F',fontSize:11,lineHeight:16},
+  motorCopyAttachment:{borderRadius:15,borderWidth:1,borderColor:'#D8E4F5',overflow:'hidden'},
+  motorCopyDropzone:{paddingHorizontal:12,paddingVertical:19,alignItems:'center',justifyContent:'center',gap:7,borderStyle:'dashed',borderWidth:1.5,borderColor:'#B1C7EA',borderRadius:14},
+  motorCopyUploadIcon:{width:54,height:54,borderRadius:27,backgroundColor:'#ECF3FF',alignItems:'center',justifyContent:'center'},
+  motorCopyUploadTitle:{fontSize:15,fontWeight:'800',color:'#10254A'},
+  motorCopyUploadHint:{fontSize:11,color:'#70829B',textAlign:'center'},
+  motorCopyBrowse:{borderRadius:18,backgroundColor:'#E7EFFF',paddingHorizontal:17,paddingVertical:9,marginTop:3},
+  motorCopyBrowseText:{fontSize:11,fontWeight:'800',color:'#2457BF'},
+  motorCopyRequirements:{fontSize:10,color:'#70829B',textAlign:'center',marginTop:2},
+  motorCopySelected:{padding:12,flexDirection:'row',gap:10,alignItems:'center'},
+  motorCopyFileIcon:{width:42,height:43,borderRadius:10,backgroundColor:'#EAF1FF',alignItems:'center',justifyContent:'center'},
+  motorCopyFileInfo:{flex:1,minWidth:0,gap:5},
+  motorCopyFileName:{fontSize:12,fontWeight:'800',color:'#1A3358'},
+  motorCopyFileMeta:{fontSize:10.5,color:'#6B7D96'},
+  motorCopyFileActions:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',padding:11,borderTopWidth:1,borderTopColor:'#E7EDF6'},
+  motorCopyFileAction:{flexDirection:'row',alignItems:'center',gap:6,minHeight:34,paddingHorizontal:8},
+  motorCopyFileActionText:{fontSize:11,color:'#2457BF',fontWeight:'700'},
+  motorCopyExisting:{padding:14,borderRadius:13,backgroundColor:'#F3F7FF',flexDirection:'row',alignItems:'center',gap:11,borderWidth:1,borderColor:'#DDE6F6'},
+  motorCopyRequired:{flexDirection:'row',alignItems:'center',gap:7},
+  motorCopyRequiredText:{fontSize:10.5,color:'#667B98',fontWeight:'600'},
+  motorCopyFooter:{flexDirection:'row',alignItems:'center',gap:9,paddingHorizontal:16,paddingTop:12,paddingBottom:16,borderTopWidth:1,borderTopColor:'#E6ECF5'},
+  motorCopyCancel:{flex:1,minWidth:0,minHeight:46,borderRadius:11,borderWidth:1,borderColor:'#C7D5EA',backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center'},
+  motorCopyCancelText:{color:'#25476F',fontSize:12,fontWeight:'800'},
+  motorCopySave:{flex:1.35,minWidth:0,minHeight:46,borderRadius:11,backgroundColor:'#1C439F',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,paddingHorizontal:8},
+  motorCopySaveDisabled:{backgroundColor:'#92A1CD'},
+  motorCopySaveText:{color:'#FFFFFF',fontSize:11.5,fontWeight:'800'},
   scrim:{flex:1,justifyContent:'center',backgroundColor:'rgba(5,18,40,.5)'},sheet:{backgroundColor:'white',borderTopLeftRadius:20,borderTopRightRadius:20,padding:17,maxHeight:'70%'},
   sheetTitle:{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start',gap:12,padding:14,backgroundColor:'#F4F7FB',borderBottomWidth:1,borderColor:'#E2E9F2'},choiceScroll:{maxHeight:420},productPickerScrim:{alignItems:'center',justifyContent:'center',paddingHorizontal:18},productPickerSheet:{width:'100%',maxWidth:430,borderRadius:12,maxHeight:'76%',padding:0,overflow:'hidden'},
   choice:{minHeight:44,justifyContent:'space-between',alignItems:'center',flexDirection:'row',paddingHorizontal:12,borderTopWidth:1,borderColor:'#EEF1F7'},
