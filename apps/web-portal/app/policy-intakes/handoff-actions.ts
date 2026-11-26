@@ -127,6 +127,9 @@ export async function prepareVerifiedN8nIntakeHandoff(
       || (expectedFingerprint && parsed.preview.fingerprint!==expectedFingerprint)) {
     return{ok:false,error:"The n8n extraction changed after review. Run n8n again and check the new fields before continuing."};
   }
+  if(["national_gcv_package_native_pdf",
+      "go_digit_jcb_new_unregistered_native_pdf"].includes(parsed.preview.parserId))
+    return {ok:false,error:"This PDF was extracted with 18 source checks, but its CPA/TP or NEW registration treatment requires a product-specific reviewer. No policy or canonical draft was created."};
   const commercial=parsed.preview.commercialPremium;
   const heldCandidate=Boolean(commercial)&&Boolean(parsed.preview.candidateCanonicalPremium)
     &&parsed.preview.checksPassed===18&&parsed.preview.warnings.length===0
