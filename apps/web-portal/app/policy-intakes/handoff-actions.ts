@@ -8,6 +8,7 @@ import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
+import { isAutomaticPolicyBooking } from "@/lib/ai-policy-auto-booking-context";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
 import type { N8nVerifiedPremiumBreakdown } from "@/lib/policy-intake-n8n-validation";
 import { mapVerifiedN8nMotorPremium, mapVerifiedIffcoCommercialPremium, mapVerifiedNiaCommercialPremium, mapVerifiedUiicGcvCommercialPremium } from "@/lib/policy-n8n-onboarding-premium";
@@ -302,6 +303,12 @@ async function preparePolicyIntakeHandoffInternal(
     if(fromN8n.matches.has(id))return{ok:false,error:"The verified n8n policy number already exists or matches an earlier Intake. Booking handoff is blocked."};
   }
 
+  const automaticBooking=isAutomaticPolicyBooking();
+  // Automated booking must never assign an intake to a human operator.
+  // The durable claim is its exclusive work ownership. An explicit manual
+  // handoff continues to claim reviewer ownership as before.
+  if(automaticBooking && intake.assigned_to_profile_id)
+    return{ok:false,error:"This intake is already assigned for manual review. Automated booking will not take it over."};
   const assignedToAnother=Boolean(intake.assigned_to_profile_id&&intake.assigned_to_profile_id!==reviewer.id);
   if(assignedToAnother&&!takeOver){
     const{data:assignedProfile}=await admin.from("profiles").select("full_name").eq("id",intake.assigned_to_profile_id as string).maybeSingle<{full_name:string}>();
@@ -311,14 +318,16 @@ async function preparePolicyIntakeHandoffInternal(
 
   const replaceOcr=verified?.replaceExistingDraft===true;
   let assignmentQuery=admin.from("policy_intake_requests")
-    .update({status:"in_review",assigned_to_profile_id:reviewer.id,attention_reason:null,
+    .update({status:"in_review",...(automaticBooking?{}:{assigned_to_profile_id:reviewer.id}),attention_reason:null,
       ...(replaceOcr?{ocr_status:"completed",ocr_fields:verified.fields,
         ocr_parser_id:verified.parserId,ocr_parser_version:verified.parserVersion,
         ocr_warnings:verified.warnings}: {})})
     .eq("id",id)
     .in("status",["ready_for_review","in_review","processing","needs_attention"]);
   if(verified)assignmentQuery=assignmentQuery.eq("storage_path",intake.storage_path as string);
-  if(assignedToAnother){
+  if(automaticBooking){
+    assignmentQuery=assignmentQuery.is("assigned_to_profile_id",null);
+  }else if(assignedToAnother){
     assignmentQuery=assignmentQuery.eq("assigned_to_profile_id",intake.assigned_to_profile_id as string);
   }else{
     assignmentQuery=assignmentQuery.or(`assigned_to_profile_id.is.null,assigned_to_profile_id.eq.${reviewer.id}`);
