@@ -47,7 +47,7 @@ function fixture(parser,overrides={},premium={od:0,tp:3416,net:3416,gst:614.88,g
 const kotak="zurich_kotak_private_car_tp_native_pdf";
 const united="united_india_tractor_tp_native_pdf";
 const digit="go_digit_two_wheeler_od_native_pdf";
-assert.equal(PRODUCT_VARIANT_PARSERS.size,5);
+assert.equal(PRODUCT_VARIANT_PARSERS.size,6);
 assert.equal(assessProductVariantDirectConversion(fixture(kotak)).eligible,true);
 assert.equal(assessProductVariantDirectConversion(fixture(united,
  {policy_start_date:"2026-11-19",policy_end_date:"2027-11-18",
