@@ -113,8 +113,8 @@ export function acceptGoDigitNewJcbExtraction(
     ||![ownerDriver,basicTp,paidDriver].every(money)
     ||!money(Number(v("cpa_premium")))
     ||Math.round(Number(v("cpa_premium"))*100)!==Math.round((ownerDriver as number)*100)
-    ||!/^20\\d{2}$/.test(v("vehicle_manufacturing_year"))
-    ||!/^\\d{3,5}$/.test(v("vehicle_capacity"))
+    ||!/^20\d{2}$/.test(v("vehicle_manufacturing_year"))
+    ||!/^\d{3,5}$/.test(v("vehicle_capacity"))
     ||v("vehicle_fuel_type")!=="Diesel")
    fail("digit_jcb_cpa_or_vehicle_source_unverified");
  const cpa=ownerDriver as number;
