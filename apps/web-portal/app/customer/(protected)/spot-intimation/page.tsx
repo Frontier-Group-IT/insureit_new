@@ -1,8 +1,8 @@
+import { customerSpotVerificationLocked } from "@/lib/claim-workflow";
 import { CustomerDateInput } from "@/components/customer-portal/customer-date-input";
 import "../claims/[id]/stage/[stage]/customer-claim-reference.css";
 import { redirect } from "next/navigation";
 import { saveCustomerInternalSpotCorrection } from "@/app/customer/(protected)/claims/[id]/stage/[stage]/actions";
-import { isExternalCustomerClaim } from "@/lib/customer-web-phase2-data";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail } from "@/lib/customer-web-phase2-data";
 import { createCustomerServerSupabaseClient } from "@/lib/auth-server";
@@ -30,16 +30,14 @@ export default async function CustomerSpotIntimation({searchParams}:{searchParam
   const q=searchParams?await searchParams:{};
   const {account}=await resolveCustomerWebScope(q.account);
   if(!q.id) redirect("/customer/start-claim?account="+encodeURIComponent(account.id));
-  const {claim,documents,milestones,internal_projection}=await loadCustomerClaimDetail(account.id,q.id);
+  const {claim,documents,milestones}=await loadCustomerClaimDetail(account.id,q.id);
   const editing=q.mode==="edit";
   const draftDb = await createCustomerServerSupabaseClient();
   const draftQuery = claim.current_status === "Draft"
     ? await draftDb.from("claim_spot_intimation_drafts").select("fields, updated_at").eq("claim_id", claim.id).eq("customer_id", account.id).maybeSingle<{ fields: SpotDraftFields; updated_at: string }>()
     : null;
   const serverDraft = draftQuery?.data ? { fields: draftQuery.data.fields, updatedAt: draftQuery.data.updated_at } : null;
-  const stageTwoComplete=(internal_projection?.completedStageCount??0)>=2 || milestones.some(item=>item.milestone_key==="claim_intimation" && ["completed","not_applicable"].includes(item.milestone_status));
-  const eligible=editing && !isExternalCustomerClaim(claim) && claim.claim_service_mode==="broker_managed" &&
-    (internal_projection?.completedStageCount??0)>=1 && !stageTwoComplete;
+  const eligible=editing && claim.current_status!=="Draft" && !customerSpotVerificationLocked(claim.current_status,documents);
   const detailsHref="/customer/claims/"+encodeURIComponent(claim.id)+"/stage/spot_intimation?account="+encodeURIComponent(account.id);
   if(editing && !eligible) redirect(detailsHref);
   const spotDetails=milestones.find(m=>m.milestone_key==="spot_intimation")?.details;
