@@ -22,3 +22,13 @@ assert.match(filter, /new URLSearchParams\(\{ account: accountId \}\)/);
 assert.doesNotMatch(filter, /setTimeout|translateX|grid-cols-4/);
 for (const control of [filter, source, page]) assert.match(control, /h-10 w-fit shrink-0/);
 console.log("Customer Policy compact status dropdown regression passed");
+
+for (const title of ["No matching policies found", "No policies added yet", "No policies due for renewal", "No active policies", "No expired policies"]) assert.ok(page.includes(title));
+assert.match(page, /customer-policy-empty flex min-h-\[280px\] flex-1 flex-col items-center justify-center/);
+assert.match(page, /canAddFirstPolicy \? "\/customer\/add-policy" : "\/customer\/policies", query: \{ account: account.id \}/);
+const art = readFileSync(resolve(root, "public/assets/customer-policies/empty-state.webp"));
+assert.equal(art.toString("ascii", 0, 4), "RIFF");
+assert.equal(art.toString("ascii", 8, 12), "WEBP");
+assert.equal(art.readUInt32LE(4) + 8, art.length);
+assert.ok(art.length < 20000);
+assert.ok(art[20] & 16, "WebP must have transparency");
