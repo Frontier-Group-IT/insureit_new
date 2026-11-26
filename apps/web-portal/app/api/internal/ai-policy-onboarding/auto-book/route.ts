@@ -19,8 +19,12 @@ async function execute(){
   try{
     const result=await runAutoBookingBatch();
     return NextResponse.json(result,{headers:{"Cache-Control":"private, no-store"}});
-  }catch{
-    // No PII, auth secrets, PDF details or unverified booking status.
+  }catch(error){
+    // Report only enumerated control-flow codes. Never log raw error messages,
+    // credentials, extracted policy values or session tokens.
+    const raw=error instanceof Error?error.message:"";
+    const code=/^auto_booking_[a-z0-9_]{1,60}$/.test(raw)?raw:"unexpected_worker_exception";
+    console.error("[ai-auto-booking] worker unavailable",{code});
     return NextResponse.json({error:"auto_booking_worker_unavailable"},{status:503});
   }
 }
