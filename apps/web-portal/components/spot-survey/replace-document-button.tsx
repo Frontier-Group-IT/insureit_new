@@ -77,6 +77,7 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
       <form
         onSubmit={(event) => {
           event.preventDefault();
+          event.stopPropagation();
           const files = selectedFiles;
           if (!files.length || (isReplaceAction && (!documentId || files.length !== 1))) return;
           startTransition(async () => {
@@ -92,7 +93,8 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
                 }, isReplaceAction ? documentId : undefined);
                 const upload=prepared.uploads?.[0];
                 if (!prepared.ok || !upload) {
-                  errors.push(`${file.name}: ${prepared.message ?? "Could not prepare upload."}`);
+                  console.error("Claim document preparation failed", prepared.message);
+                  errors.push("Unable to prepare the document upload.");
                   continue;
                 }
                 const fileOptions=file.type ? {cacheControl:"3600",contentType:file.type} : {cacheControl:"3600"};
@@ -106,7 +108,8 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
                 if(!response.ok){
                   await bestEffortCancelClaimDocumentUploads(claimId,[upload.path]);
                   uploadedPath=null;
-                  errors.push(`${file.name}: ${response.message ?? "Could not save document."}`);
+                  console.error("Claim document finalization failed", response.message);
+                  errors.push("Unable to save the document.");
                   continue;
                 }
                 // The finalized document owns its storage object.
@@ -115,11 +118,12 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
               } catch (error) {
                 if(uploadedPath) await bestEffortCancelClaimDocumentUploads(claimId,[uploadedPath]);
                 const reason = error instanceof Error && error.message.trim() ? error.message : "Unexpected upload error.";
-                errors.push(`${file.name}: ${reason}`);
+                console.error("Claim document upload failed", reason);
+                errors.push(/Server Action|failed to find server action/i.test(reason) ? "Please refresh the page and check the document before trying again." : "Unable to upload the document. Please try again.");
               }
             }
             setProgress("");
-            setResult({ok:errors.length===0,message:`${completed} of ${files.length} file(s) uploaded.${errors.length ? " " + errors.join(" ") : ""}`});
+            setResult({ok:errors.length===0,message:errors.length ? `${completed} of ${files.length} files uploaded. ${errors[0]}` : `${completed} of ${files.length} files uploaded successfully.`});
             if (completed) {
               setSelectedFiles([]);
               router.refresh();
