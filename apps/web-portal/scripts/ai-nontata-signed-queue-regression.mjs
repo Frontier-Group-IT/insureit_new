@@ -328,7 +328,7 @@ assert.ok(handoff.includes("const iffcoVerifiedFill = Boolean(commercial) && fil
   &&handoff.includes("assessIffcoAutoOnboarding({"),
   "Certified IFFCO must be allowed through direct handoff without manual reparse");
 assert.ok(handoff.includes('state:eligibleForVerifiedConversion?"verified":"exception"')
-  && handoff.includes("autoEligibleGoDigit||iffcoReview.eligible"),
+  && handoff.includes("autoEligibleGoDigit||certifiedDigitNew||iffcoReview.eligible"),
   "Existing Go Digit eligibility is preserved while narrowly certified IFFCO is added");
 assert.ok(handoff.includes('go_digit_missing_verified_manufacturing_year'));
 assert.ok(component.includes('go_digit_missing_verified_manufacturing_year'));
