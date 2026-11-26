@@ -86,7 +86,15 @@ export async function runAutoBookingBatch():Promise<{
   const {data,error}=await admin.rpc("claim_ai_auto_booking_v1",{
     p_operator_profile_id:operatorId,p_limit:3,
   });
-  if(error)throw Error("auto_booking_claim_unavailable");
+  if(error){
+    // Supabase error codes are protocol metadata (e.g. 42702), not customer
+    // information. Preserve only the bounded SQLSTATE to diagnose a blocked
+    // scheduler; never log exception messages, PDFs or credentials.
+    const pgCode=typeof error.code==="string" && /^[0-9A-Z]{5}$/.test(error.code)
+      ?error.code:"unknown";
+    console.error("[ai-auto-booking] claim unavailable",{pgCode});
+    throw Error("auto_booking_claim_unavailable");
+  }
   const claims=(data??[]) as Claim[];
   let booked=0,review=0,uncertain=0;
   for(const claim of claims){
