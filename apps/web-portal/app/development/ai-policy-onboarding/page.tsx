@@ -156,6 +156,23 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
       }
     }
   }
+  // All recovery claims originated from old review_required rows. Counts
+  // represent the latest attempt, so do not report recovered bookings as
+  // both completed and still under review.
+  if(autoRequested&&autoLedgerAvailable){
+    const states=["claimed","booked","review_required","uncertain"] as const;
+    const counts=await Promise.all(states.map(state=>
+      admin.from("policy_intake_ai_auto_booking_recovery_attempts")
+        .select("intake_id",{count:"exact",head:true}).eq("state",state)));
+    if(counts.every(result=>!result.error)){
+      const values=counts.map(result=>result.count??0);
+      autoReviewCount=Math.max(0,autoReviewCount-values.reduce((a,b)=>a+b,0));
+      autoClaimedCount+=values[0];
+      autoBookedCount+=values[1];
+      autoReviewCount+=values[2];
+      autoUncertainCount+=values[3];
+    }
+  }
   // The second immutable recovery ledger supersedes the original known
   // pre-commit Liberty mismatch for display only. It does not delete history,
   // make held records new candidates, or permit retries after uncertainty.
