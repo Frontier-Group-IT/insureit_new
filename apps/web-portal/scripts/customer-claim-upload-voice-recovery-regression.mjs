@@ -11,7 +11,7 @@ assert.match(config,/source: "\/customer\/spot-intimation", headers: voiceLabHea
 assert.match(config,/source: "\/customer\/claims\/:id\/stage\/:stage", headers: voiceLabHeaders/,"Allow customer microphone on claim stage");
 assert.match(config,/microphone=\(self\)/,"Microphone remains same-origin only");
 assert.match(config,/microphone=\(\)/,"Other routes remain microphone restricted");
-assert.match(upload,/milestone_key === "claim_intimation"/,"Stage 2 upload lock matches Spot Intimation edit lock");
+assert.match(upload,/customerSpotVerificationLocked\(claim.current_status,documents\)/,"Verification upload lock matches Spot Intimation edit lock");
 assert.doesNotMatch(upload,/milestone_key === "spot_status"/,"Do not use incorrect Stage 2 key");
 assert.match(upload,/uploadedCount: 1/,"Single upload returns confirmed count");
 assert.match(multi,/router\.refresh\(\)/,"Successful bulk upload refreshes document list");
@@ -42,7 +42,7 @@ assert.match(multi,/setExpanded\(false\)/,"All Customer claim bulk uploads must 
 assert.match(multi,/prepareCustomerClaimBulkVideo/,"Large customer videos must bypass the server-action body size limit.");
 assert.match(upload,/createSignedUploadUrl\(path,\{upsert:false\}\)/,"Signed large-video uploads must not overwrite records.");
 assert.match(upload,/loadCustomerClaimDetail\(account\.id,claimId\)/,"Signed upload prepare/finalize must validate customer claim ownership.");
-assert.match(upload,/Stage 1 documents are locked/,"Signed uploads must keep Stage 2 lock.");
+assert.match(upload,/Spot Intimation documents are locked after Operations verification/,"Signed uploads must keep verification lock.");
 assert.match(upload,/actualSize!==file\.size/,"Video finalize must check uploaded object size.");
 assert.match(operations,/multiple accept=\{acceptedDocuments\}/,"Operations must support multiple-file selection.");
 assert.match(operations,/selectedBulk\.length/,"Operations must show selected files.");
