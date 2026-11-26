@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {verifiedPolicyManufacturerBrand} from "../lib/policy-trained-make-alias.ts";
+import {verifiedPolicyManufacturerBrand} from "../lib/policy-trained-make-alias.mjs";
 const national={parserId:"national_gcv_package_native_pdf",checksPassed:18,warnings:[],make:"Eicher Motors Limited",model:"EICHER PRO 1110 EICHER PRO 1110"};
 const mg={parserId:"tata_aig_private_car_saod_n8n_native_pdf",checksPassed:18,warnings:["tata_aig_human_review_required","tata_aig_receipt_date_as_issuance","tata_aig_printed_net_rounding"],make:"MORRIS GARAGES",model:"AS TOR / SELECT CVT"};
 assert.equal(verifiedPolicyManufacturerBrand(national),"EICHER");
