@@ -336,6 +336,11 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
       const canonical=input.manufacturers.find(option=>normalizeText(option)===normalizeText(sourceBrand));
       if(canonical)return canonical;
     }
+    // When these legal OEM names come from a source-declared variant, never
+    // bypass its insurer/model/check gate using generic substring matching.
+    if((input.sourceParserId==="national_gcv_package_native_pdf" && normalizeText(raw)===normalizeText("Eicher Motors Limited"))
+      ||(input.sourceParserId==="tata_aig_private_car_saod_n8n_native_pdf" && normalizeText(raw)===normalizeText("Morris Garages")))
+      return "";
     return manufacturer(raw, input.manufacturers);
   });
   setText("vehicle_model", (value) => { next.model = value; }, (raw) => {
