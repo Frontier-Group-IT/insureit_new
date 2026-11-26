@@ -4,12 +4,13 @@ import { extractNativePdfTextPages } from "@/lib/policy-ocr-native-pdf";
 import { enrichIffcoCertifiedMachineFamily } from "@/lib/policy-iffco-machine-family";
 import { assessHeldInsurerCandidate, recognizeHeldInsurerLayout } from "@/lib/policy-held-insurer-candidate-admission";
 import { verifyOrientalCmsSigningDate, type OrientalSignedIssuanceEvidence } from "@/lib/policy-oriental-cms-issuance";
+import { acceptGoDigitNewJcbExtraction } from "@/lib/policy-digit-new-jcb-extraction";
 
 type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "united_india_gcv_punjab_split_gst_native_pdf" | "united_india_private_car_package_native_pdf" | "oriental_gccv_native_pdf";
 type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf" | "hdfc_ergo_two_wheeler_tp_native_pdf" | "sbi_general_private_car_package_native_pdf";
 type HeldInsurer = "magma_private_car_package_native_pdf" | "national_private_car_liability_only_native_pdf"
   | "oriental_private_car_standalone_od_native_pdf" | "oriental_gccv_package_native_pdf";
-type Insurer = ExistingInsurer | NewProductVariant | HeldInsurer | "national_gcv_package_native_pdf";
+type Insurer = ExistingInsurer | NewProductVariant | HeldInsurer | "national_gcv_package_native_pdf" | "go_digit_jcb_new_unregistered_native_pdf";
 const HELD_INSURERS = new Set<string>([
   "magma_private_car_package_native_pdf","national_private_car_liability_only_native_pdf",
   "oriental_private_car_standalone_od_native_pdf","oriental_gccv_package_native_pdf",
@@ -500,6 +501,12 @@ function validate(payload: unknown, insurer: Insurer,
 ): NonTataCommercialRead {
   if(insurer==="national_gcv_package_native_pdf")
     return validateNationalGcvExtractionOnly(payload,ids);
+  if(insurer==="go_digit_jcb_new_unregistered_native_pdf"){
+    const approved=acceptGoDigitNewJcbExtraction(payload,ids);
+    return {parserId:approved.parserId,parserVersion:"non-tata-cv-v2",
+      fields:approved.fields,warnings:[],checksPassed:18,
+      premium:approved.premium};
+  }
   if(HELD_INSURERS.has(insurer)){
     // Oriental's PDF-native text can expose an issue date only through an
     // actual, integrity-verified, full-document detached CMS signature.
@@ -717,6 +724,13 @@ export async function tryReadNonTataCommercialPolicy(
     if(insurer==="united_india_gcv_native_pdf"){
       insurer=resolveUiicPunjabCertifiedN8nVariant(insurer,payload) as Insurer;
     }
+    // The original PDF must ALREADY be independently classified Go Digit
+    // Commercial Vehicle. Promotion never relies on a parser ID alone:
+    // acceptGoDigitNewJcbExtraction checks the exact 18-check source proof,
+    // unique current document/request IDs and literal printed NEW evidence.
+    if(insurer==="go_digit_cv_native_pdf"&&object(payload)
+      &&payload.parser_id==="go_digit_jcb_new_unregistered_native_pdf")
+      insurer="go_digit_jcb_new_unregistered_native_pdf";
     // Signature must be verified against the EXACT File bytes sent to n8n.
     // No decoded text, PDF print date, receipt, or caller-supplied date can
     // authorize this fallback. Unverifiable originals remain in review.
