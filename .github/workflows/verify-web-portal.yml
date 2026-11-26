@@ -39,6 +39,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Non-Tata normal Read and registered/unregistered review regression
         run: node scripts/non-tata-normal-read-regression.mjs
+      - name: Go Digit NEW JCB printed CPA, registration and canonical split regression
+        run: node --experimental-strip-types scripts/go-digit-new-jcb-cpa-regression.mjs
       - name: RTO city and state independently optional across policy onboarding
         run: node --experimental-strip-types scripts/rto-optional-policy-regression.mjs
       - name: Tata AIG Private Car RTO and CNG IMT25 source regression

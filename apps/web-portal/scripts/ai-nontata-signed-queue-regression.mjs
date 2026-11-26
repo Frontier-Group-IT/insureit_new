@@ -328,7 +328,7 @@ assert.ok(handoff.includes("const iffcoVerifiedFill = Boolean(commercial) && fil
   &&handoff.includes("assessIffcoAutoOnboarding({"),
   "Certified IFFCO must be allowed through direct handoff without manual reparse");
 assert.ok(handoff.includes('state:eligibleForVerifiedConversion?"verified":"exception"')
-  && handoff.includes("autoEligibleGoDigit||iffcoReview.eligible"),
+  && handoff.includes("autoEligibleGoDigit||certifiedDigitNew||iffcoReview.eligible"),
   "Existing Go Digit eligibility is preserved while narrowly certified IFFCO is added");
 assert.ok(handoff.includes('go_digit_missing_verified_manufacturing_year'));
 assert.ok(component.includes('go_digit_missing_verified_manufacturing_year'));
@@ -685,7 +685,7 @@ assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.map
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:iffcoAuto.fields.map(f=>f.key==="vehicle_fuel_type"?{...f,evidence:"Native PDF policy schedule"}:f)}).eligible,false);
 assert.equal(assessIffcoAutoOnboarding({...iffcoAuto,fields:[...iffcoAuto.fields,iffcoAuto.fields[0]]}).eligible,false);
 assert.ok(handoff.includes("const iffcoReview=assessIffcoAutoOnboarding(")
-  && handoff.includes("eligibleForVerifiedConversion=tata18Ready||verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible"),
+  && handoff.includes("eligibleForVerifiedConversion=tata18Ready||verifiedTataTp||autoEligibleGoDigit||certifiedDigitNew||iffcoReview.eligible"),
   "IFFCO source and financial validated readiness must be used for the queue");
 assert.ok(actions.includes('queued.exception_codes[0]==="registration_pending_review"')
   &&actions.includes('queued.parser_id==="iffco_tokio_cv_native_pdf"'),

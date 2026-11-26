@@ -505,7 +505,7 @@ function validate(payload: unknown, insurer: Insurer,
     const approved=acceptGoDigitNewJcbExtraction(payload,ids);
     return {parserId:approved.parserId,parserVersion:"non-tata-cv-v2",
       fields:approved.fields,warnings:[],checksPassed:18,
-      premium:approved.premium};
+      premium:approved.premium,candidateCanonicalPremium:approved.candidateCanonicalPremium};
   }
   if(HELD_INSURERS.has(insurer)){
     // Oriental's PDF-native text can expose an issue date only through an
