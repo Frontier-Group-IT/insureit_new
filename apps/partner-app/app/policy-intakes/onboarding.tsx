@@ -209,6 +209,8 @@ export default function NativePolicyOnboarding(){
   const [bookedMotorPolicyId,setBookedMotorPolicyId]=useState<string|null>(null);
   const [uploadingMotorCopy,setUploadingMotorCopy]=useState(false);
   const [approvalBusy,setApprovalBusy]=useState(false);
+  const [approvalPickerOpen,setApprovalPickerOpen]=useState(false);
+  const [approvalError,setApprovalError]=useState("");
   const [approverKey,setApproverKey]=useState("");
   const [approvalRequestId,setApprovalRequestId]=useState<string|null>(null);
   const [verifiedApprovalId,setVerifiedApprovalId]=useState<string|null>(null);
@@ -628,7 +630,7 @@ export default function NativePolicyOnboarding(){
         }catch(cause){setError(cause instanceof Error?cause.message:'Could not save draft before OTP.');setMotorCopyDialogOpen(true);return;}
         finally{setSaving(false);}
       }
-      setDateApprovalOpen(true);
+      setApprovalError("");setApprovalPickerOpen(false);setDateApprovalOpen(true);
       return;
     }
     await completeBooking();
@@ -713,26 +715,24 @@ export default function NativePolicyOnboarding(){
   }
 
   async function requestApproval(){
-    if(!data||!draft||(!isNew&&dirty)){setError('Save the draft before requesting date approval.');return;}
-    if(!approverKey){setError('Choose an approving officer.');return;}
-    setApprovalBusy(true);setError('');
+    if(!data||!draft||(!isNew&&dirty)){setApprovalError('Save the draft before requesting date approval.');return;}
+    if(!approverKey){setApprovalError('Choose an approving officer.');return;}
+    setApprovalBusy(true);setApprovalError('');
     try{
       const result=isNew?await requestNewNativePolicyDateApproval(draft,approverKey):await requestNativePolicyDateApproval(id,data.revision,approverKey);
-      setApprovalRequestId(result.approval_id);setApprovalCode('');
-    }catch(e){setError(e instanceof Error?e.message:'Could not request approval.');}
+      setApprovalRequestId(result.approval_id);setVerifiedApprovalId(null);setApprovalCode('');
+    }catch(e){setApprovalError(e instanceof Error?e.message:'Could not request approval.');}
     finally{setApprovalBusy(false);}
   }
   async function verifyApproval(){
-    if(!data||!approvalRequestId||!/^\d{6}$/.test(approvalCode)){setError('Enter the six-digit approval code.');return;}
-    setApprovalBusy(true);setError('');
+    if(!data||!approvalRequestId||!/^\d{6}$/.test(approvalCode)){setApprovalError('Enter the six-digit approval code.');return;}
+    setApprovalBusy(true);setApprovalError('');
     try{
-      if(isNew&&!draft){setError('Complete the policy draft first.');return;}
+      if(isNew&&!draft){setApprovalError('Complete the policy draft first.');return;}
       if(isNew&&draft)await verifyNewNativePolicyDateApproval(draft,approvalRequestId,approvalCode);
       else await verifyNativePolicyDateApproval(id,data.revision,approvalRequestId,approvalCode);
-      setVerifiedApprovalId(approvalRequestId);setDateApprovalOpen(false);
-      if(productType==='Motor')void completeBooking(undefined,approvalRequestId);
-      else partnerAlert('Date approved','The approved policy can now be booked.');
-    }catch(e){setError(e instanceof Error?e.message:'Approval could not be verified.');}
+      setVerifiedApprovalId(approvalRequestId);setApprovalCode('');
+    }catch(e){setApprovalError(e instanceof Error?e.message:'Approval could not be verified.');}
     finally{setApprovalBusy(false);}
   }
 
@@ -1566,17 +1566,45 @@ export default function NativePolicyOnboarding(){
         </View>
       </View>
     </Modal>
-    <Modal transparent visible={dateApprovalOpen} animationType="fade" onRequestClose={()=>setDateApprovalOpen(false)}>
-      <View style={styles.scrim}><View style={styles.sheet}>
-        <View style={styles.sheetTitle}><Text style={styles.sectionTitle}>Policy Date Approval</Text><Pressable onPress={()=>setDateApprovalOpen(false)} accessibilityLabel="Close approval"><Ionicons name="close" size={21} color="#4C5970"/></Pressable></View>
-        <Text style={styles.notice}>Select an authorised officer. An approval code will be emailed to them. Obtain approval before using the code.</Text>
-        {!approvalRequestId ? <>
-          {(data?.approvers??[]).map(approver=><Pressable key={approver.key} onPress={()=>setApproverKey(approver.key)} style={styles.choice}><Text style={styles.choiceText}>{approverKey===approver.key?'● ':'○ '}{approver.name}</Text></Pressable>)}
-          <Pressable disabled={approvalBusy||!approverKey} style={[styles.primary,styles.bookButton]} onPress={()=>void requestApproval()}><Text style={styles.primaryText}>{approvalBusy?'Sending…':'Send Approval Request'}</Text></Pressable>
-        </> : <>
-          <TextInput accessibilityLabel="Six-digit approval code" keyboardType="numeric" maxLength={6} value={approvalCode} onChangeText={setApprovalCode} style={styles.input}/>
-          <Pressable disabled={approvalBusy||approvalCode.length!==6} style={[styles.primary,styles.bookButton]} onPress={()=>void verifyApproval()}><Text style={styles.primaryText}>{approvalBusy?'Checking…':'Verify Approval'}</Text></Pressable>
-        </>}
+    <Modal transparent visible={dateApprovalOpen} animationType="fade" onRequestClose={()=>{if(!approvalBusy){setApprovalPickerOpen(false);setDateApprovalOpen(false);}}}>
+      <View style={[styles.scrim,styles.approvalScrim]}><View style={styles.approvalSheet}>
+        <View style={styles.approvalHeader}>
+          <View style={styles.approvalShield}><Ionicons name="shield-checkmark-outline" size={20} color="#FFFFFF"/></View>
+          <Text style={styles.approvalTitle}>Policy Date Approval</Text>
+          <Pressable disabled={approvalBusy} onPress={()=>{setApprovalPickerOpen(false);setDateApprovalOpen(false);}} accessibilityLabel="Close approval" hitSlop={8}><Ionicons name="close" size={21} color="#60758D"/></Pressable>
+        </View>
+        <ScrollView keyboardShouldPersistTaps="handled" style={styles.approvalScroll} contentContainerStyle={styles.approvalContent}>
+          <View style={styles.approvalDetails}>
+            <View style={styles.approvalDetail}><Text style={styles.approvalLabel}>Policy issuance date</Text><Text style={styles.approvalValue}>{draft?.issuanceDate?draft.issuanceDate.split('-').reverse().join('/'):'—'}</Text></View>
+            <View style={styles.approvalDetail}><Text style={styles.approvalLabel}>Policy number</Text><Text style={styles.approvalValue}>{draft?.policyNo||'—'}</Text></View>
+          </View>
+          <View style={styles.approvalReason}>
+            <Text style={styles.approvalReasonTitle}>Why approval is required</Text>
+            <Text style={styles.approvalReasonText}>• Previous month&apos;s policies can be added without approval until the <Text style={styles.approvalDeadline}>15th</Text> of the current month.</Text>
+            <Text style={styles.approvalReasonText}>• After the 15th, adding a previous-month policy requires special approval.</Text>
+            <Text style={styles.approvalReasonText}>• The monthly submission deadline has passed and records may already be finalized. Late additions can affect reports, premium calculations and reconciliation.</Text>
+            <Text style={styles.approvalReasonText}>• Approval confirms the late entry and helps maintain accurate records.</Text>
+          </View>
+          <Text style={styles.approvalFieldLabel}>Approver</Text>
+          <View style={styles.approvalRow}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Select approver" accessibilityState={{expanded:approvalPickerOpen,disabled:approvalBusy||!!verifiedApprovalId}} disabled={approvalBusy||!!verifiedApprovalId} onPress={()=>setApprovalPickerOpen(old=>!old)} style={styles.approvalDropdown}>
+              <Text numberOfLines={1} style={styles.approvalDropdownText}>{data?.approvers?.find(person=>person.key===approverKey)?.name||'Select approver'}</Text><Ionicons name={approvalPickerOpen?'chevron-up':'chevron-down'} size={15} color="#60758D"/>
+            </Pressable>
+            <Pressable accessibilityRole="button" disabled={approvalBusy||!approverKey||!!verifiedApprovalId||!!approvalRequestId} onPress={()=>void requestApproval()} style={[styles.approvalSend,(approvalBusy||!approverKey||!!verifiedApprovalId||!!approvalRequestId)&&styles.approvalDisabled]}><Ionicons name="mail-outline" size={14} color="#FFFFFF"/><Text style={styles.approvalButtonText}>{approvalBusy&&!approvalRequestId?'Sending…':'Send OTP'}</Text></Pressable>
+          </View>
+          {approvalPickerOpen?<View style={styles.approvalOptions}>{(data?.approvers??[]).map(person=><Pressable key={person.key} accessibilityRole="button" accessibilityState={{selected:approverKey===person.key}} onPress={()=>{if(person.key!==approverKey){setApproverKey(person.key);setApprovalRequestId(null);setVerifiedApprovalId(null);setApprovalCode('');setApprovalError('');}setApprovalPickerOpen(false);}} style={styles.approvalOption}><Text style={styles.approvalDropdownText}>{person.name}</Text>{approverKey===person.key?<Ionicons name="checkmark" size={16} color="#17365D"/>:null}</Pressable>)}</View>:null}
+          {approvalRequestId&&!verifiedApprovalId?<View style={styles.approvalContent}>
+            <Text style={styles.approvalFieldLabel}>Email OTP</Text>
+            <View style={styles.approvalRow}><TextInput accessibilityLabel="Six-digit approval code" keyboardType="numeric" maxLength={6} value={approvalCode} onChangeText={value=>setApprovalCode(value.replace(/\D/g,'').slice(0,6))} placeholder="6-digit code" style={[styles.input,styles.approvalOtpInput]}/><Pressable disabled={approvalBusy||approvalCode.length!==6} style={[styles.approvalSend,(approvalBusy||approvalCode.length!==6)&&styles.approvalDisabled]} onPress={()=>void verifyApproval()}><Text style={styles.approvalButtonText}>{approvalBusy?'Checking…':'Verify'}</Text></Pressable></View>
+            <Pressable disabled={approvalBusy} onPress={()=>{setApprovalRequestId(null);setApprovalCode('');setApprovalError('');}}><Text style={styles.approvalNewOtp}>New OTP</Text></Pressable>
+          </View>:null}
+          {verifiedApprovalId?<Text style={styles.approvalVerified}>✓ Email OTP verified. Confirm &amp; Submit to continue.</Text>:null}
+          {approvalError?<Text accessibilityRole="alert" style={styles.approvalError}>{approvalError}</Text>:null}
+        </ScrollView>
+        <View style={styles.approvalFooter}>
+          <Pressable disabled={approvalBusy} onPress={()=>{setApprovalPickerOpen(false);setDateApprovalOpen(false);}} style={styles.approvalCancel}><Text style={styles.approvalCancelText}>Cancel</Text></Pressable>
+          <Pressable disabled={!verifiedApprovalId||approvalBusy||booking||saving} onPress={()=>{if(!verifiedApprovalId||approvalBusy||booking||saving)return;setDateApprovalOpen(false);if(productType==='Motor')void completeBooking(undefined,verifiedApprovalId);else partnerAlert('Date approved','The approved policy can now be booked.');}} style={[styles.approvalConfirm,(!verifiedApprovalId||approvalBusy||booking||saving)&&styles.approvalDisabled]}><Text style={styles.approvalButtonText}>Confirm &amp; Submit</Text></Pressable>
+        </View>
       </View></View>
     </Modal>
     <Modal transparent visible={sourcePickerOpen} animationType="fade" onRequestClose={()=>{sourceRequestId.current+=1;setSourcePickerOpen(false);}}>
@@ -1800,6 +1828,24 @@ const styles=StyleSheet.create({
   motorCopySaveDisabled:{backgroundColor:'#92A1CD'},
   motorCopySaveText:{color:'#FFFFFF',fontSize:11.5,fontWeight:'800'},
   scrim:{flex:1,justifyContent:'center',backgroundColor:'rgba(5,18,40,.5)'},sheet:{backgroundColor:'white',borderTopLeftRadius:20,borderTopRightRadius:20,padding:17,maxHeight:'70%'},
+  approvalScrim:{alignItems:'center',paddingHorizontal:14,paddingVertical:20},
+  approvalSheet:{width:'100%',maxWidth:400,maxHeight:'94%',backgroundColor:'#FFFFFF',borderRadius:16,padding:12,gap:8},
+  approvalHeader:{flexDirection:'row',alignItems:'center',gap:8},
+  approvalShield:{width:34,height:34,borderRadius:8,backgroundColor:'#17365D',alignItems:'center',justifyContent:'center'},
+  approvalTitle:{flex:1,fontSize:16,fontWeight:'800',color:'#17365D'},
+  approvalScroll:{flexGrow:0},approvalContent:{gap:8},
+  approvalDetails:{flexDirection:'row',gap:8,borderWidth:1,borderColor:'#DDE7F2',backgroundColor:'#F8FAFD',borderRadius:9,padding:9},
+  approvalDetail:{flex:1,minWidth:0,gap:3},approvalLabel:{fontSize:10,color:'#667B94'},approvalValue:{fontSize:12,fontWeight:'700',color:'#19395C'},
+  approvalReason:{backgroundColor:'#F0F5FD',borderColor:'#D8E5F6',borderWidth:1,borderRadius:9,padding:10,gap:5},
+  approvalReasonTitle:{fontSize:12,fontWeight:'800',color:'#17365D'},approvalReasonText:{fontSize:11,lineHeight:16,color:'#344D70'},approvalDeadline:{fontWeight:'800',color:'#17365D'},
+  approvalFieldLabel:{fontSize:11,fontWeight:'700',color:'#17365D'},approvalRow:{flexDirection:'row',gap:7,alignItems:'center'},
+  approvalDropdown:{flex:7,minWidth:0,minHeight:38,borderWidth:1,borderColor:'#C8D9EF',borderRadius:8,paddingHorizontal:8,flexDirection:'row',alignItems:'center',gap:4},
+  approvalDropdownText:{flex:1,fontSize:11,color:'#19375D',fontWeight:'600'},approvalSend:{flex:3,minHeight:38,borderRadius:8,backgroundColor:'#17365D',flexDirection:'row',gap:4,alignItems:'center',justifyContent:'center',paddingHorizontal:5},
+  approvalButtonText:{fontSize:11,fontWeight:'700',color:'#FFFFFF'},approvalDisabled:{opacity:.45},
+  approvalOptions:{borderWidth:1,borderColor:'#DDE7F2',borderRadius:8},approvalOption:{minHeight:38,flexDirection:'row',alignItems:'center',paddingHorizontal:9,borderBottomWidth:StyleSheet.hairlineWidth,borderColor:'#DDE7F2'},
+  approvalOtpInput:{flex:7,minWidth:0},approvalNewOtp:{fontSize:11,fontWeight:'700',color:'#315B9A'},approvalVerified:{fontSize:11,color:'#14845B',fontWeight:'700'},approvalError:{fontSize:11,color:'#B91C1C'},
+  approvalFooter:{flexDirection:'row',justifyContent:'flex-end',alignItems:'center',gap:8,borderTopWidth:1,borderColor:'#E5EBF3',paddingTop:8},
+  approvalCancel:{borderWidth:1,borderColor:'#D3DEEC',borderRadius:8,paddingHorizontal:16,minHeight:38,justifyContent:'center'},approvalCancelText:{fontSize:11,color:'#405C78',fontWeight:'700'},approvalConfirm:{backgroundColor:'#17365D',borderRadius:8,paddingHorizontal:12,minHeight:38,justifyContent:'center'},
   sheetTitle:{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-start',gap:12,padding:14,backgroundColor:'#F4F7FB',borderBottomWidth:1,borderColor:'#E2E9F2'},choiceScroll:{maxHeight:420},productPickerScrim:{alignItems:'center',justifyContent:'center',paddingHorizontal:18},productPickerSheet:{width:'100%',maxWidth:430,borderRadius:12,maxHeight:'76%',padding:0,overflow:'hidden'},
   choice:{minHeight:44,justifyContent:'space-between',alignItems:'center',flexDirection:'row',paddingHorizontal:12,borderTopWidth:1,borderColor:'#EEF1F7'},
   choiceText:{fontSize:12,color:'#284064'},choiceSelected:{backgroundColor:'#17365D'},choiceTextSelected:{color:'#FFFFFF',fontWeight:'800'},
