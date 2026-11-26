@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createSupabaseWithAccessToken } from "@/lib/auth";
 import { withVerifiedPartnerApiToken } from "@/lib/partner-ai-studio-api-context";
 import { convertVerifiedAiIntake } from "@/app/development/ai-policy-onboarding/actions";
+import { withAutomaticPolicyBooking } from "@/lib/ai-policy-auto-booking-context";
 import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyIntakeReviewer,requirePolicyIntakeFinalizer } from "@/lib/policy-intake-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
@@ -94,8 +95,8 @@ export async function runAutoBookingBatch():Promise<{
       continue; // Malformed persisted evidence: no booking and no guessed repair.
     }
     try{
-      const result=await withVerifiedPartnerApiToken(operatorToken,
-        ()=>convertVerifiedAiIntake(claim.intake_id,true));
+      const result=await withAutomaticPolicyBooking(()=>withVerifiedPartnerApiToken(operatorToken,
+        ()=>convertVerifiedAiIntake(claim.intake_id,true)));
       if(result.ok&&result.policyId&&UUID.test(result.policyId)){
         await finish(claim,"booked",null,result.policyId);
         booked++;
