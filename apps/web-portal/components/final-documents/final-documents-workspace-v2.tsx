@@ -30,7 +30,7 @@ export type DealershipDetailsV2 = {
   contact_number?: string;
 };
 
-type ActionResult = { ok: boolean; message?: string };
+type ActionResult = { ok: boolean; message?: string; missingFields?: string[] };
 
 type ClaimIntimationDetails = {
   claim_intimation_date: string;
@@ -39,6 +39,14 @@ type ClaimIntimationDetails = {
   gate_in_date: string;
   estimate_amount: string;
 };
+
+const requiredStageDetails = [
+  ["claim_intimation_date", "Claim Intimation Date"],
+  ["dealership_name", "Dealership Name"],
+  ["dealership_location", "Dealership Location"],
+  ["gate_in_date", "Gate-in Date"],
+  ["estimate_amount", "Estimate Amount"],
+] as const;
 
 type DocumentVisual = {
   key: Stage3DocumentVerificationItem["visualKey"];
@@ -51,6 +59,8 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
   const [activeTab, setActiveTab] = useState(0);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [result, setResult] = useState<ActionResult | null>(null);
+  const [validateDetails, setValidateDetails] = useState(false);
+  const detailsSectionRef = useRef<HTMLElement>(null);
   const [claimNumberPromptOpen, setClaimNumberPromptOpen] = useState(false);
   const [claimNumberInput, setClaimNumberInput] = useState("");
   const [advanceAfterClaimNumber, setAdvanceAfterClaimNumber] = useState(false);
@@ -76,6 +86,8 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
     estimate_amount: ""
   });
   const visibleRows = rows.filter((row) => row.groupIndex === activeTab);
+  const missingDetails = requiredStageDetails.filter(([key]) => !details[key].trim());
+  const invalidDetail = (key: keyof ClaimIntimationDetails) => validateDetails && missingDetails.some(([missingKey]) => missingKey === key);
 
   const verifiedCount = useMemo(() => {
     if (!verificationData) return rows.filter((row) => row.status === "Verified").length;
@@ -199,6 +211,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
         setTimeout(() => router.refresh(), 0);
         return;
       }
+      setResult({ ok: false, message: response.message || "Unable to save changes. Please try again." });
     });
   }
 
@@ -253,7 +266,8 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
           }
         } catch (error) {
           setAutoSaveStatus("error");
-          setAutoSaveError(error instanceof Error ? error.message : "Automatic save failed. Your draft is kept in this browser tab.");
+          console.error("Claim intimation automatic save failed", error);
+          setAutoSaveError("Automatic save failed. Your draft is kept in this browser tab.");
         }
       });
     }, 650);
@@ -300,6 +314,11 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
 
   function saveAndContinue() {
     setResult(null);
+    setValidateDetails(true);
+    if (missingDetails.length) {
+      setResult({ ok: false, missingFields: missingDetails.map(([, label]) => label), message: "Please complete the required details to continue." });
+      return;
+    }
     setPendingAction("save-continue");
     startTransition(async () => {
       let saved: ActionResult;
@@ -307,7 +326,8 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
         saved = await saveFinalDealershipDetails(stageDetailsForm());
       } catch (error) {
         setPendingAction(null);
-        setResult({ ok: false, message: error instanceof Error ? error.message : "Unable to save claim details." });
+        console.error("Claim intimation save failed", error);
+        setResult({ ok: false, message: "Unable to save claim details. Please refresh and try again." });
         return;
       }
       if (!saved.ok) {
@@ -354,7 +374,8 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
         }
       } catch (error) {
         setPendingAction(null);
-        setResult({ ok: false, message: error instanceof Error ? error.message : "Unable to complete Claim Intimation." });
+        console.error("Claim intimation completion failed", error);
+        setResult({ ok: false, message: "Unable to complete Claim Intimation. Please refresh and try again." });
       }
     });
   }
@@ -377,16 +398,16 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
           </section>
         </div>
       ) : null}
-      <section className="rounded-2xl border border-[#DFE8F4] bg-white p-4 shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
+      <section ref={detailsSectionRef} className="rounded-2xl border border-[#DFE8F4] bg-white p-4 shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
         <h2 className="text-[15px] font-semibold text-[#071D49]">Stage Details</h2>
         <span role="status" aria-live="polite" className="sr-only">{autoSaveStatus === "saving" ? "Saving automatically…" : autoSaveStatus === "saved" ? "Saved" : autoSaveStatus === "error" ? "Save failed — draft retained" : ""}</span>
         {autoSaveStatus === "error" ? <p role="alert" className="mt-2 text-[11px] text-red-700">{autoSaveError}</p> : null}
         <div className="mt-2 grid gap-3 md:grid-cols-5">
-          <DateField label="Claim Intimation Date" value={details.claim_intimation_date} onChange={(value) => updateStageDetail("claim_intimation_date", value)} />
-          <Field label="Dealership Name" value={details.dealership_name} onChange={(value) => updateStageDetail("dealership_name", value)} />
-          <Field label="Dealership Location" value={details.dealership_location} onChange={(value) => updateStageDetail("dealership_location", value)} />
-          <DateField label="Gate-in Date" value={details.gate_in_date} onChange={(value) => updateStageDetail("gate_in_date", value)} />
-          <Field label="Estimate Amount" value={details.estimate_amount} onChange={(value) => updateStageDetail("estimate_amount", value.replace(/[^0-9.]/g, ""))} inputMode="decimal" />
+          <DateField label="Claim Intimation Date" invalid={invalidDetail("claim_intimation_date")} value={details.claim_intimation_date} onChange={(value) => updateStageDetail("claim_intimation_date", value)} />
+          <Field label="Dealership Name" invalid={invalidDetail("dealership_name")} value={details.dealership_name} onChange={(value) => updateStageDetail("dealership_name", value)} />
+          <Field label="Dealership Location" invalid={invalidDetail("dealership_location")} value={details.dealership_location} onChange={(value) => updateStageDetail("dealership_location", value)} />
+          <DateField label="Gate-in Date" invalid={invalidDetail("gate_in_date")} value={details.gate_in_date} onChange={(value) => updateStageDetail("gate_in_date", value)} />
+          <Field label="Estimate Amount" invalid={invalidDetail("estimate_amount")} value={details.estimate_amount} onChange={(value) => updateStageDetail("estimate_amount", value.replace(/[^0-9.]/g, ""))} inputMode="decimal" />
         </div>
       </section>
 
@@ -465,14 +486,20 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
           <div className="mt-3 rounded-xl border border-[#E2EAF4] bg-[#FBFCFE] px-4 py-5 text-center text-[11px] font-semibold text-[#68758A]">{verificationLoadError ? "Unable to load documents. Please retry or refresh the claim." : "Loading documents..."}</div>
         )}
 
-        <div className="mt-4 flex justify-end"><div className="flex items-center gap-3"><button type="button" disabled={isPending} onClick={() => run("draft", () => submitFinalDocumentsDraft(stageDetailsForm()))} className="rounded-lg border border-[#D9E3F0] bg-white px-5 py-2 text-[12px] font-semibold text-[#071D49] transition disabled:cursor-not-allowed disabled:bg-[#F1F4F8] disabled:text-[#8A97A8] disabled:opacity-70">{isPending && pendingAction === "draft" ? "Saving..." : "Save as Draft"}</button><button type="button" disabled={isPending} onClick={saveAndContinue} className="rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white disabled:bg-[#A9B4C5]">{isPending && pendingAction === "save-continue" ? "Saving..." : "Save Details"}</button></div></div>
+        <div className="mt-4 flex justify-end"><div className="flex items-center gap-3"><button type="button" disabled={isPending} onClick={() => { setValidateDetails(false); run("draft", () => submitFinalDocumentsDraft(stageDetailsForm())); }} className="rounded-lg border border-[#D9E3F0] bg-white px-5 py-2 text-[12px] font-semibold text-[#071D49] transition disabled:cursor-not-allowed disabled:bg-[#F1F4F8] disabled:text-[#8A97A8] disabled:opacity-70">{isPending && pendingAction === "draft" ? "Saving..." : "Save as Draft"}</button><button type="button" disabled={isPending} onClick={saveAndContinue} className="rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white disabled:bg-[#A9B4C5]">{isPending && pendingAction === "save-continue" ? "Saving..." : "Save Details"}</button></div></div>
       </section>
 
       <ClaimStageErrorDialog
-        message={claimNumberError || (!result?.ok ? result?.message : null) || verificationLoadError}
+        message={claimNumberError || (!result?.ok ? result?.message : null) || (verificationLoadError ? "Unable to load documents. Please refresh and try again." : "")}
+        title={result?.missingFields?.length && !claimNumberError ? "Missing Details" : undefined}
+        fields={!claimNumberError ? result?.missingFields : undefined}
         onClose={() => {
           if (claimNumberError) setClaimNumberError("");
-          else if (result && !result.ok) setResult(null);
+          else if (result && !result.ok) {
+            const focusMissing = Boolean(result.missingFields?.length);
+            setResult(null);
+            if (focusMissing) requestAnimationFrame(() => detailsSectionRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
+          }
           else setVerificationLoadError("");
         }}
       />
@@ -512,14 +539,14 @@ function documentVisual(row: FinalDocumentRowV2): DocumentVisual {
   return { key: "document", accent: "bg-[#EEF4FF]", fallbackIcon: "📄" };
 }
 
-function Field({ label, value, onChange, inputMode }: { label: string; value: string; onChange: (value: string) => void; inputMode?: "decimal" | "numeric" }) { return <label className="block min-w-0"><span className="block whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.01em] text-[#174EA6]">{label} <span className="text-red-600">*</span></span><input value={value} inputMode={inputMode} onChange={(event) => onChange(event.target.value)} className="mt-1 h-[34px] w-full rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#174EA6]" /></label>; }
-function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function Field({ label, value, onChange, inputMode, invalid }: { label: string; value: string; onChange: (value: string) => void; inputMode?: "decimal" | "numeric"; invalid?: boolean }) { return <label className="block min-w-0"><span className="block whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.01em] text-[#174EA6]">{label} <span className="text-red-600">*</span></span><input aria-invalid={invalid || undefined} style={invalid ? { borderColor: "#DC2626" } : undefined} value={value} inputMode={inputMode} onChange={(event) => onChange(event.target.value)} className="mt-1 h-[34px] w-full rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#174EA6]" /></label>; }
+function DateField({ label, value, onChange, invalid }: { label: string; value: string; onChange: (value: string) => void; invalid?: boolean }) {
   const matched = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   const display = matched ? `${matched[3]}/${matched[2]}/${matched[1]}` : "DD/MM/YYYY";
   return <label className="block min-w-0"><span className="block whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.01em] text-[#174EA6]">{label} <span className="text-red-600">*</span></span>
-    <span className="relative mt-1 flex h-[34px] w-full items-center justify-between rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold text-[#071D49] focus-within:border-[#174EA6]">
+    <span style={invalid ? { borderColor: "#DC2626" } : undefined} className="relative mt-1 flex h-[34px] w-full items-center justify-between rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold text-[#071D49] focus-within:border-[#174EA6]">
       <span aria-hidden="true">{display}</span><svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 shrink-0 fill-none stroke-[#526178] stroke-[1.8]"><rect x="4" y="6" width="16" height="14" rx="2" /><path d="M8 3v6M16 3v6M4 10h16" /></svg>
-      <input aria-label={label} type="date" value={value} onChange={(event) => onChange(event.target.value)} onClick={(event) => event.currentTarget.showPicker?.()} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+      <input aria-label={label} aria-invalid={invalid || undefined} type="date" value={value} onChange={(event) => onChange(event.target.value)} onClick={(event) => event.currentTarget.showPicker?.()} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
     </span>
   </label>;
 }
