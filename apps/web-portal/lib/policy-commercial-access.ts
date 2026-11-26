@@ -11,6 +11,7 @@ const COMMERCIAL_PROFILE_IDS = new Set([
   "1b7cb2bb-e9a3-4713-ab42-56758dab10c9", // Ragini Gupta — Operations it_super_user
   "8c4ec4a2-d940-4394-b484-698e9ab70a69", // Nikhil Awadhwal — Operations it_super_user
   "f634d48a-e075-4dbd-849c-3e17974f3f94",
+  "7bda6ffc-340e-48aa-bd3d-4f1f62cf85d9", // Gagandeep Singh — Sales Head, read-only commercial reporting
 ]);
 
 export function canAccessPolicyCommercials(profile: CommercialProfile, scopedRecordAuthorized = false) {
