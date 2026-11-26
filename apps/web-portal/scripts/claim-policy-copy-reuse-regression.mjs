@@ -44,7 +44,7 @@ assert.match(button, /router\.refresh\(\)/);
 // Customer reuse enforces account/claim scope, existing stage locks and preserves pending verification.
 assert.match(customerAction, /resolveCustomerWebScope\(accountId\)/);
 assert.match(customerAction, /loadCustomerClaimDetail\(account\.id, claimId\)/);
-assert.match(customerAction, /Claim Intimation is complete\. Spot Intimation documents are locked/);
+assert.match(customerAction, /Spot Intimation documents are locked after Operations verification/);
 assert.match(customerAction, /Completed managed claims cannot accept new customer documents/);
 assert.match(customerAction, /findExistingLinkedClaimCopy\(admin, claim\.id, account\.id, source\)/);
 assert.match(customerAction, /if \(existing\) return/);
