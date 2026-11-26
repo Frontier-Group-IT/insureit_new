@@ -24,7 +24,7 @@ assert.match(screen,/approvalDropdown:\{flex:7/);
 assert.match(screen,/approvalSend:\{flex:3/);
 assert.match(screen,/approvalDeadline:\{fontWeight:'800',color:'#17365D'\}/);
 assert.match(screen,/draft\?\.issuanceDate\?draft\.issuanceDate\.split\('-'\)\.reverse\(\)\.join\('\/'\)/);
-assert.match(screen,/draft\?\.policyNumber\|\|'—'/);
+assert.match(screen,/draft\?\.policyNo\|\|'—'/);
 assert.match(screen,/Why approval is required/);
 assert.match(screen,/Confirm &amp; Submit/);
 assert.match(screen,/approvalError\?<Text accessibilityRole="alert"/);
