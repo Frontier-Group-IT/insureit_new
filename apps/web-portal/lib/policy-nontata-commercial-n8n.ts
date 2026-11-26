@@ -9,7 +9,7 @@ type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" |
 type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf" | "hdfc_ergo_two_wheeler_tp_native_pdf" | "sbi_general_private_car_package_native_pdf";
 type HeldInsurer = "magma_private_car_package_native_pdf" | "national_private_car_liability_only_native_pdf"
   | "oriental_private_car_standalone_od_native_pdf" | "oriental_gccv_package_native_pdf";
-type Insurer = ExistingInsurer | NewProductVariant | HeldInsurer;
+type Insurer = ExistingInsurer | NewProductVariant | HeldInsurer | "national_gcv_package_native_pdf";
 const HELD_INSURERS = new Set<string>([
   "magma_private_car_package_native_pdf","national_private_car_liability_only_native_pdf",
   "oriental_private_car_standalone_od_native_pdf","oriental_gccv_package_native_pdf",
@@ -96,6 +96,12 @@ function insurerForText(head: string): Insurer | null {
     matches.push("iffco_tokio_cv_native_pdf");
   if (/Go Digit General Insurance/i.test(issuer) && /Digit Commercial Vehicle Insurance/i.test(product))
     matches.push("go_digit_cv_native_pdf");
+  // National GCV Package is different from the established National private
+  // car liability-only product. Require BOTH independently read native-PDF
+  // issuer and bilingual Goods Carrying Vehicle Package heading.
+  if (/National Insurance Co(?:mpany)?\\.?\\s*(?:Ltd\\.?|Limited)/i.test(normalized)
+      && /Policy Schedule-Motor\\s*-\\s*Goods Carrying Vehicle\\s*-\\s*Package/i.test(normalized))
+    matches.push("national_gcv_package_native_pdf");
   if (/UNITED INDIA INSURANCE COMPANY LIMITED/i.test(issuer) && /GCV PUBLIC CARRIER/i.test(product)){
     // Exact source-certified Punjab/BharatBenz four-component split tax.
     // Keep existing IGST-based UIIC classifications untouched.
@@ -394,10 +400,102 @@ function validateNewVariant(
       ncbDiscount:ncbDiscount as number,odBasicAfterNcb:effectiveOd as number}:{})}};
 }
 
+/** National Insurance GCV Package: certified extraction ONLY.
+ * No CPA (owner-driver personal accident) is invented from an uncharged
+ * PDF. Canonical premium projection/booking for this new product is NOT
+ * enabled; the output only supports reviewed source-field extraction.
+ */
+export function validateNationalGcvExtractionOnly(
+ payload:unknown,ids:Record<"intake_id"|"document_id"|"request_id",string>,
+):NonTataCommercialRead{
+ if(!object(payload)||payload.contract_version!=="1"
+  ||payload.parser_id!=="national_gcv_package_native_pdf"
+  ||payload.parser_version!=="source-candidate-1"
+  ||payload.extraction_method!=="native_pdf_text"
+  ||payload.review_required!==true||payload.auto_finalize_allowed!==false
+  ||payload.ok!==true||payload.validation_passed!==true
+  ||payload.intake_id!==ids.intake_id||payload.document_id!==ids.document_id
+  ||payload.request_id!==ids.request_id
+  ||!object(payload.checks)||!Array.isArray(payload.fields)
+  ||!Array.isArray(payload.warnings)||payload.warnings.length!==0
+  ||!object(payload.premium_components))
+  throw new Error("n8n_national_gcv_extraction_contract_invalid");
+ const names=[
+  "insurer_product_verified","policy_number_verified","insured_name_verified",
+  "printed_issuance_date_verified","coverage_dates_verified",
+  "registration_printed","engine_chassis_printed","make_model_variant_printed",
+  "vehicle_class_verified","fuel_source_verified","manufacture_year_verified",
+  "capacity_cc_printed","idv_printed","od_tp_components_reconciled",
+  "printed_tax_components_verified","net_tax_gross_reconciled",
+  "tp_itemization_reconciled","stamp_charge_disclosed",
+ ];
+ if(Object.keys(payload.checks).length!==18||names.some(k=>payload.checks[k]!==true))
+  throw new Error("n8n_national_gcv_extraction_checks_invalid");
+ const fields:OcrField[]=payload.fields.map((raw:unknown)=>{
+  if(!object(raw)||typeof raw.key!=="string"||!ALLOWED_FIELDS.has(raw.key)
+   ||typeof raw.value!=="string"||!raw.value.trim()||raw.value.length>300
+   ||typeof raw.label!=="string"||raw.label.length>100
+   ||typeof raw.evidence!=="string"||raw.evidence.length>180
+   ||raw.confidence!==null||raw.page!==null)
+    throw new Error("n8n_national_gcv_field_invalid");
+  return {key:raw.key,label:raw.label,value:raw.value,confidence:null,page:null,evidence:raw.evidence};
+ });
+ if(fields.length<19||fields.length>32||new Set(fields.map(x=>x.key)).size!==fields.length)
+  throw new Error("n8n_national_gcv_field_set_invalid");
+ const by=new Map(fields.map(f=>[f.key,f]));
+ const val=(key:string)=>by.get(key)?.value.trim()??"";
+ const exact="NIA bilingual goods carrying vehicle package schedule";
+ const required=["policy_number","insured_name","policy_product","policy_start_date",
+  "policy_end_date","policy_issuance_date","vehicle_registration_number",
+  "vehicle_registration_status","vehicle_make","vehicle_model","vehicle_class",
+  "vehicle_chassis_number","vehicle_engine_number","vehicle_manufacturing_year",
+  "vehicle_fuel_type","vehicle_capacity","idv","od_premium","tp_premium"];
+ if(required.some(k=>!val(k)||by.get(k)?.evidence!==exact&&k!=="policy_issuance_date"))
+  throw new Error("n8n_national_gcv_source_evidence_missing");
+ if(val("insurer_name")!=="National Insurance Company Limited"
+  ||by.get("insurer_name")?.evidence!==exact
+  ||val("policy_product")!=="Goods Carrying Vehicle Package"
+  ||val("vehicle_class")!=="Goods Carrying Vehicle"
+  ||val("vehicle_make")!=="Eicher Motors Limited"
+  ||val("vehicle_fuel_type")!=="DIESEL"
+  ||val("vehicle_registration_status")!=="registered"
+  ||!/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4}$/.test(val("vehicle_registration_number"))
+  ||!/^20\d\d$/.test(val("vehicle_manufacturing_year"))
+  ||!Number.isFinite(Number(val("vehicle_capacity")))||Number(val("vehicle_capacity"))<=0)
+  throw new Error("n8n_national_gcv_vehicle_provenance_invalid");
+ const date=(v:string)=>/^\d{4}-\d{2}-\d{2}$/.test(v)
+  &&Number.isFinite(Date.parse(v+"T00:00:00Z"))
+  &&new Date(v+"T00:00:00Z").toISOString().slice(0,10)===v;
+ if(by.get("policy_issuance_date")?.evidence!=="NIA printed Date of issue"
+  ||!date(val("policy_issuance_date"))||!date(val("policy_start_date"))
+  ||!date(val("policy_end_date"))||val("policy_start_date")>val("policy_end_date"))
+  throw new Error("n8n_national_gcv_issue_or_coverage_invalid");
+ const p=payload.premium_components;
+ const money=(key:string)=>typeof p[key]==="number"&&Number.isFinite(p[key])
+   &&p[key]>=0&&Math.abs(p[key]*100-Math.round(p[key]*100))<.00001;
+ const amounts=["od","tp","net","gst","gross","cgst","sgst","igst","stampDuty","separatelyPaidStamp"];
+ if(amounts.some(key=>!money(key))||p.cpa!==null||p.taxRegime!=="IGST"
+  ||p.cgst!==0||p.sgst!==0||p.igst!==p.gst||p.stampDuty!==0
+  ||p.separatelyPaidStamp!==0.5
+  ||p.od<=0||p.tp<=0||p.net<=0||p.gross<=0
+  ||Math.abs(p.od+p.tp-p.net)>.06
+  ||Math.abs(p.net+p.gst-p.gross)>.06
+  ||Math.abs(Number(val("od_premium"))-p.od)>.001
+  ||Math.abs(Number(val("tp_premium"))-p.tp)>.001
+  ||Math.abs(Number(val("idv")))===0||!Number.isFinite(Number(val("idv"))))
+  throw new Error("n8n_national_gcv_financial_evidence_invalid");
+ // Do NOT supply candidateCanonicalPremium or CPA. Extraction verified,
+ // registration is restricted to a separate product-specific human preflight.
+ return{parserId:"national_gcv_package_native_pdf",parserVersion:"source-candidate-1",
+  fields,warnings:[],checksPassed:18,premium:{od:p.od,tp:p.tp,net:p.net,gst:p.gst,gross:p.gross}};
+}
+
 function validate(payload: unknown, insurer: Insurer,
   ids: Record<"intake_id" | "document_id" | "request_id", string>,
   orientalSignature?:OrientalSignedIssuanceEvidence|null,
 ): NonTataCommercialRead {
+  if(insurer==="national_gcv_package_native_pdf")
+    return validateNationalGcvExtractionOnly(payload,ids);
   if(HELD_INSURERS.has(insurer)){
     // Oriental's PDF-native text can expose an issue date only through an
     // actual, integrity-verified, full-document detached CMS signature.
