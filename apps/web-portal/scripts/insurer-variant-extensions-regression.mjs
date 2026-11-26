@@ -134,7 +134,8 @@ assert.match(handoff,/assessProductVariantDirectConversion/);
 // for the plain-JS regression runner. All source inputs are synthetic.
 const handoffGate=handoff.slice(handoff.indexOf("const commercialChecksOk="),
  handoff.indexOf("const acceptableCommercialWarning="));
-assert.match(handoffGate,/parsed\.preview\.parserId==="sbi_general_private_car_package_native_pdf"\s*\?\s*assessProductVariantDirectConversion/);
+assert.match(handoffGate,/\["sbi_general_private_car_package_native_pdf","liberty_two_wheeler_tp_native_pdf"\]\.includes\(parsed\.preview\.parserId\)/);
+assert.match(handoffGate,/assessProductVariantDirectConversion/);
 const runHandoffGate=new Function("commercial","parsed","trainedN8nParserProfile",
  "PRODUCT_VARIANT_PARSERS","assessProductVariantDirectConversion",
  handoffGate.replaceAll("commercial!.","commercial.")+"return commercialChecksOk;");
