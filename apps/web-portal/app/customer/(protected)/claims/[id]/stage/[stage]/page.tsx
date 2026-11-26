@@ -1,4 +1,4 @@
-import { customerSpotVerificationLocked } from "@/lib/claim-workflow";
+import { customerSpotVerificationLocked, customerClaimIntimationVerificationLocked, customerClaimIntimationAvailable } from "@/lib/claim-workflow";
 import "./customer-claim-reference.css";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -61,11 +61,13 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   if (selected.key==="spot_intimation" && claim.current_status==="Draft") {
     redirect("/customer/spot-intimation?account="+encodeURIComponent(account.id)+"&id="+encodeURIComponent(claim.id));
   }
-  const canEditStage = external && Boolean(CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key]) && (completed || activeIndex===currentIndex);
+  const finalLocked = customerClaimIntimationVerificationLocked(claim.current_status,documents);
+  const finalEditable = !finalLocked && (external ? (completed || activeIndex===currentIndex) : customerClaimIntimationAvailable(claim.current_status));
+  const canEditStage = selected.key==="claim_intimation" ? finalEditable : external && Boolean(CUSTOMER_EXTERNAL_STAGE_FIELDS[selected.key]) && (completed || activeIndex===currentIndex);
   // Internal claims use the original Spot Intimation form until their first stage is complete.
   // External claims retain their existing stage navigation and edit/upload workflow.
   const completedInternalStages = !external ? (internal_projection?.completedStageCount ?? 0) : 0;
-  if (!external && completedInternalStages > 0) {
+  if (!external && completedInternalStages > 0 && !(selected.key==="claim_intimation" && finalEditable && q.mode==="edit")) {
     return <div className="customer-claim-ref-page space-y-3">
       <CustomerClaimReuploadNotice requests={reuploadRequests} accountId={account.id} claimId={claim.id}/>
       <CustomerClaimReuploadFocus requestId={selectedRequest?.id ?? null}/>
@@ -222,7 +224,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
         <form action={confirmCustomerSpotIntimationSaved}><input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/><button type="submit" className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#1253A7] px-6 text-[12px] font-bold text-white hover:bg-[#0B3884]">Save Details</button></form>
       </div>
     ) : null}
-    {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={false} allowUpload={editMode && external && canEditStage} reuploadDocumentType={selectedRequest?.documentType} reuploadRequestId={selectedRequest?.id} canReusePolicyCopy={canReusePolicyCopy} /> : null}
+    {selected.key==="claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} showSaveDetails={false} allowUpload={editMode && canEditStage} reuploadDocumentType={selectedRequest?.documentType} reuploadRequestId={selectedRequest?.id} canReusePolicyCopy={canReusePolicyCopy} /> : null}
     {selected.key==="claim_intimation" && editMode && canEditStage ? (
       <div className="flex flex-wrap items-center justify-end gap-3 rounded-xl border border-[#D9E6F7] bg-white px-5 py-4">
         <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
