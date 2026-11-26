@@ -55,12 +55,25 @@
   }
 }
 
-/* Customer Policies only: one highlight travels between the four status tabs. */
-.customer-policies-page .policy-status-sliding-indicator {
-  transition: transform 1050ms cubic-bezier(.42, 0, .20, 1);
+
+/* Policy register empty state: scoped, finite motion. */
+.customer-policies-page .customer-policy-empty {
+  animation: customer-policy-empty-enter 280ms ease-out both;
+}
+.customer-policies-page .customer-policy-empty-art {
+  animation: customer-policy-empty-float 2.8s ease-in-out 1;
+}
+@keyframes customer-policy-empty-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes customer-policy-empty-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .customer-policies-page .policy-status-sliding-indicator {
-    transition: none !important;
+  .customer-policies-page .customer-policy-empty,
+  .customer-policies-page .customer-policy-empty-art {
+    animation: none;
   }
 }
