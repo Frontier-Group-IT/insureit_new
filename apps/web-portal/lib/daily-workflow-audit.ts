@@ -8,6 +8,7 @@ import type { createSupabaseAdminClient } from "@/lib/supabase-admin";
 const ALLOWED = {
   policy_intake_requests: new Set([
     "policy_intake_review_started",
+    "policy_intake_manual_review_assigned",
     "policy_intake_attention_requested",
     "policy_intake_rejected",
     "policy_intake_response_uploaded",
