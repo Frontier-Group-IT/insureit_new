@@ -261,6 +261,7 @@ async function holdFailedAiConversion(id:string,issues:readonly SemiAutoIssue[]=
     :fields.has("Policy issuance date")?"issuance_date_unverified"
     :fields.has("PDF reconciliation")||fields.has("Owner-driver CPA")?"draft_conflict"
     :fields.has("Vehicle capacity")||fields.has("Vehicle identity")?"missing_field"
+    :fields.has("Source only")?"source_only_extraction"
     :fields.has("Source PDF")||fields.has("Extraction")?"unverified_parser"
     :"booking_review_required";
   // A certified NIA review hold is not a parsing failure. Preserve a real
@@ -576,6 +577,10 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   // Validate the original PDF premium and its OD/NCB deduction before a
   // handoff can claim the Intake or create a canonical draft.
   let verifiedMoney:ReturnType<typeof mapVerifiedN8nMotorPremium>;
+  if(["national_gcv_package_native_pdf",
+      "go_digit_jcb_new_unregistered_native_pdf"].includes(extracted.preview.parserId))
+    return fail("Source only",
+      "The current PDF was source-verified, but product-specific CPA or NEW registration evidence is not certified for automatic policy booking. Review the printed cover before converting.");
   const commercial=extracted.preview.commercialPremium;
   const iffco=extracted.preview.parserId==="iffco_tokio_cv_native_pdf";
   const nia=extracted.preview.parserId==="new_india_cv_native_pdf";
