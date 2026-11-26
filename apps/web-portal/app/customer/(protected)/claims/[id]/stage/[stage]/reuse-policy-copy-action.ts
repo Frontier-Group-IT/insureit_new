@@ -1,6 +1,6 @@
 "use server";
 
-import { customerSpotVerificationLocked } from "@/lib/claim-workflow";
+import { customerSpotVerificationLocked, customerClaimIntimationVerificationLocked, customerClaimIntimationAvailable } from "@/lib/claim-workflow";
 
 import { revalidatePath } from "next/cache";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
@@ -23,6 +23,7 @@ export async function reuseCustomerLinkedPolicyCopy(accountId: string, claimId: 
   // loadCustomerClaimDetail verifies this claim belongs to the authorized customer.
   const { claim, milestones, documents } = await loadCustomerClaimDetail(account.id, claimId);
   if (stage === "spot_intimation" && customerSpotVerificationLocked(claim.current_status,documents)) return {ok:false,message:"Spot Intimation documents are locked after Operations verification."};
+  if (stage === "claim_intimation" && (customerClaimIntimationVerificationLocked(claim.current_status,documents) || (claim.claim_service_mode === "broker_managed" && !customerClaimIntimationAvailable(claim.current_status)))) return {ok:false,message:"Claim Intimation documents are not available for editing."};
   if (claim.claim_service_mode === "broker_managed" && ["Settled","Closed","Claim Complete"].includes(claim.current_status))
     return {ok:false,message:"Completed managed claims cannot accept new customer documents."};
   const admin = createSupabaseAdminClient();
