@@ -9,6 +9,7 @@ import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { buildPolicyOcrOnboardingUpdate, normalizeVerifiedMotorPowerKw } from "@/lib/policy-ocr-onboarding-apply";
 import { policyDateDecision } from "@/lib/policy-date-rule";
+import { assessGoDigitNewJcbDirectConversion } from "@/lib/policy-digit-new-jcb-direct-eligibility";
 import { mapVerifiedGoDigitCommercialPremium, mapVerifiedIffcoCommercialPremium, mapVerifiedNiaCommercialPremium, mapVerifiedUiicGcvCommercialPremium, mapVerifiedN8nMotorPremium, verifiedCpaSelectionMatches } from "@/lib/policy-n8n-onboarding-premium";
 import { assessProductVariantDirectConversion, mapVerifiedProductVariantPremium, PRODUCT_VARIANT_PARSERS } from "@/lib/policy-product-variant-direct-eligibility";
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
@@ -578,10 +579,17 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   // Validate the original PDF premium and its OD/NCB deduction before a
   // handoff can claim the Intake or create a canonical draft.
   let verifiedMoney:ReturnType<typeof mapVerifiedN8nMotorPremium>;
-  if(["national_gcv_package_native_pdf",
-      "go_digit_jcb_new_unregistered_native_pdf"].includes(extracted.preview.parserId))
-    return fail("Source only",
-      "The current PDF was source-verified, but product-specific CPA or NEW registration evidence is not certified for automatic policy booking. Review the printed cover before converting.");
+  if(extracted.preview.parserId==="national_gcv_package_native_pdf")
+    return fail("CPA evidence","The National GCV policy has no separately verified owner-driver CPA charge or exclusion. Review original insurer evidence before booking.");
+  const digitNewCertified=assessGoDigitNewJcbDirectConversion({
+    parserId:extracted.preview.parserId,checksPassed:extracted.preview.checksPassed,
+    warnings:extracted.preview.warnings,fields:extracted.preview.fields,
+    commercialPremium:extracted.preview.commercialPremium,
+    candidateCanonicalPremium:extracted.preview.candidateCanonicalPremium,
+  });
+  if(extracted.preview.parserId==="go_digit_jcb_new_unregistered_native_pdf"
+     &&!digitNewCertified.eligible)
+    return fail("Go Digit NEW JCB evidence","Current PDF CPA/vehicle source is not certified: "+digitNewCertified.reason);
   const commercial=extracted.preview.commercialPremium;
   const iffco=extracted.preview.parserId==="iffco_tokio_cv_native_pdf";
   const nia=extracted.preview.parserId==="new_india_cv_native_pdf";
@@ -592,7 +600,9 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
     &&heldParserIds.has(extracted.preview.parserId)
     &&Boolean(extracted.preview.candidateCanonicalPremium);
   if (commercial) {
-    if(heldCandidate){
+    if(digitNewCertified.eligible){
+      verifiedMoney=extracted.preview.candidateCanonicalPremium!;
+    }else if(heldCandidate){
       // Exact PDF source, 18-check response, CPA and OD addon split already
       // verified in the independent held-insurer adapter.
       verifiedMoney=extracted.preview.candidateCanonicalPremium!;
