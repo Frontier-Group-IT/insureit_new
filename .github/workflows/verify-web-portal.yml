@@ -385,6 +385,8 @@ jobs:
       - name: Customer Exchange recovery regression
         working-directory: apps/web-portal
         run: node scripts/customer-exchange-recovery-regression.mjs
+      - name: Customer Exchange asset foundation regression
+        run: node scripts/customer-exchange-asset-regression.mjs
       - name: Customer Web login and signup entry regression
         run: node scripts/customer-web-auth-entry-regression.mjs
       - name: Customer and Operations session isolation regression

@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, CheckCircle2, ChevronDown, MapPin, Search, Tag, Truck } from "lucide-react";
 import { CustomerAnimatedSearchInput } from "./customer-animated-search-input";
-import { customerExchangeVehicleArt } from "@/lib/customer-exchange-vehicle-art";
+import { resolveCustomerExchangeVehicleArt } from "@/lib/customer-exchange-vehicle-art";
+import { ExchangeVehicleImage } from "./customer-exchange-vehicle-image";
 
 type SellVehicle = {
   vehicle_id: string;
@@ -73,12 +74,13 @@ export function CustomerExchangeSellWorkspace({ vehicles, accountId }: { vehicle
       </div>
       {filtered.length === 0 ? <div className="rounded-xl border border-[#DFE7F3] bg-white p-10 text-center text-sm text-[#6D809B]">No vehicles match your search and filters.</div> : (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          {filtered.map(vehicle => {
+          {filtered.map((vehicle,index) => {
+            const art=resolveCustomerExchangeVehicleArt(vehicle);
             const name = [vehicle.make, vehicle.model].filter(Boolean).join(" ") || vehicle.vehicle_type || "Commercial vehicle";
             const location = [vehicle.city, vehicle.state].filter(Boolean).join(", ") || "Location on request";
-            return <article key={vehicle.vehicle_id} className="flex min-w-0 flex-col rounded-xl border border-[#DDE7F2] bg-white p-2 shadow-[0_4px_16px_rgba(25,66,119,.06)]">
-              <div className="relative flex h-[88px] items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-[#EAF3FD] to-[#D3E4F5]">
-                <img src={customerExchangeVehicleArt(vehicle.vehicle_type, vehicle.vehicle_category)} alt={`${name} vehicle illustration`} className="h-full w-full object-contain p-1" />
+            return <article key={vehicle.vehicle_id} style={{animationDelay:Math.min(index,8)*45+"ms"}} className="exchange-vehicle-card flex min-w-0 flex-col rounded-xl border border-[#DDE7F2] bg-white p-2 shadow-[0_4px_16px_rgba(25,66,119,.06)]">
+              <div className="relative overflow-hidden rounded-lg">
+                <ExchangeVehicleImage key={art.src} src={art.src} label={name} kind={art.kind} showroom />
                 <span className={`absolute right-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold ${vehicle.has_active_listing ? "bg-[#FFF0D9] text-[#98641E]" : "bg-[#E2F8EB] text-[#167B51]"}`}><CheckCircle2 className="h-3 w-3" />{vehicle.has_active_listing ? "Already listed" : "Ready to list"}</span>
               </div>
               <div className="flex min-w-0 flex-1 flex-col px-1 pb-1 pt-2">

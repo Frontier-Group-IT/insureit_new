@@ -1,0 +1,25 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import ts from "typescript";
+import vm from "node:vm";
+const compile=(path,require)=>{const module={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path,"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{module,exports:module.exports,require});return module.exports;};
+const master=compile("lib/customer-exchange-vehicle-master.ts",()=>{throw Error("Unexpected import")});
+const {resolveCustomerExchangeVehicleArt:r,neutralVehicleArt:n}=compile("lib/customer-exchange-vehicle-art.ts",()=>master);
+const samples=[["BAJAJ","C3503","TWP","scooter"],["HERO","PLEASURE+","TWP","scooter"],["SUZUKI","Access 125","TWP","scooter"],["Honda","Shine","TWP","motorcycle"],["KIA","SELTOS","PCP","suv"],["MAHINDRA","BOLERO MAXX PIK-UP CITY","GCV","pickup"],["BHARATBENZ","5532T","GCV","truck"],["JCB","3DX","MISD","construction"]];
+for(const [make,model,vehicle_type,body] of samples){const a=r({make,model,vehicle_type});assert.equal(a.body,body);assert.notEqual(a.kind,"model");if(body==="scooter")assert.equal(a.src,n);}
+for(const input of [{vehicle_type:"TWP"},{vehicle_type:"PCV"},{vehicle_type:"MISD"},{vehicle_type:"GCV"},{make:"HONDA",model:"SHINE",vehicle_type:"PCP"},{make:"SUZUKI",model:"ACCESS 125",vehicle_type:"TWP",body_type:"MOTORCYCLE"},{make:"MAHINDRA",model:"BOLERO XL 2WD"}])assert.equal(r(input).src,n);
+assert.equal(r({body_type:"BUS"}).body,"bus");
+assert.equal(r({body_type:"TRAILER"}).body,"trailer");
+assert.equal(r({body_type:"TIPPER"}).body,"tipper");
+const fixture={make:"HONDA",model:"SHINE",aliases:[],body:"motorcycle",verified:true,webp:"/assets/exchange-vehicles/test.webp",source:"test",licence:"test"};
+assert.equal(r({make:"Honda",model:"Shine",vehicle_type:"TWP"},[fixture]).kind,"model");
+assert.notEqual(r({make:"Honda",model:"Shine",vehicle_type:"TWP"},[{...fixture,licence:undefined}]).kind,"model");
+assert.equal(r({make:"Honda",model:"Shine",vehicle_type:"TWP"},[fixture,fixture]).src,n);
+const page=fs.readFileSync("app/customer/(protected)/exchange/page.tsx","utf8");
+assert.match(page,/src=\{row.cover_url\|\|neutralVehicleArt\}/);
+assert.match(page,/src=\{cover\|\|neutralVehicleArt\}/);
+const sell=fs.readFileSync("components/customer-portal/customer-exchange-sell-workspace.tsx","utf8");
+assert.match(sell,/resolveCustomerExchangeVehicleArt\(vehicle\)/);
+assert.match(sell,/disabled title="Listing creation is not yet available/);
+for(const a of master.vehicleAssetMaster)assert.equal(a.verified,false,"Initial catalogue does not claim verified art");
+console.log("Exchange asset foundation regression passed");
