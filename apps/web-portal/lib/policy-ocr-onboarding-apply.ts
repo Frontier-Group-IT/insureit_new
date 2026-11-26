@@ -1,5 +1,5 @@
 import { resolveManufacturingYearEvidence } from "./policy-registration-year-fallback.mjs";
-import { verifiedPolicyManufacturerBrand } from "./policy-trained-make-alias";
+import { verifiedPolicyManufacturerBrand } from "./policy-trained-make-alias.mjs";
 
 export type OcrImportField = {
   key: string;
