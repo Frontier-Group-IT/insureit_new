@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+const stages = fs.readFileSync("components/claim-manager/operations-claim-stages.tsx","utf8");
+assert.doesNotMatch(stages,/successNotice|setSuccessNotice|ClaimStageSuccessPopup|3500/, "Successful stage saves must not leave a blocking overlay on navigation");
+assert.match(stages,/if \(!state\.ok\) return;[\s\S]*?if \(state\.completedFinalStage\)/, "Only successful saves may navigate");
+assert.match(stages,/if \(state\.nextStageKey\) \{[\s\S]*?setSelectedKey\(state\.nextStageKey\);[\s\S]*?router\.replace/, "Successful stages immediately navigate to next step");
+assert.match(stages,/router\.replace\("\/claims"\)/, "Confirmed final completion returns to claim register");
+assert.match(stages,/if \(!spotState\.ok\) return;[\s\S]*?router\.replace\(\`\/claims\/\$\{claimId\}\?stage=\$\{nextKey\}\`\)/, "Successful spot save navigates without popup");
+assert.match(stages,/setErrorNotice\(state\.message\)/, "Failed save retains error feedback");
+assert.match(stages,/setErrorNotice\(spotState\.message\)/, "Failed spot save retains error feedback");
+assert.match(stages,/<ClaimStageErrorDialog/, "Stage validation errors stay visible");
+assert.match(stages,/completeClaimJourneyStageWithFeedback\(claimId, formData\)/, "Keep authorized save action");
+assert.match(stages,/saveInternalSpotIntimationDetailsWithFeedback\(claimId, formData\)/, "Keep authorized spot save");
+console.log("Operations Claim Journey immediate success navigation regression passed.");

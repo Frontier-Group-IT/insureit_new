@@ -6,7 +6,6 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { advanceInternalSpotIntimationWithFeedback, saveInternalSpotIntimationDetailsWithFeedback } from "@/app/claims/internal-spot-intimation-actions";
 import { completeClaimJourneyStageWithFeedback } from "@/app/claims/stage-actions";
-import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
 import { ClaimStageErrorDialog } from "@/components/claim-manager/claim-stage-error-dialog";
 import { OperationsClaimStageOneAttachments } from "@/components/claim-manager/operations-claim-stage-one-attachments";
 import { ExternalClaimBillUpload, type WorkshopBillDocument } from "@/components/claims/external-claim-bill-upload";
@@ -204,14 +203,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const spotCurrentEditable = Boolean(selected.key === "spot_intimation" && selectedIsCurrent && managerNext);
   const stageEditable = !partnerReadOnlyJourney && Boolean(selected.key !== "spot_intimation" && (selected.key !== "claim_intimation" || partnerManagedJourney) && selectedAvailable && stageTarget);
   const [spotSubmitting, setSpotSubmitting] = useState(false);
-  const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!successNotice) return;
-    const timer = window.setTimeout(() => setSuccessNotice(null), 3500);
-    return () => window.clearTimeout(timer);
-  }, [successNotice]);
 
   const [state, formAction] = useActionState(
     async (_previous: ActionState, formData: FormData): Promise<ActionState> => {
@@ -221,7 +213,6 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           const result = await completeClaimJourneyStageWithFeedback(claimId, formData);
           if (!result.ok) return { ok: false, message: result.message ?? "Unable to save this claim stage.", advanced: false, nextStageKey: null };
           const message = result.advanced ? "Claim stage updated." : "Stage details saved.";
-          setSuccessNotice(message);
           return {
             ok: true,
             message,
@@ -234,7 +225,6 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         }
         const advanced = await advanceInternalSpotIntimationWithFeedback(claimId, formData);
         if (!advanced.ok) return { ok: false, message: advanced.message, advanced: false, nextStageKey: null };
-        setSuccessNotice("Claim stage updated.");
         return { ok: true, message: "Claim stage updated.", advanced: true, nextStageKey: "spot_status" };
       } catch (error) {
         return { ok: false, message: error instanceof Error ? error.message : "Unable to update the claim stage.", advanced: false, nextStageKey: null };
@@ -250,7 +240,6 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       try {
         const saved = await saveInternalSpotIntimationDetailsWithFeedback(claimId, formData);
         if (!saved.ok) return { ok: false, message: saved.message };
-        setSuccessNotice("Spot Intimation details saved.");
         return { ok: true, message: "Spot Intimation details saved." };
       } catch (error) {
         const message = error instanceof Error && error.message && !error.message.includes("NEXT_REDIRECT")
@@ -277,6 +266,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
   useEffect(() => {
     if (!state.ok) return;
+    // Navigate on confirmed success without showing a lingering success overlay.
     try { window.sessionStorage.removeItem(`insureit:spot-intimation-draft:${claimId}`); } catch { /* optional storage */ }
     if (state.completedFinalStage) {
       // Only a server-confirmed final-stage advancement returns to the Operations Claim Register.
@@ -483,7 +473,6 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         ) : null}
       </div>
 
-      {successNotice ? <ClaimStageSuccessPopup message={successNotice} /> : null}
       <ClaimStageErrorDialog message={errorNotice ? summarizeClaimActionError(errorNotice) : null} onClose={() => setErrorNotice(null)} />
     </section>
   );
