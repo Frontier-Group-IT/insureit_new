@@ -147,7 +147,21 @@ function parserDiagnostic(code:string|null|undefined): {title:string;detail:stri
     n8n_bridge_http_failure_404:"The configured n8n webhook was not found. Check workflow publication and path.",
     n8n_bridge_http_failure_401:"The n8n webhook rejected authentication."
   };
-  return {title:code==="existing_active_policy_overlap"?"Existing active policy":"Extraction diagnostic",detail:descriptions[code]??"n8n returned a failure code. Open the current workflow execution and inspect its rejected checks or document stage.",checks:[]};
+  const titles:Record<string,string>={
+    existing_active_policy_overlap:"Existing active policy",
+    n8n_review_required:"n8n PDF verification needs review",
+    n8n_nontata_identity_or_contract_invalid:"Website / n8n parser mismatch",
+    n8n_nontata_verification_failed:"Commercial PDF checks failed",
+    n8n_nontata_financial_reconciliation_failed:"Printed premium mismatch",
+    n8n_nontata_required_field_missing:"n8n missing policy fields",
+    n8n_nontata_check_set_invalid:"n8n check contract mismatch",
+    n8n_nontata_pdf_download_failed:"PDF download to n8n failed",
+    n8n_bridge_http_failure_404:"n8n webhook not found",
+    n8n_bridge_http_failure_401:"n8n authentication failed",
+    n8n_nontata_pdf_not_pdf:"Invalid PDF source",
+  };
+  return {title:titles[code]??"Extraction diagnostic",
+    detail:descriptions[code]??"n8n returned a failure code. Open the current workflow execution and inspect its rejected checks or document stage.",checks:[]};
 }
 
 const humanStatus: Record<string, string> = {
@@ -759,6 +773,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                   <td className="whitespace-nowrap px-3 py-3"><span className="rounded-md bg-[#edf2fa] px-2 py-1 font-semibold text-[#3f5c82]">{row.is_duplicate ? "Duplicate · Review only"
                       : primaryN8n && row.intake_bucket === "action_required" ? "Action Required"
                       : primaryN8n && row.intake_bucket === "in_review" ? "In Review"
+                      : primaryN8n && row.ai_state==="exception"&&row.ocr_status==="pending"
+                        ? "Extraction Review"
                       : primaryN8n && row.intake_bucket === "processing" ? "Processing"
                       : humanStatus[row.status] || row.status}</span></td>
                   <td className="whitespace-nowrap px-3 py-3"><span className={row.ocr_status === "completed" ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>{row.ocr_status === "completed" ? "Extracted" : row.ocr_status.replaceAll("_", " ")}</span></td>
