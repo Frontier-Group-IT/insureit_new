@@ -47,7 +47,7 @@ function fixture(parser,overrides={},premium={od:0,tp:3416,net:3416,gst:614.88,g
 const kotak="zurich_kotak_private_car_tp_native_pdf";
 const united="united_india_tractor_tp_native_pdf";
 const digit="go_digit_two_wheeler_od_native_pdf";
-assert.equal(PRODUCT_VARIANT_PARSERS.size,5);
+assert.equal(PRODUCT_VARIANT_PARSERS.size,6);
 assert.equal(assessProductVariantDirectConversion(fixture(kotak)).eligible,true);
 assert.equal(assessProductVariantDirectConversion(fixture(united,
  {policy_start_date:"2026-11-19",policy_end_date:"2027-11-18",
@@ -134,7 +134,8 @@ assert.match(handoff,/assessProductVariantDirectConversion/);
 // for the plain-JS regression runner. All source inputs are synthetic.
 const handoffGate=handoff.slice(handoff.indexOf("const commercialChecksOk="),
  handoff.indexOf("const acceptableCommercialWarning="));
-assert.match(handoffGate,/parsed\.preview\.parserId==="sbi_general_private_car_package_native_pdf"\s*\?\s*assessProductVariantDirectConversion/);
+assert.match(handoffGate,/\["sbi_general_private_car_package_native_pdf","liberty_two_wheeler_tp_native_pdf"\]\.includes\(parsed\.preview\.parserId\)/);
+assert.match(handoffGate,/assessProductVariantDirectConversion/);
 const runHandoffGate=new Function("commercial","parsed","trainedN8nParserProfile",
  "PRODUCT_VARIANT_PARSERS","assessProductVariantDirectConversion",
  handoffGate.replaceAll("commercial!.","commercial.")+"return commercialChecksOk;");
@@ -169,8 +170,8 @@ for(const [parser,vehicleClass,product] of [
 }
 assert.ok(convert.includes('variantParser==="sbi_general_private_car_package_native_pdf"?"Package"'),
  "SBI must not be rejected as Third Party after a verified Package draft");
-assert.ok(convert.includes('"hdfc_ergo_two_wheeler_tp_native_pdf"].includes(variantParser)?"TWP"'),
- "HDFC liability-only must preserve TWP, never MISD");
+assert.ok(convert.includes('"hdfc_ergo_two_wheeler_tp_native_pdf","liberty_two_wheeler_tp_native_pdf"].includes(variantParser)?"TWP"'),
+ "Both HDFC and Liberty liability-only variants must preserve TWP, never MISD");
 
 assert.match(eligibility,/zurich_kotak_private_car_tp_native_pdf/);
 console.log("Isolated product-variant extraction, financial and direct-convert regression passed");

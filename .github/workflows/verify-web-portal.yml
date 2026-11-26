@@ -43,6 +43,8 @@ jobs:
         run: node --experimental-strip-types scripts/go-digit-new-jcb-cpa-regression.mjs
       - name: Final four source-certified manufacturer mapping regression
         run: node --experimental-strip-types scripts/final-four-manufacturer-alias-regression.mjs
+      - name: Liberty TP and owner-driver CPA product-layout regression
+        run: node --experimental-strip-types scripts/liberty-two-wheeler-tp-regression.mjs
       - name: RTO city and state independently optional across policy onboarding
         run: node --experimental-strip-types scripts/rto-optional-policy-regression.mjs
       - name: Tata AIG Private Car RTO and CNG IMT25 source regression

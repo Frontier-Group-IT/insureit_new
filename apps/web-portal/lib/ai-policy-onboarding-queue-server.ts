@@ -1,8 +1,9 @@
 import "server-only";
+import {createHash} from "node:crypto";
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
-import { assessAiPolicyIntake, acceptedTataAigIssuanceDate, hasVerifiedN8nParserEvidence, ICICI_N8N_IDS, type AiPolicyEvidence, type AiPolicyExceptionCode } from "@/lib/ai-policy-onboarding-eligibility";
+import { assessAiPolicyIntake, acceptedTataAigIssuanceDate, hasVerifiedN8nParserEvidence, ICICI_N8N_IDS, NON_TATA_COMMERCIAL_N8N_IDS, type AiPolicyEvidence, type AiPolicyExceptionCode } from "@/lib/ai-policy-onboarding-eligibility";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
@@ -114,7 +115,15 @@ export async function processAiQueueBatch(options?: {preferredIntakeId?:string;m
   // recovery worker after deployment, without rewriting OCR/drafts or booking.
   // Include the configured base to preserve operator-controlled versioning;
   // this stable suffix also works when production has a pinned base revision.
-  const parserRevision = ((process.env.INSUREIT_AI_QUEUE_PARSER_REVISION||"bridge-v1").trim()+"-issue-date-v3");
+  // Parser coverage changes are discovered once per code release. When a
+  // NEW insurer/product adapter is added, all previous unsupported/exception
+  // rows become eligible for bounded, lease-protected automatic reprocessing.
+  // No OCR overwrite or booking is performed by the revision bump itself.
+  const registryFingerprint=createHash("sha256")
+    .update([...NON_TATA_COMMERCIAL_N8N_IDS,...ICICI_N8N_IDS].sort().join("|"))
+    .digest("hex").slice(0,12);
+  const parserRevision=((process.env.INSUREIT_AI_QUEUE_PARSER_REVISION||"bridge-v1").trim()
+    +"-insured-product-"+registryFingerprint);
   if (parserRevision.length < 1 || parserRevision.length > 80) {
     throw new Error("AI queue parser revision configuration invalid");
   }
@@ -221,10 +230,17 @@ async function processClaim(item: Claimed, parserRevision: string) {
     const untrained=extraction.reason==="untrained_or_unverified";
     // A recognized parser that rejected the PDF's verification contract is
     // not an untrained layout. Keep its safe diagnostic for the reviewer.
-    const validationFailed=untrained && Boolean(extraction.diagnosticCode);
     const safeDiagnostic=extraction.diagnosticCode??"parser_not_trained";
+    // Unknown insurer/product families are a TRAINING gap, not an OCR or PDF
+    // integrity failure. Group all same-layout intakes under one actionable
+    // product diagnosis and do not burn n8n retries on the same untrained code.
+    const layoutNeedsTraining=untrained&&(
+      !extraction.diagnosticCode
+      || extraction.diagnosticCode.startsWith("n8n_layout_untrained_")
+      || extraction.diagnosticCode==="n8n_untrained_layout");
+    const validationFailed=untrained&&!layoutNeedsTraining;
     await finishClaim(item,{
-      state:validationFailed?"exception":untrained?"unsupported":"failed",
+      state:layoutNeedsTraining?"unsupported":validationFailed?"exception":untrained?"unsupported":"failed",
       exception_codes:[validationFailed?"extraction_failed":untrained?"unsupported_layout":"extraction_failed"],
       field_keys:[],parser_id:null,checks_passed:0,extraction_fingerprint:null,
       last_error_code:untrained?safeDiagnostic:"n8n_unavailable",

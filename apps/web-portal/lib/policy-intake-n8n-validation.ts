@@ -127,6 +127,13 @@ export function validateN8nPolicyIntakeResponse(
       .includes(String(value.parser_id))) {
     throw new Error("n8n_commercial_classifier_missed_layout");
   }
+  // Unknown insurer/product is a layout-training gap, not failed PDF
+  // integrity. Repeating the same old parser will not make it succeed.
+  // This never grants verified extraction or authorizes policy booking.
+  if(["icici_policy_unrecognized_native_pdf","non_tata_unrecognized_native_pdf"].includes(String(value.parser_id))
+    &&value.ok===false&&value.review_required===true
+    &&value.auto_finalize_allowed===false)
+    throw new Error("n8n_untrained_layout");
   if (value.ok !== true || value.review_required !== true || value.auto_finalize_allowed !== false
       || (!isOd && !isBundled)
       || value.extraction_method !== "native_pdf_text") throw new Error("n8n_review_required");

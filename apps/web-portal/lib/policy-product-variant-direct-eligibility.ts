@@ -11,6 +11,7 @@ export const PRODUCT_VARIANT_PARSERS = new Set([
   "united_india_tractor_tp_native_pdf",
   "hdfc_ergo_two_wheeler_tp_native_pdf",
   "sbi_general_private_car_package_native_pdf",
+  "liberty_two_wheeler_tp_native_pdf",
 ]);
 type Field={key:string;value:string;evidence?:string};
 type Printed={od:number;tp:number;net:number;gst:number;gross:number;cpa?:number;addOn?:number;odBasic?:number;ncbPercent?:number;ncbDiscount?:number;odBasicAfterNcb?:number};
@@ -49,7 +50,7 @@ export function assessProductVariantDirectConversion(input:Input):{eligible:bool
    &&Math.abs(v*100-Math.round(v*100))<0.00001;
  if(![printed.od,printed.tp,printed.net,printed.gst,printed.gross].every(money)
    ||Math.abs(cents(printed.od)+cents(printed.tp)
-   +cents(input.parserId==="sbi_general_private_car_package_native_pdf"?(printed.cpa??NaN):0)
+   +cents(["sbi_general_private_car_package_native_pdf","liberty_two_wheeler_tp_native_pdf"].includes(input.parserId)?(printed.cpa??NaN):0)
    -cents(printed.net))>6
    ||Math.abs(cents(printed.net)+cents(printed.gst)-cents(printed.gross))>50
    ||cents(Number(field("od_premium")))!==cents(printed.od)
@@ -77,6 +78,28 @@ export function assessProductVariantDirectConversion(input:Input):{eligible:bool
      ||Math.abs(cents(printed.gst)-cents(printed.net*.18))>3
      ||!field("vehicle_manufacturing_year"))
      return no("sbi_package_variant_unverified");
+   return {eligible:true,reason:""};
+ }
+ if(input.parserId==="liberty_two_wheeler_tp_native_pdf"){
+   const cpa=printed.cpa, source=map.get("cpa_premium")?.evidence??"";
+   const make=field("vehicle_make"),model=field("vehicle_model"),cc=field("vehicle_capacity");
+   const verifiedFamily=make==="Bajaj"&&model==="PLATINA 100 ES"&&cc==="99"
+     ||make==="Bajaj"&&model==="DISCOVER 125 T DRUM"&&cc==="125"
+     ||make==="TVS"&&model==="JUPITER ZX"&&cc==="110";
+   if(field("insurer_name")!=="Liberty General Insurance Limited"
+     ||field("policy_product")!=="Third-Party Only"||field("vehicle_class")!=="Two Wheeler"
+     ||!field("vehicle_manufacturing_year")||!verifiedFamily
+     ||field("vehicle_fuel_type")!=="Petrol"
+     ||!map.get("vehicle_fuel_type")?.evidence?.startsWith("Manufacturer model-family petrol specification")
+     ||Number(field("idv"))!==0||printed.od!==0
+     ||printed.tp!==714||!Number.isFinite(cpa)||![0,375].includes(cpa??-1)
+     ||Number(field("cpa_premium"))!==cpa
+     ||(cpa===0?!source.startsWith("Printed CSI NA and no PA charge")
+       :!source.startsWith("Printed PA owner driver"))
+     ||Math.abs(cents(printed.net)-cents(printed.tp+(cpa??0)))>1
+     ||Math.abs(cents(printed.gst)-cents(printed.net*.18))>1
+     ||cents(printed.gross)!==cents(Math.round(printed.net+printed.gst)))
+       return no("liberty_two_wheeler_tp_source_unverified");
    return {eligible:true,reason:""};
  }
  if(digit){
@@ -139,7 +162,7 @@ export function mapVerifiedProductVariantPremium(
  // assessor must pass before it is invoked. Never reassign TP to OD.
  if(!PRODUCT_VARIANT_PARSERS.has(parserId)||
     ![p.od,p.tp,p.net,p.gst,p.gross].every(v=>Number.isFinite(v)&&v>=0)
-    ||Math.abs(Math.round((p.od+p.tp+(parserId==="sbi_general_private_car_package_native_pdf"?(p.cpa??NaN):0)-p.net)*100))>6
+    ||Math.abs(Math.round((p.od+p.tp+(["sbi_general_private_car_package_native_pdf","liberty_two_wheeler_tp_native_pdf"].includes(parserId)?(p.cpa??NaN):0)-p.net)*100))>6
     ||Math.abs(Math.round((p.net+p.gst-p.gross)*100))>50)
    throw new Error("product_variant_printed_premium_unreconciled");
  if(parserId==="go_digit_two_wheeler_od_native_pdf"&&!(p.od>0&&p.tp===0)
@@ -147,6 +170,15 @@ export function mapVerifiedProductVariantPremium(
       &&parserId!=="sbi_general_private_car_package_native_pdf"&&!(p.od===0&&p.tp>0))
    throw new Error("product_variant_premium_components_invalid");
  const cash=(v:number)=>String(Math.round(v*100)/100);
+ if(parserId==="liberty_two_wheeler_tp_native_pdf"){
+   if(p.od!==0||p.tp!==714||![0,375].includes(p.cpa??-1)
+     ||Math.abs(Math.round((p.tp+(p.cpa??0)-p.net)*100))>1
+     ||Math.abs(Math.round((p.net*.18-p.gst)*100))>1
+     ||Math.round(p.gross)!==Math.round(p.net+p.gst))
+       throw new Error("liberty_tw_tp_cpa_split_invalid");
+   return {od:"0",tp:cash(p.tp),addOnPremium:"0",cpa:cash(p.cpa!),
+     cpaOpted:p.cpa!>0?"Yes":"No"};
+ }
  if(parserId==="sbi_general_private_car_package_native_pdf"){
    if(![p.cpa,p.addOn,p.odBasic,p.ncbPercent,p.ncbDiscount,p.odBasicAfterNcb].every(v=>v!==undefined&&Number.isFinite(v)&&v>=0)
      ||Math.abs(Math.round(((p.odBasicAfterNcb??0)+(p.addOn??0)-p.od)*100))>1

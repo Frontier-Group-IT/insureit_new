@@ -100,6 +100,7 @@ export const NON_TATA_COMMERCIAL_N8N_IDS = new Set([
   "zurich_kotak_private_car_tp_native_pdf", "go_digit_two_wheeler_od_native_pdf",
   "united_india_tractor_tp_native_pdf",
   "hdfc_ergo_two_wheeler_tp_native_pdf", "sbi_general_private_car_package_native_pdf",
+  "liberty_two_wheeler_tp_native_pdf",
   // Explicitly source-admitted held-insurer candidates. Their actual website
   // response, date and CPA contracts remain stricter than this ID allowlist.
   "magma_private_car_package_native_pdf",
