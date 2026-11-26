@@ -1536,7 +1536,7 @@ export default function NativePolicyOnboarding(){
         <ScrollView keyboardShouldPersistTaps="handled" style={styles.approvalScroll} contentContainerStyle={styles.approvalContent}>
           <View style={styles.approvalDetails}>
             <View style={styles.approvalDetail}><Text style={styles.approvalLabel}>Policy issuance date</Text><Text style={styles.approvalValue}>{draft?.issuanceDate?draft.issuanceDate.split('-').reverse().join('/'):'—'}</Text></View>
-            <View style={styles.approvalDetail}><Text style={styles.approvalLabel}>Policy number</Text><Text style={styles.approvalValue}>{draft?.policyNumber||'—'}</Text></View>
+            <View style={styles.approvalDetail}><Text style={styles.approvalLabel}>Policy number</Text><Text style={styles.approvalValue}>{draft?.policyNo||'—'}</Text></View>
           </View>
           <View style={styles.approvalReason}>
             <Text style={styles.approvalReasonTitle}>Why approval is required</Text>
