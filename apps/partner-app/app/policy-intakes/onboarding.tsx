@@ -1540,7 +1540,7 @@ export default function NativePolicyOnboarding(){
           </View>
           <View style={styles.approvalReason}>
             <Text style={styles.approvalReasonTitle}>Why approval is required</Text>
-            <Text style={styles.approvalReasonText}>• Previous month's policies can be added without approval until the <Text style={styles.approvalDeadline}>15th</Text> of the current month.</Text>
+            <Text style={styles.approvalReasonText}>• Previous month&apos;s policies can be added without approval until the <Text style={styles.approvalDeadline}>15th</Text> of the current month.</Text>
             <Text style={styles.approvalReasonText}>• After the 15th, adding a previous-month policy requires special approval.</Text>
             <Text style={styles.approvalReasonText}>• The monthly submission deadline has passed and records may already be finalized. Late additions can affect reports, premium calculations and reconciliation.</Text>
             <Text style={styles.approvalReasonText}>• Approval confirms the late entry and helps maintain accurate records.</Text>
