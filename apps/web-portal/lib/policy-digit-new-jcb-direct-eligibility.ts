@@ -29,11 +29,11 @@ export function assessGoDigitNewJcbDirectConversion(input:Input):{eligible:boole
    ||get("vehicle_model")!=="3 DX PLUS CEV V / BACKHOE LOADER"
    ||get("vehicle_class")!=="Commercial Vehicle - Miscellaneous Class D"
    ||get("vehicle_fuel_type")!=="Diesel"
-   ||!/^20\\d{2}$/.test(get("vehicle_manufacturing_year"))
-   ||!/^\\d{3,5}$/.test(get("vehicle_capacity"))
+   ||!/^20\d{2}$/.test(get("vehicle_manufacturing_year"))
+   ||!/^\d{3,5}$/.test(get("vehicle_capacity"))
    ||map.get("cpa_premium")?.evidence!=="Digit PDF PA cover for Owner-Driver (printed)")
    return fail("digit_new_vehicle_or_cpa_source_invalid");
- const date=(v:string)=>/^\\d{4}-\\d{2}-\\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v+"T00:00:00Z"))
+ const date=(v:string)=>/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v+"T00:00:00Z"))
    &&new Date(v+"T00:00:00Z").toISOString().slice(0,10)===v;
  if(!date(get("policy_issuance_date"))||!date(get("policy_start_date"))
    ||!date(get("policy_end_date"))||get("policy_start_date")>get("policy_end_date")
