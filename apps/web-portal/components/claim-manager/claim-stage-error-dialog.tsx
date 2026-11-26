@@ -9,10 +9,12 @@ export function ClaimStageErrorDialog({
   message,
   onClose,
   title = "Check details",
+  fields,
 }: {
   message: string | null | undefined;
   onClose: () => void;
   title?: string;
+  fields?: string[];
 }) {
   const titleId = useId();
   const messageId = useId();
@@ -54,6 +56,7 @@ export function ClaimStageErrorDialog({
             <AlertCircle className="h-7 w-7" />
           </span>
           <h2 id={titleId} className="mt-4 text-[18px] font-semibold text-[#17365D]">{title}</h2>
+          {fields?.length ? <ul className="mt-4 w-full max-h-48 overflow-y-auto space-y-1 rounded-lg bg-slate-50 p-3 text-left text-[13px] font-medium text-slate-700">{fields.map(field => <li key={field} className="flex items-center gap-2"><AlertCircle aria-hidden="true" className="h-4 w-4 shrink-0 text-orange-600" />{field}</li>)}</ul> : null}
           <p id={messageId} className="mt-3 whitespace-pre-wrap break-words text-[13px] leading-6 text-[#53657F]">{message}</p>
         </div>
         <div className="border-t border-[#E4E9F0] px-6 py-4">
