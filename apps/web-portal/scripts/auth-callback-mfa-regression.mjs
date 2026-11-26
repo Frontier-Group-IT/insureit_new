@@ -12,4 +12,9 @@ assert(page.indexOf('supabase.auth.mfa.challengeAndVerify(')<page.indexOf('supab
 assert.match(page,/safePortalReturnPath\(destination\)/);
 assert.match(page,/status === "mfa"/);
 assert.doesNotMatch(page,/service_role|auth\.admin\.updateUserById|mfa\.unenroll/);
+assert(page.includes("!/^[0-9]{6}$/.test(mfaCode)"), "Six-digit numeric code must be accepted without double-escaped regex");
+assert(page.includes('event.target.value.replace(/[^0-9]/g,"").slice(0,6)'), "TOTP input must strip non-digits without deleting the code");
+assert.equal(/^[0-9]{6}$/.test("746790"),true);
+assert.equal(/^[0-9]{6}$/.test("12345"),false);
+assert.equal("74 67 90".replace(/[^0-9]/g,"").slice(0,6),"746790");
 console.log("Auth callback MFA password-change contract passed.");
