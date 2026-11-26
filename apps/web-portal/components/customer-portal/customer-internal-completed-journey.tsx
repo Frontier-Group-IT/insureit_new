@@ -1,5 +1,5 @@
 "use client";
-import { customerSpotVerificationLocked } from "@/lib/claim-workflow";
+import { customerSpotVerificationLocked, customerClaimIntimationVerificationLocked, customerClaimIntimationAvailable } from "@/lib/claim-workflow";
 import Link from "next/link";
 import { Check, Pencil } from "lucide-react";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
@@ -54,8 +54,9 @@ export function CustomerInternalCompletedJourney({
   const completedStages = Math.max(0, Math.min(completedCount, INTERNAL_JOURNEY_STAGES.length));
   const spotDocuments = documents.filter(doc => spotTypes.has(normalize(doc.document_type)));
   const stageTwoLocked = customerSpotVerificationLocked(claimStatus, documents);
+  const finalEditable = customerClaimIntimationAvailable(claimStatus) && !customerClaimIntimationVerificationLocked(claimStatus,documents);
   return <section className="overflow-hidden rounded-2xl border border-[#DCE5F1] bg-white">
-    {INTERNAL_JOURNEY_STAGES.slice(0,completedStages).map((stage) => {
+    {INTERNAL_JOURNEY_STAGES.slice(0,Math.max(completedStages,finalEditable?3:0)).map((stage) => {
       const milestone = milestones.find(item => item.milestone_key === stage.key);
       const details = milestone?.details ?? {};
       const entries = stage.key === "spot_intimation" ? [
@@ -77,6 +78,7 @@ export function CustomerInternalCompletedJourney({
           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#188460] text-white"><Check className="h-4 w-4"/></span>
           <span className="min-w-0 flex-1 text-[14px] font-bold text-[#132D54]">{stage.label}</span>
           {milestone?.completed_at ? <span className="hidden text-[11px] text-[#536782] sm:inline">{new Date(milestone.completed_at).toLocaleDateString("en-GB",{timeZone:"Asia/Kolkata",day:"2-digit",month:"short",year:"numeric"})}</span> : null}
+          {stage.key === "claim_intimation" && finalEditable ? <Link href={`/customer/claims/${encodeURIComponent(claimId)}/stage/claim_intimation?account=${encodeURIComponent(accountId)}&mode=edit`} aria-label="Edit Claim Intimation" title="Edit Claim Intimation" className="ml-2 inline-flex h-9 w-9 items-center justify-center text-[#17365D]"><Pencil className="h-4 w-4" aria-hidden="true"/></Link> : null}
           {stage.key === "spot_intimation" && !stageTwoLocked ? <Link href={`/customer/spot-intimation?account=${encodeURIComponent(accountId)}&id=${encodeURIComponent(claimId)}&mode=edit`} aria-label="Edit Spot Intimation" title="Edit Spot Intimation" className="ml-2 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-transparent text-[#17365D] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#155BAA]"><Pencil className="h-4 w-4" aria-hidden="true" /></Link> : null}
         </div>
         <div className="space-y-3 border-t border-[#E5EBF4] px-4 py-3">
@@ -91,7 +93,7 @@ export function CustomerInternalCompletedJourney({
             </div>
           </div> : <p className="rounded-lg bg-[#F6F9FD] px-3 py-3 text-[12px] text-[#64748B]">No details recorded for this stage yet.</p>}
           {stage.key === "spot_intimation" && true ? <><CustomerClaimEvidenceWorkspace documents={spotDocuments} claimId={claimId} accountId={accountId} stage="spot_intimation" allowUpload={false} reuploadDocumentType={reuploadStage === "spot_intimation" ? reuploadDocumentType : null} reuploadRequestId={reuploadStage === "spot_intimation" ? reuploadRequestId : null} /><CustomerClaimVoiceRecorder documents={spotDocuments} claimId={claimId} accountId={accountId} allowUpload={false}/></> : null}
-          {stage.key === "claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claimId} accountId={accountId} stage="claim_intimation" allowUpload={false} reuploadDocumentType={reuploadStage === "claim_intimation" ? reuploadDocumentType : null} reuploadRequestId={reuploadStage === "claim_intimation" ? reuploadRequestId : null} /> : null}
+          {stage.key === "claim_intimation" ? <CustomerClaimDocumentGroups documents={documents} claimId={claimId} accountId={accountId} stage="claim_intimation" allowUpload={finalEditable} reuploadDocumentType={reuploadStage === "claim_intimation" ? reuploadDocumentType : null} reuploadRequestId={reuploadStage === "claim_intimation" ? reuploadRequestId : null} /> : null}
         </div>
       </section>;
     })}
