@@ -197,3 +197,9 @@ export function stageAgeLabel(value?: string | null) {
   const days = Math.floor(hours / 24);
   return `${days}d in stage`;
 }
+/** Customer Spot Intimation locks after all six Operations initial-document categories are verified. */
+export function customerSpotVerificationLocked(status: string, documents: ReadonlyArray<{document_type:string;verification_status?:string|null}>) {
+  if (["Settled","Closed","Rejected","Claim Complete"].includes(status)) return true;
+  if (status === "Draft") return false;
+  return initialDocumentTypes.every(type => documents.some(doc => doc.verification_status === "verified" && matchesRequiredDocument(doc.document_type,type)));
+}
