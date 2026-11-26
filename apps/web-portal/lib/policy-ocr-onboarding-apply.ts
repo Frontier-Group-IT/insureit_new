@@ -1,4 +1,5 @@
 import { resolveManufacturingYearEvidence } from "./policy-registration-year-fallback.mjs";
+import { verifiedPolicyManufacturerBrand } from "./policy-trained-make-alias";
 
 export type OcrImportField = {
   key: string;
@@ -42,6 +43,10 @@ export type OcrApplyInput = {
   manufacturers: string[];
   insurers: Array<{ value: string; label: string }>;
   rcVerified: boolean;
+  /** Source-verified policy parser, never inferred from customer input. */
+  sourceParserId?: string;
+  sourceChecksPassed?: number;
+  sourceWarnings?: readonly string[];
 };
 
 export type OcrApplyResult = {
@@ -321,6 +326,15 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
         ?? input.manufacturers.find(option => option.trim().toLowerCase() === "bajaj auto")
         ?? input.manufacturers.find(option => /^bajaj auto (?:limited|ltd\.?|ltd\.?)$/i.test(option.trim()));
       return named ?? "";
+    }
+    const model=(byKey.get("vehicle_model")?.value??"").trim();
+    const sourceBrand=input.sourceParserId?verifiedPolicyManufacturerBrand({
+      parserId:input.sourceParserId,checksPassed:input.sourceChecksPassed??0,
+      warnings:input.sourceWarnings??[],make:raw,model,
+    }):null;
+    if(sourceBrand) {
+      const canonical=input.manufacturers.find(option=>normalizeText(option)===normalizeText(sourceBrand));
+      if(canonical)return canonical;
     }
     return manufacturer(raw, input.manufacturers);
   });
