@@ -221,7 +221,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
     // SBI Package prints owner-driver CPA separately from TP. Reuse its
     // certified product assessor (including NCB, add-ons, CPA and GST)
     // rather than applying the zero-CPA commercial equation to this layout.
-    && (parsed.preview.parserId==="sbi_general_private_car_package_native_pdf"
+    && (["sbi_general_private_car_package_native_pdf","liberty_two_wheeler_tp_native_pdf"].includes(parsed.preview.parserId)
       ? assessProductVariantDirectConversion({
         parserId:parsed.preview.parserId,checksPassed:parsed.preview.checksPassed,
         warnings:parsed.preview.warnings,fields:parsed.preview.fields,
@@ -665,7 +665,9 @@ async function preparePolicyIntakeHandoffInternal(
     policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",flatPayoutAmount:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:verified?.commercialPremium
       ? `Policy Intake ${id} — independently validated commercial-motor PDF (${verified.parserId}). REVIEW ONLY; no policy or customer was booked. Printed OD ${verified.commercialPremium.od}, TP including liabilities ${verified.commercialPremium.tp}, Net ${verified.commercialPremium.net}, GST ${verified.commercialPremium.gst}, Gross ${verified.commercialPremium.gross}. ${verified.parserId==="iffco_tokio_cv_native_pdf" ? `IFFCO source Net(B) ${verified.commercialPremium.tp} includes owner-driver CPA ${iffcoCpa}. Canonical TP ${verifiedPremium?.tp} excludes that CPA, and CPA is entered separately as ${verifiedPremium?.cpa}; their sum equals printed Net(B).` : niaCertified ? `New India separately verified owner-driver CPA ${niaCpa} is excluded from canonical TP ${verifiedPremium?.tp}; paid-driver LL stays within TP. Printed mixed 18%/5% GST ${verified.commercialPremium.gst} is not recalculated at 18% of net.` :candidatePremium ? `Verified held-insurer source: canonical TP ${verifiedPremium?.tp} excludes source-certified CPA ${verifiedPremium?.cpa}; OD and add-ons remain in the insurer-verified form buckets. RTO geography is optional.`
-        :PRODUCT_VARIANT_PARSERS.has(verified.parserId) ? (verified.parserId==="sbi_general_private_car_package_native_pdf"
+        :PRODUCT_VARIANT_PARSERS.has(verified.parserId) ? (verified.parserId==="liberty_two_wheeler_tp_native_pdf"
+        ? "Liberty Two-Wheeler Liability Only: printed Basic TP 714 and owner-driver PA 0/375 are independently separated and reconciled to printed net, GST and rounded gross. Manufacturer-model petrol evidence is labelled separately from the source PDF. RTO geography remains optional."
+        : verified.parserId==="sbi_general_private_car_package_native_pdf"
         ? "SBI General Private Car Package: printed basic OD, NCB discount (if applicable), itemized OD add-ons, third-party basic and separate owner-driver CPA are independently reconciled. Canonical Motor uses basic OD after NCB so discounts and add-ons are not double-counted. Net, GST and rounded payable are checked against the insurer PDF."
         : verified.parserId==="hdfc_ergo_two_wheeler_tp_native_pdf"
         ? "HDFC ERGO two-wheeler liability-only: printed TP ₹ total, rounded IGST and CPA waiver validated. Petrol was resolved from the certified Honda Activa-3G 109cc model family; the policy does not print fuel."
