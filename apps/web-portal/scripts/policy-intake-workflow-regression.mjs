@@ -33,7 +33,8 @@ assert(intakeList.includes('if (value === "open") return "open"')
   && intakeList.includes('return reviewer ? "action" : "open"'),
   "Policy Intake must default to true open work for non-reviewers");
 assert(aiUi.includes("const total = intakeCounts.action_required + intakeCounts.in_review + intakeCounts.processing")
-  && aiUi.includes('workspaceRows.filter(row => policyIntakeBucket(row,duplicateIds.has(row.id)) !== "duplicate")'),
+  && aiUi.includes('const canonical=policyIntakeBucket(row,duplicateIds.has(row.id));')
+  && aiUi.includes('workspaceRows.filter(row => displayBucket(row) !== "duplicate")'),
   "AI All Open and total must exclude confirmed duplicates while preserving Duplicate audit tab");
 
 const actions=read("app/policy-intakes/actions.ts");
