@@ -170,8 +170,8 @@ for(const [parser,vehicleClass,product] of [
 }
 assert.ok(convert.includes('variantParser==="sbi_general_private_car_package_native_pdf"?"Package"'),
  "SBI must not be rejected as Third Party after a verified Package draft");
-assert.ok(convert.includes('"hdfc_ergo_two_wheeler_tp_native_pdf"].includes(variantParser)?"TWP"'),
- "HDFC liability-only must preserve TWP, never MISD");
+assert.ok(convert.includes('"hdfc_ergo_two_wheeler_tp_native_pdf","liberty_two_wheeler_tp_native_pdf"].includes(variantParser)?"TWP"'),
+ "Both HDFC and Liberty liability-only variants must preserve TWP, never MISD");
 
 assert.match(eligibility,/zurich_kotak_private_car_tp_native_pdf/);
 console.log("Isolated product-variant extraction, financial and direct-convert regression passed");
