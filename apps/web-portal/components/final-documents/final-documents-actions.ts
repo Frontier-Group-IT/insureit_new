@@ -6,7 +6,7 @@ import { requireClaimWorkflowAccess } from "@/lib/claim-workflow-access";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const bucketName = "claim-documents";
-type ActionResult = { ok: boolean; message?: string };
+type ActionResult = { ok: boolean; message?: string; missingFields?: string[] };
 type ClaimRow = { id: string; customer_id: string | null; current_status: string | null; policy_service_source: "sibl" | "external" | null };
 
 type ClaimIntimationDetails = {
@@ -105,7 +105,7 @@ export async function saveFinalDealershipDetails(formData: FormData): Promise<Ac
     const missing = [
       ["Claim Intimation Date", claimIntimationDate], ["Dealership Name", dealershipName], ["Dealership Location", dealershipLocation], ["Gate-in Date", gateInDate], ["Estimate Amount", estimateAmountText]
     ].filter(([, value]) => !value).map(([label]) => label);
-    if (missing.length) throw new Error(`Please fill: ${missing.join(", ")}.`);
+    if (missing.length) return { ok: false, missingFields: missing, message: "Please complete the required details to continue." };
     if (!isDateValue(claimIntimationDate)) throw new Error("Please select a valid Claim Intimation Date.");
     if (!isDateValue(gateInDate)) throw new Error("Please select a valid Gate-in Date.");
     if (!Number.isFinite(estimateAmount) || estimateAmount < 0) throw new Error("Please enter a valid Estimate Amount.");
@@ -130,7 +130,9 @@ export async function saveFinalDealershipDetails(formData: FormData): Promise<Ac
     return { ok: true, message: "Stage details saved." };
   } catch (error) {
     console.error("saveFinalDealershipDetails failed", error);
-    return { ok: false, message: error instanceof Error ? error.message : "Unable to save stage details." };
+    const reason = error instanceof Error ? error.message : "";
+    const safe = ["Please select a valid Claim Intimation Date.", "Please select a valid Gate-in Date.", "Please enter a valid Estimate Amount.", "You do not have permission to update final documents."];
+    return { ok: false, message: safe.includes(reason) ? reason : "Unable to save stage details. Please try again." };
   }
 }
 
@@ -288,7 +290,7 @@ export async function submitFinalDocumentsDraft(formData: FormData): Promise<Act
     return { ok: true, message: "Draft saved. Verification is still required before completing this stage." };
   } catch (error) {
     console.error("submitFinalDocumentsDraft failed", error);
-    return { ok: false, message: error instanceof Error ? error.message : "Unable to save draft." };
+    return { ok: false, message: "Unable to save draft. Please try again." };
   }
 }
 
