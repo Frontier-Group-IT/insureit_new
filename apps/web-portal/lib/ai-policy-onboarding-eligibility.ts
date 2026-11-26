@@ -104,6 +104,7 @@ export const NON_TATA_COMMERCIAL_N8N_IDS = new Set([
   // response, date and CPA contracts remain stricter than this ID allowlist.
   "magma_private_car_package_native_pdf",
   "national_private_car_liability_only_native_pdf",
+  "national_gcv_package_native_pdf",
   "oriental_private_car_standalone_od_native_pdf",
   "oriental_gccv_package_native_pdf",
 ]);
