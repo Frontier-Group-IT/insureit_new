@@ -49,6 +49,7 @@ const aiIssueTitles: Record<string,string> = {
   customer_creation_required:"Create or select customer",
   vehicle_ownership:"Vehicle belongs to another customer",
   insured_name_mismatch:"PDF insured name missing in draft",
+  source_only_extraction:"PDF extracted · premium/registration review",
   missing_field:"Mandatory field missing",
   manufacturer_unmatched:"Vehicle make not matched",
   financial_reconciliation:"Premium mismatch",
