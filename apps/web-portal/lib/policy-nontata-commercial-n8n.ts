@@ -8,7 +8,7 @@ import { verifyOrientalCmsSigningDate, type OrientalSignedIssuanceEvidence } fro
 import { acceptGoDigitNewJcbExtraction } from "@/lib/policy-digit-new-jcb-extraction";
 
 type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "united_india_gcv_punjab_split_gst_native_pdf" | "united_india_private_car_package_native_pdf" | "oriental_gccv_native_pdf";
-type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf" | "hdfc_ergo_two_wheeler_tp_native_pdf" | "sbi_general_private_car_package_native_pdf";
+type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf" | "hdfc_ergo_two_wheeler_tp_native_pdf" | "sbi_general_private_car_package_native_pdf" | "liberty_two_wheeler_tp_native_pdf";
 type HeldInsurer = "magma_private_car_package_native_pdf" | "national_private_car_liability_only_native_pdf"
   | "oriental_private_car_standalone_od_native_pdf" | "oriental_gccv_package_native_pdf";
 type Insurer = ExistingInsurer | NewProductVariant | HeldInsurer | "national_gcv_package_native_pdf" | "go_digit_jcb_new_unregistered_native_pdf";
@@ -16,7 +16,7 @@ const HELD_INSURERS = new Set<string>([
   "magma_private_car_package_native_pdf","national_private_car_liability_only_native_pdf",
   "oriental_private_car_standalone_od_native_pdf","oriental_gccv_package_native_pdf",
 ]);
-const NEW_VARIANTS = new Set<Insurer>(["zurich_kotak_private_car_tp_native_pdf","go_digit_two_wheeler_od_native_pdf","united_india_tractor_tp_native_pdf","hdfc_ergo_two_wheeler_tp_native_pdf","sbi_general_private_car_package_native_pdf"]);
+const NEW_VARIANTS = new Set<Insurer>(["zurich_kotak_private_car_tp_native_pdf","go_digit_two_wheeler_od_native_pdf","united_india_tractor_tp_native_pdf","hdfc_ergo_two_wheeler_tp_native_pdf","sbi_general_private_car_package_native_pdf","liberty_two_wheeler_tp_native_pdf"]);
 type OcrField = { key: string; label: string; value: string; confidence: null; page: number | null; evidence: string };
 export type NonTataCommercialRead = {
   parserId: Insurer;
@@ -137,6 +137,10 @@ function insurerForText(head: string): Insurer | null {
   if (/HDFC ERGO General Insurance Company Limited/i.test(product)
       && /Motor Insurance\s*-\s*Two Wheeler Liability only/i.test(product))
     matches.push("hdfc_ergo_two_wheeler_tp_native_pdf");
+  if (/LIBERTY GENERAL INSURANCE LIMITED/i.test(issuer)
+      && /TWO WHEELER LIABILITY ONLY POLICY\s*\(\s*1 YEAR TP ONLY\s*\)/i.test(product)
+      && /INSURED MOTOR VEHICLE DETAILS AND PREMIUM COMPUTATION/i.test(product))
+    matches.push("liberty_two_wheeler_tp_native_pdf");
   if (/SBI General Insurance Company Limited/i.test(issuer)
       && /Private Car Insurance Policy\s*-\s*Package/i.test(product))
     matches.push("sbi_general_private_car_package_native_pdf");
@@ -251,7 +255,8 @@ export async function recognizeNonTataCommercialPdf(file: File): Promise<Insurer
   const pages = await extractNativePdfTextPages(bytes);
   const text = pages.slice(0, 3).map((page) => page.text).join("\n");
   const knownUntrained=classifyKnownUntrainedPolicyLayout(text);
-  if(knownUntrained)throw new Error(knownUntrained);
+  if(knownUntrained==="n8n_layout_untrained_oriental_two_wheeler_package")
+    throw new Error(knownUntrained);
   const initial=insurerForText(text);
   // Only UIIC GCV needs late-page financial labels for the split-GST
   // sub-profile. Never broaden other insurer classification.
@@ -290,6 +295,13 @@ const NEW_VARIANT_CHECKS: Record<NewProductVariant, string[]> = {
     "make_model_verified","manufacturing_year_and_cc_verified","rto_named","model_fuel_certified",
     "tp_only_zero_od","cpa_waiver_evidenced","liability_premium_printed",
     "igst_rounding_verified","gross_reconciled","stamp_separately_disclosed"],
+  liberty_two_wheeler_tp_native_pdf:[
+    "insurer_source_verified","liability_product_verified","policy_number_verified",
+    "insured_name_verified","printed_issue_dates_agree","coverage_dates_verified",
+    "registration_plate_verified","engine_chassis_verified","source_make_model_verified",
+    "printed_vehicle_year_verified","model_cc_reconciled","petrol_model_family_certified",
+    "basic_tp_printed","pa_charge_or_waiver_evidenced","tp_plus_cpa_reconciled",
+    "net_liability_reconciled","printed_gst_18_reconciled","gross_rupee_rounding_reconciled"],
   sbi_general_private_car_package_native_pdf:[
     "insurer_verified","package_product_verified","policy_identity_verified","issue_and_signature_date_consistent",
     "od_period_evidenced","tp_period_evidenced","registered_plate_evidenced","make_model_evidenced",
@@ -358,6 +370,13 @@ function validateNewVariant(
      ||!(Number(byKey.get("idv"))>0)
      ||!(Number(byKey.get("cpa_premium"))>0))
      throw new Error("n8n_extension_sbi_package_product_invalid");
+ }else if(insurer==="liberty_two_wheeler_tp_native_pdf"){
+   if(byKey.get("policy_product")!=="Third-Party Only"
+      ||byKey.get("vehicle_class")!=="Two Wheeler"
+      ||!byKey.get("vehicle_manufacturing_year")
+      ||byKey.get("idv")!=="0"||byKey.get("od_premium")!=="0"
+      ||!["Bajaj","TVS"].includes(byKey.get("vehicle_make")||""))
+       throw new Error("n8n_extension_liberty_tp_product_invalid");
  }else if(insurer==="go_digit_two_wheeler_od_native_pdf"){
    if(byKey.get("policy_product")!=="Stand-alone Own Damage"
      ||byKey.get("vehicle_class")!=="Two Wheeler"||!byKey.get("vehicle_registration_year")
@@ -379,7 +398,10 @@ function validateNewVariant(
    throw new Error("n8n_extension_premium_shape_invalid");
  const {od,tp,net,gst,gross}=p as {od:number,tp:number,net:number,gst:number,gross:number};
  const sbi=insurer==="sbi_general_private_car_package_native_pdf";
- const cpa=sbi?p.cpa:0,addOn=sbi?p.addOn:0,odBasic=sbi?p.odBasic:0;
+ const liberty=insurer==="liberty_two_wheeler_tp_native_pdf";
+ const cpa=sbi||liberty?p.cpa:0,addOn=sbi?p.addOn:0,odBasic=sbi?p.odBasic:0;
+ if(liberty&&(!isMoney(cpa)||cents(Number(byKey.get("cpa_premium")))!==cents(cpa)))
+   throw new Error("n8n_extension_liberty_cpa_missing_or_mismatch");
  const ncbPercent=sbi?p.ncbPercent:0,ncbDiscount=sbi?p.ncbDiscount:0;
  const effectiveOd=sbi?p.odBasicAfterNcb:0;
  if(sbi&&(!isMoney(cpa)||!isMoney(addOn)||!isMoney(odBasic)
@@ -390,7 +412,7 @@ function validateNewVariant(
     ||Math.abs(cents((odBasic as number)-(ncbDiscount as number))-cents(effectiveOd as number))>1
     ||Math.abs(cents((effectiveOd as number)+(addOn as number))-cents(od))>1))
    throw new Error("n8n_extension_sbi_financial_split_invalid");
- if(Math.abs(cents(od+tp+(sbi?(cpa as number):0))-cents(net))>6
+ if(Math.abs(cents(od+tp+(sbi||liberty?(cpa as number):0))-cents(net))>6
     ||Math.abs(cents(net+gst)-cents(gross))>50
     ||cents(Number(byKey.get("od_premium")))!==cents(od)
     ||cents(Number(byKey.get("tp_premium")))!==cents(tp)
@@ -400,7 +422,7 @@ function validateNewVariant(
  // supplied phone is handled by canonical booking identity/duplicate checks.
  return {parserId:insurer,parserVersion:"insureit-product-extension-v1",
    fields,warnings:[],checksPassed:expected.length,
-   premium:{od,tp,net,gst,gross,...(sbi?{cpa:cpa as number,addOn:addOn as number,odBasic:odBasic as number,ncbPercent:ncbPercent as number,
+   premium:{od,tp,net,gst,gross,...(liberty?{cpa:cpa as number}:{}),...(sbi?{cpa:cpa as number,addOn:addOn as number,odBasic:odBasic as number,ncbPercent:ncbPercent as number,
       ncbDiscount:ncbDiscount as number,odBasicAfterNcb:effectiveOd as number}:{})}};
 }
 
