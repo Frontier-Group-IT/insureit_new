@@ -3,6 +3,7 @@
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
+import { assessGoDigitNewJcbDirectConversion } from "@/lib/policy-digit-new-jcb-direct-eligibility";
 import { selectPolicyIntakeCustomerMatch, type PolicyIntakeCustomerIdentityCandidate } from "@/lib/policy-intake-customer-match";
 import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -128,9 +129,16 @@ export async function prepareVerifiedN8nIntakeHandoff(
       || (expectedFingerprint && parsed.preview.fingerprint!==expectedFingerprint)) {
     return{ok:false,error:"The n8n extraction changed after review. Run n8n again and check the new fields before continuing."};
   }
-  if(["national_gcv_package_native_pdf",
-      "go_digit_jcb_new_unregistered_native_pdf"].includes(parsed.preview.parserId))
-    return {ok:false,error:"This PDF was extracted with 18 source checks, but its CPA/TP or NEW registration treatment requires a product-specific reviewer. No policy or canonical draft was created."};
+  if(parsed.preview.parserId==="national_gcv_package_native_pdf")
+    return {ok:false,error:"The National GCV PDF does not independently certify owner-driver CPA disposition. Source extraction is complete, but canonical booking requires insurer-issued CPA evidence."};
+  const digitNew=assessGoDigitNewJcbDirectConversion({
+    parserId:parsed.preview.parserId,checksPassed:parsed.preview.checksPassed,
+    warnings:parsed.preview.warnings,fields:parsed.preview.fields,
+    commercialPremium:parsed.preview.commercialPremium,
+    candidateCanonicalPremium:parsed.preview.candidateCanonicalPremium,
+  });
+  if(parsed.preview.parserId==="go_digit_jcb_new_unregistered_native_pdf"&&!digitNew.eligible)
+    return {ok:false,error:"Go Digit NEW JCB source requires review: "+digitNew.reason};
   const commercial=parsed.preview.commercialPremium;
   const heldCandidate=Boolean(commercial)&&Boolean(parsed.preview.candidateCanonicalPremium)
     &&parsed.preview.checksPassed===18&&parsed.preview.warnings.length===0
@@ -179,7 +187,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
     }).eligible;
   if (commercial && !replaceExistingDraft && !goDigitVerifiedFill
       && !iffcoVerifiedFill && !standardCommercialVerifiedFill && !productVariantVerifiedFill
-      && !(heldCandidate&&fillEmptyFields)) {
+      && !(heldCandidate&&fillEmptyFields) && !(digitNew.eligible&&fillEmptyFields)) {
     return {ok:false,error:"This commercial PDF is not eligible for direct verified handoff; check its insurer-specific evidence before booking."};
   }
   if (!commercial && !parsed.preview.premium) {
@@ -206,6 +214,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
     && (["go_digit_cv_native_pdf","iffco_tokio_cv_native_pdf","new_india_cv_native_pdf",
         "united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf","united_india_private_car_package_native_pdf","oriental_gccv_native_pdf"].includes(parsed.preview.parserId)
        || PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId)
+       ||digitNew.eligible
        ||(Boolean(parsed.preview.candidateCanonicalPremium)
          &&process.env.INSUREIT_ENABLE_HELD_INSURER_CANDIDATES==="1"))
     && parsed.preview.checksPassed === (trainedN8nParserProfile(parsed.preview.parserId)?.checks ?? 0)
@@ -257,7 +266,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
     checksPassed:parsed.preview.checksPassed,fingerprint:parsed.preview.fingerprint,
     warnings:parsed.preview.warnings,premium:parsed.preview.premium,
     ...(commercial?{commercialPremium:commercial}:{}),
-    ...(heldCandidate&&parsed.preview.candidateCanonicalPremium
+    ...((heldCandidate||digitNew.eligible)&&parsed.preview.candidateCanonicalPremium
       ?{candidateCanonicalPremium:parsed.preview.candidateCanonicalPremium}:{}),fillEmptyFields,
     replaceExistingDraft,
     reviewedIssueDateReplacement,
@@ -450,7 +459,13 @@ async function preparePolicyIntakeHandoffInternal(
       && policyDateDecision(
         verified.fields.find(field=>field.key==="policy_issuance_date")?.value
           ||verified.autoAcceptedIssuanceDate?.date||"")==="allowed";
-    const eligibleForVerifiedConversion=tata18Ready||verifiedTataTp||autoEligibleGoDigit||iffcoReview.eligible
+    const certifiedDigitNew=assessGoDigitNewJcbDirectConversion({
+      parserId:verified.parserId,checksPassed:verified.checksPassed,
+      warnings:verified.warnings,fields:verified.fields,
+      commercialPremium:verified.commercialPremium,
+      candidateCanonicalPremium:verified.candidateCanonicalPremium,
+    }).eligible;
+    const eligibleForVerifiedConversion=tata18Ready||verifiedTataTp||autoEligibleGoDigit||certifiedDigitNew||iffcoReview.eligible
       ||standardReview.eligible||niaReview.eligible||uiicReview.eligible||uiicPrivateCarReview.eligible||productVariantReview.eligible
       ||heldReady;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
