@@ -2,7 +2,7 @@ import "../customer-register-motion.css";
 import { PolicySourceFilter } from "./policy-source-filter";
 import { ManufacturerMark } from "../vehicles/customer-vehicles-register";
 import { CustomerPolicyAnimatedSearch } from "./customer-policy-animated-search";
-import { PolicyStatusSlidingFilter } from "./policy-status-sliding-filter";
+import { PolicyStatusDropdown } from "./policy-status-sliding-filter";
 import Link from "next/link";
 import { FileText, ShieldCheck, Clock3, Plus } from "lucide-react";
 import { getStaticInsurerLogo } from "@/lib/insurer-logo";
@@ -94,9 +94,9 @@ export default async function CustomerPoliciesPage({
         <div className="flex flex-wrap items-center gap-2 border-b border-[#E4EAF2] px-3 py-3 sm:px-4 xl:flex-nowrap">
           <h2 className="flex shrink-0 items-center gap-2 text-[17px] font-bold text-[#102B54]"><img src="/assets/Custom-Icons/optimized-128/documents.png" alt="" aria-hidden="true" width={34} height={34} className="h-[34px] w-[34px] object-contain" />Policy Register</h2>
           <CustomerPolicyAnimatedSearch accountId={account.id} query={currentQuery} status={statusFilter ?? "all"} source={sourceFilter ?? "all"} suggestions={policies.filter(policy => (statusFilter === "all" || customerPolicyTone(policy.end_date).tone === statusFilter) && (sourceFilter === "all" || (sourceFilter === "external" ? policy.source === "external" : policy.source !== "external"))).flatMap(policy => [policy.policy_no, policy.policy_type, policy.policy_product, policy.insurer_name, policy.vehicle_no, policy.vehicle_make, policy.vehicle_model].filter((v): v is string => Boolean(v)))} />
-          <PolicyStatusSlidingFilter accountId={account.id} query={currentQuery} source={sourceFilter ?? "all"} status={statusFilter ?? "all"} counts={{ all: policies.length, active: counts.active, due: counts.due, expired: counts.expired }} />
+          <PolicyStatusDropdown accountId={account.id} query={currentQuery} source={sourceFilter ?? "all"} status={statusFilter ?? "all"} counts={{ all: policies.length, active: counts.active, due: counts.due, expired: counts.expired }} />
           <PolicySourceFilter accountId={account.id} query={currentQuery} status={statusFilter ?? "all"} source={sourceFilter ?? "all"} />
-          <Link href={{ pathname: "/customer/add-policy", query: { account: account.id } }} className="customer-register-action inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#1253A7] px-3 py-2.5 text-[12px] font-bold text-white shadow-sm transition hover:bg-[#0A3E87] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1253A7]"><Plus className="h-4 w-4" />Add Policy</Link>
+          <Link href={{ pathname: "/customer/add-policy", query: { account: account.id } }} className="customer-register-action inline-flex h-10 w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#1253A7] px-3 text-[12px] font-bold text-white shadow-sm transition hover:bg-[#0A3E87] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1253A7]"><Plus className="h-4 w-4" />Add Policy</Link>
         </div>
       {sourceFilteredRows.length === 0 ? (
         <div className="p-5"><EmptyCustomerState title="No matching policies" body="Try adjusting your filters." /></div>
