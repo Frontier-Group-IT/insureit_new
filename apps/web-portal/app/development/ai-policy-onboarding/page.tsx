@@ -78,7 +78,29 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   }
   // Compute all tabs/counts from the SAME effective duplicate set before
   // pagination, bulk-convert, retries, and row rendering. No database writes.
-  const intakeCounts = policyIntakeStatusCounts(workspaceRows,duplicateIds);
+  const autoRequested=autoBookingEnabled();
+  // A verified, unassigned Intake is awaiting automatic preflight, NOT
+  // awaiting human action. Its canonical DB status remains unchanged, and
+  // the worker still revalidates all booking rules before registration.
+  const displayBucket=(row:CandidateIntake):Exclude<IntakeStatusBucket,"all">=>{
+    const canonical=policyIntakeBucket(row,duplicateIds.has(row.id));
+    const q=queue.get(row.id);
+    return autoRequested && canonical==="action_required"
+      && row.assigned_to_profile_id===null
+      && row.policy_type==="motor" && q?.state==="verified"
+      && q.exception_codes.length===0
+      ? "processing" : canonical;
+  };
+  const intakeCounts=policyIntakeStatusCounts(workspaceRows,duplicateIds);
+  if(autoRequested){
+    for(const row of workspaceRows){
+      if(policyIntakeBucket(row,duplicateIds.has(row.id))==="action_required"
+        &&displayBucket(row)==="processing"){
+        intakeCounts.action_required--;
+        intakeCounts.processing++;
+      }
+    }
+  }
   const duplicateCount = intakeCounts.duplicate;
   const total = intakeCounts.action_required + intakeCounts.in_review + intakeCounts.processing;
   const queueCounts = { eligible:0, extracted:0, duplicates:duplicateCount, queued:0, extracting:0,
@@ -103,7 +125,6 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   // A durable claim is NEVER an unattempted booking candidate. Load ledger
   // claims separately from OCR queue state so an uncertain outcome cannot
   // be presented as automatically retryable.
-  const autoRequested=autoBookingEnabled();
   const attemptedIds=new Set<string>();
   let autoLedgerAvailable=!autoRequested;
   let autoClaimedCount=0,autoBookedCount=0,autoReviewCount=0,autoUncertainCount=0;
@@ -150,11 +171,11 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   const selectedView: OpenIntakeView = OPEN_INTAKE_VIEWS.some(v=>v.view===rawView)
     ? rawView as OpenIntakeView
     : requestedRow
-      ? policyIntakeBucket(requestedRow,duplicateIds.has(requestedRow.id)) as OpenIntakeView
+      ? displayBucket(requestedRow) as OpenIntakeView
       : "action_required";
   const statusRows = selectedView==="all"
-    ? workspaceRows.filter(row => policyIntakeBucket(row,duplicateIds.has(row.id)) !== "duplicate")
-    : workspaceRows.filter(row => policyIntakeBucket(row,duplicateIds.has(row.id)) === selectedView);
+    ? workspaceRows.filter(row => displayBucket(row) !== "duplicate")
+    : workspaceRows.filter(row => displayBucket(row) === selectedView);
   const targetIndex = requestedId ? statusRows.findIndex(row => row.id === requestedId) : -1;
   const wantedPage = targetIndex >= 0 ? Math.floor(targetIndex / PAGE_SIZE) + 1 : page;
   const safePage = Math.min(wantedPage, Math.max(1, Math.ceil(statusRows.length / PAGE_SIZE)));
@@ -173,7 +194,7 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
       ocr_fields: Array.isArray(row.ocr_fields) ? row.ocr_fields : [],
       created_at: row.created_at,
       assigned_to_profile_id: row.assigned_to_profile_id,
-      intake_bucket: policyIntakeBucket(row, duplicateIds.has(row.id)),
+      intake_bucket: displayBucket(row),
       is_duplicate: policyIntakeBucket(row, duplicateIds.has(row.id)) === "duplicate",
       n8n_enabled: semiAutoN8nEnabledForIntake(row.id),
       ai_state: queue.get(row.id)?.state ?? null,
