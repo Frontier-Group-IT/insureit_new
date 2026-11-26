@@ -64,7 +64,7 @@ export default function AuthCallbackPage() {
 
   async function verifyAuthenticator(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (status !== "mfa" || !mfaFactorId || !/^\\d{6}$/.test(mfaCode)) {
+    if (status !== "mfa" || !mfaFactorId || !/^[0-9]{6}$/.test(mfaCode)) {
       setMessage("Enter the current six-digit code from your authenticator.");
       return;
     }
@@ -180,7 +180,7 @@ export default function AuthCallbackPage() {
               maxLength={6}
               required
               value={mfaCode}
-              onChange={event=>setMfaCode(event.target.value.replace(/\\D/g,"").slice(0,6))}
+              onChange={event=>setMfaCode(event.target.value.replace(/[^0-9]/g,"").slice(0,6))}
               className="w-full rounded-xl border border-[#CBD5E1] px-3 py-3 text-center text-lg tracking-[0.3em] outline-none focus:border-[#635BFF]"
               aria-describedby="totp-help"
             />
