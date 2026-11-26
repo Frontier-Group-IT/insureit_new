@@ -24,6 +24,8 @@ assert.match(handoff,/replaceExistingDraft=false, sendToManualReview=false/);
 assert.match(operatorActions,/reviewerConfirmedSigningDate,false,true\)/);
 assert.match(ui,/Send for Manual Review/);
 assert.match(ui,/Assign & open manual review/);
+assert.doesNotMatch(ui,/router\.push\(studioOnboardingUrl\(response\.editUrl\?\?/);
+assert.match(ui,/No reviewer was assigned/);
 assert.match(completionFix,/v_intake\.assigned_to_profile_id is not null or not exists/);
 assert.match(completionFix,/a\.operator_profile_id=v_actor/);
 assert.match(completionFix,/a\.state='claimed'/);
