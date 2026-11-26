@@ -221,10 +221,17 @@ async function processClaim(item: Claimed, parserRevision: string) {
     const untrained=extraction.reason==="untrained_or_unverified";
     // A recognized parser that rejected the PDF's verification contract is
     // not an untrained layout. Keep its safe diagnostic for the reviewer.
-    const validationFailed=untrained && Boolean(extraction.diagnosticCode);
     const safeDiagnostic=extraction.diagnosticCode??"parser_not_trained";
+    // Unknown insurer/product families are a TRAINING gap, not an OCR or PDF
+    // integrity failure. Group all same-layout intakes under one actionable
+    // product diagnosis and do not burn n8n retries on the same untrained code.
+    const layoutNeedsTraining=untrained&&(
+      !extraction.diagnosticCode
+      || extraction.diagnosticCode.startsWith("n8n_layout_untrained_")
+      || extraction.diagnosticCode==="n8n_untrained_layout");
+    const validationFailed=untrained&&!layoutNeedsTraining;
     await finishClaim(item,{
-      state:validationFailed?"exception":untrained?"unsupported":"failed",
+      state:layoutNeedsTraining?"unsupported":validationFailed?"exception":untrained?"unsupported":"failed",
       exception_codes:[validationFailed?"extraction_failed":untrained?"unsupported_layout":"extraction_failed"],
       field_keys:[],parser_id:null,checks_passed:0,extraction_fingerprint:null,
       last_error_code:untrained?safeDiagnostic:"n8n_unavailable",
