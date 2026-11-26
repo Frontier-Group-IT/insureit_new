@@ -56,5 +56,4 @@ begin
   update public.policy_intake_requests set status='completed',final_policy_id=v_policy_id,finalized_by_profile_id=v_actor,finalized_at=now(),attention_reason=null where id=p_intake_id;
   delete from public.policy_intake_onboarding_drafts where intake_id=p_intake_id;
   return v_policy_result;
-end; $function$
-
+end; $function$;
