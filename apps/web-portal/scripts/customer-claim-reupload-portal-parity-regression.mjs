@@ -58,7 +58,7 @@ assert.match(action, /request\.id === requestId && request\.status === "action_r
 assert.match(action, /sameClaimDocumentType\(request\.documentType, type\)/);
 assert.match(action, /!authorizedReplacement/);
 assert.match(action, /Completed managed claims cannot accept new customer documents/);
-assert.match(action, /Stage 1 documents are locked/);
+assert.match(action, /Spot Intimation documents are locked after Operations verification/);
 assert.match(action, /Completed claims cannot accept new workshop bills/);
 assert.doesNotMatch(stagePage, /update\(\{\s*current_status/, "Navigation must not modify claim completion.");
 console.log("Customer Portal re-upload warning, exact-document navigation, and server guard contracts passed");
