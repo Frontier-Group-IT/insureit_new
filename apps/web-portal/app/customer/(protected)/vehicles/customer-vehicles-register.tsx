@@ -3,7 +3,7 @@ import "../customer-register-motion.css";
 import { CustomerSearchAutocomplete } from "@/components/customer-portal/customer-search-autocomplete";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
@@ -24,15 +24,61 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
   const [query, setQuery] = useState(initialQuery);
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const pageSize = 6;
+  const tableRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLElement>(null);
+  const [bodyBudget, setBodyBudget] = useState(360);
+  useEffect(() => {
+    const table = tableRef.current;
+    const footer = footerRef.current;
+    if (!table || !footer) return;
+    const panel = table.parentElement;
+    if (!panel) return;
+    const measure = () => {
+      const heading = table.querySelector("thead")?.getBoundingClientRect().height ?? 36;
+      const panelStyle = getComputedStyle(panel);
+      const content = panel.closest(".customer-viewport-content");
+      const bottomPadding = content ? parseFloat(getComputedStyle(content).paddingBottom) || 0 : 0;
+      const available = window.innerHeight - table.getBoundingClientRect().top - footer.getBoundingClientRect().height
+        - (parseFloat(panelStyle.paddingBottom) || 0) - 12
+        - bottomPadding - heading - 20;
+      // Do not derive the budget from the expanded table or auto footer gap.
+      setBodyBudget(Math.max(60, Math.floor(available)));
+    };
+    const observer = new ResizeObserver(measure);
+    const header = panel.querySelector("header");
+    if (header) observer.observe(header);
+    observer.observe(footer);
+    window.addEventListener("resize", measure);
+    measure();
+    return () => { observer.disconnect(); window.removeEventListener("resize", measure); };
+  }, []);
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered = items.filter(v => (statusFilter === "all" || (statusFilter === "insured" ? v.status === "active" || v.status === "due" : statusFilter === "uninsured" ? v.status === "inactive" || v.status === "expired" : v.status === statusFilter)) && (!q || [v.number, v.make, v.model, v.chassis, v.engine, v.type, ...v.policies.map(p => p.number), ...v.policies.map(p => p.insurerName ?? "")].some(x => x.toLowerCase().includes(q))));
     return filtered.sort((a,b) => a.number.localeCompare(b.number));
   }, [items, query, statusFilter]);
-  const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
+  const pages = useMemo(() => {
+    const groups: { start: number; end: number }[] = [];
+    let start = 0;
+    let used = 0;
+    rows.forEach((vehicle, index) => {
+      // Each policy line occupies 44px; cell padding and border add 17px.
+      const rowHeight = Math.max(1, vehicle.policies.length) * 44 + 17;
+      if (index > start && used + rowHeight > bodyBudget) {
+        groups.push({ start, end: index });
+        start = index;
+        used = 0;
+      }
+      used += rowHeight;
+    });
+    groups.push({ start, end: rows.length });
+    return groups;
+  }, [rows, bodyBudget]);
+  const pageCount = pages.length;
   const currentPage = Math.min(page, pageCount);
-  const visibleRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const range = pages[currentPage - 1]!;
+  const visibleRows = rows.slice(range.start, range.end);
+  useEffect(() => { setPage(p => Math.min(p, pageCount)); }, [pageCount]);
   const openVehicle = (id: string) => router.push(`/customer/vehicles/${encodeURIComponent(id)}?account=${encodeURIComponent(accountId)}`);
   return <div className="customer-register-motion customer-vehicles-page space-y-3">
     <section className="customer-register-panel rounded-2xl border border-[#DFE9F5] bg-white p-3 shadow-sm sm:p-4">
@@ -47,7 +93,7 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
         <Link href={{ pathname: "/customer/add-vehicle", query: { account: accountId } }} className="customer-register-action inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#1769DC] px-3 py-2.5 text-[12px] font-semibold text-white transition hover:bg-[#1058BD]"><Plus className="h-4 w-4"/>Add Vehicle</Link>
         </div>
       </header>
-      <div className="w-full overflow-x-auto rounded-xl border border-[#E2EAF5]">
+      <div ref={tableRef} className="w-full overflow-x-auto rounded-xl border border-[#E2EAF5]">
         <table className="w-full min-w-[1330px] table-fixed border-collapse text-center">
           <colgroup><col className="w-[12%]" /><col className="w-[7%]" /><col className="w-[19%]" /><col className="w-[7%]" /><col className="w-[16%]" /><col className="w-[14%]" /><col className="w-[20%]" /><col className="w-[5%]" /></colgroup>
           <thead className="bg-[#F4F7FB] text-[11px] font-semibold uppercase tracking-wide text-[#7188A8]">
@@ -76,7 +122,7 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
           </tbody>
         </table>
       </div>
-      <footer className="mt-3 flex items-center justify-between gap-2"><p className="text-[10px] text-[#7790B0]">Showing {rows.length===0?0:(currentPage-1)*pageSize+1}–{Math.min(currentPage*pageSize,rows.length)} of {rows.length} vehicles</p><div className="flex items-center gap-2"><button type="button" aria-label="Previous page" disabled={currentPage===1} onClick={()=>setPage(p=>Math.max(1,p-1))} className="customer-register-action grid h-7 w-7 place-items-center rounded-full border border-[#DCE7F5] text-[#176CE7] disabled:opacity-35"><ChevronLeft className="h-4 w-4"/></button><span className="grid h-7 min-w-7 place-items-center rounded-full bg-[#176CE7] px-1 text-[11px] font-bold text-white">{currentPage} / {pageCount}</span><button type="button" aria-label="Next page" disabled={currentPage===pageCount} onClick={()=>setPage(p=>Math.min(pageCount,p+1))} className="customer-register-action grid h-7 w-7 place-items-center rounded-full border border-[#DCE7F5] text-[#176CE7] disabled:opacity-35"><ChevronRight className="h-4 w-4"/></button></div></footer>
+      <footer ref={footerRef} className="mt-3 flex items-center justify-between gap-2"><p className="text-[10px] text-[#7790B0]">Showing {rows.length===0?0:range.start+1}–{range.end} of {rows.length} vehicles</p><div className="flex items-center gap-2"><button type="button" aria-label="Previous page" disabled={currentPage===1} onClick={()=>setPage(p=>Math.max(1,p-1))} className="customer-register-action grid h-7 w-7 place-items-center rounded-full border border-[#DCE7F5] text-[#176CE7] disabled:opacity-35"><ChevronLeft className="h-4 w-4"/></button><span className="grid h-7 min-w-7 place-items-center rounded-full bg-[#176CE7] px-1 text-[11px] font-bold text-white">{currentPage} / {pageCount}</span><button type="button" aria-label="Next page" disabled={currentPage===pageCount} onClick={()=>setPage(p=>Math.min(pageCount,p+1))} className="customer-register-action grid h-7 w-7 place-items-center rounded-full border border-[#DCE7F5] text-[#176CE7] disabled:opacity-35"><ChevronRight className="h-4 w-4"/></button></div></footer>
     </section>
   </div>;
 }
