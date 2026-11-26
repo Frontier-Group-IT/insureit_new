@@ -1,3 +1,4 @@
+import { customerSpotVerificationLocked } from "@/lib/claim-workflow";
 import "./customer-claim-reference.css";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -31,6 +32,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   const p=await params;const q=searchParams?await searchParams:{};
   const {account}=await resolveCustomerWebScope(q.account);
   const {claim,milestones,documents,internal_projection,reuploadRequests}=await loadCustomerClaimDetail(account.id,p.id);
+  const spotLocked=customerSpotVerificationLocked(claim.current_status,documents);
   const selected=INTERNAL_JOURNEY_STAGES.find(s=>s.key===p.stage);
   if(!selected) notFound();
   const selectedRequest = reuploadRequests.find(request => request.id === q.request && request.stage === selected.key && request.status === "action_required");
@@ -88,6 +90,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       <CustomerInternalCompletedJourney
         claimId={claim.id}
         accountId={account.id}
+        claimStatus={claim.current_status}
         completedCount={completedInternalStages}
         milestones={milestones}
         documents={documents}
@@ -106,6 +109,7 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
   }
   if (q.mode !== "edit") redirect("/customer/claims/"+encodeURIComponent(claim.id)+"/stage/"+encodeURIComponent(selected.key)+"?account="+encodeURIComponent(account.id)+"&mode=edit");
   const editMode = true;
+  if(selected.key==="spot_intimation" && !spotLocked && q.saved!=="spot_intimation") redirect("/customer/spot-intimation?account="+encodeURIComponent(account.id)+"&id="+encodeURIComponent(claim.id)+"&mode=edit");
   const canUploadStage = selected.key==="spot_intimation" || selected.key==="claim_intimation";
   const allowEdit = canEditStage || canUploadStage;
   const copyAdmin = createSupabaseAdminClient();
@@ -210,9 +214,9 @@ export default async function CustomerClaimStage({params,searchParams}:{params:P
       </CustomerClaimStageDraftForm>
     ):null}
     {selected.key==="billing" && external && !canEditStage && documents.some(doc=>doc.document_type==="Final Workshop Bill") ? <section className="rounded-xl border border-[#DCE3EC] bg-white p-4"><ExternalClaimBillUpload mode="customer" claimId={claim.id} accountId={account.id} readonly={!Boolean(selectedRequest?.stage==="billing")} reuploadRequestId={selectedRequest?.stage==="billing" ? selectedRequest.id : undefined} documents={documents.filter(doc=>doc.document_type==="Final Workshop Bill")} /></section> : null}
-    {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode} reuploadDocumentType={selectedRequest?.documentType} reuploadRequestId={selectedRequest?.id} canReusePolicyCopy={canReusePolicyCopy}/> : null}
-    {selected.key==="spot_intimation" ? <CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id} documents={documents}/> : null}
-    {selected.key==="spot_intimation" && completed ? (
+    {selected.key==="spot_intimation" ? <CustomerClaimEvidenceWorkspace documents={documents} claimId={claim.id} accountId={account.id} stage={selected.key} allowUpload={editMode && !spotLocked} reuploadDocumentType={selectedRequest?.documentType} reuploadRequestId={selectedRequest?.id} canReusePolicyCopy={canReusePolicyCopy}/> : null}
+    {selected.key==="spot_intimation" ? <CustomerClaimVoiceRecorder claimId={claim.id} accountId={account.id} documents={documents} allowUpload={!spotLocked}/> : null}
+    {selected.key==="spot_intimation" && completed && !spotLocked ? (
       <div className="flex flex-wrap items-center justify-end gap-2 rounded-xl border border-[#D9E6F7] bg-white px-4 py-3">
         <Link href={{pathname:"/customer/claims",query:{account:account.id}}} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#B9CBE2] px-5 text-[12px] font-semibold text-[#174A87]">Cancel</Link>
         <form action={confirmCustomerSpotIntimationSaved}><input type="hidden" name="account" value={account.id}/><input type="hidden" name="claim" value={claim.id}/><button type="submit" className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#1253A7] px-6 text-[12px] font-bold text-white hover:bg-[#0B3884]">Save Details</button></form>
