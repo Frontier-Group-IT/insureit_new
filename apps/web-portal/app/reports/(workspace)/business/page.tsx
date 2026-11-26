@@ -4,6 +4,7 @@ import { ReportQueryShortcuts } from "@/components/reports/report-query-shortcut
 import { ReportCompactFilters } from "@/components/reports/report-compact-filters";
 import { ReportEmptyState, ReportExportLink, ReportPageShell } from "@/components/reports/report-page-shell";
 import { getInsurerLogo } from "@/lib/insurer-logo";
+import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requireCapability } from "@/lib/master-data-server";
 import { emptyFinanceReport, loadFinanceReport, type FinanceQuery, type FinanceReport } from "@/lib/reports/finance";
 import { loadPolicyBusinessNetReport, type PolicyBusinessFilters, type PolicyBusinessQuery, type PolicyBusinessNetReport } from "@/lib/reports/policy-business";
@@ -33,11 +34,14 @@ export default async function ReportsPage({ searchParams }: Props) {
   const profile = await requireCapability("view_reports");
   if (!profile) return null;
   const query = await searchParams;
+  const commercialAccess = canAccessPolicyCommercials(profile);
   const businessQuery: PolicyBusinessQuery = { ...query, page: "1", pageSize: "5000" };
   const financeQuery: FinanceQuery = { ...query, period: query.period ?? "mtd", page: "1", pageSize: "5000" };
   const [businessResult, financeResult] = await Promise.all([
     loadCompletePolicyBusinessNetReport(profile, businessQuery).then((data) => ({ data, error: null as unknown })).catch((error) => ({ data: null, error })),
-    loadCompleteFinanceReport(profile, financeQuery).then((data) => ({ data, error: null as unknown })).catch((error) => ({ data: null, error })),
+    commercialAccess
+      ? loadCompleteFinanceReport(profile, financeQuery).then((data) => ({ data, error: null as unknown })).catch((error) => ({ data: null, error }))
+      : Promise.resolve({ data: null, error: null }),
   ]);
   if (businessResult.error) console.error("[reports] business report failed", businessResult.error instanceof Error ? businessResult.error.message : "unknown error");
   if (financeResult.error) console.error("[reports] business commercials failed", financeResult.error instanceof Error ? financeResult.error.message : "unknown error");
@@ -45,7 +49,7 @@ export default async function ReportsPage({ searchParams }: Props) {
   const filters = businessResult.data?.filters ?? fallbackFilters();
   const finance = financeResult.data?.report ?? emptyFinanceReport();
   const loadError = Boolean(businessResult.error || financeResult.error);
-  const mixMode = query.mix === "insurer" || query.mix === "rm" ? query.mix : "business-type";
+  const mixMode = commercialAccess && (query.mix === "insurer" || query.mix === "rm") ? query.mix : "business-type";
   const exportHref = reportHref("/reports/export/policy-business", filters);
   const insurerRows = buildInsurerRows(finance);
   const rmRows = buildRmRows(finance);
@@ -54,14 +58,14 @@ export default async function ReportsPage({ searchParams }: Props) {
   const mixRows = mixMode === "insurer" ? insurerRows.map((row) => ({ key: row.key, name: row.name, policies: row.policies, value: row.netPremium })) : mixMode === "rm" ? rmRows.map((row) => ({ key: row.key, name: row.name, policies: row.policies, value: row.netPremium })) : businessTypeRows;
   const mixTitle = mixMode === "insurer" ? "Insurer" : mixMode === "rm" ? "RM" : "Business Type";
 
-  return <ReportPageShell persistentHeader title="Business" loadError={loadError} actions={<ReportExportLink href={exportHref} />} controls={<ReportQueryShortcuts label="Period" param="period" activeValue={filters.period} options={PERIODS} showActiveFilterCount={false} trailing={<>{filters.period === "custom" ? <CustomDateRange filters={filters} /> : null}<ReportCompactFilters path="/reports/business" businessLine={filters.businessLine} category={filters.category} categories={report.filters.categories} period={filters.period} fromDate={filters.fromDate} toDate={filters.toDate} compactDrawer clearAppliedFilters fields={[{ name: "insurer", label: "Insurance company", value: filters.insurerId ?? "", options: report.filters.insurers.map((item) => ({ value: item.id, label: item.name })) }, { name: "rm", label: "Relationship manager", value: filters.rmEmployeeId ?? "", options: report.filters.rms.map((item) => ({ value: item.id, label: item.name })) }, { name: "intermediary", label: "Partner / intermediary", value: filters.intermediaryCode ?? "", options: report.filters.intermediaries.map((item) => ({ value: item.code, label: item.name !== item.code ? item.name + " · " + item.code : item.name })) }]} /></>} />}>
-    <CommercialFlow finance={finance} policyCount={report.summary.policy_count} />
+  return <ReportPageShell persistentHeader title="Business" loadError={loadError} actions={commercialAccess ? <ReportExportLink href={exportHref} /> : null} controls={<ReportQueryShortcuts label="Period" param="period" activeValue={filters.period} options={PERIODS} showActiveFilterCount={false} trailing={<>{filters.period === "custom" ? <CustomDateRange filters={filters} /> : null}<ReportCompactFilters path="/reports/business" businessLine={filters.businessLine} category={filters.category} categories={report.filters.categories} period={filters.period} fromDate={filters.fromDate} toDate={filters.toDate} compactDrawer clearAppliedFilters fields={[{ name: "insurer", label: "Insurance company", value: filters.insurerId ?? "", options: report.filters.insurers.map((item) => ({ value: item.id, label: item.name })) }, { name: "rm", label: "Relationship manager", value: filters.rmEmployeeId ?? "", options: report.filters.rms.map((item) => ({ value: item.id, label: item.name })) }, { name: "intermediary", label: "Partner / intermediary", value: filters.intermediaryCode ?? "", options: report.filters.intermediaries.map((item) => ({ value: item.code, label: item.name !== item.code ? item.name + " · " + item.code : item.name })) }]} /></>} />}>
+    {commercialAccess ? <CommercialFlow finance={finance} policyCount={report.summary.policy_count} /> : <section className="portal-card p-5"><p className="text-sm font-semibold">Net Premium: {currency(report.summary.net_premium)} · {integer(report.summary.policy_count)} policies</p><p className="mt-2 text-xs text-[#66758a]">Pay-in, partner payout and retention are restricted to authorized users.</p></section>}
     <section className="grid gap-3 xl:grid-cols-2">
-      <article className="portal-card flex h-[238px] min-h-0 flex-col overflow-hidden"><div className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#e6ebf2] px-4 py-2.5"><HeaderTitle title="Business Mix" /><div className="inline-flex overflow-hidden rounded-lg border border-[#dbe3ee] bg-white text-[9px] font-bold"><MixTab href={reportHref("/reports/business", filters, "business-type")} active={mixMode === "business-type"}>Business Type</MixTab><MixTab href={reportHref("/reports/business", filters, "insurer")} active={mixMode === "insurer"}>Insurer</MixTab><MixTab href={reportHref("/reports/business", filters, "rm")} active={mixMode === "rm"}>RM</MixTab></div></div><BusinessMix rows={mixRows} label={mixTitle} /></article>
-      <article className="portal-card flex h-[238px] min-h-0 flex-col overflow-hidden"><Header title="Insurer" /><InsurerTable rows={insurerRows} /></article>
+      <article className="portal-card flex h-[238px] min-h-0 flex-col overflow-hidden"><div className="flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#e6ebf2] px-4 py-2.5"><HeaderTitle title="Business Mix" /><div className="inline-flex overflow-hidden rounded-lg border border-[#dbe3ee] bg-white text-[9px] font-bold"><MixTab href={reportHref("/reports/business", filters, "business-type")} active={mixMode === "business-type"}>Business Type</MixTab>{commercialAccess ? <><MixTab href={reportHref("/reports/business", filters, "insurer")} active={mixMode === "insurer"}>Insurer</MixTab><MixTab href={reportHref("/reports/business", filters, "rm")} active={mixMode === "rm"}>RM</MixTab></> : null}</div></div><BusinessMix rows={mixRows} label={mixTitle} /></article>
+      {commercialAccess ? <article className="portal-card flex h-[238px] min-h-0 flex-col overflow-hidden"><Header title="Insurer" /><InsurerTable rows={insurerRows} /></article> : null}
     </section>
-    <section className="portal-card overflow-hidden"><Header title="RM Performance" /><RmTable rows={rmRows} /></section>
-    <section className="portal-card overflow-hidden"><Header title="Intermediaries Business" /><IntermediaryTable rows={intermediaryRows} /></section>
+    {commercialAccess ? <section className="portal-card overflow-hidden"><Header title="RM Performance" /><RmTable rows={rmRows} /></section> : null}
+    {commercialAccess ? <section className="portal-card overflow-hidden"><Header title="Intermediaries Business" /><IntermediaryTable rows={intermediaryRows} /></section> : null}
   </ReportPageShell>;
 }
 
