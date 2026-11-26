@@ -65,6 +65,52 @@ assert.equal(refine("united_india_gcv_native_pdf",punctuationVariant),
  "Source text may drop punctuation while retaining exact maker and split tax evidence");
 assert.equal(refine("united_india_gcv_native_pdf",punctuationVariant.replace("9%","18%")),
  "united_india_gcv_native_pdf","Wrong tax rate cannot pass");
+// The first native pages can independently recognize UIIC GCV even when
+// the late-page reader returns zero text. Accept the specialized Punjab
+// product ONLY if the exact original source is fully 18-check certified by
+// the n8n PDF parser, never from the parser name alone.
+const handoffStart=source.indexOf("export function resolveUiicPunjabCertifiedN8nVariant(");
+const handoffEnd=source.indexOf("/** Recognize only printed",handoffStart);
+assert(handoffStart>0 && handoffEnd>handoffStart);
+const handoffModule={exports:{}};
+new Function("exports",ts.transpileModule(source.slice(handoffStart,handoffEnd),{
+  compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}
+}).outputText)(handoffModule.exports);
+const admit=handoffModule.exports.resolveUiicPunjabCertifiedN8nVariant;
+const all=[
+ "insurer_verified","policy_identity_verified","insured_name_verified",
+ "policy_start_end_verified","issuance_date_evidenced","vehicle_identification_verified",
+ "vehicle_make_model_verified","vehicle_class_verified","vehicle_registration_printed",
+ "vehicle_idv_verified","od_tp_components_printed","net_od_tp_reconciled",
+ "gst_independently_evidenced","gross_net_tax_reconciled","uiic_layout",
+ "split_cgst_sgst_components_printed","stamp_accounting_disclosed","stamp_charge_reconciled",
+];
+const props={contract_version:"1",parser_id:"united_india_gcv_punjab_split_gst_native_pdf",
+ parser_version:"non-tata-cv-v2",extraction_method:"native_pdf_text",
+ review_required:true,auto_finalize_allowed:false,ok:true,validation_passed:true,
+ checks:Object.fromEntries(all.map(k=>[k,true])),
+ fields:[
+  ["insurer_name","United India Insurance Company Limited"],
+  ["policy_product","Goods Carrying Vehicle Package"],
+  ["vehicle_make","Daimler India Commercial Vehicles Pvt. Ltd."],
+  ["vehicle_model","BHARATBENZ 2828C 6X4 BSVI"],
+ ].map(([key,value])=>({key,value,page:null,evidence:"Native PDF policy schedule"})),
+ premium_components:{taxRegime:"CGST_SGST",cgstOthers:1893,sgstOthers:1893,
+   cgstBasicTp:1099,sgstBasicTp:1099},
+};
+const standard="united_india_gcv_native_pdf",punjab=props.parser_id;
+assert.equal(admit(standard,props),punjab);
+assert.equal(admit(null,props),null);
+assert.equal(admit("new_india_cv_native_pdf",props),"new_india_cv_native_pdf");
+assert.equal(admit(standard,{...props,checks:{...props.checks,split_cgst_sgst_components_printed:false}}),standard);
+assert.equal(admit(standard,{...props,checks:{...props.checks,unknown:true}}),standard);
+assert.equal(admit(standard,{...props,premium_components:{...props.premium_components,cgstOthers:0}}),standard);
+assert.equal(admit(standard,{...props,premium_components:{...props.premium_components,sgstOthers:1800}}),standard);
+assert.equal(admit(standard,{...props,fields:props.fields.map(f=>f.key==="vehicle_make"?{...f,value:"Another Maker"}:f)}),standard);
+assert.equal(admit(standard,{...props,fields:props.fields.map(f=>({...f,evidence:"Unverified OCR"}))}),standard);
+assert.equal(admit(standard,{...props,parser_id:"united_india_gcv_native_pdf"}),standard);
+assert.equal(admit(standard,{...props,auto_finalize_allowed:true}),standard);
+assert.match(source,/insurer=resolveUiicPunjabCertifiedN8nVariant\(insurer,payload\)/);
 const bridge=fs.readFileSync(path.resolve(here,"../lib/policy-intake-semi-auto-n8n.ts"),"utf8");
 assert.match(bridge,/"held_source_or_identity_unverified"/,
  "Genuine Oriental issuance hold must be reported as source verification, not n8n outage");

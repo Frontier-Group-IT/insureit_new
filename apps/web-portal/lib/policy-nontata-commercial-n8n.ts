@@ -169,6 +169,72 @@ export function refineUiicPunjabSplitFromSource(
   return accepted?"united_india_gcv_punjab_split_gst_native_pdf":initial;
 }
 
+/**
+ * Narrow recovery for United India Punjab GCV originals when the website's
+ * second, late-page native text scan returns empty. First two native pages
+ * MUST already classify the exact PDF as United India GCV. The SAME current
+ * PDF bytes are sent to the authorized n8n webhook; require its entire
+ * source-certified split-GST contract and exact labelled identities before
+ * refining the variant. The subsequent validate() repeats the immutable
+ * request/document IDs, exact 18 checks, field schema and all premium math.
+ * A parser ID alone, a webhook boolean alone or generic GCV never qualifies.
+ */
+export function resolveUiicPunjabCertifiedN8nVariant(
+  initial: string | null,
+  payload: unknown,
+): string | null {
+  const record=(value:unknown): value is Record<string,unknown> =>
+    !!value && typeof value==="object" && !Array.isArray(value);
+  if(initial!=="united_india_gcv_native_pdf" || !record(payload)
+    ||payload.parser_id!=="united_india_gcv_punjab_split_gst_native_pdf"
+    ||payload.parser_version!=="non-tata-cv-v2"
+    ||payload.contract_version!=="1"
+    ||payload.extraction_method!=="native_pdf_text"
+    ||payload.review_required!==true||payload.auto_finalize_allowed!==false
+    ||payload.ok!==true||payload.validation_passed!==true
+    ||!record(payload.checks)||!Array.isArray(payload.fields)
+    ||!record(payload.premium_components))return initial;
+  const required=[
+    "insurer_verified","policy_identity_verified","insured_name_verified",
+    "policy_start_end_verified","issuance_date_evidenced","vehicle_identification_verified",
+    "vehicle_make_model_verified","vehicle_class_verified","vehicle_registration_printed",
+    "vehicle_idv_verified","od_tp_components_printed","net_od_tp_reconciled",
+    "gst_independently_evidenced","gross_net_tax_reconciled",
+    "uiic_layout","split_cgst_sgst_components_printed",
+    "stamp_accounting_disclosed","stamp_charge_reconciled",
+  ];
+  const checks=payload.checks;
+  if(Object.keys(checks).length!==required.length
+    ||required.some(key=>checks[key]!==true))return initial;
+  const fields=payload.fields;
+  const read=(key:string)=>{
+    const found=fields.filter((f:unknown)=>record(f)
+      &&f.key===key&&f.page===null
+      &&f.evidence==="Native PDF policy schedule"
+      &&typeof f.value==="string");
+    return found.length===1?String(found[0].value).trim():"";
+  };
+  const insurer=read("insurer_name");
+  const product=read("policy_product");
+  const maker=read("vehicle_make");
+  const model=read("vehicle_model");
+  if(!/^United India Insurance Company Limited$/i.test(insurer)
+    || !/^Goods Carrying Vehicle Package$/i.test(product)
+    || !/^Daimler India Commercial Vehicles Pvt\.?\s*Ltd\.?$/i.test(maker)
+    || !/^BHARATBENZ\b/i.test(model))return initial;
+  const taxes=payload.premium_components;
+  const validAmount=(name:string)=>{
+    const v=taxes[name];
+    return typeof v==="number"&&Number.isFinite(v)&&v>0
+      &&v<=1_000_000&&Math.round(v*100)===v*100;
+  };
+  if(taxes.taxRegime!=="CGST_SGST"
+    ||!["cgstOthers","sgstOthers","cgstBasicTp","sgstBasicTp"].every(validAmount)
+    ||taxes.cgstOthers!==taxes.sgstOthers
+    ||taxes.cgstBasicTp!==taxes.sgstBasicTp)return initial;
+  return "united_india_gcv_punjab_split_gst_native_pdf";
+}
+
 /** Recognize only printed, trained native-PDF layouts. Never accept insurer names from caller input. */
 export async function recognizeNonTataCommercialPdf(file: File): Promise<Insurer | null> {
   if (file.type !== "application/pdf" || file.size < 128) return null;
@@ -526,7 +592,7 @@ export async function tryReadNonTataCommercialPolicy(
   file: File,
   ids?: Record<"intake_id" | "document_id" | "request_id", string>,
 ): Promise<NonTataCommercialRead | null> {
-  const insurer = await recognizeNonTataCommercialPdf(file);
+  let insurer = await recognizeNonTataCommercialPdf(file);
   if (!insurer) return null;
   if (file.size > MAX_BYTES) throw new Error("n8n_nontata_pdf_exceeds_4mb");
   const secret = process.env.INSUREIT_N8N_OCR_HEADER_SECRET;
@@ -546,6 +612,9 @@ export async function tryReadNonTataCommercialPolicy(
     });
     if (!response.ok) throw new Error("n8n_nontata_http_" + response.status);
     const payload: unknown = await response.json();
+    if(insurer==="united_india_gcv_native_pdf"){
+      insurer=resolveUiicPunjabCertifiedN8nVariant(insurer,payload) as Insurer;
+    }
     // Signature must be verified against the EXACT File bytes sent to n8n.
     // No decoded text, PDF print date, receipt, or caller-supplied date can
     // authorize this fallback. Unverifiable originals remain in review.
