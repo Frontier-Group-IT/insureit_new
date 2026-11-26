@@ -14,7 +14,7 @@ const {fileURLToPath}=await import("node:url");
 const mapper=readFileSync(fileURLToPath(new URL("../lib/policy-ocr-onboarding-apply.ts",import.meta.url)),"utf8");
 const handoff=readFileSync(fileURLToPath(new URL("../app/policy-intakes/handoff-actions.ts",import.meta.url)),"utf8");
 assert.match(mapper,/verifiedPolicyManufacturerBrand\(\{/);
-assert.match(mapper,/sourceParserId:input\.sourceParserId/);
+assert.match(mapper,/parserId:input\.sourceParserId/);
 assert.match(mapper,/if\(sourceBrand\)/);
 assert.match(handoff,/sourceParserId:verified\?\.parserId/);
 assert.match(handoff,/sourceChecksPassed:verified\?\.checksPassed/);
