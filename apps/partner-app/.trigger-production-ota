@@ -1,9 +1,9 @@
 Partner production OTA trigger
-release=partner-save-active-policy-popup-redesign
+release=partner-policy-date-approval-modal-explicit-confirmation
 source=verified-merged-main
-source_pr=5307
-source_merge=739ad8f814992dc8548b1e09e3c8d6363ecad981
-reason=publish-approved-motor-policy-copy-confirmation-ui
+source_pr=5308
+source_merge=0b454efce40f9293ed9cd2dc9ca0314ebc19707c
+reason=publish-approved-policy-date-approval-popup-and-confirm-submit
 channel=production
 runtime=0.2.0
 requested=2026-11-26
