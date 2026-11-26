@@ -11,7 +11,7 @@ import { ReportsOverviewToolbar, type OverviewBusiness, type OverviewMix, type O
 import { ReportToolbarPortal } from "@/components/reports/report-toolbar-portal";
 import { OverviewSectionSelect } from "@/components/reports/overview-section-select";
 import { BusinessTrendCard, type BusinessTrendPoint } from "@/components/reports/business-trend-card";
-import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
+import { canViewReportCommercials } from "@/lib/policy-commercial-access";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadManagementPack } from "@/lib/reports/management-pack";
@@ -29,7 +29,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
   const business = resolveOverviewBusiness(query.business);
   const trendPeriod = resolveTrendPeriod(query.trend);
   const mix = resolveOverviewMix(query.mix);
-  const commercialAccess = canAccessPolicyCommercials(profile);
+  const commercialAccess = canViewReportCommercials(profile);
   let loadError = false;
   let pack: Awaited<ReturnType<typeof loadManagementPack>> | null = null;
   let trendReport: Awaited<ReturnType<typeof loadPolicyBusinessNetReport>>["report"] | null = null;
