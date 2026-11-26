@@ -1,4 +1,5 @@
 "use client";
+import { customerSpotVerificationLocked } from "@/lib/claim-workflow";
 import Link from "next/link";
 import { Check, Pencil } from "lucide-react";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
@@ -37,7 +38,7 @@ const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "
 const spotTypes = new Set(["accidentphoto","spotphoto","accidentphotos","rccopy","insurancecopy","driverlicence","grloadbill","accidentvideo","otherdocument","incidentvoicenote","audio","voicenote","incidentaudio"]);
 
 export function CustomerInternalCompletedJourney({
-  claimId, accountId, completedCount, milestones, documents, spot, reuploadDocumentType, reuploadRequestId, reuploadStage,
+  claimId, accountId, completedCount, milestones, documents, spot, claimStatus, reuploadDocumentType, reuploadRequestId, reuploadStage,
 }: {
   claimId: string;
   accountId: string;
@@ -45,13 +46,14 @@ export function CustomerInternalCompletedJourney({
   milestones: CustomerClaimMilestone[];
   documents: CustomerClaimDocument[];
   spot: SpotFields;
+  claimStatus: string;
   reuploadDocumentType?: string | null;
   reuploadRequestId?: string | null;
   reuploadStage?: "spot_intimation" | "claim_intimation" | "billing" | null;
 }) {
   const completedStages = Math.max(0, Math.min(completedCount, INTERNAL_JOURNEY_STAGES.length));
   const spotDocuments = documents.filter(doc => spotTypes.has(normalize(doc.document_type)));
-  const stageTwoLocked = completedStages >= 2 || milestones.some(item => item.milestone_key === "claim_intimation" && (item.milestone_status === "completed" || item.milestone_status === "not_applicable"));
+  const stageTwoLocked = customerSpotVerificationLocked(claimStatus, documents);
   return <section className="overflow-hidden rounded-2xl border border-[#DCE5F1] bg-white">
     {INTERNAL_JOURNEY_STAGES.slice(0,completedStages).map((stage) => {
       const milestone = milestones.find(item => item.milestone_key === stage.key);
