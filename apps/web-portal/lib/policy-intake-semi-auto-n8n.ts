@@ -183,7 +183,7 @@ export async function previewSemiAutoN8nExtraction(
     // necessarily a new/untrained insurer. Surface only the safe validation
     // code (never raw PDF text, signed URLs, headers, or n8n responses).
     const parserValidationCodes=new Set([
-      "n8n_review_required","n8n_financial_validation_failed",
+      "n8n_review_required","n8n_shriram_issuance_not_verified","n8n_financial_validation_failed",
       "n8n_nontata_verification_failed","n8n_nontata_financial_reconciliation_failed",
       "n8n_nontata_check_set_invalid","n8n_nontata_premium_components_invalid",
       "n8n_wrong_policy_product","n8n_required_field_missing",
