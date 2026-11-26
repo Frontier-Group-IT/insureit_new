@@ -8,7 +8,8 @@ export type DigitNewJcbField={
 export type DigitNewJcbAdmission={
  parserId:"go_digit_jcb_new_unregistered_native_pdf";
  fields:DigitNewJcbField[];
- premium:{od:number;tp:number;net:number;gst:number;gross:number};
+ premium:{od:number;tp:number;net:number;gst:number;gross:number;cpa:number};
+ candidateCanonicalPremium:{od:string;tp:string;addOnPremium:"0";cpa:string;cpaOpted:"Yes"|"No"};
  checksPassed:18;
 };
 const object=(x:unknown):x is Record<string,unknown> =>
@@ -36,7 +37,7 @@ const allowed=new Set([
  "vehicle_make","vehicle_model","vehicle_class","vehicle_fuel_type",
  "vehicle_chassis_number","vehicle_engine_number",
  "vehicle_manufacturing_year","vehicle_capacity","vehicle_rto_name",
- "vehicle_rto_state","vehicle_registration_year","idv","od_premium","tp_premium"
+ "vehicle_rto_state","vehicle_registration_year","idv","od_premium","tp_premium","cpa_premium"
 ]);
 /** Fail closed with stage codes. No policy or queue mutation. */
 export function acceptGoDigitNewJcbExtraction(
@@ -79,7 +80,8 @@ export function acceptGoDigitNewJcbExtraction(
  "vehicle_registration_number","vehicle_registration_status",
  "vehicle_make","vehicle_model","vehicle_class",
  "vehicle_chassis_number","vehicle_engine_number","idv",
- "od_premium","tp_premium"];
+ "vehicle_manufacturing_year","vehicle_capacity","vehicle_fuel_type",
+ "od_premium","tp_premium","cpa_premium"];
  if(required.some(k=>!v(k)))fail("digit_jcb_required_field_missing");
  if(v("insurer_name")!=="Go Digit General Insurance Limited"
    ||v("policy_product")!=="Digit Commercial Vehicle Insurance"
@@ -104,14 +106,32 @@ export function acceptGoDigitNewJcbExtraction(
   fail("digit_jcb_premiums_missing");
  const od=p.od as number,tp=p.tp as number,net=p.net as number,
   gst=p.gst as number,gross=p.gross as number;
+ const cpaField=by.get("cpa_premium");
+ const ownerDriver=p.ownerDriverCpa,basicTp=p.basicThirdPartyLiability,
+   paidDriver=p.paidDriverLiability;
+ if(cpaField?.evidence!=="Digit PDF PA cover for Owner-Driver (printed)"
+    ||![ownerDriver,basicTp,paidDriver].every(money)
+    ||!money(Number(v("cpa_premium")))
+    ||Math.round(Number(v("cpa_premium"))*100)!==Math.round((ownerDriver as number)*100)
+    ||!/^20\\d{2}$/.test(v("vehicle_manufacturing_year"))
+    ||!/^\\d{3,5}$/.test(v("vehicle_capacity"))
+    ||v("vehicle_fuel_type")!=="Diesel")
+   fail("digit_jcb_cpa_or_vehicle_source_unverified");
+ const cpa=ownerDriver as number;
+ if(cpa<=0||cpa>tp||Math.round(((basicTp as number)+(paidDriver as number)+cpa)*100)!==Math.round(tp*100))
+   fail("digit_jcb_tp_cpa_itemization_invalid");
  if(od<=0||tp<=0||net<=0||gross<=0
   ||Math.abs(od+tp-net)>.06||Math.abs(net+gst-gross)>.06
   ||Math.abs(Number(v("od_premium"))-od)>.01
   ||Math.abs(Number(v("tp_premium"))-tp)>.01
   ||!Number.isFinite(Number(v("idv")))||Number(v("idv"))<=0)
   fail("digit_jcb_printed_premium_mismatch");
- // Keep NEW in the source, never synthesize a registered plate, CPA or
- // canonical booking premium. The downstream status stays in RTO review.
+ // Printed TP includes CPA and paid-driver liability. Canonical Motor adds
+ // CPA separately, so split ONLY this verified printed owner-driver amount.
+ // NEW remains unregistered; booking authorization is still independent.
+ const paisa=(x:number)=>String(Math.round(x*100)/100);
  return{parserId:"go_digit_jcb_new_unregistered_native_pdf",fields,
-  checksPassed:18,premium:{od,tp,net,gst,gross}};
+  checksPassed:18,premium:{od,tp,net,gst,gross,cpa},
+  candidateCanonicalPremium:{od:paisa(od),tp:paisa(tp-cpa),addOnPremium:"0",
+    cpa:paisa(cpa),cpaOpted:"Yes"}};
 }
