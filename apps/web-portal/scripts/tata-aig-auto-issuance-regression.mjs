@@ -81,7 +81,8 @@ const preview=read("../lib/policy-intake-semi-auto-n8n.ts");
 const ui=read("../components/development/semi-auto-policy-workspace.tsx");
 const actions=read("../app/development/ai-policy-onboarding/actions.ts");
 assert(worker.includes("acceptedTataAigIssuanceDate({"));
-assert(worker.includes('+"-issue-date-v3"'),"old exception rows must be eligible for bounded reassessment");
+assert(worker.includes("registryFingerprint=createHash") && worker.includes('+"-insured-product-"+registryFingerprint'),
+ "old exception rows must be eligible for bounded reassessment after parser registry changes");
 assert(worker.includes('needsDateApproval:issuanceDecision==="otp_required"'),
  "Backdate/OTP approvals remain separate from issuance validation");
 assert(worker.includes('state:"verified"')||worker.includes('"verified"'));
