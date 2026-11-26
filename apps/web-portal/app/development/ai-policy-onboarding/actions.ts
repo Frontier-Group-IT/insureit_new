@@ -725,7 +725,7 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   const variantParser=extracted.preview.parserId;
   const expectedCommercialClass=productVariant
     ?["zurich_kotak_private_car_tp_native_pdf","sbi_general_private_car_package_native_pdf"].includes(variantParser)?"PCP"
-      :["go_digit_two_wheeler_od_native_pdf","hdfc_ergo_two_wheeler_tp_native_pdf"].includes(variantParser)?"TWP"
+      :["go_digit_two_wheeler_od_native_pdf","hdfc_ergo_two_wheeler_tp_native_pdf","liberty_two_wheeler_tp_native_pdf"].includes(variantParser)?"TWP"
       :"MISD"
     :heldCandidate
       ?pdfField("vehicle_class")==="Private Car"?"PCP"
