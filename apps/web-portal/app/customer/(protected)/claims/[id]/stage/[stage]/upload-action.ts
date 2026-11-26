@@ -1,6 +1,6 @@
 "use server";
 
-import { customerSpotVerificationLocked } from "@/lib/claim-workflow";
+import { customerSpotVerificationLocked, customerClaimIntimationVerificationLocked, customerClaimIntimationAvailable } from "@/lib/claim-workflow";
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getCustomerWebSession } from "@/lib/customer-web";
@@ -43,6 +43,7 @@ export async function uploadCustomerClaimDocument(_previous:CustomerClaimUploadS
     request.id === requestId && request.status === "action_required"
     && request.stage === String(form.get("stage") || "")
     && sameClaimDocumentType(request.documentType, type)));
+  if (String(form.get("stage") || "") === "claim_intimation" && !authorizedReplacement && (customerClaimIntimationVerificationLocked(claim.current_status,documents) || (!isExternalCustomerClaim(claim) && !customerClaimIntimationAvailable(claim.current_status)))) return {error:"Claim Intimation documents are not available for editing."};
   if (!documentTypes.includes(type) && !authorizedReplacement) return {error:"Unsupported claim document category."};
   if (type==="Final Workshop Bill") {
     if (String(form.get("stage") || "") !== "billing" || !isExternalCustomerClaim(claim)) {
