@@ -1,5 +1,7 @@
 "use server";
 
+import { customerSpotVerificationLocked } from "@/lib/claim-workflow";
+
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
 import { loadCustomerClaimDetail, isExternalCustomerClaim, buildExternalClaimProjection } from "@/lib/customer-web-phase2-data";
@@ -82,12 +84,8 @@ export async function deleteCustomerSpotAttachment(
   try {
     if (!accountId || !claimId || !documentId) return { ok: false, message: "Missing document details." };
     const { account } = await resolveCustomerWebScope(accountId);
-    const { claim, milestones, internal_projection } = await loadCustomerClaimDetail(account.id, claimId);
-    if (claim.claim_service_mode === "broker_managed" && !claim.external_policy_id &&
-      ((internal_projection?.completedStageCount ?? 0) >= 2 ||
-       milestones.some(m => m.milestone_key === "claim_intimation" && ["completed","not_applicable"].includes(m.milestone_status)))) {
-      return { ok: false, message: "Stage 1 documents are locked after Claim Intimation." };
-    }
+    const { claim, milestones, documents } = await loadCustomerClaimDetail(account.id, claimId);
+    if (customerSpotVerificationLocked(claim.current_status,documents)) return {ok:false,message:"Spot Intimation documents are locked after Operations verification."};
     if (["Settled", "Closed", "Claim Complete"].includes(claim.current_status)) {
       return { ok: false, message: "Completed claims cannot have documents deleted." };
     }
@@ -139,16 +137,12 @@ export async function deleteCustomerClaimStageDocument(
       return { ok: false, message: "Invalid document deletion request." };
 
     const { account } = await resolveCustomerWebScope(accountId);
-    const { claim, milestones, internal_projection } = await loadCustomerClaimDetail(account.id, claimId);
+    const { claim, milestones, documents } = await loadCustomerClaimDetail(account.id, claimId);
     if (["Settled", "Closed", "Claim Complete"].includes(claim.current_status))
       return { ok: false, message: "Completed claims cannot have documents deleted." };
 
     const external = isExternalCustomerClaim(claim);
-    if (stage === "spot_intimation" && !external &&
-      ((internal_projection?.completedStageCount ?? 0) >= 2 ||
-       milestones.some(m => m.milestone_key === "claim_intimation" &&
-         ["completed", "not_applicable"].includes(m.milestone_status))))
-      return { ok: false, message: "Stage 1 documents are locked after Claim Intimation." };
+    if (stage === "spot_intimation" && customerSpotVerificationLocked(claim.current_status,documents)) return {ok:false,message:"Spot Intimation documents are locked after Operations verification."};
 
     if (stage !== "spot_intimation") {
       if (!external) return { ok: false, message: "This claim stage does not allow customer document deletion." };
