@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
-import { CustomerHomeReferenceNav } from "./customer-home-reference-nav";
 import { PanelTop } from "lucide-react";
 import { CustomerNavigation } from "@/components/customer-portal/customer-navigation";
 import { CustomerTopNavigation } from "@/components/customer-portal/customer-top-navigation";
@@ -49,17 +47,14 @@ export function CustomerSidebarShell({ children, headerActions, breadcrumbs }: {
     window.dispatchEvent(new CustomEvent(customerNavigationPreferenceEvent, { detail: { layout: next } }));
   }
 
-  const pathname=usePathname();
-  const referenceHome=pathname==="/customer/home"||pathname==="/customer";
-  const effectiveLayout=referenceHome?"top":layout;
-  const sidebar = effectiveLayout === "sidebar";
+  const sidebar = layout === "sidebar";
   return (
     <>
-      <CustomerNavigation mode={effectiveLayout} />
-      <div data-customer-nav-layout={effectiveLayout} data-customer-reference-home={referenceHome?"true":undefined} className={`customer-navigation-content transition-[padding] duration-200 ease-out ${sidebar ? collapsed ? "lg:pl-16" : "lg:pl-[248px]" : ""}`}>
-        <header className={`sticky top-0 z-40 border-b ${referenceHome ? "border-[#E5EAF2] bg-white" : sidebar ? "border-[#E5EAF2] bg-white shadow-[0_4px_18px_rgba(18,40,75,0.06)]" : "border-[#5942A2] bg-[#49369A] shadow-[0_4px_18px_rgba(38,21,92,0.17)]"}`}>
+      <CustomerNavigation mode={layout} />
+      <div data-customer-nav-layout={layout} className={`customer-navigation-content transition-[padding] duration-200 ease-out ${sidebar ? collapsed ? "lg:pl-16" : "lg:pl-[248px]" : ""}`}>
+        <header className={`sticky top-0 z-40 border-b ${sidebar ? "border-[#E5EAF2] bg-white shadow-[0_4px_18px_rgba(18,40,75,0.06)]" : "border-[#5942A2] bg-[#49369A] shadow-[0_4px_18px_rgba(38,21,92,0.17)]"}`}>
           <div className={`flex min-h-[66px] items-center justify-between gap-2 px-3 sm:px-5 lg:px-7 ${!sidebar ? "gap-3" : ""}`}>
-            {referenceHome ? <CustomerHomeReferenceNav/> : sidebar ? (
+            {sidebar ? (
               <>
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   <button type="button" onClick={() => switchLayout("top")} title="Switch to top header navigation" aria-label="Switch to top header navigation" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-[#344563] hover:bg-[#EDF3FF]">
