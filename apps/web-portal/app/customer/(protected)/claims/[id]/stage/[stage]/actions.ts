@@ -1,7 +1,8 @@
 "use server";
 
-import { customerSpotVerificationLocked } from "@/lib/claim-workflow";
+import { customerSpotVerificationLocked, customerClaimIntimationVerificationLocked, customerClaimIntimationAvailable } from "@/lib/claim-workflow";
 
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
@@ -55,13 +56,15 @@ export async function saveCustomerExternalStage(form:FormData, navigate = true) 
   const config=CUSTOMER_EXTERNAL_STAGE_FIELDS[key];
   if(!config)throw new Error("Invalid claim stage");
   const {account}=await resolveCustomerWebScope(accountId);
-  const {claim,milestones}=await loadCustomerClaimDetail(account.id,claimId);
-  if(!isExternalCustomerClaim(claim))
+  const {claim,milestones,documents}=await loadCustomerClaimDetail(account.id,claimId);
+  if(key==="claim_intimation" && customerClaimIntimationVerificationLocked(claim.current_status,documents)) throw new Error("Claim Intimation is locked after Operations document verification.");
+  const managedIntimation=key==="claim_intimation" && !isExternalCustomerClaim(claim) && customerClaimIntimationAvailable(claim.current_status);
+  if(!isExternalCustomerClaim(claim) && !managedIntimation)
     throw new Error("Claim stage editing is not available");
   const index=INTERNAL_JOURNEY_STAGES.findIndex(stage=>stage.key===key);
   if(index<1)throw new Error("Invalid stage");
   const previous=milestones.find(m=>m.milestone_key===INTERNAL_JOURNEY_STAGES[index-1].key);
-  if(!previous||!["completed","not_applicable"].includes(previous.milestone_status))
+  if(!managedIntimation && (!previous||!["completed","not_applicable"].includes(previous.milestone_status)))
     throw new Error("Complete the preceding claim stage first");
   const values:Record<string,string|number|boolean>={};
   for(const field of config){
@@ -93,10 +96,22 @@ export async function saveCustomerExternalStage(form:FormData, navigate = true) 
     throw new Error("Payment date must not precede document submission");
   const dateKey=stageDates[key];
   const date=dateKey?values[dateKey]:null;
-  if(typeof date==="string"&&previous.details){
+  if(typeof date==="string"&&previous?.details){
     const prevKey=stageDates[previous.milestone_key]||"spot_intimation_at";
     const previousDate=previous.details[prevKey];
     if(typeof previousDate==="string"&&date<previousDate.slice(0,10))throw new Error("Stage date precedes the previous stage");
+  }
+  if (managedIntimation) {
+    const session=await getCustomerWebSession();
+    const fresh=await loadCustomerClaimDetail(account.id,claim.id);
+    if (!customerClaimIntimationAvailable(fresh.claim.current_status) || customerClaimIntimationVerificationLocked(fresh.claim.current_status,fresh.documents)) throw new Error("Claim Intimation is locked after Operations document verification.");
+    const {error}=await createSupabaseAdminClient().from("claim_stage_details").insert({claim_id:claim.id,stage:fresh.claim.current_status,details:{...values,verification_type:"final_documents_dealership_details",milestone_key:"claim_intimation",recorded_by_actor:"customer"},created_by:session.user.id});
+    if(error)throw new Error("Could not save claim stage");
+    revalidatePath("/claims/"+claim.id);
+    const destination="/customer/claims/"+encodeURIComponent(claim.id)+"/stage/claim_intimation?account="+encodeURIComponent(account.id);
+    revalidatePath("/customer/claims/"+claim.id+"/stage/claim_intimation");
+    if(navigate)redirect(destination);
+    return destination;
   }
   const db=await createCustomerServerSupabaseClient();
   const session=await getCustomerWebSession();
@@ -193,7 +208,8 @@ export async function saveCustomerClaimIntimationDraft(form: FormData, navigate 
   const key = String(form.get("stage") || "");
   if (key !== "claim_intimation") throw new Error("Draft saving is only available for Claim Intimation");
   const { account } = await resolveCustomerWebScope(accountId);
-  const { claim, milestones } = await loadCustomerClaimDetail(account.id, claimId);
+  const { claim, milestones, documents } = await loadCustomerClaimDetail(account.id, claimId);
+  if (customerClaimIntimationVerificationLocked(claim.current_status,documents)) throw new Error("Claim Intimation is locked after Operations document verification.");
   if (!isExternalCustomerClaim(claim))
     throw new Error("Claim stage editing is not available");
   const index = INTERNAL_JOURNEY_STAGES.findIndex(stage => stage.key === key);
@@ -251,7 +267,7 @@ export async function saveCustomerClaimStageWithFeedback(mode: "draft" | "detail
       "Invalid choice", "Value too long", "RI requested date must not precede repair complete date",
       "RI done date must not precede repair complete date", "Payment date must not precede document submission",
       "Enter the vehicle received date", "Complete the preceding claim stage first",
-      "Claim Intimation cannot be edited", "Claim stage editing is not available",
+      "Claim Intimation cannot be edited", "Claim stage editing is not available", "Claim Intimation is locked after Operations document verification.",
       "Could not save claim stage", "Could not save Claim Intimation draft",
       "Delivery Order amount cannot exceed the saved Bill Amount. Check the Billing stage and enter an amount up to the bill value.",
       "This claim is not available for self-managed stage updates. Please contact support.",
