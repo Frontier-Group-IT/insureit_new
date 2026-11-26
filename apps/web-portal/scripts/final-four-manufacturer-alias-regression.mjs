@@ -14,4 +14,12 @@ for(const [f,expected] of [[national,"Eicher"],[mg,"MG"]]){
  assert.equal(build(18).next.make,expected);
  assert.equal(build(17).next.make,"","Unverified PDF must not infer canonical make");
 }
+// The queue must keep National owner-driver CPA unverified after the Eicher
+// alias resolves; a green manufacturer is NOT an unattended booking grant.
+const {readFileSync}=await import("node:fs");
+const {fileURLToPath}=await import("node:url");
+const queue=readFileSync(fileURLToPath(new URL("../lib/ai-policy-onboarding-queue-server.ts",import.meta.url)),"utf8");
+assert.match(queue,/const nationalCpaReview=extraction\.preview\.parserId==="national_gcv_package_native_pdf"/);
+assert.match(queue,/if\(nationalCpaReview&&!isDuplicate&&!codes\.includes\("booking_review_required"\)\)/);
+assert.match(queue,/national_gcv_owner_driver_cpa_unverified/);
 console.log("Source-certified MG and Eicher queue/draft alias regressions passed");
