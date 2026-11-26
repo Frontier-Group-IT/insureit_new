@@ -1,0 +1,54 @@
+import assert from "node:assert/strict";
+import {acceptGoDigitNewJcbExtraction as accept} from "../lib/policy-digit-new-jcb-extraction.ts";
+const ids={intake_id:"11111111-1111-4111-8111-111111111111",
+ document_id:"22222222-2222-4222-8222-222222222222",
+ request_id:"33333333-3333-4333-8333-333333333333"};
+const checks=[
+ "insurer_verified","policy_identity_verified","insured_name_verified",
+ "policy_start_end_verified","issuance_date_evidenced",
+ "vehicle_identification_verified","vehicle_make_model_verified",
+ "vehicle_class_verified","vehicle_registration_printed","vehicle_idv_verified",
+ "od_tp_components_printed","net_od_tp_reconciled",
+ "gst_independently_evidenced","gross_net_tax_reconciled",
+ "digit_layout","unregistered_new_printed","od_basic_ncb","tp_itemization"];
+const data={
+ insurer_name:"Go Digit General Insurance Limited",
+ policy_number:"D1234567890",insured_name:"TEST VEHICLE OWNER",
+ policy_product:"Digit Commercial Vehicle Insurance",
+ policy_issuance_date:"2026-11-25",
+ policy_start_date:"2026-11-25",policy_end_date:"2027-11-24",
+ third_party_start_date:"2026-11-25",third_party_end_date:"2027-11-24",
+ vehicle_registration_number:"NEW",vehicle_registration_status:"registration_pending",
+ vehicle_make:"JCB",vehicle_model:"3 DX PLUS CEV V / BACKHOE LOADER",
+ vehicle_class:"Commercial Vehicle - Miscellaneous Class D",
+ vehicle_fuel_type:"Diesel",vehicle_chassis_number:"RAJ3DX01234567890",
+ vehicle_engine_number:"H00549475",idv:"4200000",
+ od_premium:"5019.02",tp_premium:"7647"
+};
+const p={...ids,contract_version:"1",parser_id:"go_digit_jcb_new_unregistered_native_pdf",
+ parser_version:"non-tata-cv-v2",extraction_method:"native_pdf_text",
+ review_required:true,auto_finalize_allowed:false,ok:true,validation_passed:true,
+ checks:Object.fromEntries(checks.map(k=>[k,true])),warnings:[],
+ fields:Object.entries(data).map(([key,value])=>({
+  key,value,label:key,confidence:null,page:null,evidence:
+   ["vehicle_registration_number","vehicle_registration_status"].includes(key)
+    ?"Digit PDF vehicle schedule: printed NEW registration":"Native PDF policy schedule"
+ })),
+ premium_components:{od:5019.02,tp:7647,net:12666.02,gst:2279.88,gross:14945.9}
+};
+const good=accept(p,ids);
+assert.equal(good.checksPassed,18);
+assert.equal(good.fields.find(x=>x.key==="vehicle_registration_number")?.value,"NEW");
+assert.equal("candidateCanonicalPremium" in good,false);
+const fail=x=>assert.throws(()=>accept(x,ids));
+fail({...p,document_id:"unrelated-document"});
+fail({...p,checks:{...p.checks,unregistered_new_printed:false}});
+fail({...p,fields:p.fields.map(x=>x.key==="vehicle_registration_number"?{...x,value:"DL9CBG1234"}:x)});
+fail({...p,fields:p.fields.map(x=>x.key==="vehicle_model"?{...x,value:"Unknown Model"}:x)});
+fail({...p,fields:p.fields.map(x=>x.key==="vehicle_registration_number"?{...x,evidence:"Unverified"}:x)});
+fail({...p,fields:p.fields.filter(x=>x.key!=="vehicle_registration_status")});
+fail({...p,fields:[...p.fields,p.fields[0]]});
+fail({...p,premium_components:{...p.premium_components,gross:14955.9}});
+fail({...p,premium_components:{...p.premium_components,od:null}});
+fail({...p,fields:p.fields.map(x=>x.key==="policy_issuance_date"?{...x,value:"2027-11-25"}:x)});
+console.log("Source-only Go Digit NEW JCB strict positives and negatives passed");
