@@ -423,13 +423,17 @@ export function validateTataAigN8nResponse(
     // extraction. If the document positively prints a state that conflicts
     // with a known registered prefix, retain the independent conflict block.
     const completeIndianPlate=/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4}$/.test(plate);
+    // Delhi Transport's printed private-car series uses DL9C, DL2C etc:
+    // one district digit, explicit car class C, then 1-3 series letters.
+    // Do not generalize one-digit RTOs to other states or vehicle classes.
+    const delhiPrivateCarPlate=!twoWheeler&&/^DL[1-9]C[A-Z]{1,3}\d{3,4}$/.test(plate);
     const historicalHaryanaPlate=!twoWheeler&&/^HR\d{6}$/.test(plate);
     const stateByPrefix:Record<string,string>={
       HR:"HARYANA",DL:"DELHI",MP:"MADHYA PRADESH",WB:"WEST BENGAL",
     };
     const printedState=get("vehicle_rto_state").toUpperCase();
     const expectedState=stateByPrefix[plate.slice(0,2)];
-    if ((!completeIndianPlate&&!historicalHaryanaPlate)
+    if ((!completeIndianPlate&&!delhiPrivateCarPlate&&!historicalHaryanaPlate)
        ||(printedState&&expectedState&&printedState!==expectedState))
       fail("n8n_tata_aig_registration_invalid");
   } else if (status === "unregistered") {
