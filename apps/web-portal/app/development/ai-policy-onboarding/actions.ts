@@ -946,7 +946,7 @@ export async function continueVerifiedN8nIntakeToOnboarding(
   if (!isN8nWorkbenchPrimary() || confirmed !== true) {
     return { ok: false, error: "A confirmed n8n-primary review is required before forwarding to Policy Onboarding." };
   }
-  const handoff = await prepareVerifiedN8nIntakeHandoff(id,documentId,fingerprint,takeOver===true,fillEmptyFields===true,undefined,reviewerConfirmedSigningDate);
+  const handoff = await prepareVerifiedN8nIntakeHandoff(id,documentId,fingerprint,takeOver===true,fillEmptyFields===true,undefined,reviewerConfirmedSigningDate,false,true);
   if (!handoff.ok) {
     if (handoff.conflict) return { ok:false,error:handoff.error,assignmentConflict:{reviewerName:handoff.reviewerName} };
     return { ok:false,error:handoff.error };
