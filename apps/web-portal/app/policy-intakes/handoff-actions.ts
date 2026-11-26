@@ -308,7 +308,8 @@ async function preparePolicyIntakeHandoffInternal(
   // Automated booking must never assign an intake to a human operator.
   // The durable claim is its exclusive work ownership. An explicit manual
   // handoff continues to claim reviewer ownership as before.
-  if(!manualAssignment && intake.assigned_to_profile_id)
+  if(!manualAssignment && intake.assigned_to_profile_id
+      && (automaticBooking || intake.assigned_to_profile_id!==reviewer.id))
     return{ok:false,error:"This intake is assigned for manual review. Non-manual preparation cannot take over reviewer ownership."};
   const assignedToAnother=Boolean(intake.assigned_to_profile_id&&intake.assigned_to_profile_id!==reviewer.id);
   if(assignedToAnother&&!takeOver){
@@ -327,7 +328,11 @@ async function preparePolicyIntakeHandoffInternal(
     .in("status",["ready_for_review","in_review","processing","needs_attention"]);
   if(verified)assignmentQuery=assignmentQuery.eq("storage_path",intake.storage_path as string);
   if(!manualAssignment){
-    assignmentQuery=assignmentQuery.is("assigned_to_profile_id",null);
+    // Existing human owner may update their own draft, but a non-manual
+    // operation must not claim a previously unassigned intake.
+    assignmentQuery=!automaticBooking && intake.assigned_to_profile_id===reviewer.id
+      ?assignmentQuery.eq("assigned_to_profile_id",reviewer.id)
+      :assignmentQuery.is("assigned_to_profile_id",null);
   }else if(assignedToAnother){
     assignmentQuery=assignmentQuery.eq("assigned_to_profile_id",intake.assigned_to_profile_id as string);
   }else{
