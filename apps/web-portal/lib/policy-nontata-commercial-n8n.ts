@@ -482,7 +482,7 @@ export function validateNationalGcvExtractionOnly(
   ||p.cgst!==0||p.sgst!==0||p.igst!==p.gst||p.stampDuty!==0
   ||p.separatelyPaidStamp!==0.5
   ||od<=0||tp<=0||net<=0||gross<=0
-  Math.abs(od+tp-net)>.06
+  ||Math.abs(od+tp-net)>.06
   ||Math.abs(net+gst-gross)>.06
   ||Math.abs(Number(val("od_premium"))-od)>.001
   ||Math.abs(Number(val("tp_premium"))-tp)>.001
