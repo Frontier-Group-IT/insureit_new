@@ -32,7 +32,7 @@ export function resolveCustomerExchangeVehicleArt(input:VehicleArtInput, catalog
   const rawMake=normalizeVehicleName(input.make),make=manufacturerAliases[rawMake]??rawMake,model=normalizeVehicleName(input.model),variant=normalizeVehicleName(input.variant);
   const type=normalizeVehicleName(input.vehicle_type),category=normalizeVehicleName(input.vehicle_category);
   const explicit=[input.body_type,input.vehicle_type,input.vehicle_category].map(v=>bodyFromText(normalizeVehicleName(v))).filter(v=>v!=="unknown");
-  const explicitBody=explicit[0]??"unknown";
+  const explicitBody:VehicleBody=explicit.length>0?explicit[0]:"unknown";
   const neutral={src:neutralVehicleArt,kind:"placeholder" as const,body:"unknown" as VehicleBody,asset:undefined};
   if(new Set(explicit).size>1||!compatible(explicitBody,type)||!compatible(explicitBody,category))return neutral;
   const candidates=make&&model?catalogue.filter(a=>normalizeVehicleName(a.make)===make&&(normalizeVehicleName(a.model)===model||a.aliases.some(alias=>normalizeVehicleName(alias)===model))):[];
