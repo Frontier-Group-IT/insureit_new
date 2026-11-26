@@ -114,6 +114,7 @@ const variants=[
   ["WB Kolkata",{"vehicle_registration_number":"WB08H0751","vehicle_rto_name":"KOLKATA","vehicle_rto_state":"WEST BENGAL"}],
   ["HR Panchkula",{"vehicle_registration_number":"HR03AB1234","vehicle_rto_name":"PANCHKULA","vehicle_rto_state":"HARYANA"}],
   ["DL Delhi",{"vehicle_registration_number":"DL04AB1234","vehicle_rto_name":"DELHI","vehicle_rto_state":"DELHI"}],
+  ["DL9C Delhi private car",{"vehicle_registration_number":"DL9CBG1234","vehicle_rto_name":"DELHI","vehicle_rto_state":"DELHI"}],
   ["Rajasthan Jaipur",{"vehicle_registration_number":"RJ14AB1234","vehicle_rto_name":"JAIPUR","vehicle_rto_state":null}],
   ["city only",{"vehicle_registration_number":"WB08H0751","vehicle_rto_name":"KOLKATA","vehicle_rto_state":null}],
   ["state only",{"vehicle_registration_number":"WB08H0751","vehicle_rto_name":null,"vehicle_rto_state":"WEST BENGAL"}],
@@ -124,6 +125,15 @@ for(const [label,fields] of variants){
   assert.equal(verified.ok,true,label+" should not fail for RTO geography");
   assert.equal(verified.checksPassed,18);
 }
+// Delhi single-digit zonal private-car prefix is source-approved; do not
+// generalize to malformed Delhi plates, other states, or a conflicting state.
+for(const bad of ["DL0CBG1234","DL9C1234","DL9CBG12","MP9CBG1234","DL9SBG1234"]){
+  invalid(withVehicle({vehicle_registration_number:bad,vehicle_rto_state:bad.startsWith("MP")?"MADHYA PRADESH":"DELHI"}),()=>{},"n8n_tata_aig_registration_invalid");
+}
+invalid(withVehicle({vehicle_registration_number:"DL9CAQ4321",vehicle_rto_state:"HARYANA"}),()=>{},"n8n_tata_aig_registration_invalid");
+const delhiSaod=copy(saodWithoutTp);
+delhiSaod.fields.find(f=>f.key==="vehicle_registration_number").value="DL9CAQ4321";
+assert.equal(validateTataAigN8nResponse(delhiSaod,IDS).ok,true,"Delhi DL9C private-car SAOD must validate");
 invalid(withVehicle({"vehicle_registration_number":"WB08H0751","vehicle_rto_state":"WEST BENGAL"}),x=>{
   x.fields.find(f=>f.key==="vehicle_rto_state").value="HARYANA";
 },"n8n_tata_aig_registration_invalid");
