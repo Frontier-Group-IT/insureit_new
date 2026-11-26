@@ -1007,7 +1007,7 @@ assert(workbenchText.includes("Confirm bulk Policy registration")
   && workbenchText.includes("Verify this Intake in Policy Register before retrying"),
   "Bulk registration must require explicit per-batch confirmation, cap at 10 and use canonical per-Intake checks without ambiguous retries");
 const aiQueueRevisionText=text("lib/ai-policy-onboarding-queue-server.ts");
-assert(aiQueueRevisionText.includes('+"-issue-date-v3"')
+assert(aiQueueRevisionText.includes('+"-insured-product-"+registryFingerprint')
   && aiQueueRevisionText.includes("processAiQueueBatch")
   && aiQueueRevisionText.includes("MAX_BATCH = 6")
   && aiQueueRevisionText.includes("MAX_CONCURRENT = 3"),
