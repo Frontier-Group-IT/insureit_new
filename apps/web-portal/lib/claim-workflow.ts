@@ -203,3 +203,12 @@ export function customerSpotVerificationLocked(status: string, documents: Readon
   if (status === "Draft") return false;
   return initialDocumentTypes.every(type => documents.some(doc => doc.verification_status === "verified" && matchesRequiredDocument(doc.document_type,type)));
 }
+
+/** Final-document verification is independent of the initial document checklist. */
+export function customerClaimIntimationVerificationLocked(status: string, documents: ReadonlyArray<{document_type:string;verification_status?:string|null}>) {
+  if (["Settled","Closed","Rejected","Claim Complete","Final Documents Verified"].includes(status)) return true;
+  return finalDocumentTypes.every(type => documents.some(doc => doc.verification_status === "verified" && matchesRequiredDocument(doc.document_type,type)));
+}
+export function customerClaimIntimationAvailable(status: string) {
+  return finalDocumentPhaseStatuses.includes(status as ClaimStatus) || status === "Vehicle Inspected";
+}
