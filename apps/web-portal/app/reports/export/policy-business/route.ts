@@ -2,7 +2,7 @@ import { unzipSync, zipSync, strFromU8, strToU8 } from "fflate";
 import { NextRequest } from "next/server";
 import * as XLSX from "xlsx";
 import { requireCapability, requireScopedPospMispManager } from "@/lib/master-data-server";
-import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
+import { canViewReportCommercials } from "@/lib/policy-commercial-access";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { loadPolicyBusinessMisExport, type PolicyBusinessMisRow } from "@/lib/reports/policy-business-mis-export";
 import type { PolicyBusinessQuery } from "@/lib/reports/policy-business";
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     : await requireCapability("view_reports");
   // The general MIS includes pay-in, payout and retention columns. The
   // application-bound export has its own per-application access boundary.
-  if (!applicationId && !canAccessPolicyCommercials(profile)) {
+  if (!applicationId && !canViewReportCommercials(profile)) {
     return new Response("Commercial details restricted", {
       status: 403,
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "private, no-store, max-age=0" },
