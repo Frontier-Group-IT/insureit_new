@@ -156,6 +156,21 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
       }
     }
   }
+  // The second immutable recovery ledger supersedes the original known
+  // pre-commit Liberty mismatch for display only. It does not delete history,
+  // make held records new candidates, or permit retries after uncertainty.
+  if(autoRequested&&autoLedgerAvailable&&workspaceRows.length){
+    for(let offset=0;offset<workspaceRows.length;offset+=100){
+      const recovery=await admin.from("policy_intake_ai_auto_booking_recovery_attempts")
+        .select("intake_id,state,failure_code")
+        .in("intake_id",workspaceRows.slice(offset,offset+100).map(row=>row.id));
+      if(recovery.error)break; // Older deployment before migration.
+      for(const attempt of recovery.data??[])
+        bookingAttemptByIntake.set(attempt.intake_id,{
+          state:attempt.state,failure_code:attempt.failure_code,
+        });
+    }
+  }
   const bulkCandidates = workspaceRows.filter(row => {
     const q=queue.get(row.id);
     return row.policy_type==="motor" && !duplicateIds.has(row.id)
