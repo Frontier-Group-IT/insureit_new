@@ -380,6 +380,8 @@ jobs:
         run: node scripts/customer-spot-success-two-second-regression.mjs
       - name: Customer Claim Stage Details and Uploaded Document contrast regression
         run: node scripts/customer-claim-stage-document-contrast-regression.mjs
+      - name: Customer Spot Intimation invalid-field navigation regression
+        run: node scripts/customer-spot-intimation-invalid-field-focus-regression.mjs
       - name: Customer Vehicle Delivery reference layout regression
         run: node scripts/customer-vehicle-delivery-reference-layout-regression.mjs
       - name: Customer completed Payment Encashment heading-only regression

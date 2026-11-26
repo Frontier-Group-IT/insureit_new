@@ -25,7 +25,34 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
   const formRef = useRef<HTMLFormElement>(null);
   const restoredDraftKey=useRef<string|null>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
-  const closeError = useCallback(() => setDialogError(null), []);
+  const invalidFieldRef = useRef<HTMLInputElement | null>(null);
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const highlightedElement = useRef<HTMLElement | null>(null);
+  const clearInvalidHighlight = useCallback(() => {
+    if (highlightTimer.current) clearTimeout(highlightTimer.current);
+    highlightTimer.current = null;
+    highlightedElement.current?.classList.remove("outline", "outline-2", "outline-offset-2", "outline-red-500");
+    highlightedElement.current = null;
+  }, []);
+  const closeError = useCallback(() => {
+    setDialogError(null);
+    const input = invalidFieldRef.current;
+    invalidFieldRef.current = null;
+    if (!input?.isConnected) return;
+    // Wait for the modal to unmount before restoring focus to the missing input.
+    window.requestAnimationFrame(() => {
+      if (!input.isConnected) return;
+      clearInvalidHighlight();
+      const visibleControl = (input.type === "date" || input.type === "time"
+        ? input.closest("label")?.querySelector<HTMLElement>("span.mt-1")
+        : input) ?? input;
+      visibleControl.classList.add("outline", "outline-2", "outline-offset-2", "outline-red-500");
+      highlightedElement.current = visibleControl;
+      input.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+      input.focus({ preventScroll: true });
+      highlightTimer.current = setTimeout(clearInvalidHighlight, 2200);
+    });
+  }, [clearInvalidHighlight]);
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncSequence = useRef(0);
   const syncQueue = useRef<Promise<void>>(Promise.resolve());
@@ -98,6 +125,7 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
   };
   useEffect(() => () => {
     if (syncTimer.current) clearTimeout(syncTimer.current);
+    if (highlightTimer.current) clearTimeout(highlightTimer.current);
   }, []);
   return <div className="customer-workflow space-y-3"><CustomerErrorDialog message={dialogError} onClose={closeError} /><form ref={formRef} id="customer-spot-intimation-form" noValidate onSubmit={async (event) => {
     event.preventDefault(); // Prevent native form-action resetting entered values on validation errors.
@@ -108,10 +136,12 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
     const invalid = Array.from(event.currentTarget.elements).find((element) => element instanceof HTMLInputElement && !element.checkValidity());
     if (invalid instanceof HTMLInputElement) {
       event.preventDefault();
-      setDialogError(invalid.validity.valueMissing ? "Please complete " + (invalid.getAttribute("aria-label") || invalid.name || "the required field") + "." : invalid.validationMessage);
-      invalid.focus();
+      invalidFieldRef.current = invalid;
+      setDialogError(invalid.validity.valueMissing ? "Please fill " + (invalid.getAttribute("aria-label") || invalid.name || "the required field") + "." : invalid.validationMessage);
       return;
     }
+    invalidFieldRef.current = null;
+    clearInvalidHighlight();
     const currentForm = event.currentTarget;
     const payload = new FormData(currentForm);
     setPending(true);
@@ -133,7 +163,7 @@ export function SpotIntimationSaveForm({ action, children, cancelHref, evidence,
     } finally {
       if (!navigating) setPending(false);
     }
-  }} onInput={queueSync} onChange={queueSync} onBlurCapture={() => { if (syncTimer.current) clearTimeout(syncTimer.current); syncDraft(); }} aria-busy={pending} className="rounded-2xl border border-[#DBE4F0] bg-white p-4 shadow-[0_6px_24px_rgba(20,58,100,.04)] sm:p-5">
+  }} onInput={(event) => { if (event.target === highlightedElement.current || highlightedElement.current?.contains(event.target as Node)) clearInvalidHighlight(); queueSync(); }} onChange={queueSync} onBlurCapture={() => { if (syncTimer.current) clearTimeout(syncTimer.current); syncDraft(); }} aria-busy={pending} className="rounded-2xl border border-[#DBE4F0] bg-white p-4 shadow-[0_6px_24px_rgba(20,58,100,.04)] sm:p-5">
     {children}
     </form>
     {evidence}
