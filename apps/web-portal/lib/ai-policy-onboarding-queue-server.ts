@@ -1,8 +1,9 @@
 import "server-only";
+import {createHash} from "node:crypto";
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isN8nWorkbenchPrimary, previewSemiAutoN8nExtraction } from "@/lib/policy-intake-semi-auto-n8n";
-import { assessAiPolicyIntake, acceptedTataAigIssuanceDate, hasVerifiedN8nParserEvidence, ICICI_N8N_IDS, type AiPolicyEvidence, type AiPolicyExceptionCode } from "@/lib/ai-policy-onboarding-eligibility";
+import { assessAiPolicyIntake, acceptedTataAigIssuanceDate, hasVerifiedN8nParserEvidence, ICICI_N8N_IDS, NON_TATA_COMMERCIAL_N8N_IDS, type AiPolicyEvidence, type AiPolicyExceptionCode } from "@/lib/ai-policy-onboarding-eligibility";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { policyDateDecision } from "@/lib/policy-date-rule";
 import { assessIffcoAutoOnboarding } from "@/lib/policy-iffco-auto-eligibility";
@@ -114,7 +115,15 @@ export async function processAiQueueBatch(options?: {preferredIntakeId?:string;m
   // recovery worker after deployment, without rewriting OCR/drafts or booking.
   // Include the configured base to preserve operator-controlled versioning;
   // this stable suffix also works when production has a pinned base revision.
-  const parserRevision = ((process.env.INSUREIT_AI_QUEUE_PARSER_REVISION||"bridge-v1").trim()+"-issue-date-v3");
+  // Parser coverage changes are discovered once per code release. When a
+  // NEW insurer/product adapter is added, all previous unsupported/exception
+  // rows become eligible for bounded, lease-protected automatic reprocessing.
+  // No OCR overwrite or booking is performed by the revision bump itself.
+  const registryFingerprint=createHash("sha256")
+    .update([...NON_TATA_COMMERCIAL_N8N_IDS,...ICICI_N8N_IDS].sort().join("|"))
+    .digest("hex").slice(0,12);
+  const parserRevision=((process.env.INSUREIT_AI_QUEUE_PARSER_REVISION||"bridge-v1").trim()
+    +"-insured-product-"+registryFingerprint);
   if (parserRevision.length < 1 || parserRevision.length > 80) {
     throw new Error("AI queue parser revision configuration invalid");
   }
