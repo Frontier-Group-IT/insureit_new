@@ -54,7 +54,7 @@ export function acceptGoDigitNewJcbExtraction(
   ||!object(payload.checks)||!Array.isArray(payload.fields)
   ||!Array.isArray(payload.warnings)||payload.warnings.length!==0
   ||!object(payload.premium_components))
-  fail("digit_jcb_source_contract_invalid");
+  throw new Error("digit_jcb_source_contract_invalid");
  const checks=payload.checks as Record<string,unknown>;
  if(Object.keys(checks).length!==18||keys.some(k=>checks[k]!==true))
   fail("digit_jcb_source_checks_invalid");
