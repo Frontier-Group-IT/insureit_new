@@ -1,6 +1,6 @@
 "use server";
 
-import { customerSpotVerificationLocked } from "@/lib/claim-workflow";
+import { customerSpotVerificationLocked, customerClaimIntimationVerificationLocked, customerClaimIntimationAvailable } from "@/lib/claim-workflow";
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolveCustomerWebScope } from "@/lib/customer-web-data";
@@ -144,7 +144,8 @@ export async function deleteCustomerClaimStageDocument(
     const external = isExternalCustomerClaim(claim);
     if (stage === "spot_intimation" && customerSpotVerificationLocked(claim.current_status,documents)) return {ok:false,message:"Spot Intimation documents are locked after Operations verification."};
 
-    if (stage !== "spot_intimation") {
+    if (stage === "claim_intimation" && (customerClaimIntimationVerificationLocked(claim.current_status,documents) || (!external && !customerClaimIntimationAvailable(claim.current_status)))) return {ok:false,message:"Claim Intimation documents are not available for editing."};
+    if (stage !== "spot_intimation" && (stage !== "claim_intimation" || external)) {
       if (!external) return { ok: false, message: "This claim stage does not allow customer document deletion." };
       const projection = buildExternalClaimProjection(milestones);
       const chosen = projection.stages.find(item => item.key === stage);
