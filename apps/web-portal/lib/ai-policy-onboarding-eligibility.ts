@@ -246,8 +246,10 @@ export function assessAiPolicyIntake(input: AiPolicyEvidence): AiAssessment {
       ? !fields.get(key) && !yearEvidence.year : !fields.get(key))) {
       add("missing_field", "Mandatory extracted fields are missing", "edit_draft");
     }
-    if (parser?.family==="commercial" && fields.get("vehicle_registration_status")==="registration_pending")
-      add("registration_pending_review", "Confirm unregistered vehicle identity and RTO prefix", "edit_draft");
+    // RTO city and state are OPTIONAL for registered and unregistered vehicles.
+    // "NEW"/registration_pending is a valid source status, not a missing RTO
+    // geography error. Mandatory chassis/engine, identity, dates, premiums,
+    // duplicate and canonical ownership checks continue to run independently.
     if (!input.matchedManufacturer) add("manufacturer_unmatched", "Vehicle make not matched to master", "edit_draft");
     if (!input.premiumReconciled) add("financial_reconciliation", "Premium components do not reconcile", "edit_draft");
   }
