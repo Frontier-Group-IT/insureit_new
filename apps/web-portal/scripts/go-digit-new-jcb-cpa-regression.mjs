@@ -62,7 +62,7 @@ for(const change of [
  p=>p.fields.find(f=>f.key==="vehicle_manufacturing_year").value="",
  p=>p.fields.push({...p.fields[0]}),
  p=>p.checks.tp_itemization=false,
- p=>p.premium_components.net=12666.03,
+ p=>p.premium_components.net=12667.03,
  p=>p.auto_finalize_allowed=true,
  ]){const bad=clone(payload);change(bad);assert.throws(()=>admit(bad),"Tampered source evidence must fail closed");}
 const missingCity=clone(x);missingCity.fields=missingCity.fields.filter(f=>!["vehicle_rto_name","vehicle_rto_state"].includes(f.key));
