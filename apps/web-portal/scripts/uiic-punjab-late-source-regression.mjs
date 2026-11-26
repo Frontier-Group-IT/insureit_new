@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import "./national-gcv-extraction-regression.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
