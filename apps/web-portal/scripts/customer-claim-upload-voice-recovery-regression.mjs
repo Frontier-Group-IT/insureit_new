@@ -15,7 +15,7 @@ assert.match(upload,/milestone_key === "claim_intimation"/,"Stage 2 upload lock 
 assert.doesNotMatch(upload,/milestone_key === "spot_status"/,"Do not use incorrect Stage 2 key");
 assert.match(upload,/uploadedCount: 1/,"Single upload returns confirmed count");
 assert.match(multi,/router\.refresh\(\)/,"Successful bulk upload refreshes document list");
-assert.match(multi,/CustomerErrorDialog/,"Bulk upload errors use popup");
+assert.match(multi,/ClaimStageErrorDialog/,"Bulk upload errors use popup");
 assert.match(voice,/navigator\.mediaDevices\.getUserMedia\(\{ audio: true \}\)/,"Microphone request preserved");
 assert.match(voice,/Windows microphone privacy settings/,"Denied microphone message checks OS access");
 assert.doesNotMatch(voice,/router\.refresh\(\)/,"Successful voice upload must not refresh unsaved Spot Intimation fields");

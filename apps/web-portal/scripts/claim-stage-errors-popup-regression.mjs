@@ -21,7 +21,7 @@ const insurance = await load("../components/spot-survey/insurance-verification-m
 const verification = await load("../components/spot-survey/document-verification-modal-v3.tsx");
 const verifyButtons = await load("../components/spot-survey/verify-buttons.tsx");
 
-assert.match(shared, /role="alertdialog"/, "Errors must use an accessible alert dialog");
+assert.match(shared, /role=\{success \? "dialog" : "alertdialog"\}/, "Errors must use an accessible alert dialog");
 assert.match(shared, /aria-modal="true"/, "Dialogs must be modal");
 assert.match(shared, /createPortal\(/, "Error popup must escape stage scroll and stacking containers");
 assert.match(shared, /document\.body/, "Dialog must render above the claim view");

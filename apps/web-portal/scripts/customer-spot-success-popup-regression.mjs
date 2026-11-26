@@ -30,7 +30,8 @@ assert.doesNotMatch(save,/CustomerSuccessDialog|successNotice|savedDestination/,
 assert.match(bulk,/if \(!allowUpload \|\| running\.current \|\| !files\.length\) return;/,"Prevent duplicate or read-only direct bulk submissions.");
 assert.match(bulk,/if\(result\.error \|\| !result\.uploaded\)/,"Only verified server uploads count as successful.");
 assert.match(bulk,/if\(complete\) \{[\s\S]*?setRecentUploads/,"Bulk upload must still display confirmed files.");
-assert.doesNotMatch(bulk,/CustomerSuccessDialog|setSuccessNotice|Upload Successful/,"Bulk upload must not display success popups.");
+assert.match(bulk,/if\(complete && !failures.length\) setSuccessNotice/, "Show success only for fully confirmed batches.");
+assert.match(bulk,/<ClaimStageErrorDialog success title="Success" message=\{successNotice\}/, "Bulk success must use the shared modal.");
 assert.doesNotMatch(bulk,/<p role="status".*document\(s\) uploaded successfully/,"Remove duplicate inline success.");
 assert.match(voice,/shownUploadId\.current===uploadState\.uploaded\.id/,"Do not re-show same voice upload.");
 assert.match(voice,/setRecentVoiceNotes\(previous=>/,"Confirmed voice uploads must appear in the dedicated list immediately.");
@@ -38,13 +39,14 @@ assert.doesNotMatch(voice,/router\.refresh\(\)/,"Voice upload must not refresh a
 assert.doesNotMatch(voice,/CustomerSuccessDialog|setSuccessNotice|Upload Successful/,"Voice uploads must not display success popups.");
 assert.doesNotMatch(voice,/<p role="status".*Voice note uploaded successfully/,"Remove duplicate inline voice message.");
 assert.match(upload,/return \{error:null,uploaded:lastUploaded,uploadedCount\}/,"Keep actual server upload count.");
-assert.match(bulk,/<CustomerErrorDialog/,"Preserve bulk upload error dialog.");
+assert.match(bulk,/<ClaimStageErrorDialog title="Document upload failed"/,"Preserve bulk upload error dialog.");
 assert.match(voice,/<CustomerErrorDialog/,"Preserve recorder error dialog.");
 assert.match(individual,/shownUploadId\.current!==uploadState\.uploaded\.id/,"Do not repeat individual document success.");
 assert.match(individual,/setRecentUploads/,"Confirmed individual uploads must remain visible.");
 assert.match(individual,/router\.refresh\(\)/,"Confirmed individual uploads must refresh the document count.");
-assert.doesNotMatch(individual,/CustomerSuccessDialog|setSuccessNotice|Upload Successful/,"Individual uploads must not display success popups.");
-assert.match(individual,/<CustomerErrorDialog title="Document upload failed"/,"Individual document upload errors appear in reference popup.");
+assert.match(individual,/<ClaimStageErrorDialog success title="Success" message=\{successNotice\}/, "Individual success must use the shared modal.");
+assert.match(individual,/setSuccessNotice\("Document uploaded successfully\."\)/, "Confirmed upload receives success feedback.");
+assert.match(individual,/<ClaimStageErrorDialog title="Document upload failed"/,"Individual document upload errors appear in reference popup.");
 assert.doesNotMatch(individual,/<p role="alert"/,"Do not duplicate upload errors inline.");
 assert.doesNotMatch(vault,/setMessage\("Document uploaded\."\)/,"Customer document vault must not show upload success messages.");
 assert.match(vault,/setMessage\(body\.error \|\| "Document upload failed\."\)/,"Customer vault upload errors must remain visible.");

@@ -32,7 +32,7 @@ assert.match(completed, /<CustomerClaimVoiceRecorder documents=\{spotDocuments\}
 assert.match(header, /rounded-lg bg-white text-\[#17365D\] shadow-/, "All six Claim Journey summary tiles use opaque white.");
 
 assert.match(button,/ClaimDocumentDeleteConfirmation/, "Require explicit delete confirmation.");
-assert.match(button,/CustomerErrorDialog/, "Display failure without removing the row.");
+assert.match(button,/ClaimStageErrorDialog/, "Display failure without removing the row.");
 assert.match(button,/router\.refresh\(\)/, "Refresh document list after successful delete.");
 assert.match(action,/resolveCustomerWebScope\(accountId\)/, "Authenticate Customer account.");
 assert.match(action,/loadCustomerClaimDetail\(account.id, claimId\)/, "Check claim ownership.");
