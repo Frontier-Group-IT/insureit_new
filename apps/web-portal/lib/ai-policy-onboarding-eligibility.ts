@@ -105,6 +105,7 @@ export const NON_TATA_COMMERCIAL_N8N_IDS = new Set([
   "magma_private_car_package_native_pdf",
   "national_private_car_liability_only_native_pdf",
   "national_gcv_package_native_pdf",
+  "go_digit_jcb_new_unregistered_native_pdf",
   "oriental_private_car_standalone_od_native_pdf",
   "oriental_gccv_package_native_pdf",
 ]);
