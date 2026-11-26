@@ -9,6 +9,7 @@ import {assessStandardCommercialDirectConversion,assessUiicGcvDirectConversion,
  assessUiicPrivateCarDirectConversion} from "../lib/policy-commercial-direct-eligibility.ts";
 import {assessIffcoAutoOnboarding} from "../lib/policy-iffco-auto-eligibility.ts";
 import {assessProductVariantDirectConversion} from "../lib/policy-product-variant-direct-eligibility.ts";
+import {assessAiPolicyIntake} from "../lib/ai-policy-onboarding-eligibility.ts";
 const root=resolve(dirname(fileURLToPath(import.meta.url)),"../../..");
 const file=p=>readFileSync(resolve(root,p),"utf8");
 const f=(key,value,evidence="Native PDF policy schedule")=>({key,value:String(value),evidence});
@@ -46,6 +47,54 @@ for(const fields of [withCity,withState,withCity.concat(f("vehicle_rto_state","M
   parserId:"united_india_gcv_native_pdf",checksPassed:18,warnings:[],
   fields,commercialPremium:premium,
  }).eligible,true,"One or both RTO fields should be accepted");
+}
+// Queue-level regression: RTO geography is optional even for a fully
+// source-verified commercial policy whose registration is printed NEW.
+// The queue must not synthesize a manual RTO hold merely for unregistered
+// status. This is NOT permission to bypass canonical registration, customer,
+// duplicate, coverage, financial or ownership checks.
+const pendingNewVehicle=common.map(field=>
+ field.key==="vehicle_registration_number"?{...field,value:"NEW"}
+ :field.key==="vehicle_registration_status"?{...field,value:"registration_pending"}
+ :field);
+const queueEvidence={
+ policyType:"motor",intakeStatus:"processing",isDuplicate:false,
+ hasCurrentDocument:true,documentStillCurrent:true,
+ parserId:"united_india_gcv_native_pdf",parserChecksPassed:18,
+ extractionState:"success",extractionWarnings:[],
+ fields:pendingNewVehicle,premiumReconciled:true,matchedManufacturer:true,
+ customerMatch:"unique_exact",sharedPhoneHasDistinctNames:false,
+ existingCustomerSameIdentity:false,reviewerAssignedToAnother:false,
+ vehicleOwnerConflict:false,coverageConflict:false,
+ savedDraftConflictsWithPdf:false,issuanceDateVerified:true,
+ needsDateApproval:false,bundledPeriodsVerified:true,canonicalPreflightPassed:true,
+};
+for(const fields of [
+ pendingNewVehicle,
+ pendingNewVehicle.concat(f("vehicle_rto_name","Jabalpur")),
+ pendingNewVehicle.concat(f("vehicle_rto_state","Madhya Pradesh")),
+ pendingNewVehicle.concat(f("vehicle_rto_name","Jabalpur"),f("vehicle_rto_state","Madhya Pradesh")),
+]){
+ const outcome=assessAiPolicyIntake({...queueEvidence,fields});
+ assert.equal(outcome.state,"eligible",
+  "No RTO city/state is mandatory for an 18/18 NEW commercial extraction");
+ assert.ok(!outcome.exceptions.some(e=>e.code==="registration_pending_review"),
+  "Registration pending is not itself an RTO exception");
+}
+const noCanonicalPreflight=assessAiPolicyIntake({...queueEvidence,canonicalPreflightPassed:false});
+assert.equal(noCanonicalPreflight.state,"preflight_pending",
+ "Optional RTO does not bypass canonical booking preflight");
+for(const [variant,blockedCode] of [
+ [{...queueEvidence,fields:pendingNewVehicle.filter(f=>f.key!=="vehicle_chassis_number")},"missing_field"],
+ [{...queueEvidence,fields:pendingNewVehicle.filter(f=>f.key!=="vehicle_engine_number")},"missing_field"],
+ [{...queueEvidence,fields:pendingNewVehicle.filter(f=>f.key!=="vehicle_registration_status")},"missing_field"],
+ [{...queueEvidence,coverageConflict:true},"coverage_conflict"],
+ [{...queueEvidence,isDuplicate:true},"duplicate_policy"],
+ [{...queueEvidence,vehicleOwnerConflict:true},"vehicle_ownership"],
+ [{...queueEvidence,premiumReconciled:false},"financial_reconciliation"],
+]){
+ assert.ok(assessAiPolicyIntake(variant).exceptions.some(e=>e.code===blockedCode),
+  "Optional RTO must not remove mandatory safeguard: "+blockedCode);
 }
 const forgedPremium=assessUiicGcvDirectConversion({
  parserId:"united_india_gcv_native_pdf",checksPassed:18,warnings:[],
