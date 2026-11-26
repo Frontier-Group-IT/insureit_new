@@ -4,7 +4,7 @@ import { ReportQueryShortcuts } from "@/components/reports/report-query-shortcut
 import { ReportCompactFilters } from "@/components/reports/report-compact-filters";
 import { ReportEmptyState, ReportExportLink, ReportPageShell } from "@/components/reports/report-page-shell";
 import { getInsurerLogo } from "@/lib/insurer-logo";
-import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
+import { canViewReportCommercials } from "@/lib/policy-commercial-access";
 import { requireCapability } from "@/lib/master-data-server";
 import { emptyFinanceReport, loadFinanceReport, type FinanceQuery, type FinanceReport } from "@/lib/reports/finance";
 import { loadPolicyBusinessNetReport, type PolicyBusinessFilters, type PolicyBusinessQuery, type PolicyBusinessNetReport } from "@/lib/reports/policy-business";
@@ -34,7 +34,7 @@ export default async function ReportsPage({ searchParams }: Props) {
   const profile = await requireCapability("view_reports");
   if (!profile) return null;
   const query = await searchParams;
-  const commercialAccess = canAccessPolicyCommercials(profile);
+  const commercialAccess = canViewReportCommercials(profile);
   const businessQuery: PolicyBusinessQuery = { ...query, page: "1", pageSize: "5000" };
   const financeQuery: FinanceQuery = { ...query, period: query.period ?? "mtd", page: "1", pageSize: "5000" };
   const [businessResult, financeResult] = await Promise.all([
