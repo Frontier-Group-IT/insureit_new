@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
 import { hasVerifiedN8nParserEvidence } from "@/lib/ai-policy-onboarding-eligibility";
 import { AlertCircle, ArrowUpRight, CheckCircle2, ClipboardCheck, FileSearch, Loader2, PencilLine, RefreshCw, Search, ShieldAlert, Sparkles, Eye, RotateCcw, ArrowRight, X } from "lucide-react";
-import { applySemiAutoN8nIntake, bookSemiAutoIntake, convertVerifiedAiIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reparseAndReplaceAiPolicyIntakeDraft, reviewAiIntakeCustomerCandidates, reviewIciciVerifiedDraftRepair, applyReviewedIciciDraftRepair, type ReviewedIciciDraftComparison, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
+import { applySemiAutoN8nIntake, bookSemiAutoIntake, convertVerifiedAiIntake, checkSemiAutoIntake, continueVerifiedN8nIntakeToOnboarding, editSemiAutoIntake, previewSemiAutoN8nIntake, reprocessAiPolicyIntake, reparseAndReplaceAiPolicyIntakeDraft, sendAiIntakeForManualReview, reviewAiIntakeCustomerCandidates, reviewIciciVerifiedDraftRepair, applyReviewedIciciDraftRepair, type ReviewedIciciDraftComparison, type AiCustomerCandidateReview, type SemiAutoActionResult, type SemiAutoN8nResult } from "@/app/development/ai-policy-onboarding/actions";
 
 export type SemiAutoIntakeRow = {
   id: string;
@@ -296,6 +296,23 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
   // Reprocess is unbounded by UI batch size, but every Intake is checked
   // sequentially through the same server-side authorization and queue CAS.
   const reprocessBatch=reprocessRemaining;
+
+  async function explicitlySendToManualReview(){
+    if(!selected || selected.policy_type!=="motor" || selected.assigned_to_profile_id || isWaiting)return;
+    if(!window.confirm("Assign "+selected.intake_number+" to your account for MANUAL review? Automatic booking will no longer pick up this Intake while it is assigned. Nothing is booked by this action."))return;
+    setBusy("forwarding");
+    try{
+      const result=await sendAiIntakeForManualReview(selected.id,true);
+      setN8nNotice(result.ok
+        ?"Manual review assigned to your account by your explicit confirmation. No policy has been booked."
+        :result.error??"Manual review assignment could not be confirmed.");
+      router.refresh();
+    }catch{
+      setN8nNotice("Manual review assignment result could not be confirmed. Refresh before retrying.");
+    }finally{
+      setBusy(null);
+    }
+  }
 
   async function selectRow(id: string) {
     const next = ++requestId.current;
@@ -876,6 +893,13 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
             {busy === "extracting" ? <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Reading current private PDF through the n8n review-only bridge...</div> : null}
             {busy === "applying" ? <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-[11px] text-blue-800"><Loader2 className="h-4 w-4 animate-spin"/>Revalidating and saving the confirmed failed OCR recovery...</div> : null}
             {n8nNotice ? <p role="status" className="mt-3 rounded-lg border border-[#c8d8eb] bg-[#f5f9ff] p-3 text-[11px] leading-5 text-[#284d77]">{n8nNotice}</p> : null}
+            {primaryN8n && selected && selected.policy_type==="motor"
+              && !selected.assigned_to_profile_id && !selected.is_duplicate ? (
+              <button type="button" onClick={()=>{void explicitlySendToManualReview();}} disabled={isWaiting}
+                className="mt-3 w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-900 disabled:opacity-50">
+                Send for Manual Review (explicit assignment)
+              </button>
+            ) : null}
             {primaryN8n && selectedId && !n8nResult && busy === null ? <p className="mt-3 text-[10.5px] text-[#61738a]">Previously saved details appear above. Re-extract the current PDF only when a new verified result is necessary.</p> : null}
             {primaryN8n && selected && !done && !n8nResult
               && selected.policy_type === "motor" && !selected.is_duplicate
