@@ -183,6 +183,7 @@ export async function previewSemiAutoN8nExtraction(
     // necessarily a new/untrained insurer. Surface only the safe validation
     // code (never raw PDF text, signed URLs, headers, or n8n responses).
     const parserValidationCodes=new Set([
+      "n8n_untrained_layout",
       "n8n_layout_untrained_liberty_two_wheeler_tp",
       "n8n_layout_untrained_oriental_two_wheeler_package",
       "n8n_review_required","n8n_shriram_issuance_not_verified","n8n_financial_validation_failed",
@@ -221,7 +222,9 @@ export async function previewSemiAutoN8nExtraction(
       console.error("[ai-policy] rejected n8n validation",{code});
       return { ok: false, reason: "untrained_or_unverified",
         diagnosticCode:code,
-        error:code==="n8n_layout_untrained_liberty_two_wheeler_tp"
+        error:code==="n8n_untrained_layout"
+          ? "A new insurer or policy-product layout has no trained parser. The intake has been grouped for parser training; repeated retries of this PDF will not change the result."
+          : code==="n8n_layout_untrained_liberty_two_wheeler_tp"
           ? "Liberty General Two-Wheeler Liability Only policy detected. The Liberty TP/CPA parser is not trained; do not route to ICICI or retry the same version."
           : code==="n8n_layout_untrained_oriental_two_wheeler_package"
           ? "Oriental Motorised Two-Wheeler Package policy detected. The commercial GCCV parser is the wrong product family; this requires a dedicated two-wheeler OD/TP/CPA parser."
