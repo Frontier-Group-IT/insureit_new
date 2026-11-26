@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const source = readFileSync("app/customer/(protected)/spot-intimation/spot-intimation-save-form.tsx", "utf8");
+assert.match(source,/invalidFieldRef\.current = invalid;/,"Store first invalid field for navigation after modal dismissal");
+assert.match(source,/Please fill /,"Use requested fill wording");
+assert.doesNotMatch(source,/Please complete /,"Do not use previous wording");
+assert.match(source,/const closeError = useCallback\(\(\) => \{[\s\S]*?setDialogError\(null\);[\s\S]*?requestAnimationFrame/,"Dismiss popup before focusing field");
+assert.match(source,/input\.scrollIntoView\(\{ behavior: "smooth", block: "center"/,"Scroll to missing input");
+assert.match(source,/input\.focus\(\{ preventScroll: true \}\)/,"Focus missing input");
+assert.match(source,/input\.type === "date" \|\| input\.type === "time"/,"Highlight visible date/time wrapper");
+assert.match(source,/outline-red-500/,"Highlight missing input temporarily");
+assert.match(source,/invalid\.validity\.valueMissing/,"Preserve native validation");
+assert.match(source,/saveDraft\(\)/,"Preserve input draft");
+assert.match(source,/const result = await action\(initialState, payload\)/,"Preserve authorized submission");
+console.log("Customer Spot Intimation invalid field navigation regression passed.");
