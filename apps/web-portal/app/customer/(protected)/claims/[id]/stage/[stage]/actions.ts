@@ -1,5 +1,7 @@
 "use server";
 
+import { customerSpotVerificationLocked } from "@/lib/claim-workflow";
+
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { INTERNAL_JOURNEY_STAGES } from "@insureit/claim-journey";
@@ -271,16 +273,10 @@ export async function saveCustomerInternalSpotCorrection(
   const fail = (error: string) => ({ error, saved: false });
   const { account } = await resolveCustomerWebScope(String(form.get("account") || ""));
   const claimId = String(form.get("claim") || "");
-  const { claim, internal_projection, milestones } = await loadCustomerClaimDetail(account.id, claimId);
-  if (isExternalCustomerClaim(claim) || claim.claim_service_mode !== "broker_managed" || !internal_projection || internal_projection.completedStageCount < 1) {
-    return fail("Stage 1 corrections are not available for this claim.");
+  const { claim, documents } = await loadCustomerClaimDetail(account.id, claimId);
+  if (claim.current_status === "Draft" || customerSpotVerificationLocked(claim.current_status, documents)) {
+    return fail("Spot Intimation is locked after Operations document verification.");
   }
-  // Re-read persisted Stage 2 completion on every submission; a hidden button or
-  // a previously opened edit form is not authorization to modify completed claims.
-  const stageTwoComplete = internal_projection.completedStageCount >= 2 || milestones.some(
-    item => item.milestone_key === "claim_intimation" && ["completed", "not_applicable"].includes(item.milestone_status),
-  );
-  if (stageTwoComplete) return fail("Spot Intimation is locked because Claim Intimation (Stage 2) is complete.");
 
   const accident = String(form.get("accidentAt") || "");
   const spot = String(form.get("spotAt") || "");
@@ -303,7 +299,7 @@ export async function saveCustomerInternalSpotCorrection(
     spot_intimation_at: spotDate.toISOString(),
     accident_location: location || null,
     accident_description: [driver && "Driver: " + driver, phone && "Driver phone: " + phone].filter(Boolean).join("\n") || null,
-  }).eq("id", claim.id).eq("customer_id", account.id).eq("claim_service_mode", "broker_managed").select("id").maybeSingle();
+  }).eq("id", claim.id).eq("customer_id", account.id).eq("claim_service_mode", claim.claim_service_mode).eq("current_status", claim.current_status).select("id").maybeSingle();
   if (error || !data) {
     console.error("Customer Internal Stage 1 correction rejected", { code: error?.code ?? null });
     return fail("Stage 1 details could not be saved. Please reload and try again.");
