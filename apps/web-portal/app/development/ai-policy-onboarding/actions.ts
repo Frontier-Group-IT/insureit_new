@@ -20,6 +20,7 @@ export type { SemiAutoN8nResult } from "@/lib/policy-intake-semi-auto-n8n";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
 import { revalidatePath } from "next/cache";
+import { recordDailyWorkflowActivity } from "@/lib/daily-workflow-audit";
 import { aiQueueEnabled } from "@/lib/ai-policy-onboarding-queue-server";
 import { hasVerifiedN8nParserEvidence } from "@/lib/ai-policy-onboarding-eligibility";
 import { redirect } from "next/navigation";
@@ -906,6 +907,49 @@ export async function bookSemiAutoIntake(id: string, confirmed: boolean): Promis
     return { ok: false, ready: false, issues: [issue("Policy conflict", descriptions[conflict.type], "Policy")] };
   }
   return { ok: false, ready: false, issues: [issue(result.kind, result.error, "Policy")] };
+}
+
+/** Assign a human reviewer ONLY after the operator explicitly requests it.
+ * Viewing, parsing and failed automatic bookings never call this action.
+ * Claimed/uncertain auto-bookings cannot be taken over before reconciliation.
+ */
+export async function sendAiIntakeForManualReview(
+  id:string,confirmed:boolean,
+):Promise<{ok:boolean;error?:string}>{
+  const actor=await requireDevelopmentPolicyOperator(id);
+  if(confirmed!==true)return{ok:false,error:"Explicit manual review confirmation is required."};
+  const admin=createSupabaseAdminClient();
+  const {data:intake,error}=await admin.from("policy_intake_requests")
+    .select("id,status,policy_type,final_policy_id,assigned_to_profile_id")
+    .eq("id",id).maybeSingle<{
+      id:string;status:string;policy_type:string|null;
+      final_policy_id:string|null;assigned_to_profile_id:string|null;
+    }>();
+  if(error||!intake||intake.policy_type!=="motor"||intake.final_policy_id
+      ||!["processing","ready_for_review","in_review","needs_attention"].includes(intake.status))
+    return{ok:false,error:"Only an open, unbooked Motor Intake can be sent for manual review."};
+  if(intake.assigned_to_profile_id)
+    return{ok:false,error:"This Intake already has a reviewer. Assignment was not changed."};
+  const {data:attempt,error:attemptError}=await admin.from("policy_intake_ai_auto_booking_attempts")
+    .select("state").eq("intake_id",id).maybeSingle<{state:string}>();
+  if(attemptError)return{ok:false,error:"Booking attempt status could not be verified."};
+  if(attempt && attempt.state!=="review_required")
+    return{ok:false,error:"An automatic booking is claimed, booked or uncertain. Reconcile it before assigning a reviewer."};
+  // The update is a single CAS, so opening the Intake never grants ownership,
+  // and concurrent manual assignments cannot overwrite each other.
+  const {data:updated,error:updateError}=await admin.from("policy_intake_requests")
+    .update({assigned_to_profile_id:actor.id,status:"in_review"})
+    .eq("id",id).is("assigned_to_profile_id",null)
+    .is("final_policy_id",null)
+    .in("status",["processing","ready_for_review","in_review","needs_attention"])
+    .select("id").maybeSingle<{id:string}>();
+  if(updateError||!updated)
+    return{ok:false,error:"The Intake changed before manual assignment. Refresh and try again."};
+  await recordDailyWorkflowActivity(admin,{actorId:actor.id,table:"policy_intake_requests",
+    recordId:id,action:"policy_intake_manual_review_assigned"});
+  revalidatePath("/development/ai-policy-onboarding");
+  revalidatePath("/policy-intakes");
+  return{ok:true};
 }
 
 export async function editSemiAutoIntake(id: string, takeOver = false): Promise<SemiAutoActionResult> {
