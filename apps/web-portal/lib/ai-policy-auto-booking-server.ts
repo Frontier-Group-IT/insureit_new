@@ -9,7 +9,7 @@ import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyIntakeReviewer,requirePolicyIntakeFinalizer } from "@/lib/policy-intake-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 
-type Claim={intake_id:string;document_id:string;extraction_fingerprint:string;recovery?:boolean;stranded?:boolean};
+type Claim={intake_id:string;document_id:string;extraction_fingerprint:string;recovery?:boolean;stranded?:boolean;canonicalRecovery?:boolean};
 type FinalState="booked"|"review_required"|"uncertain";
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HASH=/^[a-f0-9]{64}$/i;
@@ -52,7 +52,8 @@ function safeReason(fields:readonly {field:string}[]):{state:FinalState;code:str
 }
 async function finish(claim:Claim,state:FinalState,code:string|null,policyId:string|null){
   const admin=createSupabaseAdminClient();
-  const {data,error}=await admin.rpc(claim.stranded?"finish_ai_auto_booking_stranded_v1":claim.recovery
+  const {data,error}=await admin.rpc(claim.canonicalRecovery?"finish_ai_auto_booking_canonical_recovery_v1":claim.stranded
+    ?"finish_ai_auto_booking_stranded_v1":claim.recovery
     ?"finish_ai_auto_booking_liberty_recovery_v1":"finish_ai_auto_booking_v1",{
     p_intake_id:claim.intake_id,p_document_id:claim.document_id,
     p_fingerprint:claim.extraction_fingerprint,p_state:state,
@@ -150,6 +151,32 @@ export async function runAutoBookingBatch():Promise<{
       await processClaim(claim);
     }
   }
+  // Exactly-once incident recovery for four named deterministic canonical
+  // authorization failures. The SQL claim function enforces the four-ID
+  // allowlist, current PDF/hash, immutable terminal failure ledgers and a
+  // saved draft. It NEVER claims uncertain, booked or assigned intakes.
+  const canonicalRecovery=await admin.rpc("claim_ai_auto_booking_canonical_recovery_v1",{
+    p_operator_profile_id:operatorId,p_limit:4,
+  });
+  if(canonicalRecovery.error){
+    const missing=["PGRST202","42883"].includes(canonicalRecovery.error.code??"");
+    const pgCode=typeof canonicalRecovery.error.code==="string"
+      && /^[0-9A-Z]{5}$/.test(canonicalRecovery.error.code)
+      ?canonicalRecovery.error.code:"unknown";
+    if(!missing){
+      console.error("[ai-auto-booking] canonical recovery claim unavailable",{pgCode});
+      throw Error("auto_booking_canonical_recovery_unavailable");
+    }
+  }else{
+    for(const item of (canonicalRecovery.data??[]) as Claim[]){
+      const claim={...item,canonicalRecovery:true};
+      claims.push(claim);
+      await processClaim(claim);
+    }
+  }
+  // The nine Tata AIG historical claims remain excluded from this release.
+  // The unrelated stranded-claim recovery is separately opt-in via env flag.
+  if(process.env.INSUREIT_AI_STRANDED_RECOVERY_ENABLED==="true"){
   // One incident-limited replay for claims stranded before conversion by
   // the 2026-11-27 PostgreSQL 42702 worker crash. Service-role SQL checks
   // exact intake IDs, minute window, zero drafts, current PDF fingerprint,
@@ -173,6 +200,7 @@ export async function runAutoBookingBatch():Promise<{
       claims.push(claim);
       await processClaim(claim);
     }
+  }
   }
   return{enabled:true,claimed:claims.length,booked,review,uncertain};
 }
