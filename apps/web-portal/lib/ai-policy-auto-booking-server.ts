@@ -9,7 +9,7 @@ import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyIntakeReviewer,requirePolicyIntakeFinalizer } from "@/lib/policy-intake-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 
-type Claim={intake_id:string;document_id:string;extraction_fingerprint:string;recovery?:boolean;stranded?:boolean;canonicalRecovery?:boolean;iciciRecovery?:boolean;reconciledDigit?:boolean;reconciledUiicTractor?:boolean};
+type Claim={intake_id:string;document_id:string;extraction_fingerprint:string;recovery?:boolean;stranded?:boolean;canonicalRecovery?:boolean;iciciRecovery?:boolean;reconciledDigit?:boolean;reconciledUiicTractor?:boolean;reconciledIciciUncertain?:boolean};
 type FinalState="booked"|"review_required"|"uncertain";
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HASH=/^[a-f0-9]{64}$/i;
@@ -90,7 +90,7 @@ function safeReason(fields:readonly {field:string}[]):{state:FinalState;code:str
 }
 async function finish(claim:Claim,state:FinalState,code:string|null,policyId:string|null){
   const admin=createSupabaseAdminClient();
-  const {data,error}=await admin.rpc(claim.reconciledUiicTractor?"finish_ai_auto_booking_uiic_tractor_v1":claim.reconciledDigit?"finish_ai_auto_booking_reconciled_digit_v1":claim.iciciRecovery?"finish_ai_auto_booking_icici_recovery_v1":claim.canonicalRecovery
+  const {data,error}=await admin.rpc(claim.reconciledIciciUncertain?"finish_ai_auto_booking_icici_uncertain_v1":claim.reconciledUiicTractor?"finish_ai_auto_booking_uiic_tractor_v1":claim.reconciledDigit?"finish_ai_auto_booking_reconciled_digit_v1":claim.iciciRecovery?"finish_ai_auto_booking_icici_recovery_v1":claim.canonicalRecovery
     ?"finish_ai_auto_booking_canonical_recovery_v1":claim.stranded
     ?"finish_ai_auto_booking_stranded_v1":claim.recovery
     ?"finish_ai_auto_booking_liberty_recovery_v1":"finish_ai_auto_booking_v1",{
@@ -279,6 +279,30 @@ export async function runAutoBookingBatch():Promise<{
   }else{
     for(const item of (uiicReconciliation.data??[]) as Claim[]){
       const claim={...item,reconciledUiicTractor:true};
+      claims.push(claim);
+      await processClaim(claim);
+    }
+  }
+  // Exact 1C79A4 ICICI: original terminal unknown with zero Policy Register
+  // or source-document writes, current unchanged 13/13 PDF+fingerprint and
+  // independently read source policy/chassis. The current PDF will regenerate
+  // the missing canonical draft under the existing booking/identity gates.
+  // The SQL claim is unique and irreversible: a second unknown is terminal.
+  const iciciUncertain=await admin.rpc("claim_ai_auto_booking_icici_uncertain_v1",{
+    p_operator_profile_id:operatorId,p_limit:1,
+  });
+  if(iciciUncertain.error){
+    const missing=["PGRST202","42883"].includes(iciciUncertain.error.code??"");
+    if(!missing){
+      const pgCode=typeof iciciUncertain.error.code==="string"
+        &&/^[0-9A-Z]{5}$/.test(iciciUncertain.error.code)
+        ?iciciUncertain.error.code:"unknown";
+      console.error("[ai-auto-booking] ICICI uncertain recovery unavailable",{pgCode});
+      throw Error("auto_booking_icici_uncertain_recovery_unavailable");
+    }
+  }else{
+    for(const item of (iciciUncertain.data??[]) as Claim[]){
+      const claim={...item,reconciledIciciUncertain:true};
       claims.push(claim);
       await processClaim(claim);
     }
