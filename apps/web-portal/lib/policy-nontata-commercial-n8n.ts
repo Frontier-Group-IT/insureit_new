@@ -413,10 +413,30 @@ function validateNewVariant(
      ||byKey.get("cpa_premium")!=="0")
      throw new Error("n8n_extension_tp_only_contract_invalid");
  }
- if(insurer==="united_india_tractor_tp_native_pdf"
-    &&(byKey.get("vehicle_class")!=="Agricultural Tractor"
-       ||byKey.get("vehicle_make")!=="MAHINDRA"))
-    throw new Error("n8n_extension_tractor_class_invalid");
+ if(insurer==="united_india_tractor_tp_native_pdf"){
+   // Both models are independently verified in the native source parser.
+   // A Powertrac 445 uses the printed 45 HP agricultural-tractor rating,
+   // not a fabricated engine-CC capacity. Its local 9%+9% tax split must
+   // be reconciled independently from the older Mahindra IGST layout.
+   const make=byKey.get("vehicle_make"),model=byKey.get("vehicle_model")||"";
+   const powertrac=make==="Escorts Kubota"&&model==="POWERTRAC 445"
+     &&/^HR\\d{2}[A-Z]{1,3}\\d{3,4}$/.test(byKey.get("vehicle_registration_number")||"")
+     &&byKey.get("vehicle_rto_state")==="Haryana"
+     &&byKey.get("vehicle_capacity")==="45";
+   if(byKey.get("vehicle_class")!=="Agricultural Tractor"
+     ||(make!=="MAHINDRA"&&!powertrac))
+     throw new Error("n8n_extension_tractor_class_invalid");
+   if(powertrac){
+     const prem=payload.premium_components;
+     if(!object(prem)||prem.taxRegime!=="CGST_SGST"
+        ||!isMoney(prem.cgst)||!isMoney(prem.sgst)
+        ||!isMoney(prem.net)||!isMoney(prem.gst)
+        ||Math.abs(cents(prem.cgst)+cents(prem.sgst)-cents(prem.gst))>1
+        ||Math.abs(cents(prem.cgst)-cents(prem.net*.09))>100
+        ||Math.abs(cents(prem.sgst)-cents(prem.net*.09))>100)
+       throw new Error("n8n_extension_tractor_cgst_sgst_evidence_invalid");
+   }
+ }
  const p=payload.premium_components;
  if(!object(p)||![p.od,p.tp,p.net,p.gst,p.gross].every(isMoney))
    throw new Error("n8n_extension_premium_shape_invalid");
