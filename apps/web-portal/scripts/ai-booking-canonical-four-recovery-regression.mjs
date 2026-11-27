@@ -51,7 +51,7 @@ for(const needle of [
 assert.doesNotMatch(sql,/\b(?:delete|truncate)\s+from\s+public\.policy_intake_ai_(?:auto_booking_attempts|auto_booking_recovery_attempts|stranded_claim_recovery)\b/i);
 assert.doesNotMatch(sql,/\bupdate\s+public\.policy_intake_ai_(?:auto_booking_attempts|auto_booking_recovery_attempts|stranded_claim_recovery)\b/i);
 assert.ok(worker.includes('admin.rpc("claim_ai_auto_booking_canonical_recovery_v1"'));
-assert.ok(worker.includes('claim.canonicalRecovery?"finish_ai_auto_booking_canonical_recovery_v1"'));
+assert.match(worker,/claim\.canonicalRecovery\s*\?\s*"finish_ai_auto_booking_canonical_recovery_v1"/);
 const ordinary=worker.indexOf("for(const claim of claims)await processClaim(claim)");
 const liberty=worker.indexOf('admin.rpc("claim_ai_auto_booking_liberty_recovery_v1"');
 const fourStart=worker.indexOf('admin.rpc("claim_ai_auto_booking_canonical_recovery_v1"');
