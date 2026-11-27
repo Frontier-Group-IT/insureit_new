@@ -1,6 +1,8 @@
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { PartnerPageHeader } from "@/components/partner-portal/partner-page-primitives";
-import { getPartnerWebNetwork, type PartnerNetworkRow } from "@/lib/partner-web";
+import { getPartnerBranchNetworkContacts } from "@/lib/partner-branch-network";
+import { getPartnerWebNetwork, getPartnerWebSession, type PartnerNetworkRow } from "@/lib/partner-web";
+import { BranchNetworkContacts } from "./branch-network-contacts";
 import { PartnerNetworkStructure } from "./network-structure";
 
 export const dynamic = "force-dynamic";
@@ -11,8 +13,8 @@ type PartnerNetworkHierarchyRow = PartnerNetworkRow & {
 };
 
 function splitPartnerHierarchy(rows: PartnerNetworkRow[], scopeMode: string) {
-  // Self scope can represent a Branch login. Keep that single authorized row as the
-  // visible root so Branch users continue to see their own Network page normally.
+  // Self scope can also represent a non-Branch Partner login. If the dedicated
+  // Branch contact RPC does not resolve a parent Partner, retain the normal view.
   if (scopeMode === "self") {
     return { rootRows: rows, branchRows: [] as PartnerNetworkHierarchyRow[] };
   }
@@ -25,6 +27,20 @@ function splitPartnerHierarchy(rows: PartnerNetworkRow[], scopeMode: string) {
 }
 
 export default async function PartnerNetworkPage() {
+  const session = await getPartnerWebSession();
+  const branchContacts = session.scope.scope_mode === "self" ? await getPartnerBranchNetworkContacts() : null;
+
+  if (branchContacts) {
+    return (
+      <PartnerPortalShell title="Network">
+        <div className="space-y-3">
+          <PartnerPageHeader title="Commercial relationships" />
+          <BranchNetworkContacts contacts={branchContacts} />
+        </div>
+      </PartnerPortalShell>
+    );
+  }
+
   const data = await getPartnerWebNetwork();
   const { rootRows, branchRows } = splitPartnerHierarchy(data.partners, data.scope_mode);
   const visibleGroupIds = new Set(
