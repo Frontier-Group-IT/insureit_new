@@ -420,7 +420,7 @@ function validateNewVariant(
    // be reconciled independently from the older Mahindra IGST layout.
    const make=byKey.get("vehicle_make"),model=byKey.get("vehicle_model")||"";
    const powertrac=make==="Escorts Kubota"&&model==="POWERTRAC 445"
-     &&/^HR\\d{2}[A-Z]{1,3}\\d{3,4}$/.test(byKey.get("vehicle_registration_number")||"")
+     &&/^HR\d{2}[A-Z]{1,3}\d{3,4}$/.test(byKey.get("vehicle_registration_number")||"")
      &&byKey.get("vehicle_rto_state")==="Haryana"
      &&byKey.get("vehicle_capacity")==="45";
    if(byKey.get("vehicle_class")!=="Agricultural Tractor"
