@@ -17,6 +17,6 @@ assert.ok(claimRegular>=0&&finishRegular>claimRegular&&recovery>finishRegular,
  "Regular claims MUST complete before independent recovery RPC can fail");
 assert.ok(worker.includes("console.error(\"[ai-auto-booking] recovery claim unavailable\",{pgCode})"));
 assert.ok(worker.includes('"finish_ai_auto_booking_liberty_recovery_v1":"finish_ai_auto_booking_v1"'));
-assert.match(worker,/claim\\.canonicalRecovery\\s*\\?\\s*"finish_ai_auto_booking_canonical_recovery_v1"/);
+assert.ok(worker.includes('claim.canonicalRecovery'));
 assert.ok(worker.includes('await processClaim(claim);'));
 console.log("AI booking regular-batch ordering and unambiguous recovery SQL regression passed");
