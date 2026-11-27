@@ -248,6 +248,8 @@ for (const role of ["zonal_head", "asm", "sales_manager"]) {
   if (!supervisorPolicyMigration.includes(marker)) fail(`Supervisor shadow policy grant missing ${marker}`);
   sqlGrants.add(`${role}|policies.view|view|hierarchy`);
 }
+if (!supervisorPolicyMigration.includes("('relationship_manager','policies.view','view','self')")) fail("RM shadow policy grant missing");
+sqlGrants.add("relationship_manager|policies.view|view|self");
 const matrixGrants = new Set(
   roleMatrixV2.flatMap((role) =>
     applicationOnlyRoleCodes.has(role.code)
