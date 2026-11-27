@@ -541,6 +541,9 @@ function formatDisplayDate(value: string) {
 
 function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accidentAt, spotIntimationAt, formAction, standalone = false, onSubmitStart, onInvalidField }: { claimId: string; stage: (typeof stages)[number]; active: (typeof stages)[number]; detail: StageDetail | undefined; spotDetails?: InternalSpotIntimationDetails | null; next?: ClaimStatus; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; standalone?: boolean; onSubmitStart?: () => void; onInvalidField?: (message: string) => void }) {
   const [location, setLocation] = useState(spotDetails?.location ?? "");
+  const [driverInjured, setDriverInjured] = useState(spotDetails?.driver_injured === true);
+  const [driverDeceased, setDriverDeceased] = useState(spotDetails?.driver_deceased === true);
+  const [driverInjuryRemarks, setDriverInjuryRemarks] = useState(spotDetails?.driver_injury_remarks ?? "");
   const formRef = useRef<HTMLFormElement>(null);
   const draftKey = `insureit:spot-intimation-draft:${claimId}`;
   const draftFields = ["incident_at", "incident_time", "spot_intimation_at", "spot_intimation_time", "driver_name", "driver_phone", "location"];
@@ -552,6 +555,9 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
       const raw = window.sessionStorage.getItem(draftKey);
       if (!raw || !formRef.current) return;
       const draft = JSON.parse(raw) as Record<string, unknown>;
+      if (draft.driver_injured === "true" || draft.driver_injured === "false") setDriverInjured(draft.driver_injured === "true");
+      if (draft.driver_deceased === "true" || draft.driver_deceased === "false") setDriverDeceased(draft.driver_injured === "true" && draft.driver_deceased === "true");
+      if (typeof draft.driver_injury_remarks === "string") setDriverInjuryRemarks(draft.driver_injury_remarks);
       for (const name of draftFields) {
         const value = draft[name];
         if (typeof value !== "string") continue;
@@ -581,6 +587,14 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
       );
       if (field) draft[name] = field.value;
     }
+    const injuredField = form.elements.namedItem("driver_injured");
+    const deceasedField = form.elements.namedItem("driver_deceased");
+    const remarksField = form.elements.namedItem("driver_injury_remarks");
+    const injured = injuredField instanceof HTMLInputElement && injuredField.checked;
+    const deceased = injured && deceasedField instanceof HTMLInputElement && deceasedField.checked;
+    draft.driver_injured = String(injured);
+    draft.driver_deceased = String(deceased);
+    draft.driver_injury_remarks = deceased && remarksField instanceof HTMLTextAreaElement ? remarksField.value : "";
     try { window.sessionStorage.setItem(draftKey, JSON.stringify(draft)); } catch { /* optional browser storage */ }
   }
   const storedIncidentAt = detail?.details?.incident_at;
@@ -637,7 +651,38 @@ function StageOneForm({ claimId, stage, active, detail, spotDetails, next, accid
             );
           })}
         </div>
-
+        <div data-driver-injury-fields className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-[#DFE8F4] bg-[#F8FAFD] px-3 py-2">
+          <label className="flex min-h-[32px] cursor-pointer items-center gap-2 text-[11px] font-semibold text-[#071D49]">
+            <input name="driver_injured" type="checkbox" value="true" checked={driverInjured}
+              onChange={(event) => {
+                setDriverInjured(event.target.checked);
+                if (!event.target.checked) { setDriverDeceased(false); setDriverInjuryRemarks(""); }
+              }}
+              className="h-4 w-4 cursor-pointer accent-[#1767C8]" />
+            Is the driver injured?
+          </label>
+          {driverInjured ? (
+            <label className="flex min-h-[32px] cursor-pointer items-center gap-2 border-l border-[#C7D7EB] pl-4 text-[11px] font-semibold text-[#071D49]">
+              <input name="driver_deceased" type="checkbox" value="true" checked={driverDeceased}
+                onChange={(event) => {
+                  setDriverDeceased(event.target.checked);
+                  if (!event.target.checked) setDriverInjuryRemarks("");
+                }}
+                className="h-4 w-4 cursor-pointer accent-[#1767C8]" />
+              Death
+            </label>
+          ) : null}
+          {driverInjured && driverDeceased ? (
+            <label className="min-w-[220px] flex-[1_1_350px] text-[10px] font-semibold uppercase tracking-[0.01em] text-[#174EA6]">
+              Remarks / Description<span className="ml-1 text-rose-600">*</span>
+              <textarea name="driver_injury_remarks" value={driverInjuryRemarks}
+                onChange={(event) => setDriverInjuryRemarks(event.target.value)}
+                required maxLength={2000} rows={2}
+                placeholder="Enter details about the incident..."
+                className="mt-1 block min-h-[46px] w-full resize-y rounded-md border border-[#CEDBEC] bg-white px-2.5 py-1.5 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
+            </label>
+          ) : null}
+        </div>
       </div>
     </form>
   );
