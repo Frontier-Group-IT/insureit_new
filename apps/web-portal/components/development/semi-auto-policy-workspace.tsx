@@ -139,9 +139,9 @@ const aiStateLabel: Record<string,string> = {
 function bookingLedgerLabel(row:SemiAutoIntakeRow):string|null{
   if(row.ai_booking_state==="review_required")
     return row.ai_booking_failure_code==="insured_name_mismatch"
-      ?"Booking review · insured name mismatch"
-      :"Booking review · "+(row.ai_booking_failure_code??"canonical checks");
-  if(row.ai_booking_state==="uncertain")return "Booking outcome uncertain · do not retry";
+      ?"Onboarding needs insured-name verification"
+      :"Automatic onboarding needs resolution · "+(row.ai_booking_failure_code??"canonical validation");
+  if(row.ai_booking_state==="uncertain")return "Booking reconciliation required · automatic retry paused";
   if(row.ai_booking_state==="claimed")return "Booking claimed · checking";
   if(row.ai_booking_state==="booked")return "Auto booked";
   return null;
@@ -742,8 +742,8 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
             <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[#345676]" aria-label="Automatic booking outcomes">
               <span>Claimed / check outcome: <strong>{autoBooking.claimed}</strong></span>
               <span>Auto onboarded: <strong>{autoBooking.booked}</strong></span>
-              <span>Booking review: <strong>{autoBooking.review}</strong></span>
-              <span>Uncertain (no retry): <strong>{autoBooking.uncertain}</strong></span>
+              <span>Auto onboarding needs resolution: <strong>{autoBooking.review}</strong></span>
+              <span>Reconciliation required (no retry): <strong>{autoBooking.uncertain}</strong></span>
             </div>
           ) : null}
           <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4 xl:grid-cols-8">
