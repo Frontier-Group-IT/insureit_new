@@ -577,6 +577,8 @@ jobs:
         run: node scripts/postcss-sharp-patched-regression.mjs
       - name: Reports-only commercial visibility and export guard regression
         run: node scripts/report-commercial-access-regression.mjs
+      - name: Policy Register RM and sales hierarchy access regression
+        run: node scripts/policy-register-sales-hierarchy-access-regression.mjs
       - name: Typecheck
         run: npm run typecheck
       - name: Lint

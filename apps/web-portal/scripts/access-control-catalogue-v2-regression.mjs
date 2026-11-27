@@ -237,6 +237,19 @@ for (const grant of [...sqlGrants]) {
   const parts = grant.split("|");
   if (parts[0] === "claims_head" && revokedClaimsHeadPermissions.includes(parts[1])) sqlGrants.delete(grant);
 }
+// Historical Phase 4 SQL is immutable. Account for additive, guarded shadow
+// grants that bring the approved Policy Register supervisor access into V2.
+const supervisorPolicyMigration = readFileSync(
+  resolve(process.cwd(), "../../supabase/migrations/20261127092300_sales_hierarchy_policy_register_v2_shadow_grants.sql"),
+  "utf8",
+);
+for (const role of ["zonal_head", "asm", "sales_manager"]) {
+  const marker = `('${role}','policies.view','view','hierarchy')`;
+  if (!supervisorPolicyMigration.includes(marker)) fail(`Supervisor shadow policy grant missing ${marker}`);
+  sqlGrants.add(`${role}|policies.view|view|hierarchy`);
+}
+if (!supervisorPolicyMigration.includes("('relationship_manager','policies.view','view','self')")) fail("RM shadow policy grant missing");
+sqlGrants.add("relationship_manager|policies.view|view|self");
 const matrixGrants = new Set(
   roleMatrixV2.flatMap((role) =>
     applicationOnlyRoleCodes.has(role.code)
