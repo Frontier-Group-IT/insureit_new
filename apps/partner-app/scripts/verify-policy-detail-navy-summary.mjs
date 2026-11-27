@@ -29,7 +29,7 @@ assert.match(source, /iconKind="renew-policy" label="Renew Policy" onPress=\{\(\
 assert.match(source, /iconKind="raise-claim" label="Raise Claim" onPress=\{\(\) => router\.push\('\/claims'/, 'Claims route remains unchanged');
 assert.match(source,/PartnerCaseBottomNavigation activeTab="Policies"/,'Bottom navigation unchanged');
 // Approved 25 Nov design: keep navy hero, original text colours and functional contracts,
-// but separate the three outer sections and use white tiles throughout.
+// keep the three outer sections with flat divider-separated fields (26 Nov).
 assert.match(source, /<View style=\{styles.separatedDetails\}>/, 'Separated details group exists');
 for (const [section, color] of [['policyOverviewSection', '#EAF3FF'], ['premiumSection', '#E8F7F0'], ['salesSection', '#F0ECFF']]) {
   assert.ok(source.includes(`styles.${section}`), section + ' is rendered independently');
@@ -37,8 +37,21 @@ for (const [section, color] of [['policyOverviewSection', '#EAF3FF'], ['premiumS
 }
 assert.match(source, /separatedDetails: \{ gap: 11 \}/, 'Visible gap between independent sections');
 assert.match(source, /sectionHeaderFill: \{ backgroundColor: 'transparent' \}/, 'Heading background follows outer section tint');
-assert.match(source, /overviewItem: [^\n]*backgroundColor: '#FFFFFF'/, 'Overview information tiles are white');
-assert.match(source, /miniInfo: [^\n]*backgroundColor: '#FFFFFF'/, 'Premium and sales information tiles are white');
+for (const name of ['overviewItem', 'miniInfo']) {
+  const style = source.match(new RegExp('\\b' + name + ': \\{([^}]+)\\}'));
+  assert.ok(style, name + ' exists');
+  assert.doesNotMatch(style[1], /backgroundColor|borderRadius|borderWidth/, name + ' must not be a nested card');
+}
+assert.match(source, /detailRow: [^\n]*borderTopWidth: StyleSheet.hairlineWidth/, 'Horizontal row dividers');
+assert.match(source, /detailCellDivider: [^\n]*borderLeftWidth: StyleSheet.hairlineWidth/, 'Vertical field dividers');
+assert.match(source, /index > 0 && styles.detailCellDivider/, 'No leading vertical divider');
+assert.equal((source.match(/<DetailRow>/g) || []).length, 8, 'All overview, expanded overview, premium and ownership rows are flat');
+const docs = readFileSync('apps/partner-app/components/partner-policy-documents.tsx', 'utf8');
+const fileStyle = docs.match(/\bfile: \{([^}]+)\}/);
+assert.ok(fileStyle);
+assert.doesNotMatch(fileStyle[1], /backgroundColor|borderRadius|\bborderWidth/);
+assert.match(fileStyle[1], /borderTopWidth: StyleSheet.hairlineWidth/);
+assert.match(docs, /open\(file, true\)/, 'Document download retained');
 assert.match(source, /styles\.overviewLabelRow/, 'Overview icon and label remain on one line');
 for (const obsolete of ['styles.quickDocument', 'styles.quickRenewal', 'styles.quickClaim', 'styles.quickCustomer', 'styles.unifiedDetails', 'styles.unifiedSection', 'styles.tileBlue', 'styles.tileGreen', 'styles.tileAmber', 'styles.tileSlate']) {
   assert.ok(!source.includes(obsolete), 'Obsolete presentation style returned: ' + obsolete);
@@ -50,4 +63,4 @@ assert.match(source, /<View style=\{\[styles.policyDetailSection, styles.salesSe
 assert.match(source, /premiumDisclosure:[^\n]*backgroundColor: 'transparent'/, 'Premium header uses section colour');
 assert.match(source, /commercialRow:[^\n]*backgroundColor: 'transparent'/, 'Sales header uses section colour');
 assert.match(source, /<Ionicons name="chevron-forward" size=\{13\} color="#0969CF"/, 'View All chevron retained');
-console.log('Navy Policy Details hero, original data/text colours and three separate coloured sections with white inner cards verified.');
+console.log('Navy Policy Details hero, original data/text colours and three separate coloured sections with flat divider-separated fields verified.');

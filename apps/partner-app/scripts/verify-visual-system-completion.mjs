@@ -1037,11 +1037,11 @@ for (const shortLabel of [
 requireText(policyDetail, ".replace(/\\s+insurance$/i, '')", 'Unknown insurer names drop safe generic insurance suffix.');
 requireText(policyDetail, 'return compact || fullName;', 'Unknown insurer labels retain their original name if shortening would erase it.');
 requireText(policyDetail, 'styles.insurerMiniInfo', 'Insurer summary must use a compact tile.');
-requireText(policyDetail, 'styles.miniInfo, styles.insurerMiniInfo', 'Insurer tile must inherit the grey Policy Number background.');
+requireText(policyDetail, 'styles.miniInfo, styles.insurerMiniInfo', 'Insurer field must share flat Policy Number field styling.');
 requireText(policyDetail, '<MiniInfo label="Policy status" value={humanize(data.policy.status || data.policy.lifecycle_status)} threeColumn />', 'Policy status must share one row with the validity dates.');
 requireText(policyDetail, '<MiniInfo label="Start date" value={formatDate(data.policy.start_date)} threeColumn />', 'Start date must sit beside the status without changing the value.');
 requireText(policyDetail, '<MiniInfo label="End date" value={formatDate(data.policy.end_date)} threeColumn />', 'End date must sit beside the start date without changing the value.');
-requireText(policyDetail, "miniInfoThreeColumn: { width: '31%', flexGrow: 1, minWidth: 0 }", 'Status and validity dates must fit in three equal responsive tiles.');
+requireText(policyDetail, "detailCell: { flex: 1, minWidth: 0 }", 'Status and validity dates must fit in equal responsive cells.');
 requireText(policyDetail, "motorCategoryPill: { backgroundColor: '#0A234A' }", 'Motor category pill must use navy background.');
 requireText(policyDetail, "motorCategoryLabel: { color: '#FFFFFF' }", 'Motor category pill must have contrasting white text.');
 requireText(policyDetail, "category === 'Motor' && styles.motorCategoryPill", 'Only Motor pill styling changes; other policy types preserve their appearance.');
@@ -1709,8 +1709,8 @@ for (const marker of ['useActivityMotion()', 'ringSegments.map', 'pickerBusy.cur
 if (profile.indexOf('setPhotoSuccess(true)') < profile.indexOf('if (!refreshedAvatar) throw')) throw new Error('Photo success must follow confirmed upload and refresh');
 
 requireText(policyDetail, "sectionHeaderFill: { backgroundColor: 'transparent' }", 'Keep original heading text colors above colored outer backgrounds');
-requireText(policyDetail, 'return <View style={styles.overviewItem}>', 'Overview tiles are white');
-for (const marker of ['styles.overviewLabelRow', "separatedDetails: { gap: 11 }", "backgroundColor: '#EAF3FF'", "backgroundColor: '#E8F7F0'", "backgroundColor: '#F0ECFF'", "miniInfo: { width: '47%', minHeight: 36, padding: 5, borderRadius: 8, backgroundColor: '#FFFFFF'", 'minHeight: 44, justifyContent', 'minHeight: 36, padding: 5', 'customerVehicleRow: { minHeight: 48']) requireText(policyDetail, marker, 'Compact approved design: ' + marker);
+requireText(policyDetail, 'return <View style={styles.overviewItem}>', 'Overview fields retain their flat item wrapper');
+for (const marker of ['styles.overviewLabelRow', "separatedDetails: { gap: 11 }", "backgroundColor: '#EAF3FF'", "backgroundColor: '#E8F7F0'", "backgroundColor: '#F0ECFF'", 'miniInfo: { flex: 1, minWidth: 0, minHeight: 34', 'minHeight: 35, justifyContent', 'detailCellDivider: { borderLeftWidth: StyleSheet.hairlineWidth', 'customerVehicleRow: { minHeight: 48']) requireText(policyDetail, marker, 'Compact approved design: ' + marker);
 
 const claimsEmptyMotionSource = read('app/(tabs)/claims.tsx');
 const claimsEmptyMotionBody = claimsEmptyMotionSource.slice(claimsEmptyMotionSource.indexOf('function ClaimsEmptyState('), claimsEmptyMotionSource.indexOf('function ClaimCard('));
@@ -1723,23 +1723,23 @@ for (const marker of ['BusinessMotionContext.Provider', 'BusinessCount', 'Busine
 const networkMotionSource = read('app/network.tsx');
 for (const marker of ['LayoutAnimation.configureNext', 'NetworkChevron', 'NetworkCount', 'memo(function NetworkPartnerCard', 'setExpanded(current => current === id ? null : id)', 'collapsedSections.has(section.key)', 'getPartnerNetwork()', 'row.metrics.premium_this_month', 'row.partner_code', 'row.children.map', 'cancelAnimationFrame(frame)', 'useActivityMotion()']) requireText(networkMotionSource, marker, 'Network motion and hierarchy preservation: ' + marker);
 
-// Approved final layout: independent tinted outer sections; every information tile is white.
+// Approved 26 Nov layout: independent tinted outer sections with flat divider-separated fields.
 for (const marker of [
   "policyOverviewSection: { backgroundColor: '#EAF3FF', borderColor: '#D6E7FC' }",
   "premiumSection: { backgroundColor: '#E8F7F0', borderColor: '#D1ECDD' }",
   "salesSection: { backgroundColor: '#F0ECFF', borderColor: '#DFD6FC' }",
-  "backgroundColor: '#FFFFFF', borderRadius: 9",
+  "detailRow: { flexDirection: 'row', alignItems: 'stretch', borderTopWidth: StyleSheet.hairlineWidth",
   "premiumDisclosure: { minHeight: 32",
   "commercialRow: { minHeight: 32",
   "insurerMiniInfo: { flexDirection: 'row'"
-]) requireText(policyDetail, marker, 'Colored outer sections and white inner cards: ' + marker);
+]) requireText(policyDetail, marker, 'Colored outer sections and flat field dividers: ' + marker);
 if (/styles\.tile(?:Blue|Green|Amber|Slate)|styles\.unifiedDetails|styles\.unifiedSection/.test(policyDetail)) throw new Error('Old unified or tinted inner tiles must not return');
 
 const policyDocumentsSection = read('components/partner-policy-documents.tsx');
 const policyDocumentsClient = read('lib/policy-documents.ts');
 const policyDocumentsMigration = fs.readFileSync(path.resolve(root, '../../supabase/migrations/20261125170000_partner_policy_documents_direct_supabase.sql'), 'utf8');
 for (const marker of ['<PartnerPolicyDocuments policyId={data.policy.id} />', 'onPress={() => void openFirstDocument()}', "listPartnerPolicyDocuments(id)", "openPartnerPolicyDocument(id, file)"]) requireText(policyDetail, marker, 'Policy details document access: ' + marker);
-for (const marker of ['No documents available for this policy.', 'Policy attachments', 'View', 'Download', 'partnerAlert', 'listPartnerPolicyDocuments(policyId)', 'openPartnerPolicyDocument(policyId, file, download)', 'styles.file', "backgroundColor: '#FFFFFF'"]) requireText(policyDocumentsSection, marker, 'Document section design and functionality: ' + marker);
+for (const marker of ['No documents available for this policy.', 'Policy attachments', 'View', 'Download', 'partnerAlert', 'listPartnerPolicyDocuments(policyId)', 'openPartnerPolicyDocument(policyId, file, download)', 'styles.file', 'file: { paddingVertical: 8', 'borderTopWidth: StyleSheet.hairlineWidth']) requireText(policyDocumentsSection, marker, 'Document section design and functionality: ' + marker);
 for (const marker of ["import { supabase }", "supabase.rpc('partner_app_policy_documents'", "supabase.rpc('partner_app_policy_document_preview_ref'", "supabase.storage.from(ref.bucket).createSignedUrl(", "120, download ?", "document.source", "error.code === '42501'"]) requireText(policyDocumentsClient, marker, 'Direct Supabase document transport: ' + marker);
 if (['fetch(', 'EXPO_PUBLIC_PORTAL_URL', '/api/partner/policies'].some(marker => policyDocumentsClient.includes(marker))) throw new Error('Policy Documents must not depend on the Operations Portal API.');
 for (const marker of ['partner_app_policy_in_scope(p_policy_id)', 'partner_app_policy_documents(p_policy_id uuid)', 'partner_app_policy_document_preview_ref(', 'partner_app_policy_document_storage_in_scope(', "auth.uid() is null", "p_source not in ('policy','life_health')", "c.final_policy_id=p_policy_id", "grant execute on function public.partner_app_policy_documents(uuid) to authenticated", 'on storage.objects for select to authenticated']) requireText(policyDocumentsMigration, marker, 'Scoped policy document authorization SQL: ' + marker);

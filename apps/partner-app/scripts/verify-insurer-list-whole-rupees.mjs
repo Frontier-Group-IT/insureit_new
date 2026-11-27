@@ -71,9 +71,28 @@ assert.ok(permissionEndpoint.includes('can_view_insurer_commercials: false'), 'I
 assert.ok(migration.includes("where p.id = auth.uid() and v_actor = 'employee'"), 'RPC checks calling employee identity');
 assert.ok(migration.includes("v_actor='employee' and v_commercial_allowed"), 'RPC redacts Pay-In and Retention for unauthorized employees');
 assert.ok(migration.includes("when v_actor='intermediary'"), 'Existing partner payout computation remains scoped');
-const configuredIds = [...commercialAccess.matchAll(/"([0-9a-f-]{36})"/g)].map((match) => match[1]).sort();
+// Compare the operational allowlist only: Reports-only grants are deliberately
+// separate and must never confer Partner insurer commercial access.
+function readProfileAllowlist(source, name) {
+  const declaration = source.match(new RegExp('const ' + name + ' = new Set\\(\\[([\\s\\S]*?)\\]\\);'));
+  assert.ok(declaration, `Missing explicit ${name} declaration`);
+  const ids = [...declaration[1].matchAll(/"([0-9a-f-]{36})"/g)].map((match) => match[1]).sort();
+  assert.ok(ids.length > 0, `Empty or unrecognized ${name}`);
+  assert.equal(new Set(ids).size, ids.length, `Duplicate IDs in ${name}`);
+  return ids;
+}
+const configuredIds = readProfileAllowlist(commercialAccess, 'COMMERCIAL_PROFILE_IDS');
+const reportsOnlyIds = readProfileAllowlist(commercialAccess, 'REPORT_COMMERCIAL_READ_PROFILE_IDS');
 const migrationIds = [...migration.matchAll(/'([0-9a-f-]{36})'::uuid/g)].map((match) => match[1]).sort();
 assert.deepEqual(migrationIds, configuredIds, 'Database and Operations commercial allowlists must stay in sync');
+for (const id of reportsOnlyIds) {
+  assert.ok(!configuredIds.includes(id) && !migrationIds.includes(id), 'Reports-only profile must not receive operational or Partner RPC commercial access');
+}
+const operationalGuard = commercialAccess.match(/export function canAccessPolicyCommercials\([\s\S]*?\n}/);
+assert.ok(operationalGuard, 'Operational commercial guard must exist');
+assert.ok(operationalGuard[0].includes('COMMERCIAL_PROFILE_IDS.has(profile.id)'), 'Operational guard must use the operational allowlist');
+assert.ok(!operationalGuard[0].includes('REPORT_COMMERCIAL_READ_PROFILE_IDS') && !operationalGuard[0].includes('canViewReportCommercials'), 'Operational guard must not inherit Reports-only grants');
+assert.ok(!permissionEndpoint.includes('canViewReportCommercials'), 'Partner permissions must not inherit Reports-only grants');
 
 const formatter = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 });
 for (const [value, expected] of [

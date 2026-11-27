@@ -1,5 +1,5 @@
 import { formatAppDate } from '@/lib/indian-date';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Children, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { BackHandler, Image, Linking, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -165,20 +165,28 @@ export default function PolicyDetailScreen() {
           <View style={[styles.policyDetailSection, styles.policyOverviewSection]}>
             <CardHeader iconKind="policy-overview" title="Policy Overview" actionLabel="View All" onAction={() => setShowOverviewDetails((value) => !value)} />
             <View style={styles.overviewGrid}>
+              <DetailRow>
               <OverviewItem iconKind="category" label="Category" value={category} />
               <OverviewItem iconKind="product" label="Product" value={data.policy.policy_product || data.policy.policy_type || data.policy.business_line || 'Not recorded'} />
               <OverviewItem iconKind="business-type" label="Business Type" value={data.policy.business_type || 'Not recorded'} />
+              </DetailRow>
+              <DetailRow>
               <OverviewItem iconKind="issuance-date" label="Issuance Date" value={formatDate(data.policy.issuance_date)} />
               <OverviewItem iconKind="idv" label="IDV" value={data.policy.insured_declared_value != null ? formatIndianCurrency(data.policy.insured_declared_value) : 'Not recorded'} />
               <OverviewItem iconKind="premium-breakup" label="Total Premium" value={nullableMoney(data.premium.gross_premium)} />
+              </DetailRow>
             </View>
             {showOverviewDetails ? (
               <View style={styles.detailGrid}>
+                <DetailRow>
                 <InsurerMiniInfo name={data.insurer.name} />
                 <MiniInfo label="Policy number" value={data.policy.policy_no || data.policy.policy_code || 'Not recorded'} />
+                </DetailRow>
+                <DetailRow>
                 <MiniInfo label="Policy status" value={humanize(data.policy.status || data.policy.lifecycle_status)} threeColumn />
                 <MiniInfo label="Start date" value={formatDate(data.policy.start_date)} threeColumn />
                 <MiniInfo label="End date" value={formatDate(data.policy.end_date)} threeColumn />
+                </DetailRow>
               </View>
             ) : null}
           </View>
@@ -190,11 +198,15 @@ export default function PolicyDetailScreen() {
             </Pressable>
             {showPremiumDetails ? (
                 <View style={styles.premiumDetailGrid}>
+                <DetailRow>
                 <MiniInfo compact label="Net premium" value={nullableMoney(data.premium.net_premium)} />
                 <MiniInfo compact label="OD premium" value={nullableMoney(data.premium.od_premium)} />
                 <MiniInfo compact label="TP premium" value={nullableMoney(data.premium.tp_premium)} />
+                </DetailRow>
+                <DetailRow>
                 <MiniInfo compact label="GST" value={nullableMoney(data.premium.gst_amount)} />
                 <MiniInfo compact label="CPA" value={data.premium.cpa_opted ? nullableMoney(data.premium.cpa_amount) : 'Not opted / not recorded'} />
+                </DetailRow>
                 </View>
             ) : null}
           </View>
@@ -206,10 +218,14 @@ export default function PolicyDetailScreen() {
             </Pressable>
             {showCommercialDetails ? (
                 <View style={styles.detailGrid}>
+                <DetailRow>
                 <MiniInfo label="Intermediary" value={intermediaryName || "Not recorded"} />
                 <MiniInfo label="RM" value={data.commercial.rm_name || 'Not recorded'} />
+                </DetailRow>
+                <DetailRow>
                 <MiniInfo label="Group" value={[data.commercial.group_name, data.commercial.group_code].filter(Boolean).join(' · ') || 'No policy snapshot'} />
                 <MiniInfo label="Policy lifecycle" value={humanize(data.policy.lifecycle_status)} />
+                </DetailRow>
                 </View>
             ) : null}
           </View>
@@ -266,6 +282,10 @@ function QuickAction({ iconKind, label, onPress }: {
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={styles.quickLabel}>{label}</Text>
     </Pressable>
   );
+}
+
+function DetailRow({ children }: { children: ReactNode }) {
+  return <View style={styles.detailRow}>{Children.toArray(children).map((child, index) => <View key={index} style={[styles.detailCell, index > 0 && styles.detailCellDivider]}>{child}</View>)}</View>;
 }
 
 function OverviewItem({ iconKind, label, value, insurerName }: { iconKind: PartnerPolicyDetailIconKind; label: string; value: string; insurerName?: string | null }) {
@@ -410,8 +430,8 @@ const styles = StyleSheet.create({
     color: '#102D55', textAlign: 'center', fontSize: 9.25, lineHeight: 12,
     fontWeight: '800', width: '100%', includeFontPadding: false,
   },
-  overviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, paddingHorizontal: 7, paddingTop: 5, paddingBottom: 5 },
-  overviewItem: { width: '31%', flexGrow: 1, minWidth: 0, minHeight: 44, justifyContent: 'center', gap: 2, paddingVertical: 4, paddingHorizontal: 5, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E4E8EE', backgroundColor: '#FFFFFF', borderRadius: 9 },
+  overviewGrid: { paddingHorizontal: 8 },
+  overviewItem: { flex: 1, minWidth: 0, minHeight: 35, justifyContent: 'center', gap: 2, paddingVertical: 4, paddingHorizontal: 6 },
   overviewLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   overviewLogoWrap: { width: 23, height: 23, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 20, height: 20 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { flexShrink: 1, color: '#53677F', fontSize: 9, lineHeight: 12 }, overviewValue: { color: '#192B46', fontSize: 11, lineHeight: 14, fontWeight: '700' },
   unifiedSectionDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E3E9F1', marginHorizontal: 10, marginVertical: 2 },
@@ -419,10 +439,13 @@ const styles = StyleSheet.create({
   commercialRow: { minHeight: 32, paddingHorizontal: 11, paddingVertical: 3, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'transparent' },
   premiumHeaderAmount: { color: '#102A51', fontSize: 12, fontWeight: '700', flexShrink: 1 },
   disclosureText: { flex: 1, minWidth: 0 }, disclosureTitle: { color: '#152945', fontSize: 10.5, lineHeight: 13, fontWeight: '700' }, disclosureSummary: { marginTop: 2, color: '#6F7F94', fontSize: 8.5, lineHeight: 11 },
-  premiumDetailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, paddingHorizontal: 7, paddingTop: 5, paddingBottom: 5 },
-  detailGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, paddingHorizontal: 7, paddingTop: 5, paddingBottom: 5 }, miniInfo: { width: '47%', minHeight: 36, padding: 5, borderRadius: 8, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E4E8EE' }, miniLabel: { color: '#53677F', fontSize: 9, lineHeight: 12, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 11, lineHeight: 14, fontWeight: '700' },
-  miniInfoCompact: { width: '31%', flexGrow: 1, minWidth: 0, paddingHorizontal: 5 },
-  miniInfoThreeColumn: { width: '31%', flexGrow: 1, minWidth: 0 },
+  premiumDetailGrid: { paddingHorizontal: 8 },
+  detailRow: { flexDirection: 'row', alignItems: 'stretch', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#C3D1E0' },
+  detailCell: { flex: 1, minWidth: 0 },
+  detailCellDivider: { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: '#C3D1E0' },
+  detailGrid: { paddingHorizontal: 8 }, miniInfo: { flex: 1, minWidth: 0, minHeight: 34, paddingVertical: 5, paddingHorizontal: 6, justifyContent: 'center' }, miniLabel: { color: '#53677F', fontSize: 9, lineHeight: 12, textTransform: 'uppercase' }, miniValue: { marginTop: 2, color: '#21334E', fontSize: 11, lineHeight: 14, fontWeight: '700' },
+  miniInfoCompact: { paddingHorizontal: 6 },
+  miniInfoThreeColumn: { minWidth: 0 },
   insurerMiniInfo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   insurerMiniLogo: { width: 25, height: 25, alignItems: 'center', justifyContent: 'center' },
   insurerMiniCopy: { flex: 1, minWidth: 0 },
