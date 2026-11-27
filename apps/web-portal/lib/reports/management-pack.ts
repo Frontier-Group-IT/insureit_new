@@ -2,7 +2,7 @@ import "server-only";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { loadClaimsReport } from "@/lib/reports/claims";
 import { loadDistributionReport } from "@/lib/reports/distribution";
-import { loadFinanceReport } from "@/lib/reports/finance";
+import { emptyFinanceReport, loadFinanceReport } from "@/lib/reports/finance";
 import { loadGovernanceReport } from "@/lib/reports/governance";
 import { loadOperationsReport } from "@/lib/reports/operations";
 import { loadPolicyBusinessNetReport } from "@/lib/reports/policy-business";
@@ -25,19 +25,19 @@ export type ManagementPack = {
   governance: Awaited<ReturnType<typeof loadGovernanceReport>>["report"] | null;
 };
 
-export async function loadManagementPack(profile: ViewerProfile, query: ManagementPackQuery): Promise<ManagementPack> {
+export async function loadManagementPack(profile: ViewerProfile, query: ManagementPackQuery, options: { operationalOnly?: boolean } = {}): Promise<ManagementPack> {
   if (profile.role === "backoffice_executive") {
     throw new Error("Backoffice Executive cannot access management-pack finance, payout or governance data.");
   }
   const filters = resolveManagementPackFilters(query);
   const monthQuery = { period: "custom", from: filters.fromDate, to: filters.toDate, business: query.business, category: query.category, page: "1" };
   const businessScope = { business: query.business, category: query.category };
-  const canViewGovernance = await hasEffectiveCapability(profile, "manage_users");
+  const canViewGovernance = !options.operationalOnly && await hasEffectiveCapability(profile, "manage_users");
 
   const [businessPayload, distributionPayload, financePayload, claimsPayload, renewalsPayload, operationsPayload, governancePayload] = await Promise.all([
     loadPolicyBusinessNetReport(profile, monthQuery),
     loadDistributionReport(profile, { ...monthQuery, onboardingPage: "1" }),
-    loadFinanceReport(profile, monthQuery),
+    options.operationalOnly ? Promise.resolve({ report: emptyFinanceReport() }) : loadFinanceReport(profile, monthQuery),
     loadClaimsReport(profile, monthQuery),
     loadRenewalReport(profile, { horizon: "90", page: "1", ...businessScope }),
     loadOperationsReport(profile, { horizon: "90", page: "1", ...businessScope }),
