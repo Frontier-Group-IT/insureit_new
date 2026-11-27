@@ -19,10 +19,20 @@ const fields=[
  field("vehicle_rto_name","Jabalpur","Native PDF policy schedule"),
 ];
 const base={parserId:"new_india_cv_native_pdf",checksPassed:16,warnings:[],
- fields,commercialPremium:{od:4818,tp:16424,net:21242,gst:3850,gross:25092}};
-assert.equal(assessNiaNamedAuthorityUnregisteredConversion(base).reason,
- "nia_untrained_vehicle_or_product_variant",
- "Untrained Tata Intra must be diagnosed first, not as optional RTO city error");
+ fields,commercialPremium:{od:4818,tp:16424,net:21242,gst:1737,gross:22979}};
+assert.equal(assessNiaNamedAuthorityUnregisteredConversion(base).eligible,true,
+ "Exact Intra V30 plus PDF page 2 CPA and reconciled split may proceed to canonical preflight");
+assert.equal(assessNiaNamedAuthorityUnregisteredConversion({
+ ...base,fields:fields.filter(x=>x.key!=="vehicle_rto_name")
+}).eligible,true,
+ "RTO geography is optional; the independently printed MP-20 prefix stays unregistered");
+assert.equal(assessNiaNamedAuthorityUnregisteredConversion({
+ ...base,fields:fields.map(x=>x.key==="vehicle_capacity"?{...x,value:"16000"}:x)
+}).reason,"nia_untrained_vehicle_or_product_variant",
+ "An Intra may never inherit the 1918 Azura heavy-vehicle capacity rule");
+assert.equal(assessNiaNamedAuthorityUnregisteredConversion({
+ ...base,fields:fields.map(x=>x.key==="cpa_premium"?{...x,evidence:"Native PDF policy schedule"}:x)
+}).eligible,false, "CPA must be explicitly sourced and reconciled");
 const withoutCpa={...base,fields:fields.filter(x=>x.key!=="cpa_premium")};
 assert.equal(assessNiaNamedAuthorityUnregisteredConversion(withoutCpa).reason,
  "nia_missing_verified_cpa_premium");
