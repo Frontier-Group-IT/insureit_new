@@ -1,0 +1,62 @@
+name: Verify Claims Head stage history migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20261127062109_allow_authorized_claims_head_managed_claim_stage_history.sql'
+      - '.github/workflows/verify-claims-head-stage-history.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify current main and production project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test "$SUPABASE_PROJECT_REF" = "ilzhsfqqjyppzzvfscmh"
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Link production Supabase
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+      - name: Verify recorded migration and exact function bodies without writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, re
+          sql = pathlib.Path('supabase/migrations/20261127062109_allow_authorized_claims_head_managed_claim_stage_history.sql').read_text()
+          bodies = re.findall(r'AS \$function\$([\s\S]*?)\$function\$;', sql)
+          assert len(bodies) == 2
+          names = ['persist_initial_document_submission_from_stage_details', 'persist_managed_claim_stage_transition_from_details']
+          checks = ["exists(select 1 from supabase_migrations.schema_migrations where version='20261127062109' and name='allow_authorized_claims_head_managed_claim_stage_history') as migration_recorded"]
+          for i, (name, body) in enumerate(zip(names, bodies), 1):
+              assert '$expected$' not in body
+              checks.append(f"coalesce((select prosrc = $expected${body}$expected$ and prosecdef and proconfig @> array['search_path=public'] from pg_proc where oid=to_regprocedure('public.{name}()')), false) as function_{i}_matches")
+          pathlib.Path('/tmp/claims-head-verify.sql').write_text('select ' + ', '.join(checks) + ';')
+          PY
+          result=$(supabase db query --remote --read-only --output-format json --file /tmp/claims-head-verify.sql)
+          for key in migration_recorded function_1_matches function_2_matches; do
+            grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true" <<<"$result"
+          done
+          echo "Recorded migration and both function definitions verified."

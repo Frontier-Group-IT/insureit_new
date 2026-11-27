@@ -93,6 +93,15 @@ jobs:
           elif [[ -z "$changed_migrations" ]]; then
             echo "No Supabase migration or schema-repair workflow changed in this release; schema wait not required."
             exit 0
+          elif grep -qx 'supabase/migrations/20261127062109_allow_authorized_claims_head_managed_claim_stage_history.sql' <<<"$changed_migrations"; then
+            unexpected_migrations=$(grep -vx 'supabase/migrations/20261127062109_allow_authorized_claims_head_managed_claim_stage_history.sql' <<<"$changed_migrations" || true)
+            if [[ -n "$unexpected_migrations" ]]; then
+              echo "::error::Claims Head stage history release contains unrelated migrations:"
+              echo "$unexpected_migrations"
+              exit 1
+            fi
+            schema_workflow="verify-claims-head-stage-history.yml"
+            echo "Claims Head stage history migration detected. Waiting for schema verification..."
           elif grep -qx 'supabase/migrations/20261117193000_verified_ai_draft_issuance_backfill.sql' <<<"$changed_migrations"; then
             unexpected_migrations=$(grep -vx 'supabase/migrations/20261117193000_verified_ai_draft_issuance_backfill.sql' <<<"$changed_migrations" || true)
             if [[ -n "$unexpected_migrations" ]]; then
