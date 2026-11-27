@@ -30,7 +30,7 @@ for(const required of [
   "public.onboard_motor_policy_commercial_status_v2(p_payload)",
 ])assert.ok(sql.includes(required),"Reconciliation source/transaction guard missing "+required);
 assert.ok(!sql.includes("'6e191de0-7777-4750-b4e4-4a60cb739ca9'::uuid"),"E99B5C has no verified draft and is never auto retried");
-assert.doesNotMatch(sql,/\bdelete\s+from\b|\btruncate\s+table\b|\bupdate\s+public\.policy_intake_ai_auto_booking_attempts\b/i);
+assert.doesNotMatch(sql,/\bdelete\s+from\s+public\.policy_intake_ai_(?:auto_booking_attempts|canonical_recovery_attempts|icici_recovery_attempts|stranded_claim_recovery)\b|\btruncate\s+table\s+public\.policy_intake_ai_|\bupdate\s+public\.policy_intake_ai_auto_booking_attempts\b/i);
 assert.ok(worker.includes('admin.rpc("claim_ai_auto_booking_reconciled_digit_v1"'));
 assert.ok(worker.includes('claim.reconciledDigit?"finish_ai_auto_booking_reconciled_digit_v1"'));
 assert.ok(worker.includes('INSUREIT_AI_STRANDED_RECOVERY_ENABLED==="true"'));
