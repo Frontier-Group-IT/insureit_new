@@ -63,25 +63,21 @@ export function PartnerPolicyDocuments({ policyId }: { policyId: string }) {
       : <View style={styles.items}>
         {files.map(file => {
           const key = file.source + ':' + file.id;
-          const pending = busy.startsWith(key);
+          const viewing = busy === key + ':view';
+          const downloading = busy === key + ':download';
           const label = LABELS[file.type] || file.type.replaceAll('_',' ').replace(/\b\w/g, letter => letter.toUpperCase());
           return <View key={key} style={styles.file}>
-            <View style={styles.fileTop}>
+            <Pressable accessibilityRole="button" accessibilityLabel={'View ' + label + ', ' + file.name} accessibilityState={{ disabled: Boolean(busy), busy: viewing }} disabled={Boolean(busy)} style={({pressed}) => [styles.fileTop, pressed && styles.pressed]} onPress={() => void open(file)}>
               <View style={styles.fileIcon}><Ionicons name={file.mimeType?.includes('pdf') ? 'document-text-outline' : 'image-outline'} color="#1769BB" size={21}/></View>
               <View style={styles.fileText}>
                 <Text style={styles.fileType} numberOfLines={1}>{label}</Text>
                 <Text style={styles.fileName} numberOfLines={2}>{file.name}</Text>
               </View>
-              {pending ? <ActivityIndicator size="small" color="#1769BB"/> : null}
-            </View>
-            <View style={styles.actions}>
-              <Pressable accessibilityRole="button" accessibilityLabel={'View ' + label} disabled={Boolean(busy)} style={({pressed}) => [styles.action, pressed && styles.pressed]} onPress={() => void open(file)}>
-                <Ionicons name="eye-outline" color="#1769BB" size={16}/><Text style={styles.actionText}>View</Text>
-              </Pressable>
-              <Pressable accessibilityRole="button" accessibilityLabel={'Download ' + label} disabled={Boolean(busy)} style={({pressed}) => [styles.action, pressed && styles.pressed]} onPress={() => void open(file, true)}>
-                <Ionicons name="download-outline" color="#1769BB" size={16}/><Text style={styles.actionText}>Download</Text>
-              </Pressable>
-            </View>
+              {viewing ? <ActivityIndicator size="small" color="#1769BB"/> : null}
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={'Download ' + label + ', ' + file.name} accessibilityState={{ disabled: Boolean(busy), busy: downloading }} disabled={Boolean(busy)} style={({pressed}) => [styles.downloadAction, pressed && styles.pressed]} onPress={() => void open(file, true)}>
+              {downloading ? <ActivityIndicator size="small" color="#1769BB"/> : <Ionicons name="download-outline" color="#1769BB" size={22}/>}
+            </Pressable>
           </View>;
         })}
       </View>}
@@ -101,14 +97,13 @@ const styles = StyleSheet.create({
   hint: { color: '#64738A', fontSize: 11, flexShrink: 1 },
   retry: { padding: 6 },
   items: { gap: 0 },
-  file: { paddingVertical: 8, paddingHorizontal: 2, gap: 6, borderTopColor: '#C3D1E0', borderTopWidth: StyleSheet.hairlineWidth },
-  fileTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  file: { paddingVertical: 8, paddingHorizontal: 2, flexDirection: 'row', alignItems: 'center', gap: 8, borderTopColor: '#C3D1E0', borderTopWidth: StyleSheet.hairlineWidth },
+  fileTop: { flex: 1, minWidth: 0, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 9 },
   fileIcon: { width: 35, height: 35, borderRadius: 9, backgroundColor: '#EDF4FD', alignItems: 'center', justifyContent: 'center' },
   fileText: { flex: 1, minWidth: 0 },
   fileType: { color: '#192B46', fontSize: 11, fontWeight: '700' },
   fileName: { color: '#64738A', fontSize: 10, marginTop: 3 },
-  actions: { flexDirection: 'row', gap: 7 },
-  action: { flex: 1, minHeight: 34, borderRadius: 8, backgroundColor: '#EDF4FD', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
+  downloadAction: { width: 44, minHeight: 44, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   actionText: { color: '#1769BB', fontSize: 11, fontWeight: '700' },
   pressed: { opacity: 0.74 },
 });
