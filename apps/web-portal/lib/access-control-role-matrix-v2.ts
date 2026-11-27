@@ -412,6 +412,7 @@ export const roleMatrixV2: readonly RoleDefinitionV2[] = [
       grant("customers.create", "edit", "self"),
       grant("customers.edit", "edit", "self"),
       grant("kyc.view", "view", "self"),
+      grant("policies.view", "view", "self"),
       grant("tasks.view", "view", "self"),
       grant("policy_intakes.view", "view", "self"),
       grant("policy_intakes.create", "edit", "self"),
