@@ -9,7 +9,7 @@ import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyIntakeReviewer,requirePolicyIntakeFinalizer } from "@/lib/policy-intake-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 
-type Claim={intake_id:string;document_id:string;extraction_fingerprint:string;recovery?:boolean;stranded?:boolean;canonicalRecovery?:boolean};
+type Claim={intake_id:string;document_id:string;extraction_fingerprint:string;recovery?:boolean;stranded?:boolean;canonicalRecovery?:boolean;iciciRecovery?:boolean};
 type FinalState="booked"|"review_required"|"uncertain";
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HASH=/^[a-f0-9]{64}$/i;
@@ -52,7 +52,8 @@ function safeReason(fields:readonly {field:string}[]):{state:FinalState;code:str
 }
 async function finish(claim:Claim,state:FinalState,code:string|null,policyId:string|null){
   const admin=createSupabaseAdminClient();
-  const {data,error}=await admin.rpc(claim.canonicalRecovery?"finish_ai_auto_booking_canonical_recovery_v1":claim.stranded
+  const {data,error}=await admin.rpc(claim.iciciRecovery?"finish_ai_auto_booking_icici_recovery_v1":claim.canonicalRecovery
+    ?"finish_ai_auto_booking_canonical_recovery_v1":claim.stranded
     ?"finish_ai_auto_booking_stranded_v1":claim.recovery
     ?"finish_ai_auto_booking_liberty_recovery_v1":"finish_ai_auto_booking_v1",{
     p_intake_id:claim.intake_id,p_document_id:claim.document_id,
@@ -170,6 +171,29 @@ export async function runAutoBookingBatch():Promise<{
   }else{
     for(const item of (canonicalRecovery.data??[]) as Claim[]){
       const claim={...item,canonicalRecovery:true};
+      claims.push(claim);
+      await processClaim(claim);
+    }
+  }
+  // Only three original ICICI 3005 exact-document 13/13 review failures are
+  // eligible for an isolated, one-time new claim after handoff correction.
+  // Terminal claims are never reset or reused. An uncertain or booked
+  // outcome remains excluded by the SQL claim function.
+  const iciciRecovered=await admin.rpc("claim_ai_auto_booking_icici_recovery_v1",{
+    p_operator_profile_id:operatorId,p_limit:3,
+  });
+  if(iciciRecovered.error){
+    const missing=["PGRST202","42883"].includes(iciciRecovered.error.code??"");
+    const pgCode=typeof iciciRecovered.error.code==="string"
+      && /^[0-9A-Z]{5}$/.test(iciciRecovered.error.code)
+      ?iciciRecovered.error.code:"unknown";
+    if(!missing){
+      console.error("[ai-auto-booking] ICICI recovery claim unavailable",{pgCode});
+      throw Error("auto_booking_icici_recovery_unavailable");
+    }
+  }else{
+    for(const item of (iciciRecovered.data??[]) as Claim[]){
+      const claim={...item,iciciRecovery:true};
       claims.push(claim);
       await processClaim(claim);
     }

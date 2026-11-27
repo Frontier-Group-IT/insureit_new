@@ -459,13 +459,28 @@ async function preparePolicyIntakeHandoffInternal(
       && policyDateDecision(
         verified.fields.find(field=>field.key==="policy_issuance_date")?.value
           ||verified.autoAcceptedIssuanceDate?.date||"")==="allowed";
+    // ICICI 3005 is already source-certified at 13/13. Rebuilding its
+    // parser-derived onboarding draft must NEVER demote an otherwise
+    // verified current-document extraction to booking_review_required.
+    // Require exact insurer parser, all required source fields, independently
+    // accepted issuance and a reconciled premium. Canonical preflight and
+    // final booking authorization still run separately.
+    const verifiedIcici3005=verified.parserId==="icici_3005_n8n_native_pdf"
+      &&hasVerifiedN8nParserEvidence(verified.parserId,verified.checksPassed,verified.warnings)
+      &&Boolean(verified.premium)
+      &&["policy_number","insured_name","vehicle_chassis_number",
+        "vehicle_engine_number","policy_issuance_date",
+        "policy_start_date","policy_end_date"].every(key=>
+          verified.fields.some(field=>field.key===key&&field.value.trim().length>0))
+      &&policyDateDecision(verified.fields.find(field=>
+        field.key==="policy_issuance_date")?.value??"")==="allowed";
     const certifiedDigitNew=assessGoDigitNewJcbDirectConversion({
       parserId:verified.parserId,checksPassed:verified.checksPassed,
       warnings:verified.warnings,fields:verified.fields,
       commercialPremium:verified.commercialPremium,
       candidateCanonicalPremium:verified.candidateCanonicalPremium,
     }).eligible;
-    const eligibleForVerifiedConversion=tata18Ready||verifiedTataTp||autoEligibleGoDigit||certifiedDigitNew||iffcoReview.eligible
+    const eligibleForVerifiedConversion=verifiedIcici3005||tata18Ready||verifiedTataTp||autoEligibleGoDigit||certifiedDigitNew||iffcoReview.eligible
       ||standardReview.eligible||niaReview.eligible||uiicReview.eligible||uiicPrivateCarReview.eligible||productVariantReview.eligible
       ||heldReady;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");

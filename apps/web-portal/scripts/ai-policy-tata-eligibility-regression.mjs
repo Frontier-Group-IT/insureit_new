@@ -179,7 +179,7 @@ assert(backend.includes("const tata18Ready=[")
   &&backend.includes("hasVerifiedN8nParserEvidence(verified.parserId,verified.checksPassed,verified.warnings)")
   &&backend.includes("verified.autoAcceptedIssuanceDate?.date")
   &&backend.includes('verified.fields.find(field=>field.key==="policy_issuance_date")?.value')
-  &&backend.includes("const eligibleForVerifiedConversion=tata18Ready||verifiedTataTp"),
+  &&backend.includes("||tata18Ready||verifiedTataTp"),
   "Tata 18-check Package/SAOD/Bundled must reach verified Convert when date and premium are certified");
 assert(!backend.includes('policyDateDecision(verified.autoAcceptedIssuanceDate?.date??"")==="valid"'),
   "Do not invent a policy-date decision; use the canonical allowed/OTP gate");
