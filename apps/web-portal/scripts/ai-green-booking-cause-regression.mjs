@@ -23,4 +23,7 @@ assert.ok(worker.includes('return candidate?{state:"review_required",code:candid
 assert.ok(worker.includes('await finish(claim,"uncertain","conversion_outcome_unknown",null)'));
 assert.ok(worker.includes('const operatorToken=await verifiedOperatorToken()'));
 assert.ok(!worker.includes('state:"pending",attempts:0'),"No automatic retry/reset of uncertain attempt");
+const ui=readFileSync(new URL("../components/development/semi-auto-policy-workspace.tsx",import.meta.url),"utf8");
+assert.ok(ui.includes('row.ai_booking_state==="uncertain"||row.ai_booking_state==="review_required"?"bg-amber-500"'));
+assert.ok(ui.includes('!["uncertain","claimed","review_required"].includes(row.ai_booking_state??"")'));
 console.log("Green verified preflight failures retain deterministic review codes; unknown booking remains no-retry");
