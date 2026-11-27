@@ -1,12 +1,12 @@
 Partner production OTA trigger
-release=partner-policy-date-approval-modal-explicit-confirmation
+release=partner-policy-details-single-section-dividers
 source=verified-merged-main
-source_pr=5308
-source_merge=0b454efce40f9293ed9cd2dc9ca0314ebc19707c
-reason=publish-approved-policy-date-approval-popup-and-confirm-submit
+source_pr=5335
+source_merge=21a8c4459ff48ba52d69b2bd4abf65faaa181391
+reason=publish-approved-policy-details-single-section-cards-and-dividers
 channel=production
 runtime=0.2.0
-requested=2026-11-26
+requested=2026-11-27
 backend_changes=false
 no_native_build=true
 no_apk=true
