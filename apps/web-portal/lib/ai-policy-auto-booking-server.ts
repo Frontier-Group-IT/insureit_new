@@ -20,6 +20,11 @@ const ALLOWED_REVIEW_FIELDS=new Map([
   ["Canonical booking","canonical_booking_review"],["Source PDF","source_pdf_review"],
   ["Canonical Intake handoff","canonical_handoff_review"],
   ["Policy issuance date","issuance_date_review"],["Premium","premium_review"],
+  ["Product variant evidence","product_variant_review"],
+  ["Product variant premium","product_variant_premium_review"],
+  ["Verified commercial fields","commercial_identity_review"],
+  ["PDF reconciliation","pdf_reconciliation_review"],
+  ["Owner-driver CPA","cpa_selection_review"],
   ["Manufacturer","manufacturer_review"],["Automation","automation_disabled"],
 ]);
 export function autoBookingEnabled(){
