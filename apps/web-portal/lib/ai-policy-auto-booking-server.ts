@@ -97,21 +97,8 @@ export async function runAutoBookingBatch():Promise<{
     throw Error("auto_booking_claim_unavailable");
   }
   const claims=(data??[]) as Claim[];
-  // This second immutable claim only covers the pre-transaction Liberty
-  // insured-name parser-evidence bug. Never retry uncertain/booked outcomes.
-  // A missing reviewed migration is not permission to claim or auto-book.
-  const recovered=await admin.rpc("claim_ai_auto_booking_liberty_recovery_v1",{
-    p_operator_profile_id:operatorId,p_limit:3,
-  });
-  if(recovered.error){
-    const missing=["PGRST202","42883"].includes(recovered.error.code??"");
-    if(!missing)throw Error("auto_booking_recovery_claim_unavailable");
-  }else{
-    for(const entry of (recovered.data??[]) as Claim[])
-      claims.push({...entry,recovery:true});
-  }
   let booked=0,review=0,uncertain=0;
-  for(const claim of claims){
+  const processClaim=async(claim:Claim):Promise<void>=>{
     if(!UUID.test(claim.intake_id)||!UUID.test(claim.document_id)||!HASH.test(claim.extraction_fingerprint)){
       uncertain++;
       continue; // Malformed persisted evidence: no booking and no guessed repair.
@@ -134,6 +121,33 @@ export async function runAutoBookingBatch():Promise<{
       try{await finish(claim,"uncertain","conversion_outcome_unknown",null);}
       catch{console.error("[ai-auto-booking] attempt needs ledger reconciliation");}
       uncertain++;
+    }
+  };
+  // Finish every newly claimed policy before attempting the independent
+  // Liberty recovery RPC. A broken recovery function must NEVER strand a
+  // regular batch in the irreversible "claimed" state.
+  for(const claim of claims)await processClaim(claim);
+  // Only deterministic pre-commit Liberty failures qualify, as checked in
+  // the service-role SQL RPC. Uncertain/booked outcomes remain excluded.
+  const recovered=await admin.rpc("claim_ai_auto_booking_liberty_recovery_v1",{
+    p_operator_profile_id:operatorId,p_limit:3,
+  });
+  if(recovered.error){
+    // Preserve the database SQLSTATE for fault diagnosis, without leaking
+    // customer data, PDF content, or credentials into application logs.
+    const pgCode=typeof recovered.error.code==="string"
+      && /^[0-9A-Z]{5}$/.test(recovered.error.code)
+      ?recovered.error.code:"unknown";
+    const missing=["PGRST202","42883"].includes(recovered.error.code??"");
+    if(!missing){
+      console.error("[ai-auto-booking] recovery claim unavailable",{pgCode});
+      throw Error("auto_booking_recovery_claim_unavailable");
+    }
+  }else{
+    for(const item of (recovered.data??[]) as Claim[]){
+      const claim={...item,recovery:true};
+      claims.push(claim);
+      await processClaim(claim);
     }
   }
   return{enabled:true,claimed:claims.length,booked,review,uncertain};
