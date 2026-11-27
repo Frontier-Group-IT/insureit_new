@@ -11,6 +11,7 @@ begin
     select r.id, p.id, 'view', 'hierarchy', true,
       'Approved Policy Register read-only RM supervisor hierarchy access 2026-11-27'
     from (values
+      ('relationship_manager','policies.view','view','self'),
       ('zonal_head','policies.view','view','hierarchy'),
       ('asm','policies.view','view','hierarchy'),
       ('sales_manager','policies.view','view','hierarchy')
