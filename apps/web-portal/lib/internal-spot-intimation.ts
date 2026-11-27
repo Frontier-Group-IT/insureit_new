@@ -3,6 +3,9 @@ export type InternalSpotIntimationDetails = {
   spot_intimation_at: string | null;
   driver_name: string | null;
   driver_phone: string | null;
+  driver_injured: boolean | null;
+  driver_deceased: boolean | null;
+  driver_injury_remarks: string | null;
   location: string | null;
   accident_description: string | null;
 };
@@ -10,6 +13,10 @@ export type InternalSpotIntimationDetails = {
 type StageDetailLike = {
   details: Record<string, unknown> | null;
 };
+
+function boolValue(value: unknown): boolean | null {
+  return typeof value === "boolean" ? value : null;
+}
 
 function stringValue(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -45,6 +52,9 @@ export function readInternalSpotIntimationDetails(rows: StageDetailLike[], claim
     spot_intimation_at: claim.spot_intimation_at ?? stringValue(details.spot_intimation_at),
     driver_name: storedOrFallback(details, "driver_name", legacyDriverName(description)),
     driver_phone: storedOrFallback(details, "driver_phone", legacyDriverPhone(description)),
+    driver_injured: boolValue(details.driver_injured),
+    driver_deceased: boolValue(details.driver_deceased),
+    driver_injury_remarks: stringValue(details.driver_injury_remarks),
     location: claim.accident_location ?? storedOrFallback(details, "location", storedOrFallback(details, "accident_location", null)),
     accident_description: description
   } satisfies InternalSpotIntimationDetails;

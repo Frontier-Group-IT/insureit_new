@@ -63,6 +63,17 @@ function normalizedDetails(claim: ClaimRow, formData: FormData) {
   const driverName = textValue(formData, "driver_name");
   const driverPhone = textValue(formData, "driver_phone");
   const location = textValue(formData, "location") ?? textValue(formData, "accident_location");
+  // Checkboxes submit explicit "true" or "false" values. Always discard stale
+  // death/remarks data when an earlier condition is unchecked.
+  const driverInjured = formData.get("driver_injured") === "true";
+  const driverDeceased = driverInjured && formData.get("driver_deceased") === "true";
+  const driverInjuryRemarks = driverDeceased ? textValue(formData, "driver_injury_remarks") : null;
+  if (driverDeceased && !driverInjuryRemarks) {
+    throw new Error("Driver death remarks are required when Death is checked.");
+  }
+  if (driverInjuryRemarks && driverInjuryRemarks.length > 2000) {
+    throw new Error("Driver death remarks must be 2000 characters or fewer.");
+  }
   const accidentDescription = mergeCustomerDriverDescription(claim.accident_description, driverName, driverPhone);
   return {
     normalized,
@@ -75,6 +86,9 @@ function normalizedDetails(claim: ClaimRow, formData: FormData) {
       spot_intimation_at: normalized.spotIntimationAt,
       driver_name: driverName,
       driver_phone: driverPhone,
+      driver_injured: driverInjured,
+      driver_deceased: driverDeceased,
+      driver_injury_remarks: driverInjuryRemarks,
       location,
       accident_location: location,
       accident_description: accidentDescription,
@@ -147,6 +161,10 @@ function spotIntimationFeedback(reason: string, operation: "save" | "advance"): 
     "This status change is not allowed for the current claim stage.",
     "Claim has an unsupported status.",
   ].includes(reason)) return "Action Not Allowed — This claim cannot advance from its current stage.";
+  if (reason === "Driver death remarks are required when Death is checked." ||
+      reason === "Driver death remarks must be 2000 characters or fewer.") {
+    return "Required Details Missing — " + reason;
+  }
   if (reason === "Unable to check document verification. Please try again.") return reason;
   if (reason === "The Spot Intimation changes could not be persisted. Refresh the claim and try again." ||
       reason === "Accident details were saved, but the stage history could not be recorded. Please refresh the claim and retry Save Details. Do not advance the stage.") return reason;

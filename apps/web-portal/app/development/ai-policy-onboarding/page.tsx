@@ -217,6 +217,36 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
       }
     }
   }
+  // Third immutable, incident-only canonical-claim recovery: these exact four
+  // records previously had terminal review_required attempts. Show ONLY the
+  // latest ledger outcome without resetting their original claim history.
+  if(autoRequested&&autoLedgerAvailable){
+    const states=["claimed","booked","review_required","uncertain"] as const;
+    const counts=await Promise.all(states.map(state=>
+      admin.from("policy_intake_ai_canonical_recovery_attempts")
+        .select("intake_id",{count:"exact",head:true}).eq("state",state)));
+    if(counts.every(result=>!result.error)){
+      const values=counts.map(result=>result.count??0);
+      autoReviewCount=Math.max(0,autoReviewCount-values.reduce((a,b)=>a+b,0));
+      autoClaimedCount+=values[0];
+      autoBookedCount+=values[1];
+      autoReviewCount+=values[2];
+      autoUncertainCount+=values[3];
+    }
+  }
+  if(autoRequested&&autoLedgerAvailable&&workspaceRows.length){
+    for(let offset=0;offset<workspaceRows.length;offset+=100){
+      const recovery=await admin.from("policy_intake_ai_canonical_recovery_attempts")
+        .select("intake_id,state,failure_code")
+        .in("intake_id",workspaceRows.slice(offset,offset+100).map(row=>row.id));
+      if(recovery.error)break; // Website can deploy before DB migration.
+      for(const attempt of recovery.data??[]){
+        bookingAttemptByIntake.set(attempt.intake_id,{
+          state:attempt.state,failure_code:attempt.failure_code,
+        });
+      }
+    }
+  }
   const bulkCandidates = workspaceRows.filter(row => {
     const q=queue.get(row.id);
     return row.policy_type==="motor" && !duplicateIds.has(row.id)

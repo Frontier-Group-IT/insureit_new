@@ -167,6 +167,9 @@ function mergeExternalSpotDetails(operations: InternalSpotIntimationDetails, cus
     spot_intimation_at: operations.spot_intimation_at ?? customerText("spot_intimation_at"),
     driver_name: operations.driver_name ?? customerText("driver_name"),
     driver_phone: operations.driver_phone ?? customerText("driver_phone"),
+    driver_injured: operations.driver_injured ?? (typeof customerDetails?.driver_injured === "boolean" ? customerDetails.driver_injured : null),
+    driver_deceased: operations.driver_deceased ?? (typeof customerDetails?.driver_deceased === "boolean" ? customerDetails.driver_deceased : null),
+    driver_injury_remarks: operations.driver_injury_remarks ?? customerText("driver_injury_remarks"),
     location: operations.location ?? customerText("location") ?? customerText("accident_location"),
     accident_description: operations.accident_description ?? customerText("accident_description"),
   };
