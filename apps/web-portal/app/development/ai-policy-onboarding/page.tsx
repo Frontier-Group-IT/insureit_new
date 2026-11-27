@@ -188,6 +188,35 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
         });
     }
   }
+  // A one-time stranded-claim recovery supersedes an older 'claimed'
+  // booking attempt. Aggregate counts and individual rows show the latest
+  // audited attempt, while preserving the original immutable ledger.
+  if(autoRequested&&autoLedgerAvailable){
+    const states=["claimed","booked","review_required","uncertain"] as const;
+    const counts=await Promise.all(states.map(state=>
+      admin.from("policy_intake_ai_stranded_claim_recovery")
+        .select("intake_id",{count:"exact",head:true}).eq("state",state)));
+    if(counts.every(result=>!result.error)){
+      const values=counts.map(result=>result.count??0);
+      autoClaimedCount=Math.max(0,autoClaimedCount-values.reduce((a,b)=>a+b,0))+values[0];
+      autoBookedCount+=values[1];
+      autoReviewCount+=values[2];
+      autoUncertainCount+=values[3];
+    }
+  }
+  if(autoRequested&&autoLedgerAvailable&&workspaceRows.length){
+    for(let offset=0;offset<workspaceRows.length;offset+=100){
+      const recovery=await admin.from("policy_intake_ai_stranded_claim_recovery")
+        .select("intake_id,state,failure_code")
+        .in("intake_id",workspaceRows.slice(offset,offset+100).map(row=>row.id));
+      if(recovery.error)break;
+      for(const attempt of recovery.data??[]){
+        bookingAttemptByIntake.set(attempt.intake_id,{
+          state:attempt.state,failure_code:attempt.failure_code,
+        });
+      }
+    }
+  }
   const bulkCandidates = workspaceRows.filter(row => {
     const q=queue.get(row.id);
     return row.policy_type==="motor" && !duplicateIds.has(row.id)
