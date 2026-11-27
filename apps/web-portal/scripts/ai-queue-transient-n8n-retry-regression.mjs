@@ -62,4 +62,13 @@ for(const x of [
  'allowed.every(key=>typeof checkSet[key]==="boolean")',
  'new Error("n8n_failed_checks__"+failed.slice(0,6).join("__"))',
 ])assert.ok(extension.includes(x),"Source-validation errors must not masquerade as n8n outages: "+x);
+const hardened=readFileSync(new URL("../../../supabase/migrations/20261127094500_ai_queue_new_intake_transport_retry_guard.sql",import.meta.url),"utf8");
+assert.ok(hardened.includes("q.state='failed' and q.last_error_code='n8n_unavailable' and q.attempts<12"));
+assert.ok(hardened.includes("i.created_at >= '2026-11-27 00:00:00+00'::timestamptz"),
+ "Historical exhausted intakes including nine excluded Tata AIG must not be reopened");
+assert.ok(hardened.includes("not exists (select 1 from public.policy_intake_ai_auto_booking_attempts a where a.intake_id=q.intake_id)"),
+ "Existing booking attempts are immutable and excluded");
+assert.ok(hardened.includes("i.final_policy_id is null"));
+assert.ok(hardened.includes("q.document_id is distinct from excluded.document_id"));
+assert.ok(hardened.includes("q.state <> 'duplicate'"));
 console.log("NIA exact-source variant and transient n8n recovery safety passed");
