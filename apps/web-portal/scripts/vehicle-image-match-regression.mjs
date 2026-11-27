@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import { resolveVehicleImage } from "../lib/vehicle-image-match.ts";
+const base = {manufacturerId:"make-a",model:"Ertiga",active:true,path:"general.webp"};
+const variant = {...base,variant:"ZXI",path:"variant.webp"};
+const year = {...base,year:2024,path:"year.webp"};
+const exact = {...variant,year:2024,path:"exact.webp"};
+const rows = [base,variant,year,exact,{...exact,active:false,path:"inactive.webp"}];
+assert.equal(resolveVehicleImage({manufacturerId:"make-a",model:" ERTIGA ",variant:"zxi",year:2024},rows),"exact.webp");
+assert.equal(resolveVehicleImage({manufacturerId:"make-a",model:"Ertiga",variant:"zxi",year:2023},rows),"variant.webp");
+assert.equal(resolveVehicleImage({manufacturerId:"make-a",model:"Ertiga",year:2024},rows),"year.webp");
+assert.equal(resolveVehicleImage({manufacturerId:"make-a",model:"Ertiga"},rows),"general.webp");
+assert.equal(resolveVehicleImage({manufacturerId:"make-b",model:"Ertiga"},rows),null);
+assert.equal(resolveVehicleImage({manufacturerId:"make-a",model:"Ertig"},rows),null);
+assert.equal(resolveVehicleImage({manufacturerId:"make-a",model:"Ertiga"},[base,{...base,path:"duplicate.webp"}]),null);
+assert.equal(resolveVehicleImage({manufacturerId:"make-a",model:"Ertiga"},[{...base,active:false}]),null);
+console.log("Vehicle image matching regression passed.");
