@@ -1,0 +1,21 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const sql=readFileSync(new URL("../../../supabase/migrations/20261127050000_fix_ai_booking_liberty_recovery_conflict.sql",import.meta.url),"utf8");
+const worker=readFileSync(new URL("../lib/ai-policy-auto-booking-server.ts",import.meta.url),"utf8");
+assert.match(sql,/on conflict on constraint policy_intake_ai_auto_booking_recovery_attempts_pkey do nothing/i);
+assert.doesNotMatch(sql,/on conflict\s*\(\s*intake_id\s*\)/i);
+assert.match(sql,/q\.parser_id='liberty_two_wheeler_tp_native_pdf'/);
+assert.match(sql,/a\.state='review_required' and a\.failure_code='insured_name_mismatch'/);
+assert.match(sql,/a\.extraction_fingerprint=q\.extraction_fingerprint/);
+assert.match(sql,/i\.final_policy_id is null/);
+assert.match(sql,/not exists\s*\(\s*select 1 from public\.policy_intake_ai_auto_booking_recovery_attempts/);
+assert.doesNotMatch(sql,/\b(?:delete|truncate)\b/i);
+const claimRegular=worker.indexOf('admin.rpc("claim_ai_auto_booking_v1"');
+const finishRegular=worker.indexOf("for(const claim of claims)await processClaim(claim)");
+const recovery=worker.indexOf('admin.rpc("claim_ai_auto_booking_liberty_recovery_v1"');
+assert.ok(claimRegular>=0&&finishRegular>claimRegular&&recovery>finishRegular,
+ "Regular claims MUST complete before independent recovery RPC can fail");
+assert.ok(worker.includes("console.error(\"[ai-auto-booking] recovery claim unavailable\",{pgCode})"));
+assert.ok(worker.includes('?"finish_ai_auto_booking_liberty_recovery_v1":"finish_ai_auto_booking_v1"'));
+assert.ok(worker.includes('await processClaim(claim);'));
+console.log("AI booking regular-batch ordering and unambiguous recovery SQL regression passed");
