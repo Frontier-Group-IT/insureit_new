@@ -43,6 +43,8 @@ jobs:
         run: node --experimental-strip-types scripts/go-digit-new-jcb-cpa-regression.mjs
       - name: Final four source-certified manufacturer mapping regression
         run: node --experimental-strip-types scripts/final-four-manufacturer-alias-regression.mjs
+      - name: Nine stranded Tata claimed-before-conversion recovery safety regression
+        run: node scripts/ai-booking-stranded-claim-regression.mjs
       - name: Unambiguous Liberty claim SQL and worker ordering regression
         run: node scripts/ai-booking-recovery-rpc-order-regression.mjs
       - name: One-time Liberty auto-booking recovery ledger and precommit safety regression
