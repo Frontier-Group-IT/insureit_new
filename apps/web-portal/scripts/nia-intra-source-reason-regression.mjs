@@ -26,7 +26,7 @@ assert.equal(assessNiaNamedAuthorityUnregisteredConversion(base).reason,
 const withoutCpa={...base,fields:fields.filter(x=>x.key!=="cpa_premium")};
 assert.equal(assessNiaNamedAuthorityUnregisteredConversion(withoutCpa).reason,
  "nia_missing_verified_cpa_premium");
-const changed={...base,fields:fields.map(x=>x.key==="vehicle_model"?{...x,value:"1918 AZURA"}:x)};
+const changed={...base,fields:fields.map(x=>x.key==="vehicle_model"?{...x,value:"1918 AZURA"}:x.key==="vehicle_capacity"?{...x,value:"16000"}:x)};
 assert.equal(assessNiaNamedAuthorityUnregisteredConversion(changed).reason,
  "nia_named_rto_authority_not_verified",
  "Known model still requires independent source verification of supplied RTO evidence");
