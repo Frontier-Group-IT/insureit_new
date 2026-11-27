@@ -26,4 +26,7 @@ assert.match(stored, /driver_injured: boolValue\(details.driver_injured\)/, "Sav
 assert.match(stored, /driver_deceased: boolValue\(details.driver_deceased\)/, "Saved death status must be restored");
 assert.match(claimPage, /driver_injured: operations.driver_injured/, "External claims use the shared injury details");
 assert.match(claimPage, /driver_deceased: operations.driver_deceased/, "External claims use the shared death details");
+const partnerClaimOperations = fs.readFileSync("lib/partner-claim-operations.ts", "utf8");
+assert.match(partnerClaimOperations, /driver_injured: operations.driver_injured/, "Partner claim stage details retain driver injury");
+assert.match(partnerClaimOperations, /driver_deceased: operations.driver_deceased/, "Partner claim stage details retain driver death status");
 console.log("Operations Claim Journey immediate success navigation regression passed.");
