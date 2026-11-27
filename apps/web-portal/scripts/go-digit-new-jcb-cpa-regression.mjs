@@ -65,6 +65,36 @@ for(const change of [
  p=>p.premium_components.net=12667.03,
  p=>p.auto_finalize_allowed=true,
  ]){const bad=clone(payload);change(bad);assert.throws(()=>admit(bad),"Tampered source evidence must fail closed");}
+// Source replay of the other original Go Digit NEW backhoe product family:
+// 3 DX ECO XPERT, independent insurer printed premium values.
+const eco=clone(payload);
+eco.fields.find(f=>f.key==="vehicle_model").value="3 DX ECO XPERT / BACKHOE LOADER";
+eco.fields.find(f=>f.key==="vehicle_chassis_number").value="RAJ3DXE5P03631865";
+eco.fields.find(f=>f.key==="vehicle_engine_number").value="H00541836";
+eco.fields.find(f=>f.key==="idv").value="3309713";
+eco.fields.find(f=>f.key==="od_premium").value="4638.15";
+eco.premium_components={od:4638.15,tp:7647,net:12285.15,
+ gst:2211.33,gross:14496.48,ownerDriverCpa:330,
+ basicThirdPartyLiability:7267,paidDriverLiability:50};
+const ecoParsed=admit(eco);
+assert.equal(ecoParsed.candidateCanonicalPremium.tp,"7317");
+assert.equal(ecoParsed.candidateCanonicalPremium.cpa,"330");
+assert.equal(assessGoDigitNewJcbDirectConversion({
+ parserId:ecoParsed.parserId,checksPassed:18,warnings:[],fields:ecoParsed.fields,
+ commercialPremium:ecoParsed.premium,
+ candidateCanonicalPremium:ecoParsed.candidateCanonicalPremium,
+}).eligible,true,"ECO XPERT source-verified CPA and NEW identity");
+for(const modify of [
+ q=>q.fields.find(f=>f.key==="vehicle_model").value="3 DX ECO UNKNOWN / BACKHOE LOADER",
+ q=>q.premium_components.ownerDriverCpa=0,
+ q=>q.premium_components.gross=14496.58,
+ q=>q.fields.find(f=>f.key==="vehicle_registration_number").value="MP20AB1234",
+ q=>q.fields.find(f=>f.key==="cpa_premium").evidence="Unknown",
+ q=>q.checks.unregistered_new_printed=false,
+]){
+ const fail=clone(eco);modify(fail);
+ assert.throws(()=>admit(fail),"ECO XPERT uncertain evidence must fail closed");
+}
 const missingCity=clone(x);missingCity.fields=missingCity.fields.filter(f=>!["vehicle_rto_name","vehicle_rto_state"].includes(f.key));
 assert.equal(assessGoDigitNewJcbDirectConversion({
  parserId:missingCity.parserId,checksPassed:18,warnings:[],fields:missingCity.fields,

@@ -89,6 +89,8 @@ jobs:
         run: node scripts/partner-ai-studio-cloudflare-actions-regression.mjs
       - name: Verify Partner AI Studio dedicated Windows tunnel backend isolation
         run: node scripts/partner-ai-studio-windows-backend-regression.mjs
+      - name: New India Intra variant and CPA evidence-specific diagnostic regression
+        run: node --experimental-strip-types scripts/nia-intra-source-reason-regression.mjs
       - name: NIA named-authority and owner-driver CPA direct-convert regression
         run: node --experimental-strip-types scripts/nia-named-authority-direct-convert-regression.mjs
       - name: Isolated Kotak Digit OD and UIIC Tractor TP product regression
