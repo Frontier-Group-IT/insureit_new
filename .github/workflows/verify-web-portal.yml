@@ -43,6 +43,8 @@ jobs:
         run: node --experimental-strip-types scripts/go-digit-new-jcb-cpa-regression.mjs
       - name: Final four source-certified manufacturer mapping regression
         run: node --experimental-strip-types scripts/final-four-manufacturer-alias-regression.mjs
+      - name: ICICI 3005 verified handoff and isolated recovery regression
+        run: node scripts/ai-booking-icici-verified-handoff-recovery-regression.mjs
       - name: Four canonical booking authorization recovery and Tata exclusion regression
         run: node scripts/ai-booking-canonical-four-recovery-regression.mjs
       - name: Nine stranded Tata claimed-before-conversion recovery safety regression
