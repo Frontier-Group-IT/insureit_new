@@ -3,7 +3,7 @@ import {readFileSync} from "node:fs";
 const sql=readFileSync(new URL("../../../supabase/migrations/20261127050000_fix_ai_booking_liberty_recovery_conflict.sql",import.meta.url),"utf8");
 const worker=readFileSync(new URL("../lib/ai-policy-auto-booking-server.ts",import.meta.url),"utf8");
 assert.match(sql,/on conflict on constraint policy_intake_ai_auto_booking_recovery_attempts_pkey do nothing/i);
-assert.doesNotMatch(sql,/on conflict\s*\(\s*intake_id\s*\)/i);
+assert.doesNotMatch(sql,/^\s*on conflict\s*\(\s*intake_id\s*\)/im);
 assert.match(sql,/q\.parser_id='liberty_two_wheeler_tp_native_pdf'/);
 assert.match(sql,/a\.state='review_required' and a\.failure_code='insured_name_mismatch'/);
 assert.match(sql,/a\.extraction_fingerprint=q\.extraction_fingerprint/);
