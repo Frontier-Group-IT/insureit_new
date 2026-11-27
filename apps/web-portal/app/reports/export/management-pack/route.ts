@@ -9,7 +9,14 @@ export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
   const profile = await requireCapability("view_reports");
-  if (!profile || !canViewReportCommercials(profile)) {
+  const fullCommercialAccess = canViewReportCommercials(profile);
+  // ANJU's approved organization-level reports access is not commercial access.
+  // Restrict the exception to this active Operations profile and live exports.
+  const operationalOnly = !fullCommercialAccess &&
+    profile?.id === "82e34a1c-7e0b-4ba8-a058-bb3142734325" &&
+    profile.role === "super_admin";
+  if (!profile || (!fullCommercialAccess && !operationalOnly) ||
+      (operationalOnly && request.nextUrl.searchParams.has("snapshot"))) {
     return new Response("Commercial details restricted", {
       status: 403,
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "private, no-store, max-age=0" },
@@ -24,21 +31,24 @@ export async function GET(request: NextRequest) {
   const snapshotId = request.nextUrl.searchParams.get("snapshot") || undefined;
   const archived = snapshotId ? await loadManagementPackSnapshot(profile.id, snapshotId) : null;
   if (snapshotId && !archived) return new Response("Snapshot not found", { status: 404 });
-  const pack = archived?.pack ?? await loadManagementPack(profile, { month, from, to, business, category });
-  const dataRows = managementPackCsvRows(pack, archived?.snapshotVersion);
+  const pack = archived?.pack ?? await loadManagementPack(profile, { month, from, to, business, category }, { operationalOnly });
+  const allRows = managementPackCsvRows(pack, archived?.snapshotVersion);
+  const operationalSections = new Set(["Business", "Distribution", "Claims", "Renewal snapshot", "Operations snapshot"]);
+  const dataRows = operationalOnly ? allRows.filter(([section]) => operationalSections.has(section)) : allRows;
   const rows: Array<Array<string | number>> = [
     ["Month", from && to ? "Custom range" : pack.filters.month],
     ["From", pack.filters.fromDate],
     ["To", pack.filters.toDate],
     ["Scope", pack.scopeMode],
     ["Snapshot", archived ? "Frozen" : "Live"],
+    ...(operationalOnly ? [["Access", "Operational only — finance and governance excluded"]] : []),
     ...(archived ? [["Snapshot Version", archived.snapshotVersion] as Array<string | number>, ["Captured", archived.capturedAt] as Array<string | number>] : []),
     [],
     ["Section", "Metric", "Value"],
     ...dataRows,
   ];
   const csv = rows.map((row) => row.map(escapeCsv).join(",")).join("\r\n");
-  const suffix = archived ? "_Frozen" : "";
+  const suffix = archived ? "_Frozen" : operationalOnly ? "_Operational" : "";
   const filenameRange = from && to ? `${pack.filters.fromDate}_to_${pack.filters.toDate}` : pack.filters.month;
   const filename = `INSUREIT_Management_Pack_${filenameRange}${suffix}.csv`;
 
