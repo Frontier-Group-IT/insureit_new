@@ -97,16 +97,6 @@ export function assessNiaNamedAuthorityUnregisteredConversion(input:Input):{elig
   if(get("vehicle_registration_status")!=="unregistered"
     ||get("vehicle_registration_number"))
     return fail("nia_registration_must_remain_unregistered");
-  const authority=fields.get("vehicle_rto_name")?.evidence??"";
-  const authorityMatch=authority.match(
-    /^NIA PDF Name of registration authority: ([A-Za-z][A-Za-z .'-]{2,65}) - MP (\d{2}); matches MP-\2$/,
-  );
-  const printedPrefix=fields.get("vehicle_registration_status")?.evidence??"";
-  const sourcePrefix=printedPrefix.match(/^NIA PDF partial registration prefix MP-(\d{2}); no full plate$/);
-  if(!sourcePrefix||(get("vehicle_rto_name") && (!authorityMatch
-      ||authorityMatch[1].trim()!==get("vehicle_rto_name")
-      ||sourcePrefix[1]!==authorityMatch[2])))
-    return fail("nia_named_rto_authority_not_verified");
   // Only this source-certified model/layout family is enabled initially.
   // Other NIA goods vehicles remain review-controlled until their own tests.
   if(get("insurer_name")!=="The New India Assurance Company Limited"
@@ -122,6 +112,16 @@ export function assessNiaNamedAuthorityUnregisteredConversion(input:Input):{elig
     ||Number(get("vehicle_capacity"))>60000
     ||Number(get("idv"))<=0)
     return fail("nia_untrained_vehicle_or_product_variant");
+  const authority=fields.get("vehicle_rto_name")?.evidence??"";
+  const authorityMatch=authority.match(
+    /^NIA PDF Name of registration authority: ([A-Za-z][A-Za-z .'-]{2,65}) - MP (\d{2}); matches MP-\2$/,
+  );
+  const printedPrefix=fields.get("vehicle_registration_status")?.evidence??"";
+  const sourcePrefix=printedPrefix.match(/^NIA PDF partial registration prefix MP-(\d{2}); no full plate$/);
+  if(!sourcePrefix||(get("vehicle_rto_name") && (!authorityMatch
+      ||authorityMatch[1].trim()!==get("vehicle_rto_name")
+      ||sourcePrefix[1]!==authorityMatch[2])))
+    return fail("nia_named_rto_authority_not_verified");
   const validDay=(v:string)=>{
     if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;
     const d=new Date(v+"T00:00:00.000Z");
