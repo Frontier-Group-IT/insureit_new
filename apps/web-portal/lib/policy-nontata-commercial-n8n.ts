@@ -322,6 +322,30 @@ function validateNewVariant(
  payload:unknown,insurer:NewProductVariant,
  ids:Record<"intake_id"|"document_id"|"request_id",string>,
 ):NonTataCommercialRead{
+ // A source parser returning ok:false with a complete, identity-bound check
+ // set is NOT an n8n outage. Preserve only our locally allowed check names,
+ // never arbitrary remote messages, PDF text or customer details.
+ if(object(payload)
+   &&payload.contract_version==="1"
+   &&payload.parser_id===insurer
+   &&payload.parser_version==="insureit-product-extension-v1"
+   &&payload.extraction_method==="native_pdf_text"
+   &&payload.review_required===true
+   &&payload.auto_finalize_allowed===false
+   &&payload.intake_id===ids.intake_id
+   &&payload.document_id===ids.document_id
+   &&payload.request_id===ids.request_id
+   &&payload.ok===false
+   &&payload.validation_passed===false
+   &&object(payload.checks)){
+    const allowed=NEW_VARIANT_CHECKS[insurer],checkSet=payload.checks;
+    if(Object.keys(checkSet).length===allowed.length
+       &&allowed.every(key=>typeof checkSet[key]==="boolean")){
+      const failed=allowed.filter(key=>checkSet[key]!==true);
+      if(failed.length)
+        throw new Error("n8n_failed_checks__"+failed.slice(0,6).join("__"));
+    }
+ }
  if(!object(payload)||payload.contract_version!=="1"||payload.parser_id!==insurer
    ||payload.parser_version!=="insureit-product-extension-v1"
    ||payload.extraction_method!=="native_pdf_text"||payload.review_required!==true
