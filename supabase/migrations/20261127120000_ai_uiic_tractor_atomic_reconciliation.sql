@@ -51,7 +51,7 @@ begin
    and q.extraction_fingerprint ~ '^[a-fA-F0-9]{64}$'
    and draft.revision=1
    and length(coalesce(draft.draft_payload->>'policyNo',''))>=8
-   and length(coalesce(draft.draft_payload->>'chassisNo',''))>=12
+   and length(coalesce(draft.draft_payload->>'chassisNo',''))>=9
    and a.operator_profile_id=p_operator_profile_id
    and a.state='uncertain' and a.failure_code='conversion_outcome_unknown'
    and a.finished_at is not null and a.policy_id is null
