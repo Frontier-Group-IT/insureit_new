@@ -304,7 +304,13 @@ export async function convertVerifiedAiIntake(id:string,confirmed:boolean):Promi
   if(confirmed!==true)return{ok:false,ready:false,issues:[issue("Confirmation","Explicit policy registration confirmation is required.")]};
   try{
     const result=await convertVerifiedAiIntakeCore(id,confirmed);
-    if(!result.ok)await holdFailedAiConversion(id,result.issues);
+    if(!result.ok){
+      // A failed best-effort diagnostic persistence must never turn an
+      // already classified pre-booking rejection into "unknown outcome".
+      // Preserve the original deterministic source/identity reason.
+      try { await holdFailedAiConversion(id,result.issues); }
+      catch { console.error("[ai-policy] classified booking hold could not be persisted"); }
+    }
     return result;
   }catch(error){
     // Preserve the exact error class for server-side diagnosis without
