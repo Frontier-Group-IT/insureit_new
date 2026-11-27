@@ -103,13 +103,17 @@ export function assessNiaNamedAuthorityUnregisteredConversion(input:Input):{elig
     ||!["Commercial Vehicle Package Policy","Commercial Vehicle Package Policy Enhanced Covers"].includes(get("policy_product"))
     ||get("vehicle_class")!=="Commercial Vehicle - Goods Carrying"
     ||get("vehicle_make")!=="TATA MOTOR"
-    ||get("vehicle_model")!=="1918 AZURA"
+    ||!["1918 AZURA","TATA INTRA V30 TRUCK"].includes(get("vehicle_model"))
     ||get("vehicle_fuel_type")!=="Diesel"
     ||!/^(?:19|20)\d{2}$/.test(get("vehicle_manufacturing_year"))
     ||Number(get("vehicle_manufacturing_year"))>new Date().getUTCFullYear()
     ||!Number.isFinite(Number(get("vehicle_capacity")))
-    ||Number(get("vehicle_capacity"))<12000
-    ||Number(get("vehicle_capacity"))>60000
+    // This variant must agree with the printed Tata chassis/model family.
+    // 1918 AZURA is a heavy GCV; Intra V30 is a much smaller 2760 CC truck.
+    // Never use one model's capacity range to admit the other.
+    ||(get("vehicle_model")==="1918 AZURA"
+      ? Number(get("vehicle_capacity"))<12000||Number(get("vehicle_capacity"))>60000
+      : Number(get("vehicle_capacity"))<2500||Number(get("vehicle_capacity"))>4000)
     ||Number(get("idv"))<=0)
     return fail("nia_untrained_vehicle_or_product_variant");
   const authority=fields.get("vehicle_rto_name")?.evidence??"";
@@ -118,9 +122,15 @@ export function assessNiaNamedAuthorityUnregisteredConversion(input:Input):{elig
   );
   const printedPrefix=fields.get("vehicle_registration_status")?.evidence??"";
   const sourcePrefix=printedPrefix.match(/^NIA PDF partial registration prefix MP-(\d{2}); no full plate$/);
-  if(!sourcePrefix||(get("vehicle_rto_name") && (!authorityMatch
-      ||authorityMatch[1].trim()!==get("vehicle_rto_name")
-      ||sourcePrefix[1]!==authorityMatch[2])))
+  // MP-nn is never a registered plate. RTO geography is optional for the
+  // Intra V30 source variant; a generic RTO label cannot confer registration
+  // status or booking authority. AZURA retains its strict named-authority
+  // corroboration. Do not fabricate an RTO city or state when absent.
+  if(!sourcePrefix
+    ||(get("vehicle_model")==="1918 AZURA" && get("vehicle_rto_name")
+      && (!authorityMatch
+        ||authorityMatch[1].trim()!==get("vehicle_rto_name")
+        ||sourcePrefix[1]!==authorityMatch[2])))
     return fail("nia_named_rto_authority_not_verified");
   const validDay=(v:string)=>{
     if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return false;
