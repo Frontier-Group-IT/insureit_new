@@ -50,4 +50,13 @@ for(const item of inputs){
  }
  assert.equal(assessProductVariantDirectConversion({...base,commercialPremium:{...base.commercialPremium,gross:16000}}).eligible,false);
 }
+const {readFileSync}=await import("node:fs");
+const adapter=readFileSync(new URL("../lib/policy-nontata-commercial-n8n.ts",import.meta.url),"utf8");
+const ui=readFileSync(new URL("../components/development/semi-auto-policy-workspace.tsx",import.meta.url),"utf8");
+assert.ok(adapter.includes('byKey.get("vehicle_make")==="ROYAL ENFIELD"'));
+assert.ok(adapter.includes('byKey.get("vehicle_model")==="CLASSIC STD 350 EFI"'));
+assert.ok(adapter.includes('byKey.get("vehicle_capacity")==="346"'));
+assert.ok(adapter.includes('!["Bajaj","TVS"].includes'));
+assert.ok(ui.includes('row.ai_booking_failure_code==="vehicle_ownership"'));
+assert.ok(ui.includes('row.ai_booking_failure_code==="coverage_conflict"'));
 console.log("SBI Maruti and Liberty Royal source-certified variants: positives, strict identity, premium and prior family protections passed");
