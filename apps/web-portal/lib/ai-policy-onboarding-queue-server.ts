@@ -132,6 +132,20 @@ export async function processAiQueueBatch(options?: {preferredIntakeId?:string;m
     throw new Error("Invalid immediate policy Intake reference");
   }
   const boundedMax=preferredIntakeId?1:Math.max(1,Math.min(MAX_BATCH,options?.maxBatch??MAX_BATCH));
+  // Once per current PDF, reassess only old NIA unsupported-model holds
+  // after the source-certified V30 release. No global parser revision bump,
+  // no booking attempt reset, and no Tata AIG recovery is touched.
+  if(!preferredIntakeId){
+    const replay=await admin.rpc("requeue_ai_nia_intra_after_rule_v1",{
+      p_max:12,
+    });
+    if(replay.error){
+      // Website and migration may release separately. Any other error is
+      // operational, never grounds for inventing a verified policy.
+      if(!["42883","PGRST202"].includes(replay.error.code??""))
+        throw new Error("NIA source-reassessment RPC unavailable");
+    }
+  }
   const {data,error}=await admin.rpc("claim_policy_intake_ai_queue_v3",{
     p_max:boundedMax,p_parser_revision:parserRevision,
     p_preferred_intake_id:preferredIntakeId??null,
@@ -239,13 +253,27 @@ async function processClaim(item: Claimed, parserRevision: string) {
       || extraction.diagnosticCode.startsWith("n8n_layout_untrained_")
       || extraction.diagnosticCode==="n8n_untrained_layout");
     const validationFailed=untrained&&!layoutNeedsTraining;
+    // A timed-out/unavailable n8n call is transient; never call a parser
+    // unsupported merely because the service is down. Retry with bounded
+    // exponential backoff, and stop conclusively after 12 attempts rather
+    // than creating an infinite queue loop or masking it as source evidence.
+    const {data:attemptRow}=await admin.from("policy_intake_ai_processing_queue")
+      .select("attempts").eq("intake_id",item.intake_id)
+      .eq("document_id",item.document_id).eq("lease_id",item.lease_id)
+      .maybeSingle<{attempts:number}>();
+    const attemptCount=Number(attemptRow?.attempts??1);
+    const retryExhausted=!untrained && attemptCount>=12;
+    const retryMinutes=untrained||retryExhausted?1440
+      :Math.min(360,5*Math.pow(2,Math.max(0,attemptCount-1)));
     await finishClaim(item,{
-      state:layoutNeedsTraining?"unsupported":validationFailed?"exception":untrained?"unsupported":"failed",
+      state:layoutNeedsTraining?"unsupported":validationFailed||retryExhausted?"exception"
+        :untrained?"unsupported":"failed",
       exception_codes:[validationFailed?"extraction_failed":untrained?"unsupported_layout":"extraction_failed"],
       field_keys:[],parser_id:null,checks_passed:0,extraction_fingerprint:null,
-      last_error_code:untrained?safeDiagnostic:"n8n_unavailable",
-      processed_at:untrained?new Date().toISOString():null,
-      retry_after:retryAfter(untrained?1440:5),
+      last_error_code:untrained?safeDiagnostic:retryExhausted
+        ?"n8n_unavailable_retry_exhausted":"n8n_unavailable",
+      processed_at:untrained||retryExhausted?new Date().toISOString():null,
+      retry_after:retryAfter(retryMinutes),
     });
     return;
   }
@@ -361,8 +389,17 @@ async function processClaim(item: Claimed, parserRevision: string) {
   // NIA writes "TATA MOTOR" on its GCV schedule. For the separately
   // trained 1918 AZURA family this is the canonical Tata manufacturer,
   // not a missing brand. Never infer a brand for unknown NIA models.
-  const recognizedNiaTata=extraction.preview.parserId==="new_india_cv_native_pdf"
-    &&rawMake==="TATA MOTOR" &&model==="1918 AZURA";
+  const niaModelCertified=extraction.preview.parserId==="new_india_cv_native_pdf"
+    &&assessNiaNamedAuthorityUnregisteredConversion({
+      parserId:extraction.preview.parserId,
+      checksPassed:extraction.preview.checksPassed,
+      warnings:extraction.preview.warnings,
+      fields:extraction.preview.fields,
+      commercialPremium:extraction.preview.commercialPremium,
+    }).eligible;
+  const recognizedNiaTata=niaModelCertified
+    &&rawMake==="TATA MOTOR"
+    &&["1918 AZURA","TATA INTRA V30 TRUCK"].includes(model);
   // The motor master lists marque/brands, not every insurer's legal OEM name.
   // Only exact already-certified insurer/source combinations may use an
   // equivalent brand; a generic unknown make still triggers review.
