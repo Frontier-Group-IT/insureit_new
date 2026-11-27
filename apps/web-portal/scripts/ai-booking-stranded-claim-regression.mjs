@@ -27,7 +27,7 @@ for(const required of [
 ])assert.ok(sql.includes(required),"Unsafe stranded recovery gate missing: "+required);
 assert.doesNotMatch(sql,/\b(?:delete|truncate)\s+from\s+public\.policy_intake_ai_auto_booking_attempts\b/i);
 assert.doesNotMatch(sql,/\bupdate\s+public\.policy_intake_ai_auto_booking_attempts\b/i);
-assert.ok(worker.includes('claim.stranded?"finish_ai_auto_booking_stranded_v1"'));
+assert.ok(worker.includes('claim.stranded\n    ?"finish_ai_auto_booking_stranded_v1"'));\nassert.ok(worker.includes('INSUREIT_AI_STRANDED_RECOVERY_ENABLED==="true"'),"Nine Tata claims must remain opt-in");
 assert.ok(worker.includes('admin.rpc("claim_ai_auto_booking_stranded_v1"'));
 assert.ok(worker.includes('p_operator_profile_id:operatorId,p_limit:1'));
 const ordinary=worker.indexOf("for(const claim of claims)await processClaim(claim)");
