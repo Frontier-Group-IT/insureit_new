@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const read = name => readFileSync(new URL(name,import.meta.url),'utf8');
+const edge=read('../../../supabase/functions/partner-ai-studio-verify/index.ts');
+const data=read('../lib/ai-studio.ts');
+assert(edge.includes("caller.auth.getUser(jwt)"));
+assert(edge.includes("caller.rpc('partner_app_ai_studio_detail_v1'"));
+assert(edge.includes("supabaseUrl,serviceRole"));
+assert(edge.includes("const URL_EXPECTED='https://n8n.nishant.uk/webhook/insureit-policy-intake-icici-v1'"));
+assert(edge.includes('source.searchParams.get(\'token\')'));
+assert(edge.includes("afterDocument.data.id!==doc.id"));
+assert(edge.includes("parsed.auto_finalize_allowed!==false"));
+assert(edge.includes("booking_allowed:false,draft_replaced:false"));
+assert(!edge.includes(".from('policies').insert(")&&!edge.includes(".from('policy_intake_onboarding_drafts').update("));
+assert(data.includes("supabase.functions.invoke('partner-ai-studio-verify'"));
+console.log('Native AI Studio secure fresh verification contract passed');

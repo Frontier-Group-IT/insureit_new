@@ -198,6 +198,9 @@ jobs:
       - name: Verify native AI Studio access and Supabase-only data contract
         run: node apps/partner-app/scripts/verify-ai-studio-native.mjs
 
+      - name: Verify Vercel-independent n8n edge read-only contract
+        run: node apps/partner-app/scripts/verify-ai-studio-edge.mjs
+
       - name: Verify pre-APK native transition guard
         run: npm --workspace apps/partner-app run verify:pre-apk
 
