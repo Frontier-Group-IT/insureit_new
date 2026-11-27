@@ -127,14 +127,23 @@ export function assessProductVariantDirectConversion(input:Input):{eligible:bool
    ||field("third_party_end_date")!==field("policy_end_date"))
    return no("tp_only_variant_unverified");
  if(input.parserId==="united_india_tractor_tp_native_pdf"){
+   const isMahindra=field("vehicle_make")==="MAHINDRA"
+     &&field("vehicle_model")==="575 DI XP PLUS";
+   const isPowertrac=field("vehicle_make")==="Escorts Kubota"
+     &&field("vehicle_model")==="POWERTRAC 445"
+     &&field("vehicle_rto_state")==="Haryana"
+     &&field("vehicle_capacity")==="45"
+     &&map.get("vehicle_capacity")?.evidence?.includes("Tractor HP 45")
+     &&/^HR\d{2}[A-Z]{1,3}\d{3,4}$/.test(field("vehicle_registration_number"));
    if(field("insurer_name")!=="United India Insurance Company Limited"
      ||field("vehicle_class")!=="Agricultural Tractor"
-     ||field("vehicle_make")!=="MAHINDRA"
-     ||field("vehicle_model")!=="575 DI XP PLUS"
+     ||(!isMahindra&&!isPowertrac)
      ||field("vehicle_fuel_type")!=="Diesel"
      ||!map.get("cpa_premium")?.evidence?.includes("removed")
-
-     ||Math.abs(cents(printed.gst)-cents(Math.round(printed.net*.18)))>100)
+     ||(isPowertrac
+       ? Math.abs(cents(printed.gst)-cents(printed.net*.18))>100
+         ||Math.abs(cents(printed.net)-cents(printed.tp))>1
+       :Math.abs(cents(printed.gst)-cents(Math.round(printed.net*.18)))>100))
      return no("united_tractor_tp_variant_unverified");
  }else if(input.parserId==="hdfc_ergo_two_wheeler_tp_native_pdf"){
    if(field("insurer_name")!=="HDFC ERGO General Insurance Company Limited"

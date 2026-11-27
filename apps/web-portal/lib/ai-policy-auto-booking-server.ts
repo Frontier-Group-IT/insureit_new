@@ -9,7 +9,7 @@ import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyIntakeReviewer,requirePolicyIntakeFinalizer } from "@/lib/policy-intake-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 
-type Claim={intake_id:string;document_id:string;extraction_fingerprint:string;recovery?:boolean;stranded?:boolean;canonicalRecovery?:boolean;iciciRecovery?:boolean;reconciledDigit?:boolean};
+type Claim={intake_id:string;document_id:string;extraction_fingerprint:string;recovery?:boolean;stranded?:boolean;canonicalRecovery?:boolean;iciciRecovery?:boolean;reconciledDigit?:boolean;reconciledUiicTractor?:boolean};
 type FinalState="booked"|"review_required"|"uncertain";
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HASH=/^[a-f0-9]{64}$/i;
@@ -20,6 +20,11 @@ const ALLOWED_REVIEW_FIELDS=new Map([
   ["Canonical booking","canonical_booking_review"],["Source PDF","source_pdf_review"],
   ["Canonical Intake handoff","canonical_handoff_review"],
   ["Policy issuance date","issuance_date_review"],["Premium","premium_review"],
+  ["Product variant evidence","product_variant_review"],
+  ["Product variant premium","product_variant_premium_review"],
+  ["Verified commercial fields","commercial_identity_review"],
+  ["PDF reconciliation","pdf_reconciliation_review"],
+  ["Owner-driver CPA","cpa_selection_review"],
   ["Manufacturer","manufacturer_review"],["Automation","automation_disabled"],
 ]);
 export function autoBookingEnabled(){
@@ -52,7 +57,7 @@ function safeReason(fields:readonly {field:string}[]):{state:FinalState;code:str
 }
 async function finish(claim:Claim,state:FinalState,code:string|null,policyId:string|null){
   const admin=createSupabaseAdminClient();
-  const {data,error}=await admin.rpc(claim.reconciledDigit?"finish_ai_auto_booking_reconciled_digit_v1":claim.iciciRecovery?"finish_ai_auto_booking_icici_recovery_v1":claim.canonicalRecovery
+  const {data,error}=await admin.rpc(claim.reconciledUiicTractor?"finish_ai_auto_booking_uiic_tractor_v1":claim.reconciledDigit?"finish_ai_auto_booking_reconciled_digit_v1":claim.iciciRecovery?"finish_ai_auto_booking_icici_recovery_v1":claim.canonicalRecovery
     ?"finish_ai_auto_booking_canonical_recovery_v1":claim.stranded
     ?"finish_ai_auto_booking_stranded_v1":claim.recovery
     ?"finish_ai_auto_booking_liberty_recovery_v1":"finish_ai_auto_booking_v1",{
@@ -217,6 +222,30 @@ export async function runAutoBookingBatch():Promise<{
   }else{
     for(const item of (digitReconciliation.data??[]) as Claim[]){
       const claim={...item,reconciledDigit:true};
+      claims.push(claim);
+      await processClaim(claim);
+    }
+  }
+  // Exact, source-certified United India Powertrac 445 re-entry only after
+  // verifying the original uncertain attempt made NO policy/vehicle-policy
+  // write, source document link or intake audit. The DB inserts one claim
+  // atomically; an uncertain second outcome is terminal with no automatic
+  // replay. Original auto-booking ledger remains unchanged.
+  const uiicReconciliation=await admin.rpc("claim_ai_auto_booking_uiic_tractor_v1",{
+    p_operator_profile_id:operatorId,p_limit:1,
+  });
+  if(uiicReconciliation.error){
+    const missing=["PGRST202","42883"].includes(uiicReconciliation.error.code??"");
+    if(!missing){
+      const pgCode=typeof uiicReconciliation.error.code==="string"
+        &&/^[0-9A-Z]{5}$/.test(uiicReconciliation.error.code)
+        ?uiicReconciliation.error.code:"unknown";
+      console.error("[ai-auto-booking] UIIC tractor reconciliation unavailable",{pgCode});
+      throw Error("auto_booking_uiic_reconciliation_unavailable");
+    }
+  }else{
+    for(const item of (uiicReconciliation.data??[]) as Claim[]){
+      const claim={...item,reconciledUiicTractor:true};
       claims.push(claim);
       await processClaim(claim);
     }
