@@ -9,7 +9,7 @@ import { requireCapability } from "@/lib/master-data-server";
 import { requirePolicyIntakeReviewer,requirePolicyIntakeFinalizer } from "@/lib/policy-intake-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 
-type Claim={intake_id:string;document_id:string;extraction_fingerprint:string;recovery?:boolean};
+type Claim={intake_id:string;document_id:string;extraction_fingerprint:string;recovery?:boolean;stranded?:boolean};
 type FinalState="booked"|"review_required"|"uncertain";
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HASH=/^[a-f0-9]{64}$/i;
@@ -52,7 +52,7 @@ function safeReason(fields:readonly {field:string}[]):{state:FinalState;code:str
 }
 async function finish(claim:Claim,state:FinalState,code:string|null,policyId:string|null){
   const admin=createSupabaseAdminClient();
-  const {data,error}=await admin.rpc(claim.recovery
+  const {data,error}=await admin.rpc(claim.stranded?"finish_ai_auto_booking_stranded_v1":claim.recovery
     ?"finish_ai_auto_booking_liberty_recovery_v1":"finish_ai_auto_booking_v1",{
     p_intake_id:claim.intake_id,p_document_id:claim.document_id,
     p_fingerprint:claim.extraction_fingerprint,p_state:state,
@@ -146,6 +146,30 @@ export async function runAutoBookingBatch():Promise<{
   }else{
     for(const item of (recovered.data??[]) as Claim[]){
       const claim={...item,recovery:true};
+      claims.push(claim);
+      await processClaim(claim);
+    }
+  }
+  // One incident-limited replay for claims stranded before conversion by
+  // the 2026-11-27 PostgreSQL 42702 worker crash. Service-role SQL checks
+  // exact intake IDs, minute window, zero drafts, current PDF fingerprint,
+  // verified 18/18 Tata source, no assignment/policy and no prior recovery.
+  // This is never a generic "retry claimed" capability.
+  const stranded=await admin.rpc("claim_ai_auto_booking_stranded_v1",{
+    p_operator_profile_id:operatorId,p_limit:1,
+  });
+  if(stranded.error){
+    const missing=["PGRST202","42883"].includes(stranded.error.code??"");
+    const pgCode=typeof stranded.error.code==="string"
+      && /^[0-9A-Z]{5}$/.test(stranded.error.code)
+      ?stranded.error.code:"unknown";
+    if(!missing){
+      console.error("[ai-auto-booking] stranded-claim recovery unavailable",{pgCode});
+      throw Error("auto_booking_stranded_claim_unavailable");
+    }
+  }else{
+    for(const item of (stranded.data??[]) as Claim[]){
+      const claim={...item,stranded:true};
       claims.push(claim);
       await processClaim(claim);
     }
