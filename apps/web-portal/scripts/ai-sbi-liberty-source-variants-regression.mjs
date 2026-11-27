@@ -43,7 +43,7 @@ for(const item of inputs){
  assert.equal(assessProductVariantDirectConversion({...base,warnings:["unverified"]}).eligible,false);
  for(const [field,value] of [
    ["vehicle_model","WRONG MODEL"],["vehicle_capacity","999"],["vehicle_make","UNKNOWN"],
-   ["vehicle_fuel_type","Diesel"],["vehicle_registration_number","MP20AB1234"],
+   ["vehicle_fuel_type","Diesel"],["vehicle_registration_number","NOT-A-PLATE"],
  ]){
   assert.equal(assessProductVariantDirectConversion({...base,fields:base.fields.map(f=>f.key===field?{...f,value}:f)}).eligible,false,
    item.id+" accepted wrong "+field);
