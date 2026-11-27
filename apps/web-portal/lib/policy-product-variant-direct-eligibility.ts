@@ -64,6 +64,7 @@ export function assessProductVariantDirectConversion(input:Input):{eligible:bool
      ||!([
         field("vehicle_make")==="TATA"&&/^PUNCH\s+ADVENTURE$/i.test(field("vehicle_model"))&&field("vehicle_capacity")==="1199",
         field("vehicle_make")==="MAHINDRA"&&/^XUV\s*300\s+W8\s*\(O\)$/i.test(field("vehicle_model"))&&field("vehicle_capacity")==="1197",
+        field("vehicle_make")==="MARUTI"&&/^VITARA BREZZA LXI$/i.test(field("vehicle_model"))&&field("vehicle_capacity")==="1462"&&field("vehicle_manufacturing_year")==="2021",
        ].some(Boolean))
      ||field("vehicle_fuel_type")!=="Petrol"
      ||Number(field("idv"))<=0||printed.od<=0||printed.tp<=0
@@ -85,14 +86,15 @@ export function assessProductVariantDirectConversion(input:Input):{eligible:bool
    const make=field("vehicle_make"),model=field("vehicle_model"),cc=field("vehicle_capacity");
    const verifiedFamily=make==="Bajaj"&&model==="PLATINA 100 ES"&&cc==="99"
      ||make==="Bajaj"&&model==="DISCOVER 125 T DRUM"&&cc==="125"
-     ||make==="TVS"&&model==="JUPITER ZX"&&cc==="110";
+     ||make==="TVS"&&model==="JUPITER ZX"&&cc==="110"
+     ||make==="ROYAL ENFIELD"&&model==="CLASSIC STD 350 EFI"&&cc==="346";
    if(field("insurer_name")!=="Liberty General Insurance Limited"
      ||field("policy_product")!=="Third-Party Only"||field("vehicle_class")!=="Two Wheeler"
      ||!field("vehicle_manufacturing_year")||!verifiedFamily
      ||field("vehicle_fuel_type")!=="Petrol"
      ||!map.get("vehicle_fuel_type")?.evidence?.startsWith("Manufacturer model-family petrol specification")
      ||Number(field("idv"))!==0||printed.od!==0
-     ||printed.tp!==714||!Number.isFinite(cpa)||![0,375].includes(cpa??-1)
+     ||!(make==="ROYAL ENFIELD"?printed.tp===1366:printed.tp===714)||!Number.isFinite(cpa)||![0,375].includes(cpa??-1)
      ||Number(field("cpa_premium"))!==cpa
      ||(cpa===0?!source.startsWith("Printed CSI NA and no PA charge")
        :!source.startsWith("Printed PA owner driver"))
@@ -180,7 +182,7 @@ export function mapVerifiedProductVariantPremium(
    throw new Error("product_variant_premium_components_invalid");
  const cash=(v:number)=>String(Math.round(v*100)/100);
  if(parserId==="liberty_two_wheeler_tp_native_pdf"){
-   if(p.od!==0||p.tp!==714||![0,375].includes(p.cpa??-1)
+   if(p.od!==0||![714,1366].includes(p.tp)||![0,375].includes(p.cpa??-1)
      ||Math.abs(Math.round((p.tp+(p.cpa??0)-p.net)*100))>1
      ||Math.abs(Math.round((p.net*.18-p.gst)*100))>1
      ||Math.round(p.gross)!==Math.round(p.net+p.gst))
