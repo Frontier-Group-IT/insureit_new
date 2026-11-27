@@ -132,6 +132,20 @@ export async function processAiQueueBatch(options?: {preferredIntakeId?:string;m
     throw new Error("Invalid immediate policy Intake reference");
   }
   const boundedMax=preferredIntakeId?1:Math.max(1,Math.min(MAX_BATCH,options?.maxBatch??MAX_BATCH));
+  // Once per current PDF, reassess only old NIA unsupported-model holds
+  // after the source-certified V30 release. No global parser revision bump,
+  // no booking attempt reset, and no Tata AIG recovery is touched.
+  if(!preferredIntakeId){
+    const replay=await admin.rpc("requeue_ai_nia_intra_after_rule_v1",{
+      p_max:12,
+    });
+    if(replay.error){
+      // Website and migration may release separately. Any other error is
+      // operational, never grounds for inventing a verified policy.
+      if(!["42883","PGRST202"].includes(replay.error.code??""))
+        throw new Error("NIA source-reassessment RPC unavailable");
+    }
+  }
   const {data,error}=await admin.rpc("claim_policy_intake_ai_queue_v3",{
     p_max:boundedMax,p_parser_revision:parserRevision,
     p_preferred_intake_id:preferredIntakeId??null,
