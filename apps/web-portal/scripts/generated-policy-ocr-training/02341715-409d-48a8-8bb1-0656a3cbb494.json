@@ -1,0 +1,61 @@
+{
+  "parser_id": "united_india_motor_v1",
+  "ground_truth": {
+    "section_02": {
+      "vehicle_make": "TATA",
+      "vehicle_class": "GCV",
+      "vehicle_model": "ACE PRO EV",
+      "vehicle_capacity": "1610",
+      "vehicle_rto_name": "MP 65",
+      "vehicle_fuel_type": "Electric",
+      "vehicle_rto_state": "MADHYA PRADESH",
+      "vehicle_engine_number": "SYNENGINE66A17E7FBFB0",
+      "vehicle_chassis_number": "SYNCHASSIS66A17E7FBFB0",
+      "vehicle_manufacturing_year": 2026,
+      "vehicle_registration_number": null,
+      "vehicle_registration_status": "registration_pending"
+    },
+    "section_03": {
+      "idv": 640000,
+      "cpa_opted": true,
+      "od_premium": 8300,
+      "tp_premium": 13642,
+      "valid_from": "2026-06-30",
+      "valid_upto": "2027-06-29",
+      "cpa_premium": 200,
+      "printed_gst": 2212.1,
+      "insurer_name": "United India Insurance Company Limited",
+      "policy_number": "SYN-66A17E7FBFB0",
+      "policy_product": "Package",
+      "printed_net_premium": 22142,
+      "printed_gross_premium": 24354.1
+    }
+  },
+  "parser_version": "united_india_motor_v1.1.0+layout-uiic_gcv_package-v5",
+  "schema_version": "policy_ocr_training_candidate_v2",
+  "evidence_labels": {
+    "idv": "IDV / Sum Insured · Page 2",
+    "cpa_opted": "Owner-driver CPA · Page 1",
+    "od_premium": "OD premium · Page 4",
+    "tax_amount": "GST / Tax · Page 4",
+    "tp_premium": "Insufficient evidence · Page 4",
+    "cpa_premium": "Owner-driver CPA · Page 4",
+    "insurer_name": "Insurer Header · Page 1",
+    "vehicle_make": "Vehicle Make · Page 2",
+    "gross_premium": "Gross / Total Payable · Page 4",
+    "policy_number": "Policy Number · Page 1",
+    "total_premium": "Net Premium · Page 4",
+    "vehicle_class": "Vehicle Class · Page 1",
+    "vehicle_model": "Vehicle Model · Page 2",
+    "policy_product": "Policy Product · Page 1",
+    "policy_end_date": "Valid upto · Page 1",
+    "vehicle_capacity": "Vehicle Capacity · Page 2",
+    "vehicle_rto_name": "Insufficient evidence · Page 2",
+    "policy_start_date": "Policy Period · Page 1",
+    "vehicle_rto_state": "Insufficient evidence · Page 2",
+    "vehicle_engine_number": "Engine Number · Page 2",
+    "vehicle_chassis_number": "Chassis Number · Page 2",
+    "vehicle_manufacturing_year": "Manufacturing Year · Page 2",
+    "vehicle_registration_status": "Vehicle Registration Status · Page 2"
+  }
+}
