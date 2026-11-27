@@ -86,7 +86,7 @@ export function acceptGoDigitNewJcbExtraction(
  if(v("insurer_name")!=="Go Digit General Insurance Limited"
    ||v("policy_product")!=="Digit Commercial Vehicle Insurance"
    ||v("vehicle_make")!=="JCB"
-   ||v("vehicle_model")!=="3 DX PLUS CEV V / BACKHOE LOADER"
+   ||!["3 DX PLUS CEV V / BACKHOE LOADER","3 DX ECO XPERT / BACKHOE LOADER"].includes(v("vehicle_model"))
    ||v("vehicle_registration_number")!=="NEW"
    ||v("vehicle_registration_status")!=="registration_pending"
    ||v("vehicle_class")!=="Commercial Vehicle - Miscellaneous Class D"
