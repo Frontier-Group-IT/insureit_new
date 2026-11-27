@@ -137,10 +137,18 @@ const aiStateLabel: Record<string,string> = {
 };
 
 function bookingLedgerLabel(row:SemiAutoIntakeRow):string|null{
-  if(row.ai_booking_state==="review_required")
-    return row.ai_booking_failure_code==="insured_name_mismatch"
-      ?"Onboarding needs insured-name verification"
-      :"Automatic onboarding needs resolution · "+(row.ai_booking_failure_code??"canonical validation");
+  if(row.ai_booking_state==="review_required"){
+    if(row.ai_booking_failure_code==="insured_name_mismatch")
+      return "Onboarding needs insured-name verification";
+    // Distinguish actual policy/vehicle conflicts from parser failures. A
+    // successfully extracted source is not permission to supersede another
+    // active policy on the same chassis.
+    if(row.ai_booking_failure_code==="vehicle_ownership")
+      return "Existing vehicle ownership / policy conflict · review before booking";
+    if(row.ai_booking_failure_code==="coverage_conflict")
+      return "Overlapping existing coverage · review before booking";
+    return "Automatic onboarding needs resolution · "+(row.ai_booking_failure_code??"canonical validation");
+  }
   if(row.ai_booking_state==="uncertain")return "Booking reconciliation required · automatic retry paused";
   if(row.ai_booking_state==="claimed")return "Booking claimed · checking";
   if(row.ai_booking_state==="booked")return "Auto booked";
