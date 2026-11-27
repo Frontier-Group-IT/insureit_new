@@ -16,6 +16,26 @@ for(const x of [
  "q.retry_after<=now()",
 ])assert.ok(sql.toLowerCase().includes(x.toLowerCase()),"Missing retry safety: "+x);
 assert.ok(sql.includes("q.attempts<5"),"Normal failures keep original five-attempt budget");
+for(const gate of [
+ "create table if not exists public.policy_intake_ai_source_rule_replays",
+ "enable row level security",
+ "revoke all on public.policy_intake_ai_source_rule_replays from public,anon,authenticated",
+ "current_user <> 'service_role'",
+ "q.parser_id='new_india_cv_native_pdf'",
+ "q.checks_passed=16",
+ "q.last_error_code='nia_nia_untrained_vehicle_or_product_variant'",
+ "d.is_current=true",
+ "d.storage_bucket=i.storage_bucket",
+ "d.storage_path=i.storage_path",
+ "i.assigned_to_profile_id is null and i.final_policy_id is null",
+ "not exists (",
+ "policy_intake_ai_auto_booking_attempts",
+ "policy_intake_ai_canonical_recovery_attempts",
+ "on conflict on constraint policy_intake_ai_source_rule_replays_pkey do nothing",
+ "for update of q skip locked",
+])assert.ok(sql.includes(gate),"Missing isolated NIA re-evaluation guard: "+gate);
+assert.ok(worker.includes('admin.rpc("requeue_ai_nia_intra_after_rule_v1"'));
+assert.ok(worker.includes('if(!preferredIntakeId){'));
 for(const x of [
  'const retryExhausted=!untrained && attemptCount>=12',
  'Math.min(360,5*Math.pow(2,Math.max(0,attemptCount-1)))',
@@ -29,5 +49,5 @@ assert.ok(nia.includes('["1918 AZURA","TATA INTRA V30 TRUCK"].includes(get("vehi
 assert.ok(nia.includes('get("vehicle_model")==="1918 AZURA"'));
 assert.ok(nia.includes('||Number(get("cpa_premium"))<=0'));
 assert.ok(nia.includes('cpaEvidence!=="NIA PDF page 2 Owner Driver PA; TP and 18%/5% IGST bases independently reconciled"'));
-assert.doesNotMatch(sql,/policy_intake_ai_auto_booking|delete from public|truncate /i);
+assert.doesNotMatch(sql,/delete from public|truncate /i);
 console.log("NIA exact-source variant and transient n8n recovery safety passed");
