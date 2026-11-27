@@ -134,7 +134,7 @@ export function assessProductVariantDirectConversion(input:Input):{eligible:bool
      &&field("vehicle_rto_state")==="Haryana"
      &&field("vehicle_capacity")==="45"
      &&map.get("vehicle_capacity")?.evidence?.includes("Tractor HP 45")
-     &&/^HR\\d{2}[A-Z]{1,3}\\d{3,4}$/.test(field("vehicle_registration_number"));
+     &&/^HR\d{2}[A-Z]{1,3}\d{3,4}$/.test(field("vehicle_registration_number"));
    if(field("insurer_name")!=="United India Insurance Company Limited"
      ||field("vehicle_class")!=="Agricultural Tractor"
      ||(!isMahindra&&!isPowertrac)
