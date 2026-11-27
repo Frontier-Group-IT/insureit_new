@@ -361,8 +361,17 @@ async function processClaim(item: Claimed, parserRevision: string) {
   // NIA writes "TATA MOTOR" on its GCV schedule. For the separately
   // trained 1918 AZURA family this is the canonical Tata manufacturer,
   // not a missing brand. Never infer a brand for unknown NIA models.
-  const recognizedNiaTata=extraction.preview.parserId==="new_india_cv_native_pdf"
-    &&rawMake==="TATA MOTOR" &&model==="1918 AZURA";
+  const niaModelCertified=extraction.preview.parserId==="new_india_cv_native_pdf"
+    &&assessNiaNamedAuthorityUnregisteredConversion({
+      parserId:extraction.preview.parserId,
+      checksPassed:extraction.preview.checksPassed,
+      warnings:extraction.preview.warnings,
+      fields:extraction.preview.fields,
+      commercialPremium:extraction.preview.commercialPremium,
+    }).eligible;
+  const recognizedNiaTata=niaModelCertified
+    &&rawMake==="TATA MOTOR"
+    &&["1918 AZURA","TATA INTRA V30 TRUCK"].includes(model);
   // The motor master lists marque/brands, not every insurer's legal OEM name.
   // Only exact already-certified insurer/source combinations may use an
   // equivalent brand; a generic unknown make still triggers review.
