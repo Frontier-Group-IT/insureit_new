@@ -5,7 +5,7 @@ type Input={parserId:string;checksPassed:number;warnings:readonly string[];
  fields:readonly Field[];commercialPremium?:Money|null;
  candidateCanonicalPremium?:Canonical|null};
 /** Eligibility to ATTEMPT canonical preflight, never permission to write a policy.
- * Only the exact source-certified Go Digit 3DX PLUS CEV V NEW PDF is admitted.
+ * Only exactly source-certified Go Digit 3DX PLUS CEV V or ECO XPERT NEW PDFs are admitted.
  * RTO city/state are optional; no real plate or CPA can be fabricated.
  */
 export function assessGoDigitNewJcbDirectConversion(input:Input):{eligible:boolean;reason:string}{
@@ -26,7 +26,7 @@ export function assessGoDigitNewJcbDirectConversion(input:Input):{eligible:boole
    ||map.get("vehicle_registration_number")?.evidence!=="Digit PDF vehicle schedule: printed NEW registration"
    ||map.get("vehicle_registration_status")?.evidence!=="Digit PDF vehicle schedule: printed NEW registration"
    ||get("vehicle_make")!=="JCB"
-   ||get("vehicle_model")!=="3 DX PLUS CEV V / BACKHOE LOADER"
+   ||!["3 DX PLUS CEV V / BACKHOE LOADER","3 DX ECO XPERT / BACKHOE LOADER"].includes(get("vehicle_model"))
    ||get("vehicle_class")!=="Commercial Vehicle - Miscellaneous Class D"
    ||get("vehicle_fuel_type")!=="Diesel"
    ||!/^20\d{2}$/.test(get("vehicle_manufacturing_year"))
