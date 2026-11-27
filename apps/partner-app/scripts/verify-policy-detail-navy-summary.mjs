@@ -52,6 +52,13 @@ assert.ok(fileStyle);
 assert.doesNotMatch(fileStyle[1], /backgroundColor|borderRadius|\bborderWidth/);
 assert.match(fileStyle[1], /borderTopWidth: StyleSheet.hairlineWidth/);
 assert.match(docs, /open\(file, true\)/, 'Document download retained');
+assert.match(docs, /<Pressable[^\n]*accessibilityLabel=\{'View ' \+ label[^\n]*styles\.fileTop[^\n]*onPress=\{\(\) => void open\(file\)\}/, 'File icon and name must be one clickable preview target');
+assert.match(docs, /<Pressable[^\n]*accessibilityLabel=\{'Download ' \+ label[^\n]*styles\.downloadAction[^\n]*open\(file, true\)/, 'Separate right download target must use download mode');
+assert.match(docs, /downloadAction: \{ width: 44, minHeight: 44/, 'Download target must remain accessible');
+assert.match(docs, /name="download-outline"/, 'Right-side download icon required');
+assert.doesNotMatch(docs, /styles\.actions|>View<\/Text>|>Download<\/Text>/, 'Remove duplicate text action buttons');
+assert.match(docs, /viewing \? <ActivityIndicator/);
+assert.match(docs, /downloading \? <ActivityIndicator/);
 assert.match(source, /styles\.overviewLabelRow/, 'Overview icon and label remain on one line');
 for (const obsolete of ['styles.quickDocument', 'styles.quickRenewal', 'styles.quickClaim', 'styles.quickCustomer', 'styles.unifiedDetails', 'styles.unifiedSection', 'styles.tileBlue', 'styles.tileGreen', 'styles.tileAmber', 'styles.tileSlate']) {
   assert.ok(!source.includes(obsolete), 'Obsolete presentation style returned: ' + obsolete);
