@@ -101,7 +101,7 @@ export async function runAutoBookingBatch():Promise<{
   const processClaim=async(claim:Claim):Promise<void>=>{
     if(!UUID.test(claim.intake_id)||!UUID.test(claim.document_id)||!HASH.test(claim.extraction_fingerprint)){
       uncertain++;
-      continue; // Malformed persisted evidence: no booking and no guessed repair.
+      return; // Malformed persisted evidence: no booking and no guessed repair.
     }
     try{
       const result=await withAutomaticPolicyBooking(()=>withVerifiedPartnerApiToken(operatorToken,
