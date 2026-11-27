@@ -43,6 +43,8 @@ jobs:
         run: node --experimental-strip-types scripts/go-digit-new-jcb-cpa-regression.mjs
       - name: Final four source-certified manufacturer mapping regression
         run: node --experimental-strip-types scripts/final-four-manufacturer-alias-regression.mjs
+      - name: Verified ICICI 834132 automatic recovery and reconciliation status regression
+        run: node scripts/ai-icici-834132-automatic-recovery-regression.mjs
       - name: ICICI 3005 verified handoff and isolated recovery regression
         run: node scripts/ai-booking-icici-verified-handoff-recovery-regression.mjs
       - name: Four canonical booking authorization recovery and Tata exclusion regression
