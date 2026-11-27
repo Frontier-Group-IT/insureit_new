@@ -25,7 +25,9 @@ for(const literal of [
 assert.match(migration,/state in \('claimed','booked','review_required','uncertain'\)/);
 assert.doesNotMatch(migration,/\b(?:delete|truncate)\s+from\s+public\.policy_intake_ai_auto_booking_attempts\b/i);
 assert.doesNotMatch(migration,/\bupdate\s+public\.policy_intake_ai_auto_booking_attempts\b/i);
-assert.ok(worker.includes('claims.push({...entry,recovery:true})'));
+assert.ok(worker.includes('const claim={...item,recovery:true}'));
+assert.ok(worker.includes('claims.push(claim);'));
+assert.ok(worker.includes('await processClaim(claim);'));
 assert.ok(worker.includes('"finish_ai_auto_booking_liberty_recovery_v1":"finish_ai_auto_booking_v1"'));
 assert.ok(worker.includes('["PGRST202","42883"]'));
 assert.ok(page.includes('bookingAttemptByIntake.set(attempt.intake_id'));
