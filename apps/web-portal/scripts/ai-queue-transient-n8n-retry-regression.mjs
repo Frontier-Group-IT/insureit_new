@@ -4,6 +4,7 @@ import {readFileSync} from "node:fs";
 const worker=readFileSync(new URL("../lib/ai-policy-onboarding-queue-server.ts",import.meta.url),"utf8");
 const sql=readFileSync(new URL("../../../supabase/migrations/20261127090000_ai_queue_transient_n8n_recovery_v4.sql",import.meta.url),"utf8");
 const nia=readFileSync(new URL("../lib/policy-commercial-direct-eligibility.ts",import.meta.url),"utf8");
+const extension=readFileSync(new URL("../lib/policy-nontata-commercial-n8n.ts",import.meta.url),"utf8");
 
 for(const x of [
  "create or replace function public.claim_policy_intake_ai_queue_v3",
@@ -50,4 +51,15 @@ assert.ok(nia.includes('get("vehicle_model")==="1918 AZURA"'));
 assert.ok(nia.includes('||Number(get("cpa_premium"))<=0'));
 assert.ok(nia.includes('cpaEvidence!=="NIA PDF page 2 Owner Driver PA; TP and 18%/5% IGST bases independently reconciled"'));
 assert.doesNotMatch(sql,/delete from public|truncate /i);
+for(const x of [
+ 'payload.ok===false',
+ 'payload.validation_passed===false',
+ 'payload.intake_id===ids.intake_id',
+ 'payload.document_id===ids.document_id',
+ 'payload.request_id===ids.request_id',
+ 'const allowed=NEW_VARIANT_CHECKS[insurer],checkSet=payload.checks',
+ 'Object.keys(checkSet).length===allowed.length',
+ 'allowed.every(key=>typeof checkSet[key]==="boolean")',
+ 'new Error("n8n_failed_checks__"+failed.slice(0,6).join("__"))',
+])assert.ok(extension.includes(x),"Source-validation errors must not masquerade as n8n outages: "+x);
 console.log("NIA exact-source variant and transient n8n recovery safety passed");
