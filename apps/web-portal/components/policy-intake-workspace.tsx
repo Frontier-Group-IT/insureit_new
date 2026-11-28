@@ -14,7 +14,7 @@ import {
 import { PolicyIntakeOcrRetryButton } from "@/components/policy-intake-ocr-retry-button";
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { getInsurerLogo } from "@/lib/insurer-logo";
-import { policyIntakeBucket, policyIntakeStatusCounts } from "@/lib/policy-intake-status-buckets";
+import { policyIntakeBucket, type IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
 
 export type PolicyIntakeWorkspaceRow = {
   id: string;
@@ -32,6 +32,7 @@ export type PolicyIntakeWorkspaceRow = {
   ocr_fields: PolicyIntakeOcrField[];
   file_name: string;
   assigned_to_profile_id: string | null;
+  effective_bucket?: Exclude<IntakeStatusBucket, "all">;
 };
 
 export type PolicyIntakeViewKey = "open" | "action" | "in_review" | "mine" | "processing" | "completed" | "duplicate" | "rejected" | "all";
@@ -61,8 +62,11 @@ function policyTypeLabel(value: string | null) {
   if (value === "health") return "Health";
   return "—";
 }
+function intakeBucket(row: PolicyIntakeWorkspaceRow) {
+  return row.effective_bucket ?? policyIntakeBucket(row, false);
+}
 function isDuplicate(row: PolicyIntakeWorkspaceRow) {
-  return policyIntakeBucket(row, false) === "duplicate";
+  return intakeBucket(row) === "duplicate";
 }
 function canRetryOcr(row: PolicyIntakeWorkspaceRow) {
   if (isProposal(row) || row.status !== "processing") return false;
@@ -72,6 +76,9 @@ function canRetryOcr(row: PolicyIntakeWorkspaceRow) {
   return Number.isFinite(created) && Date.now() - created >= STALE_OCR_MS;
 }
 function statusLabel(row: PolicyIntakeWorkspaceRow) {
+  if (intakeBucket(row) === "duplicate") return "Duplicate";
+  if (intakeBucket(row) === "processing" && row.status !== "processing") return "Automatic processing";
+  if (intakeBucket(row) === "action_required" && row.status === "in_review") return "Action required";
   if (row.status === "processing" && row.ocr_status === "failed") return "AI extraction needs attention";
   return ({
     processing: "Fetching details",
@@ -83,6 +90,9 @@ function statusLabel(row: PolicyIntakeWorkspaceRow) {
   } as Record<string, string>)[row.status] ?? row.status;
 }
 function statusTone(row: PolicyIntakeWorkspaceRow): "navy" | "green" | "amber" | "red" | "blue" | "slate" {
+  if (intakeBucket(row) === "duplicate") return "slate";
+  if (intakeBucket(row) === "processing") return "blue";
+  if (intakeBucket(row) === "action_required") return "amber";
   if (row.status === "processing" && row.ocr_status === "failed") return "amber";
   if (row.status === "completed") return "green";
   if (row.status === "rejected") return "red";
@@ -195,26 +205,25 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
   }), [rows, query, source, ocr, fromDate, toDate, view]);
 
   const stats = useMemo(() => {
-    const bucketCounts = policyIntakeStatusCounts(baseFiltered, new Set(
-      baseFiltered.filter(isDuplicate).map((row) => row.id),
-    ));
+    const bucketCounts = { action_required: 0, in_review: 0, processing: 0, completed: 0, duplicate: 0, rejected: 0, all: baseFiltered.length };
+    for (const row of baseFiltered) bucketCounts[intakeBucket(row)]++;
     return { all: bucketCounts.all,
       open: bucketCounts.action_required + bucketCounts.in_review + bucketCounts.processing,
       action: bucketCounts.action_required,
       inReview: bucketCounts.in_review, processing: bucketCounts.processing,
       completed: bucketCounts.completed, duplicate: bucketCounts.duplicate,
       rejected: bucketCounts.rejected,
-      myActiveWork: baseFiltered.filter((row) => policyIntakeBucket(row, false) === "in_review" &&
+      myActiveWork: baseFiltered.filter((row) => intakeBucket(row) === "in_review" &&
         row.assigned_to_profile_id === currentProfileId).length };
   }, [baseFiltered, currentProfileId]);
 
   const filtered = useMemo(() => {
     const statusRows = baseFiltered.filter((row) => {
     if (view === "all") return true; // Historical register only: contains closed and duplicate rows.
-    if (view === "open") return ["action_required","in_review","processing"].includes(policyIntakeBucket(row, false));
-    if (view === "mine") return policyIntakeBucket(row, false) === "in_review" &&
+    if (view === "open") return ["action_required","in_review","processing"].includes(intakeBucket(row));
+    if (view === "mine") return intakeBucket(row) === "in_review" &&
       row.assigned_to_profile_id === currentProfileId;
-    return policyIntakeBucket(row, false) === (view === "action" ? "action_required" : view);
+    return intakeBucket(row) === (view === "action" ? "action_required" : view);
     });
     // Only the Completed tab uses finalization chronology; other views retain submission order.
     return view === "completed" ? [...statusRows].sort((a, b) =>
