@@ -29,14 +29,14 @@ export function assessNationalGcvRecordSource(text:string,p:Printed):NationalGcv
   const number=(v:string)=>money(v);
   // Exact labelled product/invoice row sequence. The two separate tax rates
   // must agree with component premium AND the separately printed tax total.
-  const rows=[...invoice.matchAll(/997134\s+Motor\s+vehicle\s+insurance\s+services\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s+0%\s+0\.00\s+0%\s+0\.00\s+(18|5)%\s+([\d,]+\.\d{2})/gi)]
+  const rows=[...invoice.matchAll(/997134\s+Motor(?:\s+vehicle\s+insurance\s+services)?\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s+0%\s+0\.00\s+0%\s+0\.00\s+(18|5)%\s+([\d,]+\.\d{2})/gi)]
     .map(x=>({gross:number(x[1]),taxable:number(x[2]),rate:Number(x[3]),igst:number(x[4])}));
   if(rows.length!==2)return null;
   const high=rows.find(r=>r.rate===18),low=rows.find(r=>r.rate===5);
   if(!high||!low||rows.filter(r=>r.rate===18).length!==1||rows.filter(r=>r.rate===5).length!==1)return null;
   const od=whole.match(/Own\s*\nDamage Cover[\s\S]{0,145}?₹\s*([\d,.]+)/i);
   const basic=whole.match(/Legal Liability Cover\s+([\d,.]+)/i);
-  const paid=whole.match(/Legal Liability to Driver,Cleaner,Coolies[\s\S]{0,100}?\n\s*([\d,.]+)\s*\nCNG\/LPG Kit/i);
+  const paid=whole.match(/Legal Liability to Driver,Cleaner,Coolies\s+([\d,.]+)\b/i)\n    ||whole.match(/Legal Liability to Driver,Cleaner,Coolies[\s\S]{0,115}?\n\s*([\d,.]+)\s*\nCNG\/LPG Kit/i);
   if(!od||!basic||!paid)return null;
   const sourceOd=money(od[1]),basicTp=money(basic[1]),paidDriver=money(paid[1]);
   if(![p.od,p.tp,p.net,p.gst,p.gross,sourceOd,basicTp,paidDriver].every(x=>Number.isFinite(x)&&x>=0)
