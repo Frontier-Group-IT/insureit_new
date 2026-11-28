@@ -144,7 +144,15 @@ export function assessNiaNamedAuthorityUnregisteredConversion(input:Input):{elig
     ||get("third_party_end_date")!==get("policy_end_date"))
     return fail("nia_coverage_evidence_conflict");
   const cpaEvidence=fields.get("cpa_premium")?.evidence??"";
-  if(cpaEvidence!=="NIA PDF page 2 Owner Driver PA; TP and 18%/5% IGST bases independently reconciled")
+  const positiveCpa=cpaEvidence==="NIA PDF page 2 Owner Driver PA; TP and 18%/5% IGST bases independently reconciled";
+  // An explicit "none" owner-driver nominee together with a fully
+  // itemized NO-CPA liability/tax split is different from a missing CPA
+  // field. Only the already certified Intra V30 layout gets this path;
+  // actual make/model/variant inconsistencies are rejected at source read.
+  const zeroChargeCpa=get("vehicle_model")==="TATA INTRA V30 TRUCK"
+    &&get("cpa_premium")==="0"
+    &&cpaEvidence==="NIA PDF page 2 Owner Driver PA nominee none; no CPA charged; TP and 18%/5% IGST independently reconciled";
+  if(!positiveCpa&&!zeroChargeCpa)
     return fail("nia_cpa_and_mixed_gst_source_unverified");
   const p=input.commercialPremium;
   if(!p)return fail("nia_printed_premium_missing");
@@ -153,7 +161,7 @@ export function assessNiaNamedAuthorityUnregisteredConversion(input:Input):{elig
   if(!values.every(v=>Number.isFinite(v)&&v>=0&&v<=1_000_000_000
       &&Math.abs(v*100-cents(v))<0.00001)
     ||p.od<=0||p.tp<=0||p.gross<=0
-    ||Number(get("cpa_premium"))<=0||Number(get("cpa_premium"))>=p.tp
+    ||(positiveCpa && Number(get("cpa_premium"))<=0)||Number(get("cpa_premium"))>=p.tp
     ||Math.abs(cents(p.od)+cents(p.tp)-cents(p.net))>6
     ||Math.abs(cents(p.net)+cents(p.gst)-cents(p.gross))>6
     ||cents(Number(get("od_premium")))!==cents(p.od)
