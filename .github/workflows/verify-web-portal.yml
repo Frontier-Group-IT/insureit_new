@@ -43,6 +43,8 @@ jobs:
         run: node --experimental-strip-types scripts/go-digit-new-jcb-cpa-regression.mjs
       - name: Final four source-certified manufacturer mapping regression
         run: node --experimental-strip-types scripts/final-four-manufacturer-alias-regression.mjs
+      - name: Prevent reparse and queue resets of uncertain booking transactions
+        run: node --experimental-strip-types scripts/ai-intake-reprocess-ledger-guard-regression.mjs
       - name: Go Digit 7A atomic reconciliation prevents duplicate bookings
         run: node scripts/ai-digit-7a-atomic-reconciliation-regression.mjs
       - name: Future ICICI verified canonical recovery is exactly once
