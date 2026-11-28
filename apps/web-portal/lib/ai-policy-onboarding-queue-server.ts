@@ -497,11 +497,12 @@ async function processClaim(item: Claimed, parserRevision: string) {
     &&!niaReview.eligible&&!isDuplicate
     &&!codes.includes("booking_review_required"))
     codes.push("booking_review_required");
-  // National GCV schedule is 18/18 source-extracted, but the PDF premium
-  // does not print a separately certified owner-driver CPA charge/exemption.
-  // Correcting Eicher's active marque must not promote it to unattended
-  // booking. Keep the source-only hold independent of manufacturer mapping.
-  const nationalCpaReview=extraction.preview.parserId==="national_gcv_package_native_pdf";
+  // National GCV record import needs page-6 invoice source evidence.
+  // Merely passing 18 extraction checks is insufficient. A zero separate
+  // CPA *charge* with full invoice reconciliation may qualify; this does
+  // not assert a coverage waiver or bypass any canonical booking check.
+  const nationalCpaReview=extraction.preview.parserId==="national_gcv_package_native_pdf"
+    &&!extraction.preview.candidateCanonicalPremium;
   if(nationalCpaReview&&!isDuplicate&&!codes.includes("booking_review_required"))
     codes.push("booking_review_required");
   const state:AiQueueState=isDuplicate?"duplicate"
