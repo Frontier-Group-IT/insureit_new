@@ -27,6 +27,27 @@ const full=assessNationalGcvRecordSource(policy,premium);
 assert.ok(full,"Two printed IGST rows and payable should reconcile");
 assert.deepEqual(full.canonical,{od:"1723",tp:"27286",addOnPremium:"0",cpa:"0",cpaOpted:"No"});
 assert.equal(full.roundingAdjustment,-.04);
+// Reproduce the REAL 10-page National GCV's de-identified PDF text ordering.
+// The policy schedule has a distinct employee-count row before ₹100,
+// and the tax invoice's service label can appear before the numeric cells.
+const paidDriverSplit=policy
+ .replace("Legal Liability to Driver,Cleaner,Coolies 100.00",
+   "Legal Liability to Driver,Cleaner,Coolies\n(Upto 6) 2-pers.\n100.00\nCNG/LPG Kit 0.00")
+ .replace("CNG/LPG Kit 0.00\nCNG/LPG Kit 0.00","CNG/LPG Kit 0.00")
+ .replace("997134 Motor 1,823.04",
+   "997134 Motor\nvehicle\ninsurance\nservices\n1,823.04")
+ .replace("997134 Motor 27,186.00",
+   "997134 Motor\nvehicle\ninsurance\nservices\n27,186.00");
+assert.ok(assessNationalGcvRecordSource(paidDriverSplit,premium),
+  "Native PDF employee-count row and invoice line breaks must reconcile");
+for(const edited of [
+ paidDriverSplit.replace("(Upto 6) 2-pers.\n100.00","(Upto 6) 2-pers.\n200.00"),
+ paidDriverSplit.replace("(Upto 6) 2-pers.\n100.00","(Upto 6) 2-pers.\n₹ 100.00"),
+ paidDriverSplit.replace("(Upto 6) 2-pers.\n100.00","(Upto 6) 2-pers.\n"),
+ paidDriverSplit.replace("1,823.04 1,823.04","1,823.05 1,823.05"),
+])assert.equal(assessNationalGcvRecordSource(edited,premium),null,
+  "Missing or altered paid-driver/invoice source evidence cannot auto-import");
+
 // Exact native-PDF bilingual heading shape: Hindi glyphs may be inserted
 // between the printed goods-carrying title and final Package token.
 const mixedHeading=policy.replace(
