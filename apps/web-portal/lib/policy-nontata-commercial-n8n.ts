@@ -7,6 +7,7 @@ import { assessHeldInsurerCandidate, recognizeHeldInsurerLayout } from "@/lib/po
 import { verifyOrientalCmsSigningDate, type OrientalSignedIssuanceEvidence } from "@/lib/policy-oriental-cms-issuance";
 import { acceptGoDigitNewJcbExtraction } from "@/lib/policy-digit-new-jcb-extraction";
 import { niaIntraModelVariantConflict } from "@/lib/policy-nia-intra-source-conflict";
+import { assessNationalGcvRecordSource } from "@/lib/policy-national-gcv-record-source";
 
 type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "united_india_gcv_punjab_split_gst_native_pdf" | "united_india_private_car_package_native_pdf" | "oriental_gccv_native_pdf";
 type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf" | "hdfc_ergo_two_wheeler_tp_native_pdf" | "sbi_general_private_car_package_native_pdf" | "liberty_two_wheeler_tp_native_pdf";
@@ -819,6 +820,25 @@ export async function tryReadNonTataCommercialPolicy(
       ?await verifyOrientalCmsSigningDate(new Uint8Array(await file.arrayBuffer()))
       :null;
     const read=validate(payload, insurer, requestIds, signature);
+    if(insurer==="national_gcv_package_native_pdf"){
+      const pages=await extractNativePdfTextPages(new Uint8Array(await file.arrayBuffer()),{
+        maxTextPages:10,extendedTimeout:true,
+      });
+      const certified=assessNationalGcvRecordSource(
+        pages.map(page=>page.text).join("\n"),read.premium);
+      if(certified){
+        // "0" is the separate CHARGE on the issued invoice, not a legal
+        // declaration that PA cover was waived or absent. Keep the document.
+        read.fields.push({
+          key:"cpa_premium",label:"cpa_premium",value:"0",confidence:null,page:6,
+          evidence:"National GCV invoice: no separately charged CPA; coverage/waiver not determined",
+        });
+        const policy=read.fields.find(field=>field.key==="policy_product");
+        if(policy)policy.evidence="National printed GCV package; source rounding adjustment "
+          +String(certified.roundingAdjustment)+" INR; original policy copy retained";
+        read.candidateCanonicalPremium=certified.canonical;
+      }
+    }
     if(insurer==="new_india_cv_native_pdf"){
       const pages=await extractNativePdfTextPages(new Uint8Array(await file.arrayBuffer()));
       if(niaIntraModelVariantConflict(pages.slice(0,2).map(page=>page.text).join("\n"))){
