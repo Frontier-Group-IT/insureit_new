@@ -48,8 +48,12 @@ assert.ok(worker.includes('const recognizedNiaTata=niaModelCertified'));
 assert.ok(worker.includes('["1918 AZURA","TATA INTRA V30 TRUCK"].includes(model)'));
 assert.ok(nia.includes('["1918 AZURA","TATA INTRA V30 TRUCK"].includes(get("vehicle_model"))'));
 assert.ok(nia.includes('get("vehicle_model")==="1918 AZURA"'));
-assert.ok(nia.includes('||Number(get("cpa_premium"))<=0'));
-assert.ok(nia.includes('cpaEvidence!=="NIA PDF page 2 Owner Driver PA; TP and 18%/5% IGST bases independently reconciled"'));
+assert.ok(nia.includes('(positiveCpa && Number(get("cpa_premium"))<=0)'));
+assert.ok(nia.includes('const zeroChargeCpa=get("vehicle_model")==="TATA INTRA V30 TRUCK"'));
+assert.ok(nia.includes('get("cpa_premium")==="0"'));
+assert.ok(nia.includes('if(!positiveCpa&&!zeroChargeCpa)'));
+assert.ok(nia.includes('const positiveCpa=cpaEvidence==="NIA PDF page 2 Owner Driver PA; TP and 18%/5% IGST bases independently reconciled"'));
+assert.ok(nia.includes('Owner Driver PA nominee none; no CPA charged; TP and 18%/5% IGST independently reconciled'));
 assert.doesNotMatch(sql,/delete from public|truncate /i);
 for(const x of [
  'payload.ok===false',
