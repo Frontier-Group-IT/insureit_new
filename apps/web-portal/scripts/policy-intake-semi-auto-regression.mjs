@@ -742,9 +742,9 @@ assert.deepEqual({action:aiBucketCounts.action_required,review:aiBucketCounts.in
   {action:1,review:1,processing:1,openDuplicates:1,all:4},
   "Open-only AI counts match the Register's same buckets while excluding rejected/completed duplicates");
 const aiPageText=text("app/development/ai-policy-onboarding/page.tsx");
-assert(aiPageText.includes("policyIntakeStatusCounts(workspaceRows,duplicateIds)")
+assert(aiPageText.includes("for(const row of workspaceRows) intakeCounts[displayBucket(row)]++")
   && aiPageText.includes("getPartnerEmployeeIntakeReadScope")
-  && aiPageText.includes("const canonical=policyIntakeBucket(row,duplicateIds.has(row.id));")
+  && aiPageText.includes("effectivePolicyIntakeBucket(row,duplicateIds.has(row.id),queue.get(row.id),autoRequested)")
   && aiPageText.includes("displayBucket(row) === selectedView")
   && aiPageText.includes("const pageRows: SemiAutoIntakeRow[] = statusRows"),
  "AI Intake status tabs must use canonical register bucket and authorized scope before paging");
