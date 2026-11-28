@@ -105,6 +105,8 @@ jobs:
         run: node scripts/ai-queue-transient-n8n-retry-regression.mjs
       - name: Versioned New India native parser source replay with negative tax fixtures
         run: node scripts/nia-n8n-zero-cpa-node-replay.mjs
+      - name: National GCV per-intake reparse exception message isolation
+        run: node scripts/national-gcv-modal-scope-regression.mjs
       - name: National GCV record-only printed invoice and rounding regression
         run: node --experimental-strip-types scripts/national-gcv-record-import-regression.mjs
       - name: New India Intra source-certified zero-charge CPA and mixed GST
