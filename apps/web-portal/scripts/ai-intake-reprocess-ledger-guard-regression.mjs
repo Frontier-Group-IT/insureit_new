@@ -10,6 +10,7 @@ assert.ok(AI_BOOKING_REPROCESS_LEDGERS.includes(original));
 assert.ok(AI_BOOKING_REPROCESS_LEDGERS.includes("policy_intake_ai_reconciled_recovery_attempts"));
 assert.ok(AI_BOOKING_REPROCESS_LEDGERS.includes("policy_intake_ai_uiic_tractor_recovery_attempts"));
 assert.ok(AI_BOOKING_REPROCESS_LEDGERS.includes("policy_intake_ai_icici_uncertain_recovery_attempts"));
+assert.ok(AI_BOOKING_REPROCESS_LEDGERS.includes("policy_intake_ai_stranded_claim_recovery"));
 
 const readStates=async(states={},errorTable=null)=>{
   const seen=[];
