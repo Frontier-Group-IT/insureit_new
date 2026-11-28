@@ -19,7 +19,7 @@ assert.match(route, /if \(employeeRead\?\.mode === "or"\) pageQuery = pageQuery.
 assert.match(route, /q = q.or\(intakeReadScope\)/, "Keep partner search scoped");
 assert.match(sitePage, /getPartnerEmployeeIntakeReadScope/, "Website resolves the exact same employee read scope as the Partner API");
 assert.match(sitePage, /loadPolicyIntakeDuplicateMatches\(admin, rows\)/, "Website uses the same duplicate algorithm");
-assert.match(siteWorkspace, /policyIntakeStatusCounts\(baseFiltered/, "Website uses the shared bucket definitions");
+assert.match(siteWorkspace, /for \(const row of baseFiltered\) bucketCounts\[intakeBucket\(row\)\]\+\+/, "Website uses the shared effective bucket definitions");
 assert.match(siteWorkspace, /router.refresh\(\)/, "Website refreshes current data without resetting filters");
 assert.match(siteWorkspace, /visibilitychange/, "Website refreshes after returning to the tab");
 assert.match(buckets, /row.status === "ready_for_review"/, "Ready belongs under Action Required unless duplicate");
