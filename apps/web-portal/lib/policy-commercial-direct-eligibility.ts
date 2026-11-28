@@ -14,6 +14,7 @@ export function assessStandardCommercialDirectConversion(input:Input):{eligible:
   const requiredChecks:Record<string,number>={
     new_india_cv_native_pdf:16,
     united_india_gcv_native_pdf:18,
+    united_india_gcv_haryana_mahindra_split_gst_native_pdf:18,
     oriental_gccv_native_pdf:17,
   };
   const expected=requiredChecks[input.parserId];
@@ -180,7 +181,8 @@ export function assessNiaNamedAuthorityUnregisteredConversion(input:Input):{elig
 export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;reason:string}{
   const fail=(reason:string)=>({eligible:false,reason});
   const punjabSplit=input.parserId==="united_india_gcv_punjab_split_gst_native_pdf";
-  if(!["united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf"].includes(input.parserId)
+  const haryanaMahindra=input.parserId==="united_india_gcv_haryana_mahindra_split_gst_native_pdf";
+  if(!["united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf","united_india_gcv_haryana_mahindra_split_gst_native_pdf"].includes(input.parserId)
     ||input.checksPassed!==18||input.warnings.length)
     return fail("uiic_pdf_parser_unverified");
   const fields=new Map<string,Field>();
@@ -206,8 +208,13 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
         ||get("vehicle_model")!=="BHARATBENZ 2828C 6X4 BSVI"
         ||get("vehicle_fuel_type")!=="Diesel"
 )
-      :(get("vehicle_make")!=="Tata Motors"
-        ||!["Petrol","Diesel"].includes(get("vehicle_fuel_type")))))
+      :haryanaMahindra
+        ?(get("vehicle_make")!=="Mahindra"
+          ||get("vehicle_model")!=="BOL MAXX PUP CITY 1.3 LXD"
+          ||get("vehicle_fuel_type")!=="Diesel"
+          ||fields.get("vehicle_make")?.evidence!=="UIIC PDF MAHINDRA & MAHINDRA LIMITED canonical manufacturer")
+        :(get("vehicle_make")!=="Tata Motors"
+          ||!["Petrol","Diesel"].includes(get("vehicle_fuel_type")))))
     return fail("uiic_insurer_product_vehicle_conflict");
   const year=Number(get("vehicle_manufacturing_year"));
   if(!/^20\d{2}$/.test(get("vehicle_manufacturing_year"))
@@ -238,6 +245,20 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
     &&(!get("vehicle_rto_name")
       ||fields.get("vehicle_rto_name")?.evidence===
         "UIIC PDF vehicle Registration Authority: RTO "+get("vehicle_rto_name")+" INDIA");
+  // Original/current HR vehicle row and tax-contract-only Mahindra source.
+  // The RTO city must match the labelled Registration Authority source, not
+  // a geocoded guess or insured address.
+  const hrAuthority=(fields.get("vehicle_rto_name")?.evidence??"")
+    .match(/^UIIC PDF vehicle Registration Authority: (HR\d{2}) ([A-Z ]{3,55}) INDIA$/);
+  const registeredHaryana=haryanaMahindra
+    &&/^HR\d{2}[A-Z]{1,3}\d{3,4}$/.test(reg)&&status==="registered"
+    &&get("vehicle_rto_state")==="Haryana"
+    &&fields.get("vehicle_rto_state")?.evidence==="UIIC PDF current HR registered plate prefix"
+    &&hrAuthority?.[1]===reg.slice(0,4)&&hrAuthority?.[2]===get("vehicle_rto_name")
+    &&/^MA1[A-Z0-9]{14,21}$/.test(get("vehicle_chassis_number"))
+    &&/^TUR[A-Z0-9]{7,14}$/.test(get("vehicle_engine_number"));
+  if(haryanaMahindra&&!registeredHaryana)
+    return fail("uiic_haryana_registration_and_vehicle_identity_unverified");
   // Separate printed Chandigarh UT vehicle schedule profile; never accept
   // arbitrary non-MP registrations without the exact insurer PDF RLA/STA
   // Registration Authority and the same current policy's CH registration.
@@ -248,7 +269,7 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
       ||(get("vehicle_rto_name")==="CHANDIGARH"
         &&fields.get("vehicle_rto_name")?.evidence===
           "UIIC PDF vehicle Registration Authority: CHANDIGARH UT (RLA AND STA) INDIA"));
-  if(!newPrinted&&!registered&&!registeredChandigarh&&!registeredPunjab)
+  if(!newPrinted&&!registered&&!registeredChandigarh&&!registeredPunjab&&!registeredHaryana)
     return fail("uiic_registration_status_not_source_verified");
   const dates=["policy_start_date","policy_end_date","policy_issuance_date","third_party_start_date","third_party_end_date"];
   if(dates.some(key=>! /^\d{4}-\d\d-\d\d$/.test(get(key)))

@@ -11,7 +11,7 @@ import { assessNationalGcvRecordSource } from "@/lib/policy-national-gcv-record-
 import { normalizeNationalGcvLeadingDot } from "@/lib/policy-national-gcv-insured-name";
 import { certifyNiaZeroChargedCpa, NIA_ZERO_CHARGE_SOURCE } from "@/lib/policy-nia-zero-charge-source";
 
-type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "united_india_gcv_punjab_split_gst_native_pdf" | "united_india_private_car_package_native_pdf" | "oriental_gccv_native_pdf";
+type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "united_india_gcv_punjab_split_gst_native_pdf" | "united_india_gcv_haryana_mahindra_split_gst_native_pdf" | "united_india_private_car_package_native_pdf" | "oriental_gccv_native_pdf";
 type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf" | "hdfc_ergo_two_wheeler_tp_native_pdf" | "sbi_general_private_car_package_native_pdf" | "liberty_two_wheeler_tp_native_pdf";
 type HeldInsurer = "magma_private_car_package_native_pdf" | "national_private_car_liability_only_native_pdf"
   | "oriental_private_car_standalone_od_native_pdf" | "oriental_gccv_package_native_pdf";
@@ -65,6 +65,7 @@ const REQUIRED_EXTRA: Record<ExistingInsurer, string[]> = {
   go_digit_cv_native_pdf: ["digit_layout", "registered_plate", "od_basic_ncb", "tp_itemization"],
   united_india_gcv_native_pdf: ["uiic_layout", "igst_components_printed", "stamp_accounting_disclosed", "stamp_charge_reconciled"],
   united_india_gcv_punjab_split_gst_native_pdf: ["uiic_layout", "split_cgst_sgst_components_printed", "stamp_accounting_disclosed", "stamp_charge_reconciled"],
+  united_india_gcv_haryana_mahindra_split_gst_native_pdf: ["uiic_layout", "split_cgst_sgst_components_printed", "stamp_accounting_disclosed", "stamp_charge_reconciled"],
   united_india_private_car_package_native_pdf: ["uiic_private_car_layout", "igst_18_printed", "cpa_disposition_verified", "ncb_premium_reconciled"],
   oriental_gccv_native_pdf: ["oicl_layout", "four_tax_components_printed", "stamp_charge_reconciled"],
 };
@@ -177,6 +178,13 @@ export function refineUiicPunjabSplitFromSource(
     && /BHARATBENZ/i.test(makerRow);
   const cgst=/CGST\s*[-–—:]?\s*Others\s*\(\s*9\s*%\s*\)/i.test(normalized);
   const sgst=/SGST\s*[-–—:]?\s*Basic\s*TP\s*\(\s*2\.50\s*%\s*\)/i.test(normalized);
+  // Source-labelled Haryana Mahindra GCV is a separate split-tax profile.
+  // Require the current vehicle maker/model and original HR registration;
+  // never treat an ordinary UIIC IGST schedule as CGST/SGST.
+  const haryanaMahindra=/MAHINDRA\s*&\s*MAHINDRA\s+LIMITED\s*\/\s*BOL\s+MAXX\s+PUP\s+CITY\s+1\.3\s+LXD/i.test(normalized)
+    &&/HR\s*-\s*\d{2}\s*-\s*[A-Z]{1,3}\s*-\s*\d{3,4}\s+No\s+TUR[A-Z0-9]{7,14}\s+MA1[A-Z0-9]{14,21}/i.test(normalized);
+  if(sourceIssuer&&sourceProduct&&haryanaMahindra&&cgst&&sgst)
+    return "united_india_gcv_haryana_mahindra_split_gst_native_pdf";
   const accepted=sourceIssuer&&sourceProduct&&sourceMaker&&cgst&&sgst;
   if(!accepted)console.warn("[uiic-punjab] source evidence gap",{
     issuer:sourceIssuer,product:sourceProduct,maker:sourceMaker,
@@ -735,7 +743,7 @@ function validate(payload: unknown, insurer: Insurer,
   const premium = payload.premium_components;
   if (!object(premium) || ![premium.od, premium.tp, premium.net, premium.gst, premium.gross].every(isMoney))
     throw new Error("n8n_nontata_premium_components_invalid");
-  if(insurer==="united_india_gcv_punjab_split_gst_native_pdf"){
+  if(["united_india_gcv_punjab_split_gst_native_pdf","united_india_gcv_haryana_mahindra_split_gst_native_pdf"].includes(insurer)){
     // Never represent split CGST/SGST as IGST or trust a remote total.
     if(premium.taxRegime!=="CGST_SGST"
       ||![premium.cgstOthers,premium.sgstOthers,premium.cgstBasicTp,premium.sgstBasicTp].every(isMoney)

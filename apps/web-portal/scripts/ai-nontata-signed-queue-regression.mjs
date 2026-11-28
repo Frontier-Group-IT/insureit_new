@@ -245,7 +245,7 @@ assert.ok(insuredHelper.includes('"united_india_gcv_native_pdf"')
   && insuredHelper.includes('oriental_private_car_standalone_od_native_pdf:')
   && insuredHelper.includes('"Oriental current PDF policy/vehicle/premium schedule"'),
   "Only the original current-PDF source label may supply Oriental insured names");
-assert.ok(handoff.includes('"united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf","united_india_private_car_package_native_pdf","oriental_gccv_native_pdf"'),
+assert.ok(handoff.includes('"united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf","united_india_gcv_haryana_mahindra_split_gst_native_pdf","united_india_private_car_package_native_pdf","oriental_gccv_native_pdf"'),
   "Both old UIIC and new Punjab insurer contracts must reach review-only canonical handoff");
 assert.match(preview,/tryReadNonTataCommercialSignedPolicy/);
 assert.ok(preview.indexOf("tryReadNonTataCommercialSignedPolicy") <

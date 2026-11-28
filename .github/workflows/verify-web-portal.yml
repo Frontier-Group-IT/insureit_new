@@ -127,6 +127,8 @@ jobs:
         run: node --experimental-strip-types scripts/nia-intra-source-reason-regression.mjs
       - name: NIA named-authority and owner-driver CPA direct-convert regression
         run: node --experimental-strip-types scripts/nia-named-authority-direct-convert-regression.mjs
+      - name: United India Haryana Mahindra GCV split taxes and source identity
+        run: node --experimental-strip-types scripts/uiic-haryana-mahindra-source-regression.mjs
       - name: HDFC TVS Jupiter HP registration source and existing Honda regression
         run: node --experimental-strip-types scripts/hdfc-tvs-jupiter-printed-hp-registration-regression.mjs
       - name: Isolated Kotak Digit OD and UIIC Tractor TP product regression
