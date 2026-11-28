@@ -1,3 +1,4 @@
+import { CustomerVehicleArtwork } from "@/components/customer-portal/customer-vehicle-artwork";
 import "./customer-home-modern.css";
 import Link from "next/link";
 import { AlertTriangle, CarFront, ClipboardList, ShieldPlus, ShieldCheck, FileText, ArrowLeftRight, Truck, CalendarDays, ClipboardPlus, ShieldX, Headset } from "lucide-react";
@@ -129,7 +130,7 @@ export default async function CustomerHomePage({ searchParams }: { searchParams?
                   const href={pathname:`/customer/vehicles/${vehicle.id}`,query:accountQuery};
                   return <tr key={vehicle.id} className="cursor-pointer transition hover:bg-[#F8FBFF]">
                     <td className="p-0"><Link href={href} className="block px-3 py-1.5 text-center font-medium text-[11px] text-[#526782]">{vehicle.vehicle_no || (vehicle.chassis_no?`New-${vehicle.chassis_no}`:"Unregistered")}</Link></td>
-                    <td className="p-0"><Link href={href} className="flex px-3 py-1.5 items-center justify-center gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F5F9FE]"><ManufacturerMark make={vehicle.make??""}/></span><span className="min-w-0"><span className="block truncate text-[10px] text-[#7186A0]">{vehicle.model || "—"}</span></span></Link></td>
+                    <td className="p-0"><Link href={href} className="flex px-3 py-1.5 items-center justify-center gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F5F9FE]"><CustomerVehicleArtwork accountId={account.id} vehicleId={vehicle.id} model={vehicle.model??""} fallback={<ManufacturerMark make={vehicle.make??""}/>}/></span><span className="min-w-0"><span className="block truncate text-[10px] text-[#7186A0]">{vehicle.model || "—"}</span></span></Link></td>
                     <td className="p-0"><Link href={href} className="block px-3 py-1.5 text-center"><span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ${insured?"bg-emerald-50 text-emerald-700":"bg-red-50 text-red-600"}`}>{insured?"Insured":"Not insured"}</span></Link></td>
                   </tr>;
                 })}
