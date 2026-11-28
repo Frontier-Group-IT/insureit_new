@@ -129,8 +129,14 @@ export async function prepareVerifiedN8nIntakeHandoff(
       || (expectedFingerprint && parsed.preview.fingerprint!==expectedFingerprint)) {
     return{ok:false,error:"The n8n extraction changed after review. Run n8n again and check the new fields before continuing."};
   }
-  if(parsed.preview.parserId==="national_gcv_package_native_pdf")
-    return {ok:false,error:"The National GCV PDF does not independently certify owner-driver CPA disposition. Source extraction is complete, but canonical booking requires insurer-issued CPA evidence."};
+  // This route imports an ALREADY ISSUED PDF as a record. CPA=0 denotes
+  // no separately charged premium, not proof of waiver or absence of cover.
+  // Without page-6 original invoice proof, National remains a review hold.
+  const nationalRecordReady=parsed.preview.parserId==="national_gcv_package_native_pdf"
+    &&parsed.preview.checksPassed===18&&parsed.preview.warnings.length===0
+    &&Boolean(parsed.preview.candidateCanonicalPremium);
+  if(parsed.preview.parserId==="national_gcv_package_native_pdf"&&!nationalRecordReady)
+    return {ok:false,error:"National GCV source invoice is not fully reconciled. Keep for record review; no insurer contact is required merely to fill CPA."};
   const digitNew=assessGoDigitNewJcbDirectConversion({
     parserId:parsed.preview.parserId,checksPassed:parsed.preview.checksPassed,
     warnings:parsed.preview.warnings,fields:parsed.preview.fields,
@@ -178,7 +184,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
       parserId:parsed.preview.parserId,checksPassed:parsed.preview.checksPassed,
       warnings:parsed.preview.warnings,fields:parsed.preview.fields,
       commercialPremium:commercial,
-    }).eligible);
+    }).eligible||nationalRecordReady);
   const productVariantVerifiedFill=Boolean(commercial)&&fillEmptyFields
     &&assessProductVariantDirectConversion({
       parserId:parsed.preview.parserId,checksPassed:parsed.preview.checksPassed,
@@ -214,7 +220,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
     && (["go_digit_cv_native_pdf","iffco_tokio_cv_native_pdf","new_india_cv_native_pdf",
         "united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf","united_india_private_car_package_native_pdf","oriental_gccv_native_pdf"].includes(parsed.preview.parserId)
        || PRODUCT_VARIANT_PARSERS.has(parsed.preview.parserId)
-       ||digitNew.eligible
+       ||digitNew.eligible||nationalRecordReady
        ||(Boolean(parsed.preview.candidateCanonicalPremium)
          &&process.env.INSUREIT_ENABLE_HELD_INSURER_CANDIDATES==="1"))
     && parsed.preview.checksPassed === (trainedN8nParserProfile(parsed.preview.parserId)?.checks ?? 0)
@@ -266,7 +272,7 @@ export async function prepareVerifiedN8nIntakeHandoff(
     checksPassed:parsed.preview.checksPassed,fingerprint:parsed.preview.fingerprint,
     warnings:parsed.preview.warnings,premium:parsed.preview.premium,
     ...(commercial?{commercialPremium:commercial}:{}),
-    ...((heldCandidate||digitNew.eligible)&&parsed.preview.candidateCanonicalPremium
+    ...((heldCandidate||digitNew.eligible||nationalRecordReady)&&parsed.preview.candidateCanonicalPremium
       ?{candidateCanonicalPremium:parsed.preview.candidateCanonicalPremium}:{}),fillEmptyFields,
     replaceExistingDraft,
     reviewedIssueDateReplacement,
@@ -480,7 +486,11 @@ async function preparePolicyIntakeHandoffInternal(
       commercialPremium:verified.commercialPremium,
       candidateCanonicalPremium:verified.candidateCanonicalPremium,
     }).eligible;
-    const eligibleForVerifiedConversion=verifiedIcici3005||tata18Ready||verifiedTataTp||autoEligibleGoDigit||certifiedDigitNew||iffcoReview.eligible
+    const nationalGcvRecordReady=verified.parserId==="national_gcv_package_native_pdf"
+      &&verified.checksPassed===18&&verified.warnings.length===0
+      &&Boolean(verified.candidateCanonicalPremium)
+      &&policyDateDecision(verified.fields.find(field=>field.key==="policy_issuance_date")?.value??"")==="allowed";
+    const eligibleForVerifiedConversion=verifiedIcici3005||tata18Ready||verifiedTataTp||autoEligibleGoDigit||certifiedDigitNew||nationalGcvRecordReady||iffcoReview.eligible
       ||standardReview.eligible||niaReview.eligible||uiicReview.eligible||uiicPrivateCarReview.eligible||productVariantReview.eligible
       ||heldReady;
     const specificMissingYear=goDigit&&missingGoDigit.includes("vehicle_manufacturing_year");
