@@ -112,7 +112,7 @@ assert(dashboardView.includes('href="/policy-intakes?view=action"'),"Action Requ
 assert(dashboardView.includes('href="/policy-intakes?view=in_review"'),"In Review must open the corresponding Intake Queue");
 const queue=read("app/policy-intakes/page.tsx");
 assert(queue.includes("loadPolicyIntakeDuplicateMatches(admin, rows)"),"Policy Intake queue must use the shared duplicate detector");
-assert(queue.includes('status: "Duplicate"'),"Detected duplicates must be removed from Ready for review and shown in the Duplicate bucket");
+assert(queue.includes('status: duplicate ? "Duplicate" : row.status') && queue.includes("effectivePolicyIntakeBucket(row, duplicate, evidence, autoRequested)"),"Detected duplicates must be removed from Ready for review and shown in the Duplicate bucket");
 assert(queue.includes("policy_type"),"Policy Intake queue payload must include the stored policy type");
 const retryActions=read("app/policy-intakes/retry-actions.ts");
 assert(retryActions.includes("requirePolicyIntakeViewer(id)"),"Retry-state lookup must verify ownership of the requested intake, including RM submitters");
