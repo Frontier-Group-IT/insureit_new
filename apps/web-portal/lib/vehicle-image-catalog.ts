@@ -1,7 +1,7 @@
 import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { normalizeVehicleImageKey as key } from "@/lib/vehicle-image-match";
-export type CatalogItem = { manufacturerId: string; make: string; model: string; type: string; count: number };
+export type CatalogItem = { manufacturerId: string; make: string; model: string; type: string; count: number; years: number[] };
 export async function loadVehicleImageCatalog() {
  const admin=createSupabaseAdminClient();
  const [m,a,b]=await Promise.all([
@@ -23,16 +23,16 @@ export async function loadObservedVehicleModels(){
  const {admin,display,manufacturerId}=await loadVehicleImageCatalog();
  const rows=new Map<string,CatalogItem>();let unmatched=0;
  for(let offset=0;;offset+=500){
-  const {data,error}=await admin.from("vehicles").select("make,model,vehicle_type").order("id").range(offset,offset+499);
+  const {data,error}=await admin.from("vehicles").select("make,model,vehicle_type,year").order("id").range(offset,offset+499);
   if(error)throw new Error("Unable to load observed vehicle models.");
   for(const v of data??[]){
    const id=manufacturerId(v.make),model=key(v.model);
    if(!id||!model){unmatched++;continue;}
    const k=id+"|"+model;
    const old=rows.get(k);
-   if(old)old.count++;else rows.set(k,{manufacturerId:id,make:display.get(id)??v.make,model,type:v.vehicle_type??"",count:1});
+   if(old){old.count++;if(Number.isInteger(v.year)&&!old.years.includes(v.year))old.years.push(v.year);}else rows.set(k,{manufacturerId:id,make:display.get(id)??v.make,model,type:v.vehicle_type??"",count:1,years:Number.isInteger(v.year)?[v.year]:[]});
   }
   if(!data||data.length<500)break;
  }
- return {models:[...rows.values()].sort((a,b)=>b.count-a.count||a.model.localeCompare(b.model)),unmatched};
+ return {models:[...rows.values()].map(m=>({...m,years:m.years.sort((a,b)=>b-a)})).sort((a,b)=>b.count-a.count||a.model.localeCompare(b.model)),unmatched};
 }
