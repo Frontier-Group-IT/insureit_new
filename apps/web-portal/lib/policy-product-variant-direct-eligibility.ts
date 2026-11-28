@@ -34,7 +34,18 @@ export function assessProductVariantDirectConversion(input:Input):{eligible:bool
    "idv","od_premium","tp_premium","cpa_premium"]){
    if(!field(key))return no("missing_"+key);
  }
- if(!/^[A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4}$/.test(field("vehicle_registration_number"))
+ // Some HDFC liability schedules print HP RTO registration without an
+ // alphabetic series (HP-86-6153). Accept ONLY this certified TVS Jupiter
+ // source family; never weaken registration rules for other insurers.
+ const sourceHpJupiter=input.parserId==="hdfc_ergo_two_wheeler_tp_native_pdf"
+   &&/^HP\d{2}\d{4}$/.test(field("vehicle_registration_number"))
+   &&field("vehicle_make")==="TVS"
+   &&field("vehicle_model")==="JUPITER-SMW"
+   &&field("vehicle_capacity")==="110"
+   &&field("vehicle_rto_state")==="Himachal Pradesh"
+   &&map.get("vehicle_registration_number")?.evidence==="Native PDF: Registration No."
+   &&map.get("vehicle_rto_state")?.evidence==="Printed HP state plate prefix";
+ if((! /^[A-Z]{2}\d{2}[A-Z]{1,3}\d{3,4}$/.test(field("vehicle_registration_number"))&&!sourceHpJupiter)
    ||field("vehicle_registration_status")!=="registered")
    return no("registration_plate_not_verified");
  const day=(v:string)=>/^\d{4}-\d{2}-\d{2}$/.test(v)
@@ -148,9 +159,13 @@ export function assessProductVariantDirectConversion(input:Input):{eligible:bool
        :Math.abs(cents(printed.gst)-cents(Math.round(printed.net*.18)))>100))
      return no("united_tractor_tp_variant_unverified");
  }else if(input.parserId==="hdfc_ergo_two_wheeler_tp_native_pdf"){
+   const honda=field("vehicle_make")==="HONDA"
+     &&field("vehicle_model")==="ACTIVA-3G"&&field("vehicle_capacity")==="109";
+   const jupiter=sourceHpJupiter
+     &&field("vehicle_manufacturing_year")==="2021"
+     &&(map.get("vehicle_fuel_type")?.evidence??"").includes("not PDF-printed");
    if(field("insurer_name")!=="HDFC ERGO General Insurance Company Limited"
-     ||field("vehicle_class")!=="Two Wheeler"||field("vehicle_make")!=="HONDA"
-     ||field("vehicle_model")!=="ACTIVA-3G"||field("vehicle_capacity")!=="109"
+     ||field("vehicle_class")!=="Two Wheeler"||(!honda&&!jupiter)
      ||field("vehicle_fuel_type")!=="Petrol"
      ||!map.get("cpa_premium")?.evidence?.includes("waiver")
      ||Math.abs(cents(printed.gst)-cents(Math.round(printed.net*.18)))>1)
