@@ -40,9 +40,9 @@ export function assessNationalGcvRecordSource(text:string,p:Printed):NationalGcv
     // Reconstruct ONLY if there is exactly one mathematical pairing of
     // independently printed taxable values, tax rates and IGST amounts.
     const section=invoice.slice(invoice.indexOf("997134"));
-    if(!section||[...section.matchAll(/\\b997134\\b/g)].length!==2
-      ||[...section.matchAll(/\\b18%/g)].length!==1
-      ||[...section.matchAll(/\\b5%/g)].length!==1)return null;
+    if(!section||[...section.matchAll(/\b997134\b/g)].length!==2
+      ||[...section.matchAll(/\b18%/g)].length!==1
+      ||[...section.matchAll(/\b5%/g)].length!==1)return null;
     const monetary=[...section.matchAll(/\b([\d,]+\.\d{2})\b/g)].map(m=>number(m[1]));
     const counts=new Map<number,number>();
     for(const n of monetary)counts.set(n,(counts.get(n)??0)+1);
