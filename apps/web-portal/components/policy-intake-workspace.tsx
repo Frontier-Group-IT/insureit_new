@@ -65,9 +65,6 @@ function policyTypeLabel(value: string | null) {
 function intakeBucket(row: PolicyIntakeWorkspaceRow) {
   return row.effective_bucket ?? policyIntakeBucket(row, false);
 }
-function isDuplicate(row: PolicyIntakeWorkspaceRow) {
-  return intakeBucket(row) === "duplicate";
-}
 function canRetryOcr(row: PolicyIntakeWorkspaceRow) {
   if (isProposal(row) || row.status !== "processing") return false;
   if (row.ocr_status === "failed") return true;
