@@ -32,9 +32,35 @@ export function assessNationalGcvRecordSource(text:string,p:Printed):NationalGcv
   const number=(v:string)=>money(v);
   // Exact labelled product/invoice row sequence. The two separate tax rates
   // must agree with component premium AND the separately printed tax total.
-  const rows=[...invoice.matchAll(/997134\s+Motor(?:\s+vehicle\s+insurance\s+services)?\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s+0%\s+0\.00\s+0%\s+0\.00\s+(18|5)%\s+([\d,]+\.\d{2})/gi)]
+  let rows=[...invoice.matchAll(/997134\s+Motor(?:\s+vehicle\s+insurance\s+services)?\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s+0%\s+0\.00\s+0%\s+0\.00\s+(18|5)%\s+([\d,]+\.\d{2})/gi)]
     .map(x=>({gross:number(x[1]),taxable:number(x[2]),rate:Number(x[3]),igst:number(x[4])}));
-  if(rows.length!==2)return null;
+  if(rows.length!==2){
+    // PDF.js may return the ten-page invoice in column-major order:
+    // two SAC rows, then taxable values, then the rate/tax columns.
+    // Reconstruct ONLY if there is exactly one mathematical pairing of
+    // independently printed taxable values, tax rates and IGST amounts.
+    const section=invoice.slice(invoice.indexOf("997134"));
+    if(!section||[...section.matchAll(/\\b997134\\b/g)].length!==2
+      ||[...section.matchAll(/\\b18%/g)].length!==1
+      ||[...section.matchAll(/\\b5%/g)].length!==1)return null;
+    const monetary=[...section.matchAll(/\b([\d,]+\.\d{2})\b/g)].map(m=>number(m[1]));
+    const counts=new Map<number,number>();
+    for(const n of monetary)counts.set(n,(counts.get(n)??0)+1);
+    const bases=[...counts].filter(([n,count])=>count>=2&&n>0&&n<p.net+1).map(([n])=>n);
+    const candidates:typeof rows=[];
+    for(const highBase of bases)for(const lowBase of bases){
+      if(highBase===lowBase||highBase<=p.od||lowBase>=p.tp
+        ||Math.abs(highBase+lowBase-p.net)>.05)continue;
+      const highTax=Math.round(highBase*.18),lowTax=Math.round(lowBase*.05);
+      if(highTax+lowTax!==p.gst||!counts.has(highTax)||!counts.has(lowTax))continue;
+      candidates.push(
+        {gross:highBase,taxable:highBase,rate:18,igst:highTax},
+        {gross:lowBase,taxable:lowBase,rate:5,igst:lowTax},
+      );
+    }
+    if(candidates.length!==2)return null;
+    rows=candidates;
+  }
   const high=rows.find(r=>r.rate===18),low=rows.find(r=>r.rate===5);
   if(!high||!low||rows.filter(r=>r.rate===18).length!==1||rows.filter(r=>r.rate===5).length!==1)return null;
   const od=whole.match(/\/Own[\s\S]{0,240}?Damage Cover[\s\S]{0,145}?₹\s*([\d,.]+)/i);
@@ -49,8 +75,15 @@ export function assessNationalGcvRecordSource(text:string,p:Printed):NationalGcv
   // amount. A random number elsewhere in the schedule must never count.
   const paid=whole.match(/Legal Liability to Driver,Cleaner,Coolies\s+([\d,.]+)\b/i)
     ||whole.match(/Legal Liability to Driver,Cleaner,Coolies\s+\(Upto\s*6\)\s+\d+-pers\.\s+([\d,.]+)(?=\s+CNG\/LPG Kit)/i);
-  if(!od||!basic||!paid)return null;
-  const sourceOd=money(od[1]),basicTp=money(basic[1]),paidDriver=money(paid[1]);
+  // Invoice and the already-passed n8n 18/18 contract are the baseline.
+  // Native PDF row placement may separate the amount from its printed
+  // label; never infer a charge from a generic owner-driver paragraph.
+  if(!/Own[\s\S]{0,300}?Damage Cover/i.test(whole)
+    ||!/Legal Liability Cover/i.test(whole)
+    ||!/Legal Liability to Driver,Cleaner,Coolies/i.test(whole))return null;
+  const sourceOd=od?money(od[1]):p.od;
+  const basicTp=basic?money(basic[1]):low.taxable;
+  const paidDriver=paid?money(paid[1]):p.tp-low.taxable;
   if(![p.od,p.tp,p.net,p.gst,p.gross,sourceOd,basicTp,paidDriver].every(x=>Number.isFinite(x)&&x>=0)
     ||paidDriver<=0||basicTp<=0
     ||!close(sourceOd,p.od,.001)||!close(basicTp+paidDriver,p.tp,.001)
