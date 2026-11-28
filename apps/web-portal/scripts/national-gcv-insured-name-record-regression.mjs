@@ -9,7 +9,7 @@ assert.deepEqual(normalizeNationalGcvLeadingDot(extracted),{
 const normalized=normalizeNationalGcvLeadingDot(extracted);
 const customer={contact_name:"ALPHA LOGISTICS CORPORATION OF INDIA",phone:"9000000000"};
 const draft={insuredName:normalized.name,phoneNo:"9000000000"};
-const norm=x=>x.normalize("NFKC").trim().replace(/\\s+/g," ").toUpperCase();
+const norm=x=>x.normalize("NFKC").trim().replace(/\s+/g," ").toUpperCase();
 assert.equal(norm(draft.insuredName),norm(customer.contact_name));
 assert.equal(draft.phoneNo,customer.phone);
 for(const invalid of [
