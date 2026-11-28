@@ -25,5 +25,23 @@ assert.ok(customer.indexOf("resolveCustomerWebScope(accountId)")<customer.indexO
 const upload=source("../app/api/master-data/vehicle-images/route.ts");
 assert.equal((upload.match(/requireCapability\("manage_master_data","edit"\)/g)||[]).length,2);
 assert.ok(upload.includes('.eq("version",existing.data.version)')&&upload.includes('.eq("version",body.version)'));
-assert.ok(upload.includes("catalog.years.includes(year)")&&upload.includes("limitInputPixels:1080000"));
+assert.ok(upload.includes("Images apply to all years")&&upload.includes("limitInputPixels:1080000"));
 console.log("Vehicle image source access and lifecycle contracts passed.");
+
+import {vehicleFamily,modelSearch,resolveFamilyArtwork} from "../lib/vehicle-image-family.ts";
+for(const model of ["ERTIGA VXI","Ertiga ZXI PLUS","ERTICA CNG"])assert.equal(vehicleFamily(model)?.model,"ertiga");
+assert.equal(vehicleFamily("BOLERO PICK UP FB")?.model,"bolero pickup");
+assert.equal(vehicleFamily("BOLERO NEO N10")?.model,"bolero neo");
+assert.equal(vehicleFamily("BOLERO SLX")?.model,"bolero");
+assert.equal(vehicleFamily("SWIFT DZIRE VDI")?.model,"swift dzire");
+assert.equal(vehicleFamily("ACCESS 125 DISC ALOYWHL L2 BS6")?.model,"access 125");
+assert.equal(vehicleFamily("UNKNOWN CAR"),null);
+assert.ok(modelSearch("Mahindra Bolero Pickup","mahendra pickup"));
+assert.ok(modelSearch("Maruti Suzuki Ertiga","ertica"));
+const oldImage={model:"access 125 disc",active:true,path:"old.webp"};
+assert.equal(resolveFamilyArtwork("access 125 drum",[oldImage]),"old.webp");
+assert.equal(resolveFamilyArtwork("access 125 drum",[oldImage,{...oldImage,path:"other.webp"}]),null);
+assert.equal(resolveFamilyArtwork("access 125 drum",[oldImage,{...oldImage,model:"access 125",path:"base.webp"}]),"base.webp");
+const picker=source("../app/master-data/vehicle-images/model-picker.tsx");
+for(const token of ["top-full","pointerdown","ArrowDown","Escape","modelSearch","setQuery","aria-autocomplete"])assert.ok(picker.includes(token),token);
+console.log("Base-model and searchable picker regressions passed.");

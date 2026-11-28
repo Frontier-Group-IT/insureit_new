@@ -1,6 +1,7 @@
 import "server-only";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { normalizeVehicleImageKey as key } from "@/lib/vehicle-image-match";
+import { vehicleFamily } from "@/lib/vehicle-image-family";
 export type CatalogItem = { manufacturerId: string; make: string; model: string; type: string; count: number; years: number[] };
 export async function loadVehicleImageCatalog() {
  const admin=createSupabaseAdminClient();
@@ -26,13 +27,14 @@ export async function loadObservedVehicleModels(){
   const {data,error}=await admin.from("vehicles").select("make,model,vehicle_type,year").order("id").range(offset,offset+499);
   if(error)throw new Error("Unable to load observed vehicle models.");
   for(const v of data??[]){
-   const id=manufacturerId(v.make),model=key(v.model);
+   const family=vehicleFamily(v.model);
+   const id=family?manufacturerId(family.make):manufacturerId(v.make),model=family?.model??key(v.model);
    if(!id||!model){unmatched++;continue;}
    const k=id+"|"+model;
    const old=rows.get(k);
-   if(old){old.count++;if(Number.isInteger(v.year)&&!old.years.includes(v.year))old.years.push(v.year);}else rows.set(k,{manufacturerId:id,make:display.get(id)??v.make,model,type:v.vehicle_type??"",count:1,years:Number.isInteger(v.year)?[v.year]:[]});
+   if(old){old.count++;if(Number.isInteger(v.year)&&!old.years.includes(v.year))old.years.push(v.year);}else rows.set(k,{manufacturerId:id,make:family?.make??display.get(id)??v.make,model,type:v.vehicle_type??"",count:1,years:Number.isInteger(v.year)?[v.year]:[]});
   }
   if(!data||data.length<500)break;
  }
- return {models:[...rows.values()].map(m=>({...m,years:m.years.sort((a,b)=>b-a)})).sort((a,b)=>b.count-a.count||a.model.localeCompare(b.model)),unmatched};
+ return {models:[...rows.values()].map(m=>({...m,years:m.years.sort((a,b)=>b-a)})).sort((a,b)=>(a.make+" "+a.model).localeCompare(b.make+" "+b.model,"en",{numeric:true,sensitivity:"base"})),unmatched};
 }

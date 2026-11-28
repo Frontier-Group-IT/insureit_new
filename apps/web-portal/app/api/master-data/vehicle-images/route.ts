@@ -14,18 +14,19 @@ export async function POST(request:Request){
  let form:FormData;try{form=await request.formData();}catch{return fail("Invalid upload");}
  const image=form.get("image"),manufacturerId=String(form.get("manufacturerId")??""),model=normalizeVehicleImageKey(String(form.get("model")??""));
  if(!(image instanceof File)||image.size<1||image.size>2097152||image.type!=="image/webp"||!model||model.length>240)return fail("Invalid image or model");
- const yearText=String(form.get("year")??"");const year=yearText?Number(yearText):null;
+ const year=null;
+ if(form.get("year"))return fail("Images apply to all years");
  const replace=String(form.get("replace")??"")==="true";
  const {models}=await loadObservedVehicleModels();
  const catalog=models.find(m=>m.manufacturerId===manufacturerId&&m.model===model);
- if(!catalog|| (year!==null&&(!Number.isInteger(year)||!catalog.years.includes(year))))return fail("Model or year is not in the observed catalogue");
+ if(!catalog)return fail("Model is not in the observed catalogue");
  let data:Buffer,width:number,height:number;
  try{const decoder=sharp(Buffer.from(await image.arrayBuffer()),{limitInputPixels:1080000,failOn:"error"});const metadata=await decoder.metadata();if(metadata.format!=="webp"||(metadata.pages??1)!==1)return fail("Only still WebP images are allowed");const output=await decoder.resize({width:1200,height:900,fit:"inside",withoutEnlargement:true}).webp({quality:82}).toBuffer({resolveWithObject:true});data=output.data;width=output.info.width;height=output.info.height;}catch{return fail("Image cannot be decoded");}
  if(data.length>2097152)return fail("Optimized image too large");
  const admin=createSupabaseAdminClient();
  const hash=createHash("sha256").update(data).digest("hex");
  const lookup=admin.from("vehicle_image_master").select("id,version,storage_path").eq("manufacturer_id",manufacturerId).eq("model_key",model).is("variant_key",null).eq("is_active",true);
- const existing=await (year===null?lookup.is("model_year",null):lookup.eq("model_year",year)).maybeSingle();
+ const existing=await lookup.is("model_year",null).maybeSingle();
  if(existing.error)return fail("Unable to verify existing mapping",503);
  if(existing.data&&!replace)return fail("An active image exists. Select replacement to overwrite.",409);
  const id=randomUUID(),path=manufacturerId+"/"+id+".webp";
