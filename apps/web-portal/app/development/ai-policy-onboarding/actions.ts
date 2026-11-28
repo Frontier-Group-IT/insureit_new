@@ -1,3 +1,4 @@
+import { checkAiBookingReprocessHold } from "@/lib/ai-intake-reprocess-ledger-guard";
 "use server";
 
 import { preparePolicyIntakeHandoff, prepareVerifiedN8nIntakeHandoff, type PolicyIntakeDraft } from "@/app/policy-intakes/handoff-actions";
@@ -1197,6 +1198,25 @@ export async function reviewAiIntakeCustomerCandidates(id:string):Promise<AiCust
  * OCR, saved onboarding drafts, customers, vehicles or registered policies.
  * The worker independently re-checks current PDF at the next scheduled run.
  */
+/**
+ * Refuse destructive queue resets / draft replacement while any automatic
+ * booking or one-time recovery ledger is claimed, uncertain or booked.
+ * Fail closed if a ledger cannot be read; no writes occur in this helper.
+ */
+async function aiReprocessBookingLedgerError(intakeId:string):Promise<string|null>{
+  const admin=createSupabaseAdminClient();
+  const hold=await checkAiBookingReprocessHold(async table=>{
+    const {data,error}=await admin.from(table).select("state")
+      .eq("intake_id",intakeId).maybeSingle<{state:string}>();
+    return {state:data?.state??null,error:!!error};
+  });
+  if(hold==="booking_ledger_unavailable")
+    return "Booking reconciliation could not be verified; reprocessing was not started.";
+  if(hold==="booking_reconciliation_required")
+    return "This Intake has a claimed, uncertain or booked automatic transaction. Reconcile its booking history before replacing or reprocessing its PDF evidence.";
+  return null;
+}
+
 export async function reprocessAiPolicyIntake(id: string): Promise<{ok:boolean;error?:string}> {
   await requireDevelopmentPolicyOperator(id);
   if(!aiQueueEnabled())return{ok:false,error:"The automatic extraction queue is not enabled."};
@@ -1211,6 +1231,8 @@ export async function reprocessAiPolicyIntake(id: string): Promise<{ok:boolean;e
     ||intake.final_policy_id){
     return{ok:false,error:"Only an open, unregistered Motor Intake can be reprocessed."};
   }
+  const bookingHold=await aiReprocessBookingLedgerError(id);
+  if(bookingHold)return{ok:false,error:bookingHold};
   const duplicates=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
   if(!duplicates.ok)return{ok:false,error:"Duplicate safety check is unavailable; no queue change was made."};
   if(duplicates.matches.has(id))return{ok:false,error:"This Intake is a duplicate. Resolve it in Policy Intake before reprocessing."};
@@ -1259,6 +1281,8 @@ export async function reparseAndReplaceAiPolicyIntakeDraft(
       ||intake.final_policy_id){
     return{ok:false,error:"Only an open, unbooked Motor Intake can be reparsed."};
   }
+  const bookingHold=await aiReprocessBookingLedgerError(id);
+  if(bookingHold)return{ok:false,error:bookingHold};
   const duplicate=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
   if(!duplicate.ok)return{ok:false,error:"Duplicate verification is unavailable; nothing was replaced."};
   if(duplicate.matches.has(id))return{ok:false,error:"This Intake is a duplicate and cannot be reparsed into an onboarding draft."};
