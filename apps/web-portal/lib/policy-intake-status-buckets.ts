@@ -27,3 +27,23 @@ export function policyIntakeStatusCounts<T extends { status: string; ocr_status:
   for (const row of rows) counts[policyIntakeBucket(row, duplicateIds.has(row.id))]++;
   return counts;
 }
+
+/** Shared display-only status for the Operations Intake Queue and AI Policy Studio. */
+export type IntakeAiDisplayEvidence = {
+  state?: string | null;
+  exception_codes?: readonly string[] | null;
+};
+export function effectivePolicyIntakeBucket(
+  row: { status: string; ocr_status: string | null; policy_type?: string | null; assigned_to_profile_id?: string | null },
+  duplicate: boolean,
+  queue: IntakeAiDisplayEvidence | null | undefined,
+  automaticBookingEnabled: boolean,
+): Exclude<IntakeStatusBucket, "all"> {
+  const confirmedDuplicate = queue?.state === "duplicate" && queue.exception_codes?.includes("duplicate_policy") === true;
+  const canonical = policyIntakeBucket(row, duplicate || confirmedDuplicate);
+  if (!automaticBookingEnabled || row.assigned_to_profile_id != null || row.policy_type !== "motor") return canonical;
+  if (queue?.state === "verified" && (queue.exception_codes?.length ?? 0) === 0 &&
+      (canonical === "action_required" || canonical === "in_review")) return "processing";
+  if (queue?.state === "exception" && canonical === "in_review") return "action_required";
+  return canonical;
+}
