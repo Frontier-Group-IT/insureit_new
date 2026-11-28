@@ -28,7 +28,7 @@ assert.ok(upload.includes('.eq("version",existing.data.version)')&&upload.includ
 assert.ok(upload.includes("Images apply to all years")&&upload.includes("limitInputPixels:1080000"));
 console.log("Vehicle image source access and lifecycle contracts passed.");
 
-import {vehicleFamily,modelSearch,resolveFamilyArtwork} from "../lib/vehicle-image-family.ts";
+import {vehicleFamily,familyKey,modelSearch,resolveFamilyArtwork} from "../lib/vehicle-image-family.ts";
 for(const model of ["ERTIGA VXI","Ertiga ZXI PLUS","ERTICA CNG"])assert.equal(vehicleFamily(model)?.model,"ertiga");
 assert.equal(vehicleFamily("BOLERO PICK UP FB")?.model,"bolero pickup");
 assert.equal(vehicleFamily("BOLERO NEO N10")?.model,"bolero neo");
@@ -45,3 +45,20 @@ assert.equal(resolveFamilyArtwork("access 125 drum",[oldImage,{...oldImage,model
 const picker=source("../app/master-data/vehicle-images/model-picker.tsx");
 for(const token of ["createPortal","document.body","rect.bottom+4","zIndex:10000","backgroundColor:\"#fff\"","self-center","rotate-180","panel.current?.contains","pointerdown","ArrowDown","Escape","modelSearch","setQuery","aria-autocomplete"])assert.ok(picker.includes(token),token);
 console.log("Base-model and searchable picker regressions passed.");
+
+import {buildVehicleImageRegister} from "../lib/vehicle-image-register.ts";
+const model=(name)=>({manufacturerId:"a",make:"Make",model:name,type:"",count:1,years:[]});
+const mapping={id:"1",manufacturer_id:"a",model_key:"ertiga vxi",variant_key:null,model_year:null,version:"v",is_active:true};
+const register=buildVehicleImageRegister([model("swift"),model("ertiga")],[mapping],{a:"Make"},vehicleFamily,familyKey);
+assert.equal(register.length,2);
+assert.equal(register[0].model,"ertiga");
+assert.equal(register[0].preview.id,"1");
+assert.equal(register[1].status,"pending");
+assert.equal(buildVehicleImageRegister([model("ertiga")],[mapping,{...mapping,id:"2",model_key:"ertiga zxi"}],{},vehicleFamily,familyKey)[0].status,"review");
+const registerSource=source("../app/master-data/vehicle-images/register.tsx");
+for(const token of ["modelSearch","aria-autocomplete","uploadVehicleImage","method:\"PATCH\"","PAGE_SIZE=25","pageNumbers","aria-current","Vehicle Image Register","Action"])assert.ok(registerSource.includes(token),token);
+console.log("Full vehicle image register regressions passed.");
+
+assert.ok(registerSource.includes("filtered.slice((current-1)*PAGE_SIZE,current*PAGE_SIZE)"));
+assert.ok(!registerSource.includes("setSize"));
+assert.ok(registerSource.includes("localeCompare"));

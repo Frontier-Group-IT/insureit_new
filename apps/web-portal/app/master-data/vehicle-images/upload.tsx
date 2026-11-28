@@ -4,19 +4,7 @@ import { useRouter } from "next/navigation";
 import type { CatalogItem } from "@/lib/vehicle-image-catalog";
 import {ModelPicker,modelOptionKey as key} from "./model-picker";
 type Item={file:File;selection:string;status:string;replace:boolean};
-async function optimize(file:File){
- if(file.size>20*1024*1024)throw new Error("Original exceeds 20 MB");
- const image=await createImageBitmap(file);
- try{
- const scale=Math.min(1,1200/image.width,900/image.height);
- const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));
- const ctx=canvas.getContext("2d");if(!ctx)throw new Error("Image decoding unavailable");
- ctx.drawImage(image,0,0,canvas.width,canvas.height);
- const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,"image/webp",0.82));
- if(!blob||blob.type!=="image/webp"||blob.size>2097152)throw new Error("Unable to optimize image");
- return blob;
- }finally{image.close();}
-}
+import {uploadVehicleImage} from "./image-upload-client";
 export function VehicleImageUpload({models}:{models:CatalogItem[]}){
  const router=useRouter();const [items,setItems]=useState<Item[]>([]);const [busy,setBusy]=useState(false);const [error,setError]=useState("");
 
@@ -25,8 +13,7 @@ export function VehicleImageUpload({models}:{models:CatalogItem[]}){
  try{for(let i=0;i<items.length;i++){
  const item=items[i];if(item.status==="Uploaded")continue;
  try{const m=models.find(m=>key(m)===item.selection);if(!m)throw new Error("Select a model");
- const blob=await optimize(item.file);const body=new FormData();body.set("image",blob,"vehicle.webp");body.set("manufacturerId",m.manufacturerId);body.set("model",m.model);body.set("replace",String(item.replace));
- const res=await fetch("/api/master-data/vehicle-images",{method:"POST",body});const result=await res.json();if(!res.ok)throw new Error(result.error||"Upload failed");
+ await uploadVehicleImage(item.file,m.manufacturerId,m.model,item.replace);
  setItems(old=>old.map((x,j)=>j===i?{...x,status:"Uploaded"}:x));
  }catch(e){setItems(old=>old.map((x,j)=>j===i?{...x,status:e instanceof Error?e.message:"Upload failed"}:x));}
  }}finally{setBusy(false);router.refresh();}
