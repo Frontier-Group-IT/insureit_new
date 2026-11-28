@@ -1,8 +1,8 @@
-import {vehicleFamily, familyKey} from "./vehicle-image-family.ts";
+import type {vehicleFamily as FamilyResolver,familyKey as FamilyNormalizer} from "./vehicle-image-family";
 import type {CatalogItem} from "./vehicle-image-catalog";
 export type ImageMapping={id:string;manufacturer_id:string;model_key:string;variant_key:string|null;model_year:number|null;version:string;is_active:boolean};
 export type RegisterRow={key:string;manufacturerId:string;make:string;model:string;count:number;uploadable:boolean;mappings:ImageMapping[];preview:ImageMapping|null;status:"uploaded"|"pending"|"review"};
-export function buildVehicleImageRegister(models:CatalogItem[],mappings:ImageMapping[],names:Record<string,string>){
+export function buildVehicleImageRegister(models:CatalogItem[],mappings:ImageMapping[],names:Record<string,string>,vehicleFamily:typeof FamilyResolver,familyKey:typeof FamilyNormalizer){
  const key=(id:string,model:string)=>JSON.stringify([id,model]);
  const rows=new Map<string,RegisterRow>();
  for(const m of models){const k=key(m.manufacturerId,m.model);rows.set(k,{key:k,manufacturerId:m.manufacturerId,make:m.make,model:m.model,count:m.count,uploadable:true,mappings:[],preview:null,status:"pending"});}
