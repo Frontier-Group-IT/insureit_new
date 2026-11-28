@@ -257,6 +257,8 @@ export function assessUiicGcvDirectConversion(input:Input):{eligible:boolean;rea
     &&hrAuthority?.[1]===reg.slice(0,4)&&hrAuthority?.[2]===get("vehicle_rto_name")
     &&/^MA1[A-Z0-9]{14,21}$/.test(get("vehicle_chassis_number"))
     &&/^TUR[A-Z0-9]{7,14}$/.test(get("vehicle_engine_number"));
+  if(haryanaMahindra&&!registeredHaryana)
+    return fail("uiic_haryana_registration_and_vehicle_identity_unverified");
   // Separate printed Chandigarh UT vehicle schedule profile; never accept
   // arbitrary non-MP registrations without the exact insurer PDF RLA/STA
   // Registration Authority and the same current policy's CH registration.
