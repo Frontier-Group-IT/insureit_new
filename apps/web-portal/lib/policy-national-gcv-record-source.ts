@@ -18,8 +18,8 @@ export type NationalGcvRecordEvidence={
 };
 export function assessNationalGcvRecordSource(text:string,p:Printed):NationalGcvRecordEvidence|null{
   const whole=text.replace(/\r/g,"").replace(/\u00a0/g," ");
-  if(!/National Insurance Co(?:mpany)?\.?\s*(?:Ltd|Limited)/i.test(whole)
-    ||!/Policy Schedule-Motor\s*-\s*Goods Carrying Vehicle\s*-\s*Package/i.test(whole)
+  // National bilingual certificates may interleave Hindi glyphs and line breaks\n  // between the goods-carrying title and Package. Bound that gap tightly;\n  // do not accept unrelated National products or invoices.\n  if(!/National Insurance Co(?:mpany)?\.?\s*(?:Ltd|Limited)/i.test(whole)
+    ||!/Policy Schedule-Motor\s*-\s*Goods Carrying Vehicle\s*-[\s\S]{0,90}?\bPackage\b/i.test(whole)
     ||!/Commercial Vehicle Package Policy/i.test(whole))
     return null;
   const invoiceStart=whole.search(/TAX INVOICE/i);
