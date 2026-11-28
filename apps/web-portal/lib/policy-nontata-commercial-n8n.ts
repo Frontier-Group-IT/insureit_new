@@ -8,6 +8,7 @@ import { verifyOrientalCmsSigningDate, type OrientalSignedIssuanceEvidence } fro
 import { acceptGoDigitNewJcbExtraction } from "@/lib/policy-digit-new-jcb-extraction";
 import { niaIntraModelVariantConflict } from "@/lib/policy-nia-intra-source-conflict";
 import { assessNationalGcvRecordSource } from "@/lib/policy-national-gcv-record-source";
+import { certifyNiaZeroChargedCpa, NIA_ZERO_CHARGE_SOURCE } from "@/lib/policy-nia-zero-charge-source";
 
 type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "united_india_gcv_punjab_split_gst_native_pdf" | "united_india_private_car_package_native_pdf" | "oriental_gccv_native_pdf";
 type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf" | "hdfc_ergo_two_wheeler_tp_native_pdf" | "sbi_general_private_car_package_native_pdf" | "liberty_two_wheeler_tp_native_pdf";
@@ -841,7 +842,19 @@ export async function tryReadNonTataCommercialPolicy(
     }
     if(insurer==="new_india_cv_native_pdf"){
       const pages=await extractNativePdfTextPages(new Uint8Array(await file.arrayBuffer()));
-      if(niaIntraModelVariantConflict(pages.slice(0,2).map(page=>page.text).join("\n"))){
+      const original=pages.slice(0,2).map(page=>page.text).join("\n");
+      // N8n may omit an OPTIONAL CPA charge even after all 16 source
+      // checks pass. Independently certify zero charged CPA only against
+      // the exact source PDF's printed OD, TP, two IGST rows and gross.
+      // An existing positive CPA is NEVER overwritten.
+      const cpa=read.fields.find(field=>field.key==="cpa_premium");
+      if((!cpa||cpa.value==="0")
+        &&certifyNiaZeroChargedCpa(original,read.premium)){
+        if(cpa){cpa.value="0";cpa.evidence=NIA_ZERO_CHARGE_SOURCE;}
+        else read.fields.push({key:"cpa_premium",label:"cpa_premium",value:"0",
+          confidence:null,page:2,evidence:NIA_ZERO_CHARGE_SOURCE});
+      }
+      if(niaIntraModelVariantConflict(original)){
         // An immutable PDF remains source of both printed values. The
         // canonical model continues to use Make/Model, not Variant.
         const field=read.fields.find(item=>item.key==="vehicle_model");
