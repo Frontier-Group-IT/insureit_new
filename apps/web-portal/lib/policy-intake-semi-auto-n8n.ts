@@ -187,6 +187,9 @@ export async function previewSemiAutoN8nExtraction(
       "n8n_layout_untrained_liberty_two_wheeler_tp",
       "n8n_layout_untrained_oriental_two_wheeler_package",
       "n8n_review_required","n8n_shriram_issuance_not_verified","n8n_financial_validation_failed",
+      // Insurer printed conflicting V-series models: deterministic source hold,
+      // never retry as an unavailable n8n webhook.
+      "n8n_nia_intra_source_model_variant_conflict",
       "n8n_nontata_verification_failed","n8n_nontata_financial_reconciliation_failed",
       "n8n_nontata_check_set_invalid","n8n_nontata_premium_components_invalid",
       "n8n_wrong_policy_product","n8n_required_field_missing",
@@ -230,6 +233,8 @@ export async function previewSemiAutoN8nExtraction(
           ? "Oriental Motorised Two-Wheeler Package policy detected. The commercial GCCV parser is the wrong product family; this requires a dedicated two-wheeler OD/TP/CPA parser."
           : code.startsWith("n8n_failed_checks__")
           ? "n8n rejected the PDF. Failed checks: "+code.slice("n8n_failed_checks__".length).split("__").join(", ")+". No booking or OCR replacement occurred."
+          : code==="n8n_nia_intra_source_model_variant_conflict"
+          ? "The original New India PDF prints a different model than its variant. Request an insurer-corrected policy or trusted RC identification; automatic booking is paused without retry."
           : code==="n8n_commercial_classifier_missed_layout"
             ? "The n8n commercial parser responded, but the website did not recognize its commercial layout before applying ICICI validation. Check the commercial PDF classifier."
             : "The n8n parser response failed strict verification ("+code+"). Review the parser evidence; no OCR replacement or booking occurred." };
