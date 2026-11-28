@@ -27,6 +27,18 @@ const full=assessNationalGcvRecordSource(policy,premium);
 assert.ok(full,"Two printed IGST rows and payable should reconcile");
 assert.deepEqual(full.canonical,{od:"1723",tp:"27286",addOnPremium:"0",cpa:"0",cpaOpted:"No"});
 assert.equal(full.roundingAdjustment,-.04);
+// PDF.js can emit the original invoice in column-major order rather than
+// row-major text. Still certify only the unique two-base, two-rate pairing.
+const columnMajor=policy
+ .replace("997134 Motor 1,823.04 1,823.04 0% 0.00 0% 0.00 18% 328.00\nvehicle insurance services\n997134 Motor 27,186.00 27,186.00 0% 0.00 0% 0.00 5% 1,359.00",
+ "997134 Motor\n997134 Motor\nvehicle insurance services\n1,823.04 1,823.04\n27,186.00 27,186.00\n0% 0.00 0% 0.00\n18% 328.00\n5% 1,359.00");
+assert.ok(assessNationalGcvRecordSource(columnMajor,premium),
+ "Column-major National 18%/5% invoice must reconcile to unique bases");
+assert.equal(assessNationalGcvRecordSource(
+ columnMajor.replace("18% 328.00","18% 329.00"),premium),null);
+assert.equal(assessNationalGcvRecordSource(
+ columnMajor.replace("27,186.00 27,186.00","27,186.00 27,185.00"),premium),null);
+
 // Reproduce the REAL 10-page National GCV's de-identified PDF text ordering.
 // The policy schedule has a distinct employee-count row before ₹100,
 // and the tax invoice's service label can appear before the numeric cells.
@@ -40,9 +52,11 @@ const paidDriverSplit=policy
    "997134 Motor\nvehicle\ninsurance\nservices\n27,186.00");
 assert.ok(assessNationalGcvRecordSource(paidDriverSplit,premium),
   "Native PDF employee-count row and invoice line breaks must reconcile");
+assert.ok(assessNationalGcvRecordSource(
+ paidDriverSplit.replace("(Upto 6) 2-pers.\n100.00","(Upto 6) 2-pers.\n₹ 100.00"),premium),
+ "A printed currency sign must not invalidate the exact paid-driver charge");
 for(const edited of [
  paidDriverSplit.replace("(Upto 6) 2-pers.\n100.00","(Upto 6) 2-pers.\n200.00"),
- paidDriverSplit.replace("(Upto 6) 2-pers.\n100.00","(Upto 6) 2-pers.\n₹ 100.00"),
  paidDriverSplit.replace("(Upto 6) 2-pers.\n100.00","(Upto 6) 2-pers.\n"),
  paidDriverSplit.replace("1,823.04 1,823.04","1,823.05 1,823.05"),
 ])assert.equal(assessNationalGcvRecordSource(edited,premium),null,

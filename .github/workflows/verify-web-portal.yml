@@ -107,6 +107,8 @@ jobs:
         run: node scripts/nia-n8n-zero-cpa-node-replay.mjs
       - name: National GCV per-intake reparse exception message isolation
         run: node scripts/national-gcv-modal-scope-regression.mjs
+      - name: New India original-PDF zero CPA evidence without n8n optional field
+        run: node --experimental-strip-types scripts/nia-zero-cpa-original-source-regression.mjs
       - name: National GCV record-only printed invoice and rounding regression
         run: node --experimental-strip-types scripts/national-gcv-record-import-regression.mjs
       - name: New India Intra source-certified zero-charge CPA and mixed GST
