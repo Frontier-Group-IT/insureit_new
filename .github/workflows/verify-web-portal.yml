@@ -596,7 +596,7 @@ jobs:
       - name: Policy Register RM and sales hierarchy access regression
         run: node scripts/policy-register-sales-hierarchy-access-regression.mjs
       - name: Vehicle image matching and access contract regression
-        run: node --experimental-strip-types apps/web-portal/scripts/vehicle-image-match-regression.mjs
+        run: node --experimental-strip-types scripts/vehicle-image-match-regression.mjs
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
