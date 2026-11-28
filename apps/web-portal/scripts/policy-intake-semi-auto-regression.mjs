@@ -1036,7 +1036,9 @@ assert(actionsText.includes("async function holdFailedAiConversion(id:string,iss
   && actionsText.includes('activeOverlap?"existing_active_policy_overlap":"bulk_conversion_review_required"')
   && actionsText.includes('last_error_code.eq.bulk_conversion_review_required')
   && actionsText.includes('not("extraction_fingerprint","is",null)')
-  && actionsText.includes("if(!result.ok)await holdFailedAiConversion(id,result.issues)")
+  && actionsText.includes("if(!result.ok){")
+  && actionsText.includes("try { await holdFailedAiConversion(id,result.issues); }")
+  && actionsText.includes("return result;")
   && actionsText.includes("await holdFailedAiConversion(id);"),
   "Failed and uncertain conversions must hold previously verified queue rows; certified NIA coverage conflicts retain their exact reason");
 assert(workbenchText.includes('booking_review_required:"Prior conversion held · inspect exact review"')

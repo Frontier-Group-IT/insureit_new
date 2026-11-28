@@ -399,7 +399,10 @@ function validateNewVariant(
       ||byKey.get("vehicle_class")!=="Two Wheeler"
       ||!byKey.get("vehicle_manufacturing_year")
       ||byKey.get("idv")!=="0"||byKey.get("od_premium")!=="0"
-      ||!["Bajaj","TVS"].includes(byKey.get("vehicle_make")||""))
+      ||!["Bajaj","TVS"].includes(byKey.get("vehicle_make")||"")
+       &&!(byKey.get("vehicle_make")==="ROYAL ENFIELD"
+         &&byKey.get("vehicle_model")==="CLASSIC STD 350 EFI"
+         &&byKey.get("vehicle_capacity")==="346"))
        throw new Error("n8n_extension_liberty_tp_product_invalid");
  }else if(insurer==="go_digit_two_wheeler_od_native_pdf"){
    if(byKey.get("policy_product")!=="Stand-alone Own Damage"

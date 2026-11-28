@@ -107,6 +107,14 @@ jobs:
         run: node --experimental-strip-types scripts/nia-named-authority-direct-convert-regression.mjs
       - name: Isolated Kotak Digit OD and UIIC Tractor TP product regression
         run: node --experimental-strip-types scripts/insurer-variant-extensions-regression.mjs
+      - name: SBI Maruti and Liberty Royal source-certified variant regression
+        run: node --experimental-strip-types scripts/ai-sbi-liberty-source-variants-regression.mjs
+      - name: ICICI 1C79A4 single unknown noncommit recovery regression
+        run: node scripts/ai-icici-green-uncertain-recovery-regression.mjs
+      - name: Verified green intake deterministic booking cause regression
+        run: node scripts/ai-green-booking-cause-regression.mjs
+      - name: United India Powertrac 445 canonical and atomic reconciliation regression
+        run: node --experimental-strip-types scripts/ai-uiic-powertrac-canonical-reconciliation-regression.mjs
       - name: United India Powertrac 445 source-verified tractor regression
         run: node scripts/ai-united-powertrac-445-source-regression.mjs
       - name: Life and Health Case Register line filter regression

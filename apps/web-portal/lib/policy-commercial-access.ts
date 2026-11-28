@@ -27,6 +27,9 @@ const REPORT_COMMERCIAL_READ_PROFILE_IDS = new Set([
 ]);
 
 export function canViewReportCommercials(profile: CommercialProfile) {
+  // Every authenticated Super Admin can view organization-wide financial reports.
+  // Keep this reports-only: it must not grant policy commercial editing access.
+  if (profile?.role === "super_admin") return true;
   return canAccessPolicyCommercials(profile) || Boolean(
     profile?.id && profile.role === "sales_head" && REPORT_COMMERCIAL_READ_PROFILE_IDS.has(profile.id)
   );

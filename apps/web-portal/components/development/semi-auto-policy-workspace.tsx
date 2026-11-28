@@ -137,10 +137,18 @@ const aiStateLabel: Record<string,string> = {
 };
 
 function bookingLedgerLabel(row:SemiAutoIntakeRow):string|null{
-  if(row.ai_booking_state==="review_required")
-    return row.ai_booking_failure_code==="insured_name_mismatch"
-      ?"Onboarding needs insured-name verification"
-      :"Automatic onboarding needs resolution · "+(row.ai_booking_failure_code??"canonical validation");
+  if(row.ai_booking_state==="review_required"){
+    if(row.ai_booking_failure_code==="insured_name_mismatch")
+      return "Onboarding needs insured-name verification";
+    // Distinguish actual policy/vehicle conflicts from parser failures. A
+    // successfully extracted source is not permission to supersede another
+    // active policy on the same chassis.
+    if(row.ai_booking_failure_code==="vehicle_ownership")
+      return "Existing vehicle ownership / policy conflict · review before booking";
+    if(row.ai_booking_failure_code==="coverage_conflict")
+      return "Overlapping existing coverage · review before booking";
+    return "Automatic onboarding needs resolution · "+(row.ai_booking_failure_code??"canonical validation");
+  }
   if(row.ai_booking_state==="uncertain")return "Booking reconciliation required · automatic retry paused";
   if(row.ai_booking_state==="claimed")return "Booking claimed · checking";
   if(row.ai_booking_state==="booked")return "Auto booked";
@@ -828,7 +836,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                   {primaryN8n && queueActive ? <td className="px-3 py-2">
                     <div className="flex min-w-[230px] items-center justify-between gap-2">
                       <button type="button" title="Open exception" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}} className="flex min-w-0 items-center gap-2 text-left">
-                        <span className={"h-2 w-2 shrink-0 rounded-full "+(row.is_duplicate?"bg-slate-400":row.ai_state==="verified"?"bg-emerald-500":row.ai_state==="processing"?"bg-sky-500":"bg-amber-500")}/>
+                        <span className={"h-2 w-2 shrink-0 rounded-full "+(row.is_duplicate?"bg-slate-400":row.ai_booking_state==="uncertain"||row.ai_booking_state==="review_required"?"bg-amber-500":row.ai_booking_state==="claimed"?"bg-sky-500":row.ai_state==="verified"?"bg-emerald-500":row.ai_state==="processing"?"bg-sky-500":"bg-amber-500")}/>
                         <span className="sr-only">Parser not trained · Reprocess</span>
                         <span className="max-w-[200px] truncate font-medium text-slate-700" title={bookingLedgerLabel(row)??(row.ai_diagnostic_code ? parserDiagnostic(row.ai_diagnostic_code)?.detail : visibleReviewCodes(row).map(code=>aiIssueTitles[code]??code).join(", "))}>
                           {row.is_duplicate?"Duplicate":bookingLedgerLabel(row)??(row.ai_diagnostic_code?(parserDiagnostic(row.ai_diagnostic_code)?.title??"Parser error"):visibleReviewCodes(row).length?(aiIssueTitles[visibleReviewCodes(row)[0]]??"Needs review"):aiStateLabel[row.ai_state??""]??"Queued")}
@@ -837,7 +845,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                       </button>
                       <div className="flex shrink-0 items-center gap-0.5">
                         <button type="button" aria-label={"Inspect "+row.intake_number} title="Inspect" onClick={()=>{setExceptionRow(row);setCustomerReview(null);}} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4"/></button>
-                        {((!row.is_duplicate&&row.ai_state==="verified"&&!row.ai_exceptions?.length&&row.ocr_status==="completed"&&["in_review","ready_for_review","needs_attention"].includes(row.status))||canRetryReviewHeldPolicy(row))?<button type="button" aria-label={"Convert "+row.intake_number} title="Convert" disabled={isWaiting} onClick={()=>setAutoConvertRow(row)} className="rounded-lg p-2 text-emerald-700 hover:bg-emerald-50 disabled:opacity-40"><ArrowRight className="h-4 w-4"/></button>:null}
+                        {((!row.is_duplicate&&row.ai_state==="verified"&&!["uncertain","claimed","review_required"].includes(row.ai_booking_state??"")&&!row.ai_exceptions?.length&&row.ocr_status==="completed"&&["in_review","ready_for_review","needs_attention"].includes(row.status))||canRetryReviewHeldPolicy(row))?<button type="button" aria-label={"Convert "+row.intake_number} title="Convert" disabled={isWaiting} onClick={()=>setAutoConvertRow(row)} className="rounded-lg p-2 text-emerald-700 hover:bg-emerald-50 disabled:opacity-40"><ArrowRight className="h-4 w-4"/></button>:null}
                         {canPrepareVerifiedOnboarding(row)?<button type="button"
                           aria-label={"Prepare onboarding "+row.intake_number}
                           title="Prepare verified PDF onboarding (no booking)"
