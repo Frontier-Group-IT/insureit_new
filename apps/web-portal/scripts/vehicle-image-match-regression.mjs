@@ -56,5 +56,9 @@ assert.equal(register[0].preview.id,"1");
 assert.equal(register[1].status,"pending");
 assert.equal(buildVehicleImageRegister([model("ertiga")],[mapping,{...mapping,id:"2",model_key:"ertiga zxi"}],{} )[0].status,"review");
 const registerSource=source("../app/master-data/vehicle-images/register.tsx");
-for(const token of ["modelSearch","aria-autocomplete","uploadVehicleImage","method:\"PATCH\"","[25,50,100]","Vehicle Image Register","Action"])assert.ok(registerSource.includes(token),token);
+for(const token of ["modelSearch","aria-autocomplete","uploadVehicleImage","method:\"PATCH\"","PAGE_SIZE=25","pageNumbers","aria-current","Vehicle Image Register","Action"])assert.ok(registerSource.includes(token),token);
 console.log("Full vehicle image register regressions passed.");
+
+assert.ok(registerSource.includes("filtered.slice((current-1)*PAGE_SIZE,current*PAGE_SIZE)"));
+assert.ok(!registerSource.includes("setSize"));
+assert.ok(registerSource.includes("localeCompare"));
