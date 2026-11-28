@@ -7,7 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { inferLegacyAiReviewReason } from "@/lib/ai-intake-legacy-review";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
-import { policyIntakeBucket, policyIntakeStatusCounts, type IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
+import { effectivePolicyIntakeBucket, policyIntakeBucket, type IntakeStatusBucket } from "@/lib/policy-intake-status-buckets";
 import { getPartnerEmployeeIntakeReadScope } from "@/lib/partner-policy-intake-read-access";
 import { isN8nWorkbenchPrimary, semiAutoN8nEnabledForIntake } from "@/lib/policy-intake-semi-auto-n8n";
 import type { PolicyIntakeOcrField } from "@/lib/policy-intake-ocr-service";
@@ -82,31 +82,12 @@ export default async function SemiAutoPolicyOnboardingPage({ searchParams }: { s
   // A verified, unassigned Intake is awaiting automatic preflight, NOT
   // awaiting human action. Its canonical DB status remains unchanged, and
   // the worker still revalidates all booking rules before registration.
-  const displayBucket=(row:CandidateIntake):Exclude<IntakeStatusBucket,"all">=>{
-    const canonical=policyIntakeBucket(row,duplicateIds.has(row.id));
-    const q=queue.get(row.id);
-    if(!autoRequested || row.assigned_to_profile_id!==null || row.policy_type!=="motor")
-      return canonical;
-    // Unassigned records must not appear in the human In Review lane just
-    // because an automatic handoff set an internal workflow state.
-    if(q?.state==="verified" && q.exception_codes.length===0
-      && (canonical==="action_required"||canonical==="in_review"))
-      return "processing";
-    if(q?.state==="exception" && canonical==="in_review")
-      return "action_required";
-    return canonical;
+  const displayBucket=(row:CandidateIntake):Exclude<IntakeStatusBucket,"all"> =>
+    effectivePolicyIntakeBucket(row,duplicateIds.has(row.id),queue.get(row.id),autoRequested);
+  const intakeCounts: Record<IntakeStatusBucket, number> = {
+    action_required:0,in_review:0,processing:0,completed:0,duplicate:0,rejected:0,all:workspaceRows.length,
   };
-  const intakeCounts=policyIntakeStatusCounts(workspaceRows,duplicateIds);
-  if(autoRequested){
-    for(const row of workspaceRows){
-      const canonical=policyIntakeBucket(row,duplicateIds.has(row.id));
-      const displayed=displayBucket(row);
-      if(canonical!==displayed){
-        intakeCounts[canonical]--;
-        intakeCounts[displayed]++;
-      }
-    }
-  }
+  for(const row of workspaceRows) intakeCounts[displayBucket(row)]++;
   const duplicateCount = intakeCounts.duplicate;
   const total = intakeCounts.action_required + intakeCounts.in_review + intakeCounts.processing;
   const queueCounts = { eligible:0, extracted:0, duplicates:duplicateCount, queued:0, extracting:0,
