@@ -743,7 +743,7 @@ function validate(payload: unknown, insurer: Insurer,
   const premium = payload.premium_components;
   if (!object(premium) || ![premium.od, premium.tp, premium.net, premium.gst, premium.gross].every(isMoney))
     throw new Error("n8n_nontata_premium_components_invalid");
-  if(insurer==="united_india_gcv_punjab_split_gst_native_pdf"){
+  if(["united_india_gcv_punjab_split_gst_native_pdf","united_india_gcv_haryana_mahindra_split_gst_native_pdf"].includes(insurer)){
     // Never represent split CGST/SGST as IGST or trust a remote total.
     if(premium.taxRegime!=="CGST_SGST"
       ||![premium.cgstOthers,premium.sgstOthers,premium.cgstBasicTp,premium.sgstBasicTp].every(isMoney)
