@@ -8,6 +8,7 @@ import { verifyOrientalCmsSigningDate, type OrientalSignedIssuanceEvidence } fro
 import { acceptGoDigitNewJcbExtraction } from "@/lib/policy-digit-new-jcb-extraction";
 import { niaIntraModelVariantConflict } from "@/lib/policy-nia-intra-source-conflict";
 import { assessNationalGcvRecordSource } from "@/lib/policy-national-gcv-record-source";
+import { normalizeNationalGcvLeadingDot } from "@/lib/policy-national-gcv-insured-name";
 import { certifyNiaZeroChargedCpa, NIA_ZERO_CHARGE_SOURCE } from "@/lib/policy-nia-zero-charge-source";
 
 type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "united_india_gcv_punjab_split_gst_native_pdf" | "united_india_private_car_package_native_pdf" | "oriental_gccv_native_pdf";
@@ -822,6 +823,21 @@ export async function tryReadNonTataCommercialPolicy(
       :null;
     const read=validate(payload, insurer, requestIds, signature);
     if(insurer==="national_gcv_package_native_pdf"){
+      // 18/18 insurer-certified extraction can retain a single leading
+      // punctuation artifact in /Customer Name, e.g. ".LOGISTICS ...".
+      // Remove only that artifact for the recordkeeping draft; retain the
+      // exact raw text in field evidence and the immutable original PDF.
+      // Canonical matching remains exact name + phone, and duplicate/vehicle
+      // checks are performed independently before any policy insert.
+      if(read.checksPassed===18&&read.warnings.length===0){
+        const insured=read.fields.find(field=>field.key==="insured_name");
+        const normalized=insured
+          ?normalizeNationalGcvLeadingDot(insured.value):null;
+        if(insured&&normalized){
+          insured.value=normalized.name;
+          insured.evidence="National GCV original /Customer Name had one leading punctuation artifact; raw extracted name: "+normalized.raw+"; original PDF retained";
+        }
+      }
       const pages=await extractNativePdfTextPages(new Uint8Array(await file.arrayBuffer()),{
         maxTextPages:10,extendedTimeout:true,
       });
