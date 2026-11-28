@@ -1343,7 +1343,7 @@ export function SemiAutoPolicyWorkspace({ rows, profileId, initialIntakeId, prim
                   className="mt-2 rounded-md bg-[#174b83] px-3 py-2 text-[10px] font-bold text-white disabled:opacity-50">
                   {replaceReparseId===exceptionRow.id?"Reparsing current PDF…":"Reparse & replace saved draft"}
                 </button>
-                {replaceReparseError?<p role="alert" className="mt-2 text-[10px] text-amber-800">{replaceReparseError}</p>:null}
+                {replaceReparseErrorId===exceptionRow.id&&replaceReparseError?<p role="alert" className="mt-2 text-[10px] text-amber-800">{replaceReparseError}</p>:null}
               </div>
             ):null}
                           {(exceptionRow.ai_exceptions??[]).some(code=>code.startsWith("customer_")) ? (
