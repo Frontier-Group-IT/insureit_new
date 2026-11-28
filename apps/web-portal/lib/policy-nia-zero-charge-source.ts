@@ -7,7 +7,7 @@
 type Premium={od:number;tp:number;net:number;gst:number;gross:number};
 const near=(a:number,b:number,tolerance=.01)=>Number.isFinite(a)&&Number.isFinite(b)&&Math.abs(a-b)<=tolerance;
 const amount=(s:string)=>Number(s.replace(/,/g,""));
-const num=(n:number)=>String(n).replace(/\./g,"\\.");
+const num=(n:number|string)=>String(n).replace(/\./g,"\\.");
 export const NIA_ZERO_CHARGE_SOURCE="NIA PDF page 2 Owner Driver PA nominee none; no CPA charged; TP and 18%/5% IGST independently reconciled";
 export function certifyNiaZeroChargedCpa(text:string,p:Premium):boolean{
   const source=text.replace(/\r/g,"").replace(/\u00a0/g," ");
