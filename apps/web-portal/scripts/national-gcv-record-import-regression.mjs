@@ -53,7 +53,7 @@ const paidDriverSplit=policy
 assert.ok(assessNationalGcvRecordSource(paidDriverSplit,premium),
   "Native PDF employee-count row and invoice line breaks must reconcile");
 assert.ok(assessNationalGcvRecordSource(
- paidDriverSplit.replace("(Upto 6) 2-pers.\\n100.00","(Upto 6) 2-pers.\\n₹ 100.00"),premium),
+ paidDriverSplit.replace("(Upto 6) 2-pers.\n100.00","(Upto 6) 2-pers.\n₹ 100.00"),premium),
  "A printed currency sign must not invalidate the exact paid-driver charge");
 for(const edited of [
  paidDriverSplit.replace("(Upto 6) 2-pers.\n100.00","(Upto 6) 2-pers.\n200.00"),
