@@ -65,9 +65,14 @@ for (const obsolete of ['styles.quickDocument', 'styles.quickRenewal', 'styles.q
 }
 assert.match(source, /quickAction:\s*\{[\s\S]*?backgroundColor: 'transparent'/, 'Quick Action tiles remain transparent');
 assert.match(source, /<View style=\{\[styles.policyDetailSection, styles.policyOverviewSection\]\}>\s*<CardHeader iconKind="policy-overview" title="Policy Overview"/, 'Policy Overview in independent blue section');
-assert.match(source, /<View style=\{\[styles.policyDetailSection, styles.premiumSection\]\}>\s*<Pressable accessibilityRole="button" accessibilityState=\{\{ expanded: showPremiumDetails \}\}/, 'Premium disclosure in independent mint section');
+assert.match(source, /\{showPremiumDetails \? \(\s*<View style=\{\[styles.policyDetailSection, styles.premiumSection\]\}>\s*<View style=\{styles.premiumDisclosure\}>/, 'Entire mint premium section is conditional');
 assert.match(source, /<View style=\{\[styles.policyDetailSection, styles.salesSection\]\}>\s*<Pressable accessibilityRole="button" accessibilityState=\{\{ expanded: showCommercialDetails \}\}/, 'Sales disclosure in independent lavender section');
 assert.match(source, /premiumDisclosure:[^\n]*backgroundColor: 'transparent'/, 'Premium header uses section colour');
 assert.match(source, /commercialRow:[^\n]*backgroundColor: 'transparent'/, 'Sales header uses section colour');
 assert.match(source, /<Ionicons name="chevron-forward" size=\{13\} color="#0969CF"/, 'View All chevron retained');
 console.log('Navy Policy Details hero, original data/text colours and three separate coloured sections with flat divider-separated fields verified.');
+
+assert.match(source, /useState\(false\);\s*const \{ motion \}/, 'Premium starts collapsed');
+assert.match(source, /accessibilityState=\{\{ expanded: showPremiumDetails \}\} onPress=\{togglePremiumDetails\}/, 'Total Premium is accessible toggle');
+assert.match(source, /showPremiumDetails \? "chevron-up" : "chevron-down"/, 'Chevron reflects expansion');
+assert.match(source, /motion && Platform.OS !== 'web'\) LayoutAnimation.configureNext/, 'Animation respects motion preference');

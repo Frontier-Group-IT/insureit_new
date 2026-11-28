@@ -1,9 +1,10 @@
 import { formatAppDate } from '@/lib/indian-date';
 import { Children, useCallback, useEffect, useState, type ReactNode } from 'react';
-import { BackHandler, Image, Linking, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, Image, LayoutAnimation, Linking, Platform, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
+import { useActivityMotion } from '@/components/activity-motion';
 import { partnerAlert } from '@/components/ui/partner-alert-provider';
 import { PartnerPolicyDocuments } from '@/components/partner-policy-documents';
 import { listPartnerPolicyDocuments, openPartnerPolicyDocument } from '@/lib/policy-documents';
@@ -27,7 +28,13 @@ export default function PolicyDetailScreen() {
   const [error, setError] = useState('');
   const [intermediaryName, setIntermediaryName] = useState<string | null>(null);
   const [showOverviewDetails, setShowOverviewDetails] = useState(false);
-  const [showPremiumDetails, setShowPremiumDetails] = useState(true);
+  const [showPremiumDetails, setShowPremiumDetails] = useState(false);
+  const { motion } = useActivityMotion();
+  const togglePremiumDetails = () => {
+    if (motion && Platform.OS !== 'web') LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowPremiumDetails((value) => !value);
+  };
+  useEffect(() => { setShowPremiumDetails(false); }, [id]);
   const [showCommercialDetails, setShowCommercialDetails] = useState(true);
 
   const load = useCallback(async () => {
@@ -173,7 +180,10 @@ export default function PolicyDetailScreen() {
               <DetailRow>
               <OverviewItem iconKind="issuance-date" label="Issuance Date" value={formatDate(data.policy.issuance_date)} />
               <OverviewItem iconKind="idv" label="IDV" value={data.policy.insured_declared_value != null ? formatIndianCurrency(data.policy.insured_declared_value) : 'Not recorded'} />
-              <OverviewItem iconKind="premium-breakup" label="Total Premium" value={nullableMoney(data.premium.gross_premium)} />
+              <Pressable accessibilityRole="button" accessibilityLabel={`Total Premium, ${nullableMoney(data.premium.gross_premium)}, premium breakup`} accessibilityState={{ expanded: showPremiumDetails }} onPress={togglePremiumDetails} style={({ pressed }) => [styles.premiumToggle, pressed && styles.pressed]}>
+                <OverviewItem iconKind="premium-breakup" label="Total Premium" value={nullableMoney(data.premium.gross_premium)} />
+                <Ionicons name={showPremiumDetails ? "chevron-up" : "chevron-down"} size={14} color="#102A51" />
+              </Pressable>
               </DetailRow>
             </View>
             {showOverviewDetails ? (
@@ -190,13 +200,13 @@ export default function PolicyDetailScreen() {
               </View>
             ) : null}
           </View>
+          {showPremiumDetails ? (
           <View style={[styles.policyDetailSection, styles.premiumSection]}>
-            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }} onPress={() => setShowPremiumDetails((value) => !value)} style={({ pressed }) => [styles.premiumDisclosure, pressed && styles.pressed]}>
+            <View style={styles.premiumDisclosure}>
               <PartnerPolicyDetailIcon kind="premium-breakup" size={22} showBadge={false} />
               <View style={styles.disclosureText}><Text style={styles.cardTitle}>Premium breakup</Text></View><Text style={styles.premiumHeaderAmount}>{formatIndianCurrency(data.premium.gross_premium)}</Text>
 
-            </Pressable>
-            {showPremiumDetails ? (
+            </View>
                 <View style={styles.premiumDetailGrid}>
                 <DetailRow>
                 <MiniInfo compact label="Net premium" value={nullableMoney(data.premium.net_premium)} />
@@ -208,8 +218,8 @@ export default function PolicyDetailScreen() {
                 <MiniInfo compact label="CPA" value={data.premium.cpa_opted ? nullableMoney(data.premium.cpa_amount) : 'Not opted / not recorded'} />
                 </DetailRow>
                 </View>
-            ) : null}
           </View>
+          ) : null}
           <View style={[styles.policyDetailSection, styles.salesSection]}>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }} onPress={() => setShowCommercialDetails((value) => !value)} style={({ pressed }) => [styles.commercialRow, pressed && styles.pressed]}>
               <PartnerPolicyDetailIcon kind="sales-ownership" size={22} showBadge={false} />
@@ -431,6 +441,7 @@ const styles = StyleSheet.create({
     fontWeight: '800', width: '100%', includeFontPadding: false,
   },
   overviewGrid: { paddingHorizontal: 8 },
+  premiumToggle: { flex: 1, minWidth: 0, minHeight: 44, flexDirection: 'row', alignItems: 'center', paddingRight: 3 },
   overviewItem: { flex: 1, minWidth: 0, minHeight: 35, justifyContent: 'center', gap: 2, paddingVertical: 4, paddingHorizontal: 6 },
   overviewLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   overviewLogoWrap: { width: 23, height: 23, borderRadius: 9, backgroundColor: '#F0F5FC', alignItems: 'center', justifyContent: 'center' }, overviewLogo: { width: 20, height: 20 }, overviewCopy: { flex: 1, minWidth: 0 }, overviewLabel: { flexShrink: 1, color: '#53677F', fontSize: 9, lineHeight: 12 }, overviewValue: { color: '#192B46', fontSize: 11, lineHeight: 14, fontWeight: '700' },

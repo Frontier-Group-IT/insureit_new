@@ -203,16 +203,16 @@ requireText(policyDetail, "premiumDisclosure: { minHeight: 32", 'Premium section
 requireText(policyDetail, "commercialRow: { minHeight: 32", 'Sales section retains its pressable disclosure');
 requireText(policyDetail, "backgroundColor: 'transparent'", 'Quick Actions use a transparent background');
 requireText(policyDetail, '<View style={[styles.policyDetailSection, styles.policyOverviewSection]}>\n            <CardHeader iconKind="policy-overview"', 'Overview has independent blue section');
-requireText(policyDetail, '<View style={[styles.policyDetailSection, styles.premiumSection]}>\n            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showPremiumDetails }}', 'Premium has independent mint section');
+requireText(policyDetail, '{showPremiumDetails ? (\n          <View style={[styles.policyDetailSection, styles.premiumSection]}>\n            <View style={styles.premiumDisclosure}>'.replace(/\n/g, '\n'), 'Entire mint premium section is conditional');
 requireText(policyDetail, '<View style={[styles.policyDetailSection, styles.salesSection]}>\n            <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCommercialDetails }}', 'Sales has independent lavender section');
 for (const removedTone of ['styles.quickDocument', 'styles.quickRenewal', 'styles.quickClaim', 'styles.quickCustomer', 'styles.policySectionHeaderTint']) {
   if (policyDetail.includes(removedTone)) throw new Error('Removed colored header/action style unexpectedly returned: ' + removedTone);
 }
 requireText(policyDetail, 'accessibilityState={{ expanded: showPremiumDetails }}', 'Premium expansion remains');
 requireText(policyDetail, 'accessibilityState={{ expanded: showCommercialDetails }}', 'Commercial expansion remains');
-requireText(policyDetail, 'const [showPremiumDetails, setShowPremiumDetails] = useState(true);', 'Premium breakup opens expanded by default');
+requireText(policyDetail, 'const [showPremiumDetails, setShowPremiumDetails] = useState(false);', 'Premium breakup opens collapsed by default');
 requireText(policyDetail, 'const [showCommercialDetails, setShowCommercialDetails] = useState(true);', 'Sales ownership opens expanded by default');
-requireText(policyDetail, 'onPress={() => setShowPremiumDetails((value) => !value)}', 'Premium breakup is still collapsible');
+requireText(policyDetail, 'onPress={togglePremiumDetails}', 'Premium breakup is still collapsible');
 requireText(policyDetail, 'onPress={() => setShowCommercialDetails((value) => !value)}', 'Sales ownership is still collapsible');
 requireText(policyDetail, 'quickSectionHeading: { marginLeft: 3, marginRight: 3, marginBottom: 4', 'Quick Actions heading remains aligned with transparent tiles');
 requireText(policyDetail, 'externalSectionHeading: { marginLeft: -6, paddingLeft: 0, paddingRight: 2 }', 'Customer & Vehicle heading moves slightly left without moving its card');
