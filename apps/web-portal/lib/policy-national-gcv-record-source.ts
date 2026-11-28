@@ -36,7 +36,8 @@ export function assessNationalGcvRecordSource(text:string,p:Printed):NationalGcv
   if(!high||!low||rows.filter(r=>r.rate===18).length!==1||rows.filter(r=>r.rate===5).length!==1)return null;
   const od=whole.match(/\/Own[\s\S]{0,240}?Damage Cover[\s\S]{0,145}?₹\s*([\d,.]+)/i);
   const basic=whole.match(/Legal Liability Cover\s+([\d,.]+)/i);
-  const paid=whole.match(/Legal Liability to Driver,Cleaner,Coolies\s+([\d,.]+)\b/i)\n    ||whole.match(/Legal Liability to Driver,Cleaner,Coolies[\s\S]{0,115}?\n\s*([\d,.]+)\s*\nCNG\/LPG Kit/i);
+  const paid=whole.match(/Legal Liability to Driver,Cleaner,Coolies\s+([\d,.]+)\b/i)
+    ||whole.match(/Legal Liability to Driver,Cleaner,Coolies[\s\S]{0,115}?\n\s*([\d,.]+)\s*\nCNG\/LPG Kit/i);
   if(!od||!basic||!paid)return null;
   const sourceOd=money(od[1]),basicTp=money(basic[1]),paidDriver=money(paid[1]);
   if(![p.od,p.tp,p.net,p.gst,p.gross,sourceOd,basicTp,paidDriver].every(x=>Number.isFinite(x)&&x>=0)
