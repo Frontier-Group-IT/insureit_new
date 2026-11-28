@@ -25,3 +25,6 @@ Run `infra/sql/audit_uncertain_policy_booking_readonly.sql` using a trusted read
 The report is insurer-neutral and detects later recovery attempts. It is useful for any future `conversion_outcome_unknown` record to distinguish already-booked evidence, second uncertain attempts, canonical review, and missing sources. Its companion CI test rejects SQL write operations and unsafe classification ordering.
 
 **No database schema migration, RLS or n8n changes are required for the report.** The script executes read-only. This release does not automatically clear exception labels or book any of the three records.
+
+## Future Go Digit JCB draft identity correction
+The verified `go_digit_jcb_new_unregistered_native_pdf` source can print a valid insured name yet formerly leave the editable onboarding draft's `insuredName` empty. This layout is now admitted to the existing exact `page:null` + `Native PDF policy schedule` insured-name evidence contract. It fills an **editable draft only** and returns `needsManualReview=true` when no customer master is linked. Conflicting masters stay blocked; no new customer is auto-created, no prior uncertain attempt is requeued, and no booking or policy record is inserted.
