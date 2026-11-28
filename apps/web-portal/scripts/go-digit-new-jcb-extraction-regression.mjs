@@ -57,13 +57,17 @@ fail({...p,fields:[...p.fields,p.fields[0]]});
 fail({...p,premium_components:{...p.premium_components,gross:14955.9}});
 fail({...p,premium_components:{...p.premium_components,od:null}});
 fail({...p,fields:p.fields.map(x=>x.key==="policy_issuance_date"?{...x,value:"2027-11-25"}:x)});
-// National CPA absence is still a hard hold. Only the exact source-verified
-// Digit NEW variant may proceed to guarded canonical review and conversion.
+// National GCV is still HELD unless original invoice line items establish
+// a zero separately charged CPA and a precise record-only premium projection.
+// This does not grant a CPA waiver or alter Go Digit NEW classification.
 const action=fs.readFileSync(new URL("../app/development/ai-policy-onboarding/actions.ts",import.meta.url),"utf8");
 const handoff=fs.readFileSync(new URL("../app/policy-intakes/handoff-actions.ts",import.meta.url),"utf8");
-assert.ok(action.includes('return fail("CPA evidence"'));
+assert.ok(action.includes('&& !extracted.preview.candidateCanonicalPremium') || action.includes('&&!extracted.preview.candidateCanonicalPremium'));
+assert.ok(action.includes('return fail("National record evidence"'));
 assert.ok(handoff.includes('parserId==="national_gcv_package_native_pdf"'));
+assert.ok(handoff.includes('!nationalRecordReady'));
+assert.ok(handoff.includes('nationalGcvRecordReady'));
 assert.ok(action.includes('assessGoDigitNewJcbDirectConversion'));
 assert.ok(handoff.includes('assessGoDigitNewJcbDirectConversion'));
 assert.ok(action.includes('verifiedMoney=extracted.preview.candidateCanonicalPremium!'));
-console.log("Source-qualified Go Digit NEW JCB CPA split and National hold regressions passed");
+console.log("Source-qualified Go Digit NEW JCB and invoice-only National GCV record holds passed");

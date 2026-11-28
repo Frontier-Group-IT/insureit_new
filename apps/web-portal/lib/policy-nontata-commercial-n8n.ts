@@ -7,6 +7,7 @@ import { assessHeldInsurerCandidate, recognizeHeldInsurerLayout } from "@/lib/po
 import { verifyOrientalCmsSigningDate, type OrientalSignedIssuanceEvidence } from "@/lib/policy-oriental-cms-issuance";
 import { acceptGoDigitNewJcbExtraction } from "@/lib/policy-digit-new-jcb-extraction";
 import { niaIntraModelVariantConflict } from "@/lib/policy-nia-intra-source-conflict";
+import { assessNationalGcvRecordSource } from "@/lib/policy-national-gcv-record-source";
 
 type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "united_india_gcv_punjab_split_gst_native_pdf" | "united_india_private_car_package_native_pdf" | "oriental_gccv_native_pdf";
 type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf" | "hdfc_ergo_two_wheeler_tp_native_pdf" | "sbi_general_private_car_package_native_pdf" | "liberty_two_wheeler_tp_native_pdf";
@@ -259,11 +260,13 @@ export async function recognizeNonTataCommercialPdf(file: File): Promise<Insurer
   if(knownUntrained==="n8n_layout_untrained_oriental_two_wheeler_package")
     throw new Error(knownUntrained);
   const initial=insurerForText(text);
-  // This source prints contradictory vehicle model and variant labels.
-  // No inferred V30/V40 choice is safe for unattended canonical booking.
-  // Run only on verified New India layouts; leave every other insurer alone.
+  // RECORD-KEEPING rule: insurer-issued policy source fields are preserved.
+  // Make/Model is the canonical model field; a conflicting Variant is a
+  // non-financial source annotation, not a reason to refuse an existing
+  // insured record. It must never be silently substituted for Make/Model.
+  // The original PDF remains attached for audit, as do all other guards.
   if(initial==="new_india_cv_native_pdf" && niaIntraModelVariantConflict(text))
-    throw new Error("n8n_nia_intra_source_model_variant_conflict");
+    console.info("[policy-record] NIA printed variant differs from Make/Model; retain the original PDF and use the labelled Make/Model");
   // Only UIIC GCV needs late-page financial labels for the split-GST
   // sub-profile. Never broaden other insurer classification.
   if(initial==="united_india_gcv_native_pdf"){
@@ -816,7 +819,36 @@ export async function tryReadNonTataCommercialPolicy(
       ||insurer==="oriental_gccv_package_native_pdf")
       ?await verifyOrientalCmsSigningDate(new Uint8Array(await file.arrayBuffer()))
       :null;
-    return validate(payload, insurer, requestIds, signature);
+    const read=validate(payload, insurer, requestIds, signature);
+    if(insurer==="national_gcv_package_native_pdf"){
+      const pages=await extractNativePdfTextPages(new Uint8Array(await file.arrayBuffer()),{
+        maxTextPages:10,extendedTimeout:true,
+      });
+      const certified=assessNationalGcvRecordSource(
+        pages.map(page=>page.text).join("\n"),read.premium);
+      if(certified){
+        // "0" is the separate CHARGE on the issued invoice, not a legal
+        // declaration that PA cover was waived or absent. Keep the document.
+        read.fields.push({
+          key:"cpa_premium",label:"cpa_premium",value:"0",confidence:null,page:6,
+          evidence:"National GCV invoice: no separately charged CPA; coverage/waiver not determined",
+        });
+        const policy=read.fields.find(field=>field.key==="policy_product");
+        if(policy)policy.evidence="National printed GCV package; source rounding adjustment "
+          +String(certified.roundingAdjustment)+" INR; original policy copy retained";
+        read.candidateCanonicalPremium=certified.canonical;
+      }
+    }
+    if(insurer==="new_india_cv_native_pdf"){
+      const pages=await extractNativePdfTextPages(new Uint8Array(await file.arrayBuffer()));
+      if(niaIntraModelVariantConflict(pages.slice(0,2).map(page=>page.text).join("\n"))){
+        // An immutable PDF remains source of both printed values. The
+        // canonical model continues to use Make/Model, not Variant.
+        const field=read.fields.find(item=>item.key==="vehicle_model");
+        if(field)field.evidence="NIA Make/Model as printed; conflicting Variant in original PDF; source discrepancy, not corrected";
+      }
+    }
+    return read;
   } finally { clearTimeout(timeout); }
 }
 

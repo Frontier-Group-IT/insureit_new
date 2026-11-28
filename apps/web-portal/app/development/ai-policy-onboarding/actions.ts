@@ -586,8 +586,13 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   // Validate the original PDF premium and its OD/NCB deduction before a
   // handoff can claim the Intake or create a canonical draft.
   let verifiedMoney:ReturnType<typeof mapVerifiedN8nMotorPremium>;
-  if(extracted.preview.parserId==="national_gcv_package_native_pdf")
-    return fail("CPA evidence","The National GCV policy has no separately verified owner-driver CPA charge or exclusion. Review original insurer evidence before booking.");
+  // Issued-policy record import. The National GCV PDF is only eligible
+  // when the original invoice separately certifies both tax bases, all
+  // printed amounts and the <=5 paisa net rounding. An unpriced PA cover
+  // cannot be interpreted as waived; CPA=0 denotes charged premium only.
+  if(extracted.preview.parserId==="national_gcv_package_native_pdf"
+    &&!extracted.preview.candidateCanonicalPremium)
+    return fail("National record evidence","The original National GCV tax invoice did not independently reconcile the OD, paid driver, basic TP, GST and payable. Retain for review.");
   const digitNewCertified=assessGoDigitNewJcbDirectConversion({
     parserId:extracted.preview.parserId,checksPassed:extracted.preview.checksPassed,
     warnings:extracted.preview.warnings,fields:extracted.preview.fields,
@@ -609,6 +614,9 @@ async function convertVerifiedAiIntakeCore(id:string,confirmed:boolean):Promise<
   if (commercial) {
     if(digitNewCertified.eligible){
       verifiedMoney=extracted.preview.candidateCanonicalPremium!;
+    }else if(extracted.preview.parserId==="national_gcv_package_native_pdf"
+      &&extracted.preview.candidateCanonicalPremium){
+      verifiedMoney=extracted.preview.candidateCanonicalPremium;
     }else if(heldCandidate){
       // Exact PDF source, 18-check response, CPA and OD addon split already
       // verified in the independent held-insurer adapter.
