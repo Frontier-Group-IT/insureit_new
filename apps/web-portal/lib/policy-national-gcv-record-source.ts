@@ -34,7 +34,7 @@ export function assessNationalGcvRecordSource(text:string,p:Printed):NationalGcv
   if(rows.length!==2)return null;
   const high=rows.find(r=>r.rate===18),low=rows.find(r=>r.rate===5);
   if(!high||!low||rows.filter(r=>r.rate===18).length!==1||rows.filter(r=>r.rate===5).length!==1)return null;
-  const od=whole.match(/Own\s*\nDamage Cover[\s\S]{0,145}?₹\s*([\d,.]+)/i);
+  const od=whole.match(/\/Own[\s\S]{0,240}?Damage Cover[\s\S]{0,145}?₹\s*([\d,.]+)/i);
   const basic=whole.match(/Legal Liability Cover\s+([\d,.]+)/i);
   const paid=whole.match(/Legal Liability to Driver,Cleaner,Coolies\s+([\d,.]+)\b/i)\n    ||whole.match(/Legal Liability to Driver,Cleaner,Coolies[\s\S]{0,115}?\n\s*([\d,.]+)\s*\nCNG\/LPG Kit/i);
   if(!od||!basic||!paid)return null;
