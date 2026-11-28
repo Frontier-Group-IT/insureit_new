@@ -236,6 +236,32 @@ export async function runAutoBookingBatch():Promise<{
       await processClaim(claim);
     }
   }
+  // Reusable 13/13 ICICI 3005 PRE-COMMIT recovery only. The SQL RPC
+  // atomically proves the previous result was deterministic extraction_review,
+  // an empty draft, unchanged current PDF/fingerprint, no registered policy
+  // with this number, no existing chassis, no competing intake and no earlier
+  // recovery. It inserts into the SAME irreversible ICICI recovery ledger
+  // and uses its existing finisher, never resetting the original attempt.
+  // Unknown/booked/ownership results and the nine Tata cases are excluded.
+  const iciciPrecommit=await admin.rpc("claim_ai_auto_booking_icici_precommit_v1",{
+    p_operator_profile_id:operatorId,p_limit:2,
+  });
+  if(iciciPrecommit.error){
+    const missing=["PGRST202","42883"].includes(iciciPrecommit.error.code??"");
+    if(!missing){
+      const pgCode=typeof iciciPrecommit.error.code==="string"
+        &&/^[0-9A-Z]{5}$/.test(iciciPrecommit.error.code)
+        ?iciciPrecommit.error.code:"unknown";
+      console.error("[ai-auto-booking] ICICI precommit recovery unavailable",{pgCode});
+      throw Error("auto_booking_icici_precommit_recovery_unavailable");
+    }
+  }else{
+    for(const item of (iciciPrecommit.data??[]) as Claim[]){
+      const claim={...item,iciciRecovery:true};
+      claims.push(claim);
+      await processClaim(claim);
+    }
+  }
   // Single exact Go Digit 7A source/transaction reconciliation. The
   // service-role SQL performs atomic Policy Register, vehicle/chassis,
   // document, audit and terminal-ledger proof BEFORE creating one new
