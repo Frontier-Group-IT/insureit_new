@@ -104,7 +104,7 @@ const handoff=fs.readFileSync(path.join(root,"app/policy-intakes/handoff-actions
 const insuredSelector=fs.readFileSync(path.join(root,"lib/policy-n8n-onboarding-insured.ts"),"utf8");
 assert(handoff.includes('"united_india_gcv_punjab_split_gst_native_pdf"'),
  "Canonical intake draft handoff must recognize verified Punjab parser");
-assert(handoff.includes('["united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf"].includes(verified.parserId)'),
+assert(handoff.includes('["united_india_gcv_native_pdf","united_india_gcv_punjab_split_gst_native_pdf","united_india_gcv_haryana_mahindra_split_gst_native_pdf"].includes(verified.parserId)'),
  "Canonical premium mapping must recognize verified Punjab parser");
 assert(insuredSelector.includes('"united_india_gcv_punjab_split_gst_native_pdf"'),
  "Verified insured name must survive Punjab draft selection");
