@@ -27,6 +27,21 @@ const full=assessNationalGcvRecordSource(policy,premium);
 assert.ok(full,"Two printed IGST rows and payable should reconcile");
 assert.deepEqual(full.canonical,{od:"1723",tp:"27286",addOnPremium:"0",cpa:"0",cpaOpted:"No"});
 assert.equal(full.roundingAdjustment,-.04);
+// Exact native-PDF bilingual heading shape: Hindi glyphs may be inserted
+// between the printed goods-carrying title and final Package token.
+const mixedHeading=policy.replace(
+ "Policy Schedule-Motor - Goods Carrying Vehicle - Package",
+ "पॉलिसी अनुसूची /Policy Schedule-Motor - Goods Carrying Vehicle -\n          ु च\n Package"
+);
+assert.ok(assessNationalGcvRecordSource(mixedHeading,premium),
+ "Original Hindi/English line-fragmented National title must import as a record");
+assert.equal(assessNationalGcvRecordSource(
+ mixedHeading.replace("Package\n", "Liability Only\n").replace(/\bPackage\b/g,"Liability Only"),premium),null,
+ "Not a valid National GCV package product");
+assert.equal(assessNationalGcvRecordSource(
+ mixedHeading.replace("          ु च", "X".repeat(150)),premium),null,
+ "Unbounded headings must not accidentally match unrelated sections");
+
 assert.match(full.rationale,/not asserted/,"No assertion of CPA cover or waiver");
 
 for(const altered of [
