@@ -328,8 +328,10 @@ assert.ok(handoff.includes("const iffcoVerifiedFill = Boolean(commercial) && fil
   &&handoff.includes("assessIffcoAutoOnboarding({"),
   "Certified IFFCO must be allowed through direct handoff without manual reparse");
 assert.ok(handoff.includes('state:eligibleForVerifiedConversion?"verified":"exception"')
-  && handoff.includes("autoEligibleGoDigit||certifiedDigitNew||iffcoReview.eligible"),
-  "Existing Go Digit eligibility is preserved while narrowly certified IFFCO is added");
+  && handoff.includes("autoEligibleGoDigit||certifiedDigitNew||nationalGcvRecordReady||iffcoReview.eligible")
+  && handoff.includes('const nationalGcvRecordReady=verified.parserId==="national_gcv_package_native_pdf"')
+  && handoff.includes('Boolean(verified.candidateCanonicalPremium)'),
+  "Existing Go Digit and IFFCO eligibility remains with separately invoice-certified National GCV");
 assert.ok(handoff.includes('go_digit_missing_verified_manufacturing_year'));
 assert.ok(component.includes('go_digit_missing_verified_manufacturing_year'));
 // Run the actual helpers on verified commercial evidence, not a copied algorithm.
