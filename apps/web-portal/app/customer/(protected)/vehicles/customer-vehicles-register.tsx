@@ -1,4 +1,5 @@
-"use client";
+ "use client";
+import { CustomerVehicleArtwork } from "@/components/customer-portal/customer-vehicle-artwork";
 import "../customer-register-motion.css";
 import { CustomerSearchAutocomplete } from "@/components/customer-portal/customer-search-autocomplete";
 import Link from "next/link";
@@ -110,7 +111,7 @@ export function CustomerVehiclesRegister({ accountId, items, initialQuery = "" }
                 onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openVehicle(v.id); } }}
                 className="customer-register-row cursor-pointer bg-white transition-colors hover:bg-[#F2F7FF] focus-visible:bg-[#EAF3FF] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#1769DC]">
                 <td className="px-3 py-3"><strong className="whitespace-nowrap text-[13px] text-[#15376B]">{v.number}</strong></td>
-                <td className="px-3 py-3"><div className="flex justify-center"><ManufacturerMark make={v.make}/></div></td>
+                <td className="px-3 py-3"><div className="flex justify-center"><CustomerVehicleArtwork accountId={accountId} vehicleId={v.id} model={v.model} fallback={<ManufacturerMark make={v.make}/>}/></div></td>
                 <td className="px-3 py-3 text-left"><strong className="block truncate whitespace-nowrap text-[12px] text-[#142C56]" title={v.model || undefined}>{v.model||"—"}</strong></td>
                 <td className="px-3 py-3 text-[12px] font-medium text-[#264572]">{v.type||"—"}</td>
                 <td className="px-3 py-3 text-[12px] text-[#264572]">{v.chassis||"—"}</td>

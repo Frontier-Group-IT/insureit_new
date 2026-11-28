@@ -1,3 +1,4 @@
+import { CustomerVehicleArtwork } from "@/components/customer-portal/customer-vehicle-artwork";
 import Image from "next/image";
 import { getStaticInsurerLogo } from "@/lib/insurer-logo";
 import { VehicleInsuranceHistoryRow } from "./vehicle-insurance-history-row";
@@ -62,7 +63,7 @@ export default async function CustomerVehicleDetailPage({
           <div className="absolute bottom-[-56px] right-28 h-40 w-40 rounded-full bg-[#82C5FF]/10 blur-2xl" />
         </div>
         <div className="relative flex items-center gap-3">
-          <Image src="/assets/customer-3d-icons/my_vehicles.png" alt="" width={56} height={56} className="h-14 w-14 shrink-0 object-contain drop-shadow-md" />
+          <CustomerVehicleArtwork accountId={account.id} vehicleId={vehicle.id} model={vehicle.model??""} className="h-16 w-24 object-contain" fallback={<Image src="/assets/customer-3d-icons/my_vehicles.png" alt="" width={56} height={56} className="h-14 w-14 shrink-0 object-contain drop-shadow-md" />}/>
           <div><h1 className="text-[20px] font-extrabold leading-tight text-white">Vehicle Details</h1><p className="mt-1 text-[11px] font-medium text-[#D2E5FC]">View and manage your vehicle information</p></div>
         </div>
       </header>
