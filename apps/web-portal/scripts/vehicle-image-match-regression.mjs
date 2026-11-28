@@ -62,3 +62,14 @@ console.log("Full vehicle image register regressions passed.");
 assert.ok(registerSource.includes("filtered.slice((current-1)*PAGE_SIZE,current*PAGE_SIZE)"));
 assert.ok(!registerSource.includes("setSize"));
 assert.ok(registerSource.includes("localeCompare"));
+
+const registerPage=source("../app/master-data/vehicle-images/page.tsx");
+assert.ok(!registerPage.includes("VehicleImageUpload"));
+assert.ok(registerPage.includes("unmatched={catalog.unmatched}"));
+assert.equal((registerPage.match(/<Card>/g)||[]).length,1);
+const compactHeader=registerSource.slice(registerSource.indexOf('data-testid="vehicle-image-register-header"'),registerSource.indexOf("{message&&"));
+assert.ok(compactHeader.indexOf("Vehicle Image Register")<compactHeader.indexOf("Search make or model"));
+assert.ok(compactHeader.indexOf("Search make or model")<compactHeader.indexOf('aria-label="Image status filters"'));
+assert.ok(compactHeader.includes("{counts[f]})</button>)}</div></div>"));
+assert.ok(compactHeader.includes("Unmatched vehicle records: {unmatched}"));
+console.log("Compact vehicle image register header contracts passed.");
