@@ -18,7 +18,7 @@ This is a living, source-constrained implementation handoff. Every intake state 
 | BE2DDA | Unsupported Non-Motor | Unsupported product | Separate Non-Motor parser and canonical booking contract; not a Motor rule extension |
 
 ## Implemented in this PR
-A reusable read-only gate is applied to **both** the AI queue reprocess action and the explicit current-PDF draft reparse action. It consults the original claim and all current one-time recovery ledgers. Any `claimed`, `uncertain`, `booked`, unreadable or unavailable ledger blocks reprocessing **before** altering queue/draft evidence. Only a pure `review_required` claim remains eligible for the pre-existing, separately authorized source-only reparse path.
+A reusable read-only gate is applied to **both** the AI queue reprocess action and the explicit current-PDF draft reparse action. It consults the original claim and all current one-time and stranded-claim recovery ledgers. Any `claimed`, `uncertain`, `booked`, unreadable or unavailable ledger blocks reprocessing **before** altering queue/draft evidence. Only a pure `review_required` claim remains eligible for the pre-existing, separately authorized source-only reparse path.
 
 ## Reusable rules for subsequent implementation
 1. Detection is by insurer + product + versioned source layout; never expand a global permissive regex from one document.
