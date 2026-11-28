@@ -109,6 +109,8 @@ jobs:
         run: node scripts/national-gcv-modal-scope-regression.mjs
       - name: New India original-PDF zero CPA evidence without n8n optional field
         run: node --experimental-strip-types scripts/nia-zero-cpa-original-source-regression.mjs
+      - name: Go Digit JCB verified insured-name draft preserves customer safeguards
+        run: node --experimental-strip-types scripts/go-digit-jcb-insured-draft-evidence-regression.mjs
       - name: Read-only booking reconciliation report never permits automatic uncertain retry
         run: node scripts/uncertain-booking-readonly-report-regression.mjs
       - name: ICICI 3005 exact-document precommit recovery and booking ledger guard
