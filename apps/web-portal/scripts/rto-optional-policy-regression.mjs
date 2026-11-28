@@ -149,6 +149,15 @@ const variantAdmission=n8nAdmission.slice(n8nAdmission.indexOf("function validat
   n8nAdmission.indexOf("function validate(payload:"));
 assert.doesNotMatch(variantAdmission,/"vehicle_registration_number","vehicle_rto_name","vehicle_rto_state"/,
   "Existing product variant adapter must never require optional RTO geography");
+const onboardingForm=file("apps/web-portal/components/policy-unified-form.tsx");
+assert.match(onboardingForm,/RTO State \/ City/);
+assert.match(onboardingForm,/\(Optional\)/);
+const rtoUiLine=onboardingForm.split("\n").find(line=>line.includes('aria-label="RTO state"'));
+assert.ok(rtoUiLine,"Both editable RTO fields must be present");
+assert.ok(rtoUiLine.includes('aria-label="RTO city"'),"RTO city must remain independently editable");
+assert.ok(!rtoUiLine.includes('required={!isCpmClass}'),"Neither RTO field may be required");
+const progress=onboardingForm.slice(onboardingForm.indexOf("const motorSectionProgress="),onboardingForm.indexOf("const sectionLabels="));
+assert.doesNotMatch(progress,/rtoFields|\.\.\.rtoFields/,"Optional RTO fields must not block section completion/date approval");
 const engine=file("apps/web-portal/lib/policy-onboarding-engine.ts");
 assert.doesNotMatch(engine,/if\s*\(vehicleClass\s*!==\s*"CPM"\s*&&\s*\(!rtoState\s*\|\|\s*!rtoName\)\)/);
 assert.match(engine,/RTO city\/state are optional/);
