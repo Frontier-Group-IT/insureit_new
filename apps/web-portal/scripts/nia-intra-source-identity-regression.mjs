@@ -26,4 +26,11 @@ const adapter=readFileSync(new URL("../lib/policy-nontata-commercial-n8n.ts",imp
 assert.ok(adapter.includes('if(initial==="new_india_cv_native_pdf" && niaIntraModelVariantConflict(text))'));
 assert.ok(adapter.includes('throw new Error("n8n_nia_intra_source_model_variant_conflict")'));
 assert.ok(adapter.includes('return initial;'),"Do not override unrelated insurer recognition");
+const bridge=readFileSync(new URL("../lib/policy-intake-semi-auto-n8n.ts",import.meta.url),"utf8");
+assert.ok(bridge.includes('"n8n_nia_intra_source_model_variant_conflict"'));
+assert.ok(bridge.includes('reason: "untrained_or_unverified"'));
+assert.ok(bridge.includes('not an n8n webhook') || bridge.includes('never retry as an unavailable n8n'));
+const queue=readFileSync(new URL("../lib/ai-policy-onboarding-queue-server.ts",import.meta.url),"utf8");
+assert.ok(queue.includes('const validationFailed=untrained&&!layoutNeedsTraining'));
+assert.ok(queue.includes('state:layoutNeedsTraining?"unsupported":validationFailed||retryExhausted?"exception"'));
 console.log("NIA source-contradictory vehicle model vs variant holds only the mismatched family");
