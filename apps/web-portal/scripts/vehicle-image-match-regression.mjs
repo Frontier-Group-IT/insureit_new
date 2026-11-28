@@ -43,5 +43,5 @@ assert.equal(resolveFamilyArtwork("access 125 drum",[oldImage]),"old.webp");
 assert.equal(resolveFamilyArtwork("access 125 drum",[oldImage,{...oldImage,path:"other.webp"}]),null);
 assert.equal(resolveFamilyArtwork("access 125 drum",[oldImage,{...oldImage,model:"access 125",path:"base.webp"}]),"base.webp");
 const picker=source("../app/master-data/vehicle-images/model-picker.tsx");
-for(const token of ["top-full","pointerdown","ArrowDown","Escape","modelSearch","setQuery","aria-autocomplete"])assert.ok(picker.includes(token),token);
+for(const token of ["createPortal","document.body","rect.bottom+4","zIndex:10000","backgroundColor:\"#fff\"","self-center","rotate-180","panel.current?.contains","pointerdown","ArrowDown","Escape","modelSearch","setQuery","aria-autocomplete"])assert.ok(picker.includes(token),token);
 console.log("Base-model and searchable picker regressions passed.");
