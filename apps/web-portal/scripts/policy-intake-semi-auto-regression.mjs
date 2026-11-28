@@ -101,9 +101,9 @@ assert(page.includes('item?.state === "duplicate" && item.exception_codes.includ
   && page.includes('duplicateIds.add(row.id)'),
   "A confirmed AI-queue duplicate must appear in the Duplicate bucket even while intake OCR is pending");
 assert(page.indexOf("const queue = queueActive ? await loadAiQueueDisplay") <
-  page.indexOf("const intakeCounts=policyIntakeStatusCounts(workspaceRows,duplicateIds)"),
+  page.indexOf("const intakeCounts: Record<IntakeStatusBucket, number>"),
   "Load queue duplicate evidence before computing unified status tab counts");
-assert(page.indexOf("const intakeCounts=policyIntakeStatusCounts(workspaceRows,duplicateIds)") <
+assert(page.indexOf("const intakeCounts: Record<IntakeStatusBucket, number>") <
   page.indexOf('const statusRows = selectedView==="all"'),
   "Queue-backed duplicate IDs must be applied before status filtering and pagination");
 assert(page.includes("!duplicateIds.has(row.id)")
@@ -742,9 +742,9 @@ assert.deepEqual({action:aiBucketCounts.action_required,review:aiBucketCounts.in
   {action:1,review:1,processing:1,openDuplicates:1,all:4},
   "Open-only AI counts match the Register's same buckets while excluding rejected/completed duplicates");
 const aiPageText=text("app/development/ai-policy-onboarding/page.tsx");
-assert(aiPageText.includes("policyIntakeStatusCounts(workspaceRows,duplicateIds)")
+assert(aiPageText.includes("for(const row of workspaceRows) intakeCounts[displayBucket(row)]++")
   && aiPageText.includes("getPartnerEmployeeIntakeReadScope")
-  && aiPageText.includes("const canonical=policyIntakeBucket(row,duplicateIds.has(row.id));")
+  && aiPageText.includes("effectivePolicyIntakeBucket(row,duplicateIds.has(row.id),queue.get(row.id),autoRequested)")
   && aiPageText.includes("displayBucket(row) === selectedView")
   && aiPageText.includes("const pageRows: SemiAutoIntakeRow[] = statusRows"),
  "AI Intake status tabs must use canonical register bucket and authorized scope before paging");

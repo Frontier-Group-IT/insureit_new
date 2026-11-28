@@ -4,6 +4,10 @@ import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel"
 import { PolicyIntakeWorkspace, type PolicyIntakeViewKey, type PolicyIntakeWorkspaceRow } from "@/components/policy-intake-workspace";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
+import { effectivePolicyIntakeBucket } from "@/lib/policy-intake-status-buckets";
+import { aiQueueEnabled, loadAiQueueDisplay } from "@/lib/ai-policy-onboarding-queue-server";
+import { autoBookingEnabled } from "@/lib/ai-policy-auto-booking-server";
+import { isN8nWorkbenchPrimary } from "@/lib/policy-intake-semi-auto-n8n";
 import { requirePolicyIntakeViewer } from "@/lib/policy-intake-server";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { requireCapability } from "@/lib/master-data-server";
@@ -158,8 +162,21 @@ export default async function PolicyIntakesPage({ searchParams }: { searchParams
     return { ...row, submitted_by_name: submittedBy };
   });
   const duplicateCheck = error ? null : await loadPolicyIntakeDuplicateMatches(admin, rows);
-  const workspaceRows = duplicateCheck?.ok
-    ? rowsWithSubmitters.map((row) => duplicateCheck.matches.has(row.id) ? { ...row, status: "Duplicate" } : row)
+  // The register and AI Studio must use the same effective status and confirmed
+  // queue-duplicate evidence. Only authorized Intake IDs are looked up.
+  const openRows = rowsWithSubmitters.filter(row =>
+    ["ready_for_review","in_review","needs_attention","processing"].includes(row.status));
+  const queue = duplicateCheck?.ok && isN8nWorkbenchPrimary() && aiQueueEnabled()
+    ? await loadAiQueueDisplay(openRows.map(row => row.id))
+    : new Map();
+  const autoRequested = autoBookingEnabled();
+  const workspaceRows: PolicyIntakeWorkspaceRow[] = duplicateCheck?.ok
+    ? rowsWithSubmitters.map(row => {
+      const duplicate = duplicateCheck.matches.has(row.id);
+      const evidence = queue.get(row.id);
+      const effective_bucket = effectivePolicyIntakeBucket(row, duplicate, evidence, autoRequested);
+      return { ...row, status: duplicate ? "Duplicate" : row.status, effective_bucket };
+    })
     : [];
   if (duplicateCheck && !duplicateCheck.ok) {
     console.error("[policy-intakes] duplicate verification failed", {

@@ -17,6 +17,8 @@ const register=read("app/policy-intakes/page.tsx");
 const studio=read("app/development/ai-policy-onboarding/page.tsx");
 const workspace=read("components/development/semi-auto-policy-workspace.tsx");
 const retry=read("app/policy-intakes/retry-actions.ts");
+const intakeWorkspace=read("components/policy-intake-workspace.tsx");
+const buckets=read("lib/policy-intake-status-buckets.ts");
 const migration=read("../../supabase/migrations/20261124183000_unified_policy_intake_automation.sql");
 
 assert(upload.includes('processing_lane:"automation"')
@@ -51,4 +53,21 @@ assert(migration.includes("set processing_lane='automation'")
 assert(!migration.includes("delete from")&&!migration.includes("truncate ")
   &&!migration.includes("update public.policies"),
   "No policies or current queue states are deleted or reset.");
+
+assert(buckets.includes("export function effectivePolicyIntakeBucket("),
+  "Both pages must use a shared, display-only status resolver.");
+assert(studio.includes("effectivePolicyIntakeBucket(row,duplicateIds.has(row.id),queue.get(row.id),autoRequested)"),
+  "AI Studio must calculate tab counts from the shared effective status.");
+assert(register.includes("effectivePolicyIntakeBucket(row, duplicate, evidence, autoRequested)")
+  && register.includes("loadAiQueueDisplay(openRows.map(row => row.id))"),
+  "The normal Policy Intake register must load AI evidence for the same authorized Intake IDs.");
+assert(intakeWorkspace.includes("for (const row of baseFiltered) bucketCounts[intakeBucket(row)]++")
+  && intakeWorkspace.includes("return row.effective_bucket ?? policyIntakeBucket(row, false)"),
+  "Normal register counts and rows must share the effective status.");
+assert(buckets.includes('queue.exception_codes?.includes("duplicate_policy") === true'),
+  "An AI queue error alone must never establish a duplicate.");
+assert(buckets.includes('row.assigned_to_profile_id != null') && buckets.includes('row.policy_type !== "motor"'),
+  "The automatic-booking presentation must not override assigned or non-Motor workflows.");
+assert(!register.includes(".update(") && !studio.includes(".update("),
+  "Both lists must remain read-only while reconciling counts.");
 console.log("Unified AI Policy Intake automation regression: OK");

@@ -44,7 +44,8 @@ for (const expected of [
 
 for (const expected of [
   'loadPolicyIntakeDuplicateMatches',
-  'duplicateCheck.matches.has(row.id) ? { ...row, status: "Duplicate" } : row',
+  'status: duplicate ? "Duplicate" : row.status',
+  'effectivePolicyIntakeBucket(row, duplicate, evidence, autoRequested)',
 ]) {
   if (!intakePageSource.includes(expected)) fail(`policy intake queue duplicate classification missing: ${expected}`);
 }
