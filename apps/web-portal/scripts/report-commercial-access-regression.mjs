@@ -10,6 +10,9 @@ const managementExport = await read("../app/reports/export/management-pack/route
 const businessExport = await read("../app/reports/export/policy-business/route.ts");
 
 assert.match(policyAccess, /export function canViewReportCommercials/);
+assert.match(policyAccess, /if \(profile\?\.role === "super_admin"\) return true;/, "All Super Admin users must receive report-only commercial read access without an ID allowlist");
+const operationalAccess = policyAccess.split("export function canViewReportCommercials")[0];
+assert.doesNotMatch(operationalAccess, /profile\?\.role === "super_admin"/, "Report-only Super Admin permission must not widen operational commercial privileges");
 const operationalList = policyAccess.split("export function canAccessPolicyCommercials")[0];
 assert.doesNotMatch(operationalList, /7bda6ffc-340e-48aa-bd3d-4f1f62cf85d9/i, "Gagandeep must not receive commercial editing/review access");
 assert.match(policyAccess, /profile\.role === "sales_head" && REPORT_COMMERCIAL_READ_PROFILE_IDS\.has\(profile\.id\)/, "Reports grant must require both profile ID and Sales Head role");
