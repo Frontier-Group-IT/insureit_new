@@ -43,7 +43,7 @@ export function certifyNiaZeroChargedCpa(text:string,p:Premium):boolean{
     ||!new RegExp("\\boprn\\b[\\s\\S]{0,210}?\\b"+num(driver)+"\\b","i").test(schedule)
     ||!new RegExp("Total OD Premium\\s*\\(Rs\\)\\s*"+num(p.od)+"\\b","i").test(schedule)
     ||!new RegExp("Total TP Premium\\s*\\(Rs\\)\\s*"+num(p.tp)+"\\b","i").test(schedule)
-    ||!new RegExp("Total Payable\\s*\\(Rs\\)[\\s\\S]{0,180}?\\b"+num(p.gross.toLocaleString("en-IN"))+"\\b","i").test(schedule))
+    ||!new RegExp("Total Payable\\s*\\(Rs\\)[\\s\\S]{0,500}?\\b"+num(p.gross.toLocaleString("en-IN"))+"\\b","i").test(schedule))
     return false;
   return true;
 }
