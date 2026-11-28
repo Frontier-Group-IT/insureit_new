@@ -16,6 +16,7 @@ export const AI_BOOKING_REPROCESS_LEDGERS = [
   "policy_intake_ai_icici_uncertain_recovery_attempts",
   "policy_intake_ai_reconciled_recovery_attempts",
   "policy_intake_ai_uiic_tractor_recovery_attempts",
+  "policy_intake_ai_stranded_claim_recovery",
 ] as const;
 
 export type AiBookingReprocessLedger = typeof AI_BOOKING_REPROCESS_LEDGERS[number];
