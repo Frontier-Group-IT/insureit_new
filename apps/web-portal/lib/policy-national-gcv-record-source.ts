@@ -83,7 +83,18 @@ export function assessNationalGcvRecordSource(text:string,p:Printed):NationalGcv
     ||!/Legal Liability to Driver,Cleaner,Coolies/i.test(whole))return null;
   const sourceOd=od?money(od[1]):p.od;
   const basicTp=basic?money(basic[1]):low.taxable;
-  const paidDriver=paid?money(paid[1]):p.tp-low.taxable;
+  const inferredDriver=p.tp-low.taxable;
+  // If PDF.js separates columns, locate the charge in the bounded
+  // paid-driver row itself; an amount inferred only from the GST totals
+  // is not enough. Never use numbers from a later invoice/coverage page.
+  const driverLabel=whole.indexOf("Legal Liability to Driver,Cleaner,Coolies");
+  const nextLabel=whole.indexOf("CNG/LPG Kit",driverLabel);
+  const chargeRow=driverLabel>=0
+    ?whole.slice(driverLabel,nextLabel>driverLabel&&nextLabel-driverLabel<520
+      ?nextLabel:driverLabel+400):"";
+  const sourceCharge=new RegExp("(?:^|[^\\d])"+inferredDriver.toFixed(2).replace(".","\\.")+"(?:$|[^\\d])");
+  if(!paid&&!sourceCharge.test(chargeRow))return null;
+  const paidDriver=paid?money(paid[1]):inferredDriver;
   if(![p.od,p.tp,p.net,p.gst,p.gross,sourceOd,basicTp,paidDriver].every(x=>Number.isFinite(x)&&x>=0)
     ||paidDriver<=0||basicTp<=0
     ||!close(sourceOd,p.od,.001)||!close(basicTp+paidDriver,p.tp,.001)
