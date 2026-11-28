@@ -26,14 +26,14 @@ const aiUi=read("app/development/ai-policy-onboarding/page.tsx");
 const intakeList=read("app/policy-intakes/page.tsx");
 assert(openUi.includes('{ value: "open", label: "All Open", count: stats.open }')
   && openUi.includes("open: bucketCounts.action_required + bucketCounts.in_review + bucketCounts.processing")
-  && openUi.includes('if (view === "open") return ["action_required","in_review","processing"].includes(policyIntakeBucket(row, false))')
+  && openUi.includes('if (view === "open") return ["action_required","in_review","processing"].includes(intakeBucket(row))')
   && openUi.includes('{ value: "all", label: "All Records", count: stats.all }'),
   "All Open must exclude canonical duplicates and completed/rejected Intakes while history remains accessible");
 assert(intakeList.includes('if (value === "open") return "open"')
   && intakeList.includes('return reviewer ? "action" : "open"'),
   "Policy Intake must default to true open work for non-reviewers");
 assert(aiUi.includes("const total = intakeCounts.action_required + intakeCounts.in_review + intakeCounts.processing")
-  && aiUi.includes('const canonical=policyIntakeBucket(row,duplicateIds.has(row.id));')
+  && aiUi.includes('effectivePolicyIntakeBucket(row,duplicateIds.has(row.id),queue.get(row.id),autoRequested)')
   && aiUi.includes('workspaceRows.filter(row => displayBucket(row) !== "duplicate")'),
   "AI All Open and total must exclude confirmed duplicates while preserving Duplicate audit tab");
 
