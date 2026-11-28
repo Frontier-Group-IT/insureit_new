@@ -103,6 +103,12 @@ jobs:
         run: node scripts/partner-ai-studio-windows-backend-regression.mjs
       - name: NIA source-certified V30 and bounded transient n8n retry regression
         run: node scripts/ai-queue-transient-n8n-retry-regression.mjs
+      - name: Versioned New India native parser source replay with negative tax fixtures
+        run: node scripts/nia-n8n-zero-cpa-node-replay.mjs
+      - name: New India Intra source-certified zero-charge CPA and mixed GST
+        run: node --experimental-strip-types scripts/nia-intra-zero-cpa-source-regression.mjs
+      - name: New India Intra source model and variant mismatch regression
+        run: node --experimental-strip-types scripts/nia-intra-source-identity-regression.mjs
       - name: New India Intra variant and CPA evidence-specific diagnostic regression
         run: node --experimental-strip-types scripts/nia-intra-source-reason-regression.mjs
       - name: NIA named-authority and owner-driver CPA direct-convert regression

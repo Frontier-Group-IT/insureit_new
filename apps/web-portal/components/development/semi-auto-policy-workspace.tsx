@@ -164,6 +164,7 @@ function parserDiagnostic(code:string|null|undefined): {title:string;detail:stri
     return {title:"PDF verification failed",detail:"The commercial reader ran but rejected these checks. Inspect the matching fields and source layout in n8n. No policy was booked.",checks};
   }
   const descriptions:Record<string,string>={
+    n8n_nia_intra_source_model_variant_conflict:"The original New India policy prints different INTRA V-series identifiers in its Make/Model and Variant fields. Confirm the correct model/variant against insurer-corrected policy or trusted RC; automatic booking is blocked without guessing.",
     n8n_shriram_issuance_not_verified:"The original Shriram private-car PDF prints Prop Issue Date as N.A. Its policy and premium fields can be reviewed, but an insurer-issued date or verifiable source signature is required before extraction can be marked verified.",
     nia_missing_rto_authority_and_cpa:"Historical NIA exception: the older system blocked missing registration authority and zero CPA. Zero CPA is now allowed; reparse this PDF to refresh the provisional RTO.",
     nia_missing_registration_authority:"NIA PDF does not print a usable registration authority. The old FASTag ID parser match has been removed. Verify the actual RTO city/code from trusted registration evidence.",
@@ -184,6 +185,7 @@ function parserDiagnostic(code:string|null|undefined): {title:string;detail:stri
     n8n_bridge_http_failure_401:"The n8n webhook rejected authentication."
   };
   const titles:Record<string,string>={
+    n8n_nia_intra_source_model_variant_conflict:"Conflicting printed vehicle model / variant",
     existing_active_policy_overlap:"Existing active policy",
     n8n_review_required:"n8n PDF verification needs review",
     n8n_shriram_issuance_not_verified:"Shriram PDF issue date not verified",

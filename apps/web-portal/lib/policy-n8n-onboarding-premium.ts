@@ -151,7 +151,9 @@ export function verifiedCpaSelectionMatches(
  * two printed 18%/5% GST bases before cpa_premium is emitted. Canonical form
  * must enter CPA separately, subtract it from printed total TP exactly once,
  * and retain the paid-driver liability in the remaining TP bucket.
- * Never derive CPA by subtracting arbitrary amounts from the TP total. */
+ * Never derive CPA by subtracting arbitrary amounts from the TP total.
+ * Zero CPA is permitted only after the separate source assessor certifies
+ * printed nominee-none, complete liability rows and independent GST bases. */
 export function mapVerifiedNiaCommercialPremium(
   printed: {od:number;tp:number;net:number;gst:number;gross:number},
   sourceVerifiedCpa: number,
@@ -160,7 +162,7 @@ export function mapVerifiedNiaCommercialPremium(
   const values=[printed.od,printed.tp,printed.net,printed.gst,printed.gross,sourceVerifiedCpa];
   if(!values.every(v=>Number.isFinite(v)&&v>=0&&v<=1_000_000_000
       &&Math.abs(v*100-cents(v))<0.00001)
-    ||sourceVerifiedCpa<=0||sourceVerifiedCpa>=printed.tp
+    ||sourceVerifiedCpa>=printed.tp
     ||printed.od<=0||printed.tp<=0||printed.gross<=0
     ||Math.abs(cents(printed.od)+cents(printed.tp)-cents(printed.net))>6
     ||Math.abs(cents(printed.net)+cents(printed.gst)-cents(printed.gross))>6)
@@ -168,7 +170,7 @@ export function mapVerifiedNiaCommercialPremium(
   const asMoney=(v:number)=>String(cents(v)/100);
   const tpWithoutCpa=(cents(printed.tp)-cents(sourceVerifiedCpa))/100;
   return {od:asMoney(printed.od),addOnPremium:"0",tp:asMoney(tpWithoutCpa),
-    cpa:asMoney(sourceVerifiedCpa),cpaOpted:"Yes"};
+    cpa:asMoney(sourceVerifiedCpa),cpaOpted:sourceVerifiedCpa>0?"Yes":"No"};
 }
 
 /** United India GCV source-certified CPA is already inside printed Gross TP(B).

@@ -6,6 +6,7 @@ import { enrichIffcoCertifiedMachineFamily } from "@/lib/policy-iffco-machine-fa
 import { assessHeldInsurerCandidate, recognizeHeldInsurerLayout } from "@/lib/policy-held-insurer-candidate-admission";
 import { verifyOrientalCmsSigningDate, type OrientalSignedIssuanceEvidence } from "@/lib/policy-oriental-cms-issuance";
 import { acceptGoDigitNewJcbExtraction } from "@/lib/policy-digit-new-jcb-extraction";
+import { niaIntraModelVariantConflict } from "@/lib/policy-nia-intra-source-conflict";
 
 type ExistingInsurer = "new_india_cv_native_pdf" | "iffco_tokio_cv_native_pdf" | "go_digit_cv_native_pdf" | "united_india_gcv_native_pdf" | "united_india_gcv_punjab_split_gst_native_pdf" | "united_india_private_car_package_native_pdf" | "oriental_gccv_native_pdf";
 type NewProductVariant = "zurich_kotak_private_car_tp_native_pdf" | "go_digit_two_wheeler_od_native_pdf" | "united_india_tractor_tp_native_pdf" | "hdfc_ergo_two_wheeler_tp_native_pdf" | "sbi_general_private_car_package_native_pdf" | "liberty_two_wheeler_tp_native_pdf";
@@ -258,6 +259,11 @@ export async function recognizeNonTataCommercialPdf(file: File): Promise<Insurer
   if(knownUntrained==="n8n_layout_untrained_oriental_two_wheeler_package")
     throw new Error(knownUntrained);
   const initial=insurerForText(text);
+  // This source prints contradictory vehicle model and variant labels.
+  // No inferred V30/V40 choice is safe for unattended canonical booking.
+  // Run only on verified New India layouts; leave every other insurer alone.
+  if(initial==="new_india_cv_native_pdf" && niaIntraModelVariantConflict(text))
+    throw new Error("n8n_nia_intra_source_model_variant_conflict");
   // Only UIIC GCV needs late-page financial labels for the split-GST
   // sub-profile. Never broaden other insurer classification.
   if(initial==="united_india_gcv_native_pdf"){
